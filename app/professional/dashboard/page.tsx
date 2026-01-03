@@ -133,8 +133,8 @@ export default function ProfessionalDashboard() {
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Add your <strong>Professional Registration Number</strong> to reach 100% and get the verified badge.
               </p>
-              <Button size="sm" className="w-full rounded-xl">
-                Complete Profile
+              <Button size="sm" className="w-full rounded-xl" asChild>
+                <a href="/professional/profile/edit">Complete Profile</a>
               </Button>
             </CardContent>
           </Card>

@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CalendarDays, Video, Clock, MoreVertical, ExternalLink, MapPin } from "lucide-react"
+import { CalendarDays, Video, Clock, MoreVertical, ExternalLink, MapPin, Star } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ReviewModal } from "@/components/review-modal"
 
 const appointments = [
   {
@@ -34,6 +36,24 @@ const appointments = [
 ]
 
 export default function AppointmentsPage() {
+  const [reviewModal, setReviewModal] = useState<{
+    isOpen: boolean
+    professionalName: string
+    appointmentId: string
+  }>({
+    isOpen: false,
+    professionalName: "",
+    appointmentId: "",
+  })
+
+  const openReviewModal = (professionalName: string, appointmentId: string) => {
+    setReviewModal({
+      isOpen: true,
+      professionalName,
+      appointmentId,
+    })
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -171,11 +191,19 @@ export default function AppointmentsPage() {
                         </div>
                       </div>
                       <div className="flex gap-3 w-full md:w-auto">
-                        <Button variant="outline" className="rounded-xl font-bold bg-transparent flex-1 md:flex-none">
-                          View Summary
+                        <Button
+                          variant="outline"
+                          className="rounded-xl font-bold bg-transparent flex-1 md:flex-none"
+                          onClick={() => openReviewModal(appt.professional, appt.id)}
+                        >
+                          <Star className="h-4 w-4 mr-2" />
+                          Dejar Reseña
                         </Button>
                         <Button variant="outline" className="rounded-xl font-bold bg-transparent flex-1 md:flex-none">
-                          Re-book
+                          Ver Resumen
+                        </Button>
+                        <Button variant="outline" className="rounded-xl font-bold bg-transparent flex-1 md:flex-none">
+                          Re-agendar
                         </Button>
                       </div>
                     </div>
@@ -214,6 +242,13 @@ export default function AppointmentsPage() {
           </div>
         </section>
       </div>
+
+      <ReviewModal
+        isOpen={reviewModal.isOpen}
+        onClose={() => setReviewModal({ ...reviewModal, isOpen: false })}
+        professionalName={reviewModal.professionalName}
+        appointmentId={reviewModal.appointmentId}
+      />
     </DashboardLayout>
   )
 }

@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookingModal } from "@/components/booking-modal"
+import { MapEmbed } from "@/components/map-embed"
 
 const professional = {
   id: "1",
@@ -195,6 +196,28 @@ export default function ProfessionalProfilePage() {
                     </CardContent>
                   </Card>
                 ))}
+              </TabsContent>
+              <TabsContent value="insurance" className="pt-8 space-y-6">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-bold mb-4">Clinic Location</h3>
+                    <MapEmbed address="Las Condes 1245, Santiago, Chile" lat={-33.4175} lng={-70.6003} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold mb-4">Insurance Accepted</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {["FONASA", "ISAPRE", "Banmédica", "Colmena"].map((insurance) => (
+                        <Badge
+                          key={insurance}
+                          variant="secondary"
+                          className="bg-accent/30 text-accent-foreground border-none rounded-xl px-4 py-2"
+                        >
+                          {insurance}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
           </div>

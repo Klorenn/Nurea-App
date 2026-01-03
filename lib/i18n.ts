@@ -1,0 +1,241 @@
+// Multi-language support for NUREA
+export type Language = "es" | "en"
+
+export const translations = {
+  es: {
+    // Navigation
+    nav: {
+      findProfessionals: "Buscar Profesionales",
+      howItWorks: "Cómo Funciona",
+      forProfessionals: "Para Profesionales",
+      pricing: "Precios",
+      signIn: "Iniciar Sesión",
+      getStarted: "Comenzar",
+    },
+    // Hero
+    hero: {
+      title: "Atención médica que se siente",
+      titleHighlight: "humana",
+      subtitle: "Encuentra y agenda citas con los mejores profesionales de la salud en Chile. Confianza, cuidado y accesibilidad en un solo lugar.",
+      searchPlaceholder: "Especialidad (ej. Psicólogo, Pediatra)",
+      locationPlaceholder: "Ubicación",
+      searchButton: "Buscar",
+      trustedBy: "Confiable para pacientes en",
+    },
+    // Auth
+    auth: {
+      welcomeBack: "Bienvenido de nuevo",
+      securePortal: "Accede a tu portal de salud seguro",
+      email: "Correo electrónico",
+      password: "Contraseña",
+      forgotPassword: "¿Olvidaste tu contraseña?",
+      signIn: "Iniciar Sesión",
+      orContinue: "O continúa con",
+      noAccount: "¿No tienes una cuenta?",
+      signUp: "Regístrate",
+      joinNurea: "Únete a NUREA",
+      startJourney: "Comienza tu viaje hacia una mejor salud hoy",
+      selectAccountType: "Selecciona tu tipo de cuenta",
+      imPatient: "Soy Paciente",
+      imProfessional: "Soy Profesional",
+      firstName: "Nombre",
+      lastName: "Apellido",
+      createAccount: "Crear Cuenta",
+      agreeTerms: "Al registrarte, acepto los",
+      termsOfService: "Términos de Servicio",
+      and: "y",
+      privacyPolicy: "Política de Privacidad",
+      alreadyAccount: "¿Ya tienes una cuenta?",
+      logIn: "Iniciar sesión",
+    },
+    // Dashboard
+    dashboard: {
+      welcome: "Bienvenido de nuevo",
+      appointment: "cita",
+      appointments: "citas",
+      scheduled: "programada",
+      scheduledPlural: "programadas",
+      forToday: "para hoy",
+      bookNew: "Agendar Nueva Cita",
+      healthSummary: "Resumen de Salud",
+      bloodType: "Tipo de Sangre",
+      allergies: "Alergias",
+      nextCheckup: "Próximo Control",
+      upcomingAppointments: "Próximas Citas",
+      viewAll: "Ver todas",
+      favoriteSpecialists: "Especialistas Favoritos",
+      browseMore: "Explorar Más Especialistas",
+      overview: "Resumen",
+      favorites: "Favoritos",
+      messages: "Mensajes",
+      payments: "Pagos",
+    },
+    // Search
+    search: {
+      filters: "Filtros",
+      clearAll: "Limpiar todo",
+      specialty: "Especialidad",
+      allSpecialties: "Todas las Especialidades",
+      consultationType: "Tipo de Consulta",
+      onlineSession: "Consulta Online",
+      inPersonVisit: "Consulta Presencial",
+      priceRange: "Rango de Precios",
+      language: "Idioma",
+      professionalsFound: "profesionales encontrados",
+      sortBy: "Ordenar por",
+      relevance: "Relevancia",
+      topRated: "Mejor Valorados",
+      priceLow: "Precio: Menor a Mayor",
+      consultationFrom: "Consulta desde",
+      perSession: "/ sesión",
+      viewProfile: "Ver Perfil",
+      bookNow: "Reservar Ahora",
+      nextAvailable: "Próxima disponible",
+    },
+    // Footer
+    footer: {
+      tagline: "Conectando pacientes con profesionales de la salud confiables en Chile y más allá.",
+      forPatients: "Para Pacientes",
+      findProfessionals: "Buscar Profesionales",
+      bookAppointment: "Agendar Cita",
+      howItWorks: "Cómo Funciona",
+      forProfessionals: "Para Profesionales",
+      joinNurea: "Únete a NUREA",
+      pricingPlans: "Planes de Precios",
+      referralProgram: "Programa de Referidos",
+      company: "Empresa",
+      aboutUs: "Acerca de Nosotros",
+      privacyPolicy: "Política de Privacidad",
+      termsOfService: "Términos de Servicio",
+      contact: "Contacto",
+      copyright: "© 2025 NUREA. Todos los derechos reservados.",
+      madeWithCare: "Hecho con cuidado para mejor acceso a la salud",
+    },
+  },
+  en: {
+    // Navigation
+    nav: {
+      findProfessionals: "Find Professionals",
+      howItWorks: "How It Works",
+      forProfessionals: "For Professionals",
+      pricing: "Pricing",
+      signIn: "Sign In",
+      getStarted: "Get Started",
+    },
+    // Hero
+    hero: {
+      title: "Healthcare that feels",
+      titleHighlight: "human",
+      subtitle: "Find and book appointments with top healthcare professionals in Chile. Trust, care, and accessibility in one place.",
+      searchPlaceholder: "Specialty (e.g. Psychologist, Pediatrician)",
+      locationPlaceholder: "Location",
+      searchButton: "Search",
+      trustedBy: "Trusted by patients across",
+    },
+    // Auth
+    auth: {
+      welcomeBack: "Welcome Back",
+      securePortal: "Access your secure health portal",
+      email: "Email Address",
+      password: "Password",
+      forgotPassword: "Forgot password?",
+      signIn: "Sign In",
+      orContinue: "Or continue with",
+      noAccount: "Don't have an account?",
+      signUp: "Sign up",
+      joinNurea: "Join NUREA",
+      startJourney: "Start your journey to better health today",
+      selectAccountType: "Select your account type",
+      imPatient: "I'm a Patient",
+      imProfessional: "I'm a Professional",
+      firstName: "First Name",
+      lastName: "Last Name",
+      createAccount: "Create Account",
+      agreeTerms: "By signing up, I agree to NUREA's",
+      termsOfService: "Terms of Service",
+      and: "and",
+      privacyPolicy: "Privacy Policy",
+      alreadyAccount: "Already have an account?",
+      logIn: "Log in",
+    },
+    // Dashboard
+    dashboard: {
+      welcome: "Welcome back",
+      appointment: "appointment",
+      appointments: "appointments",
+      scheduled: "scheduled",
+      scheduledPlural: "scheduled",
+      forToday: "for today",
+      bookNew: "Book New Appointment",
+      healthSummary: "Health Summary",
+      bloodType: "Blood Type",
+      allergies: "Allergies",
+      nextCheckup: "Next Checkup",
+      upcomingAppointments: "Upcoming Appointments",
+      viewAll: "View all",
+      favoriteSpecialists: "Favorite Specialists",
+      browseMore: "Browse More Specialists",
+      overview: "Overview",
+      favorites: "Favorites",
+      messages: "Messages",
+      payments: "Payments",
+    },
+    // Search
+    search: {
+      filters: "Filters",
+      clearAll: "Clear all",
+      specialty: "Specialty",
+      allSpecialties: "All Specialties",
+      consultationType: "Consultation Type",
+      onlineSession: "Online Session",
+      inPersonVisit: "In-person Visit",
+      priceRange: "Price Range",
+      language: "Language",
+      professionalsFound: "professionals found",
+      sortBy: "Sort by",
+      relevance: "Relevance",
+      topRated: "Top Rated",
+      priceLow: "Price: Low to High",
+      consultationFrom: "Consultation from",
+      perSession: "/ session",
+      viewProfile: "View Profile",
+      bookNow: "Book Now",
+      nextAvailable: "Next available",
+    },
+    // Footer
+    footer: {
+      tagline: "Connecting patients with trusted healthcare professionals across Chile and beyond.",
+      forPatients: "For Patients",
+      findProfessionals: "Find Professionals",
+      bookAppointment: "Book Appointment",
+      howItWorks: "How It Works",
+      forProfessionals: "For Professionals",
+      joinNurea: "Join NUREA",
+      pricingPlans: "Pricing Plans",
+      referralProgram: "Referral Program",
+      company: "Company",
+      aboutUs: "About Us",
+      privacyPolicy: "Privacy Policy",
+      termsOfService: "Terms of Service",
+      contact: "Contact",
+      copyright: "© 2025 NUREA. All rights reserved.",
+      madeWithCare: "Made with care for better healthcare access",
+    },
+  },
+} as const
+
+export function useTranslations(lang: Language = "es") {
+  return translations[lang]
+}
+
+export function t(lang: Language, key: string): string {
+  const keys = key.split(".")
+  let value: any = translations[lang]
+  
+  for (const k of keys) {
+    value = value?.[k]
+  }
+  
+  return typeof value === "string" ? value : key
+}
+
