@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export function Navbar() {
   const { language, setLanguage } = useLanguage()
@@ -57,6 +58,10 @@ export function Navbar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button size="sm" className="text-sm rounded-full bg-primary hover:bg-primary/90" asChild>
+              <Link href="/search">Agendar</Link>
+            </Button>
+            <ThemeToggle />
             <Button variant="ghost" size="sm" className="text-sm" asChild>
               <Link href="/login">{t.nav.signIn}</Link>
             </Button>

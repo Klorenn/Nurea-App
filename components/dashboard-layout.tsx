@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import { Calendar, CreditCard, Heart, LayoutDashboard, MessageSquare, Settings, User, LogOut, Bell } from "lucide-react"
+import { Calendar, CreditCard, Heart, LayoutDashboard, MessageSquare, Settings, User, LogOut, Bell, Star } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export function DashboardLayout({
   children,
@@ -36,7 +37,8 @@ export function DashboardLayout({
       : [
           { icon: LayoutDashboard, label: "Dashboard", href: "/professional/dashboard" },
           { icon: Calendar, label: "Calendar", href: "/professional/calendar" },
-          { icon: MessageSquare, label: "Consultations", href: "/professional/messages" },
+          { icon: MessageSquare, label: "Mensajes", href: "/professional/messages" },
+          { icon: Star, label: "Reseñas", href: "/professional/reviews" },
           { icon: User, label: "Public Profile", href: "/professional/profile" },
           { icon: Settings, label: "Settings", href: "/professional/settings" },
         ]
@@ -94,6 +96,7 @@ export function DashboardLayout({
             </div>
 
             <div className="flex items-center gap-4">
+              <ThemeToggle />
               <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary">
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-background" />

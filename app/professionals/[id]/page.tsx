@@ -25,6 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BookingModal } from "@/components/booking-modal"
 import { MapEmbed } from "@/components/map-embed"
+import { cn } from "@/lib/utils"
 
 const professional = {
   id: "1",
@@ -188,7 +189,15 @@ export default function ProfessionalProfilePage() {
                         </div>
                         <div className="flex gap-0.5">
                           {[1, 2, 3, 4, 5].map((star) => (
-                            <Star key={star} className="h-4 w-4 fill-primary text-primary" />
+                            <Star
+                              key={star}
+                              className={cn(
+                                "h-4 w-4",
+                                star <= review.rating
+                                  ? "fill-primary text-primary"
+                                  : "fill-none text-muted-foreground/30"
+                              )}
+                            />
                           ))}
                         </div>
                       </div>
@@ -226,10 +235,19 @@ export default function ProfessionalProfilePage() {
           <aside className="space-y-6">
             <Card className="border-border/40 shadow-2xl rounded-[2.5rem] sticky top-28 overflow-hidden">
               <div className="bg-primary p-8 text-white">
-                <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Consultation Fee</p>
+                <p className="text-xs font-bold uppercase tracking-widest opacity-80 mb-1">Valor de Consulta</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-4xl font-bold">${professional.price.toLocaleString("es-CL")}</span>
-                  <span className="text-sm opacity-80">/ session</span>
+                  <span className="text-sm opacity-80">/ sesión</span>
+                </div>
+              </div>
+              <div className="px-8 py-4 bg-primary/10 border-b border-primary/20">
+                <div className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-primary fill-primary" />
+                  <div>
+                    <p className="text-lg font-bold text-primary">{professional.rating}</p>
+                    <p className="text-xs text-muted-foreground">{professional.reviewsCount} reseñas</p>
+                  </div>
                 </div>
               </div>
               <CardContent className="p-8 space-y-8">
