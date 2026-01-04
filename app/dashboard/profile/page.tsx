@@ -1,0 +1,275 @@
+"use client"
+
+import { useState } from "react"
+import { DashboardLayout } from "@/components/dashboard-layout"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { User, Mail, Phone, Calendar, MapPin, Save, Edit2 } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
+import { useTranslations } from "@/lib/i18n"
+import { useAuth } from "@/hooks/use-auth"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+
+export default function ProfilePage() {
+  const { language } = useLanguage()
+  const t = useTranslations(language)
+  const { user } = useAuth()
+  const [isEditing, setIsEditing] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const [formData, setFormData] = useState({
+    firstName: user?.user_metadata?.first_name || "",
+    lastName: user?.user_metadata?.last_name || "",
+    email: user?.email || "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+  })
+
+  const handleSave = async () => {
+    setLoading(true)
+    // Aquí guardarías los datos en Supabase
+    setTimeout(() => {
+      setLoading(false)
+      setIsEditing(false)
+    }, 1000)
+  }
+
+  return (
+    <DashboardLayout role="patient">
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {t.dashboard.profile}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {language === "es" 
+                ? "Gestiona tu información personal"
+                : "Manage your personal information"}
+            </p>
+          </div>
+          {!isEditing ? (
+            <Button className="rounded-xl font-bold" onClick={() => setIsEditing(true)}>
+              <Edit2 className="mr-2 h-4 w-4" /> {t.dashboard.edit}
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setIsEditing(false)}>
+                {t.dashboard.cancel}
+              </Button>
+              <Button className="rounded-xl font-bold" onClick={handleSave} disabled={loading}>
+                <Save className="mr-2 h-4 w-4" /> {loading ? (language === "es" ? "Guardando..." : "Saving...") : t.dashboard.save}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Profile Picture */}
+          <Card className="border-border/40">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center space-y-4">
+                <Avatar className="h-32 w-32 rounded-2xl border-2 border-border/40">
+                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarFallback className="text-2xl">
+                    {formData.firstName[0]}{formData.lastName[0]}
+                  </AvatarFallback>
+                </Avatar>
+                {isEditing && (
+                  <Button variant="outline" className="rounded-xl w-full">
+                    {language === "es" ? "Cambiar Foto" : "Change Photo"}
+                  </Button>
+                )}
+                <div className="text-center">
+                  <p className="font-bold text-lg">
+                    {formData.firstName} {formData.lastName}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {language === "es" ? "Paciente" : "Patient"}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Personal Information */}
+          <Card className="md:col-span-2 border-border/40">
+            <CardHeader>
+              <CardTitle>
+                {language === "es" ? "Información Personal" : "Personal Information"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {language === "es" ? "Nombre" : "First Name"}
+                  </Label>
+                  {isEditing ? (
+                    <Input
+                      id="firstName"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      className="rounded-xl"
+                      disabled={loading}
+                    />
+                  ) : (
+                    <p className="text-sm font-medium py-2">{formData.firstName}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {language === "es" ? "Apellido" : "Last Name"}
+                  </Label>
+                  {isEditing ? (
+                    <Input
+                      id="lastName"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      className="rounded-xl"
+                      disabled={loading}
+                    />
+                  ) : (
+                    <p className="text-sm font-medium py-2">{formData.lastName}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  {language === "es" ? "Correo Electrónico" : "Email"}
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="rounded-xl"
+                    disabled={loading}
+                  />
+                ) : (
+                  <p className="text-sm font-medium py-2">{formData.email}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  {language === "es" ? "Teléfono" : "Phone"}
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="rounded-xl"
+                    placeholder={language === "es" ? "+56 9 1234 5678" : "+56 9 1234 5678"}
+                    disabled={loading}
+                  />
+                ) : (
+                  <p className="text-sm font-medium py-2">
+                    {formData.phone || (language === "es" ? "No agregado" : "Not added")}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {language === "es" ? "Fecha de Nacimiento" : "Date of Birth"}
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                    className="rounded-xl"
+                    disabled={loading}
+                  />
+                ) : (
+                  <p className="text-sm font-medium py-2">
+                    {formData.dateOfBirth || (language === "es" ? "No agregado" : "Not added")}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address" className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  {language === "es" ? "Dirección" : "Address"}
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="rounded-xl"
+                    placeholder={language === "es" ? "Tu dirección" : "Your address"}
+                    disabled={loading}
+                  />
+                ) : (
+                  <p className="text-sm font-medium py-2">
+                    {formData.address || (language === "es" ? "No agregado" : "Not added")}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Health Information */}
+        <Card className="border-border/40">
+          <CardHeader>
+            <CardTitle>
+              {language === "es" ? "Información de Salud" : "Health Information"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">
+                  {t.dashboard.bloodType}
+                </Label>
+                <p className="font-medium">
+                  {language === "es" ? "No agregado" : "Not added"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">
+                  {t.dashboard.allergies}
+                </Label>
+                <p className="font-medium">
+                  {language === "es" ? "No agregado" : "Not added"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-muted-foreground">
+                  {t.dashboard.nextCheckup}
+                </Label>
+                <p className="font-medium">
+                  {language === "es" ? "No programado" : "Not scheduled"}
+                </p>
+              </div>
+            </div>
+            {isEditing && (
+              <Button variant="outline" className="mt-4 rounded-xl">
+                {language === "es" ? "Editar Información de Salud" : "Edit Health Information"}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  )
+}
+
