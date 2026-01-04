@@ -95,14 +95,14 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/legal/privacy" className="hover:text-foreground transition-colors">
                   {t.footer.privacyPolicy}
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="hover:text-foreground transition-colors">
+                <Link href="/legal/terms" className="hover:text-foreground transition-colors">
                   {t.footer.termsOfService}
-                </a>
+                </Link>
               </li>
               <li>
                 <a href="#" className="hover:text-foreground transition-colors">

@@ -1,127 +1,347 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { StackedCircularFooter } from "@/components/ui/stacked-circular-footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { MapPin, Star, Filter, CalendarDays, Video, Home } from "lucide-react"
+import { Filter, Video, Home, Grid3x3, List, Search as SearchIcon, Plus, ChevronDown, ChevronUp } from "lucide-react"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import DoctorCard from "@/components/ui/doctor-live-chat-card"
+import { InputWithTags } from "@/components/ui/input-with-tags"
+import { useLanguage } from "@/contexts/language-context"
+import { useTranslations } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
+import WavyBackground from "@/components/ui/wavy-background"
+import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
 
 const professionals = [
   {
     id: "1",
     name: "Dr. Elena Vargas",
-    specialty: "Clinical Psychologist",
+    specialty: "Psicóloga Clínica",
+    specialtyEn: "Clinical Psychologist",
     location: "Online / Santiago",
     rating: 4.9,
-    reviews: 124,
+    patientsServed: 342,
     price: 45000,
     languages: ["ES", "EN"],
-    image: "/professional-1.jpg",
+    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop",
     verified: true,
+    isOnline: true,
+    availableToday: true,
+    availableUntil: "7:00 PM",
   },
   {
     id: "2",
-    name: "Dr. Marco Polo",
-    specialty: "Cardiologist",
+    name: "Dr. Carlos Méndez",
+    specialty: "Dentista",
+    specialtyEn: "Dentist",
     location: "Las Condes, Santiago",
     rating: 4.8,
-    reviews: 89,
+    patientsServed: 289,
     price: 55000,
     languages: ["ES"],
-    image: "/professional-2.jpg",
+    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop",
     verified: true,
+    isOnline: true,
+    availableToday: true,
+    availableUntil: "6:00 PM",
   },
   {
     id: "3",
-    name: "Dr. Sofia Rossi",
-    specialty: "Dermatologist",
+    name: "Dra. María González",
+    specialty: "Matrona",
+    specialtyEn: "Midwife",
     location: "Providencia, Santiago",
     rating: 4.9,
-    reviews: 210,
+    patientsServed: 512,
     price: 50000,
-    languages: ["ES", "IT"],
-    image: "/professional-3.jpg",
+    languages: ["ES"],
+    image: "https://images.unsplash.com/photo-1594824476966-48cb8e844905?w=400&h=400&fit=crop",
     verified: true,
+    isOnline: false,
+    availableToday: true,
+    availableUntil: "5:00 PM",
+  },
+  {
+    id: "4",
+    name: "Dr. Roberto González",
+    specialty: "Psiquiatra",
+    specialtyEn: "Psychiatrist",
+    location: "Online / Providencia",
+    rating: 4.8,
+    patientsServed: 321,
+    price: 52000,
+    languages: ["ES", "EN"],
+    image: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop",
+    verified: true,
+    isOnline: true,
+    availableToday: true,
+    availableUntil: "9:00 PM",
+  },
+  {
+    id: "5",
+    name: "Dra. Ana Silva",
+    specialty: "Kinesióloga",
+    specialtyEn: "Physiotherapist",
+    location: "Vitacura, Santiago",
+    rating: 4.9,
+    patientsServed: 456,
+    price: 48000,
+    languages: ["ES", "EN"],
+    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=400&fit=crop",
+    verified: true,
+    isOnline: true,
+    availableToday: true,
+    availableUntil: "7:30 PM",
+  },
+  {
+    id: "6",
+    name: "Dr. Pablo Martínez",
+    specialty: "Psicólogo",
+    specialtyEn: "Psychologist",
+    location: "Ñuñoa, Santiago",
+    rating: 4.7,
+    patientsServed: 198,
+    price: 40000,
+    languages: ["ES"],
+    image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&h=400&fit=crop",
+    verified: true,
+    isOnline: true,
+    availableToday: true,
+    availableUntil: "8:00 PM",
   },
 ]
 
 export default function SearchResultsPage() {
-  const [view, setView] = useState<"list" | "map">("list")
+  const searchParams = useSearchParams()
+  const [view, setView] = useState<"grid" | "list">("grid")
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
+  const [suggestedSpecialty, setSuggestedSpecialty] = useState("")
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const { language } = useLanguage()
+  const t = useTranslations(language)
+
+  const predefinedSpecialties = language === "es" 
+    ? ["Psicólogo", "Dentista", "Matrona", "Psiquiatra", "Kinesiólogo", "Nutricionista"]
+    : ["Psychologist", "Dentist", "Midwife", "Psychiatrist", "Physiotherapist", "Nutritionist"]
+
+  // Read search query from URL parameters
+  useEffect(() => {
+    const query = searchParams.get("q")
+    
+    if (query) {
+      // If there's a query parameter, try to match it with predefined specialties
+      const queryLower = query.toLowerCase()
+      const matchingSpecialty = predefinedSpecialties.find(
+        (spec) => spec.toLowerCase().includes(queryLower) || queryLower.includes(spec.toLowerCase())
+      )
+      if (matchingSpecialty) {
+        setSelectedSpecialties((prev) => {
+          if (!prev.includes(matchingSpecialty)) {
+            return [...prev, matchingSpecialty]
+          }
+          return prev
+        })
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  // Fix search functionality when switching tabs
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // Re-initialize any necessary state when tab becomes visible
+        // This ensures the search input and filtering continue to work
+        // Force a re-render if needed by updating a dummy state
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [])
+
+  const handleSpecialtySubmit = () => {
+    if (suggestedSpecialty.trim()) {
+      // Here you would send the suggestion to your backend
+      console.log("Suggested specialty:", suggestedSpecialty)
+      alert(language === "es" 
+        ? `¡Gracias por tu sugerencia! Hemos recibido: ${suggestedSpecialty}`
+        : `Thank you for your suggestion! We received: ${suggestedSpecialty}`)
+      setSuggestedSpecialty("")
+    }
+  }
+
+  // Filter professionals based on selected specialties
+  const filteredProfessionals = selectedSpecialties.length > 0
+    ? professionals.filter((prof) => {
+        const profSpecialty = language === "es" ? prof.specialty : prof.specialtyEn
+        return selectedSpecialties.some((spec) => 
+          profSpecialty.toLowerCase().includes(spec.toLowerCase())
+        )
+      })
+    : professionals
 
   return (
-    <main className="min-h-screen pt-20">
-      <Navbar />
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Filters Sidebar */}
-          <aside className="w-full md:w-72 space-y-8 shrink-0">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Filter className="h-5 w-5" /> Filters
+    <main className="min-h-screen relative pt-20">
+      <PaperShaderBackground />
+      <div className="absolute inset-0">
+        <WavyBackground className="absolute inset-0">
+          <div className="relative z-10">
+            <Navbar />
+            <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Search Bar with Tags */}
+        <div className="mb-8 space-y-4">
+          <div className="bg-card rounded-2xl border border-teal-200/30 dark:border-teal-800/30 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <SearchIcon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+              <h2 className="text-lg font-bold text-foreground">
+                {language === "es" ? "Buscar por Especialidad" : "Search by Specialty"}
               </h2>
-              <Button variant="ghost" size="sm" className="text-primary text-xs font-bold">
-                Clear all
+            </div>
+            <InputWithTags
+              placeholder={language === "es" ? "Buscar por especialidad..." : "Search by specialty..."}
+              predefinedTags={predefinedSpecialties}
+              value={selectedSpecialties}
+              onChange={setSelectedSpecialties}
+              limit={5}
+              allowCustomTags={false}
+            />
+          </div>
+
+          {/* Suggest Missing Professional */}
+          <div className="bg-gradient-to-r from-teal-50/50 to-teal-100/30 dark:from-teal-950/20 dark:to-teal-900/10 rounded-2xl border border-teal-200/30 dark:border-teal-800/30 p-6">
+            <h3 className="text-base font-semibold text-foreground mb-2">
+              {language === "es" ? "¿Qué profesional te gustaría ver aquí?" : "What professional would you like to see here?"}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              {language === "es" 
+                ? "Tu sugerencia nos ayuda a crecer y ofrecerte más opciones."
+                : "Your suggestion helps us grow and offer you more options."}
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={suggestedSpecialty}
+                onChange={(e) => setSuggestedSpecialty(e.target.value)}
+                placeholder={language === "es" ? "Ej: Nutricionista, Terapeuta..." : "E.g: Nutritionist, Therapist..."}
+                className="flex-1 px-4 py-2.5 bg-background border border-teal-200/30 dark:border-teal-800/30 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 dark:focus:border-teal-500"
+                onKeyDown={(e) => e.key === "Enter" && handleSpecialtySubmit()}
+              />
+              <Button
+                onClick={handleSpecialtySubmit}
+                disabled={!suggestedSpecialty.trim()}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {language === "es" ? "Sugerir" : "Suggest"}
               </Button>
             </div>
+          </div>
+        </div>
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Filters Sidebar - Collapsible */}
+          <aside className="w-full md:w-72 shrink-0">
+            <div className="bg-card rounded-2xl border border-border/40 p-4">
+              <button
+                onClick={() => setFiltersOpen(!filtersOpen)}
+                className="w-full flex items-center justify-between p-3 hover:bg-accent/50 rounded-xl transition-colors"
+              >
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Filter className="h-5 w-5" /> 
+                  {language === "es" ? "Filtros" : "Filters"}
+                </h2>
+                {filtersOpen ? (
+                  <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                )}
+              </button>
 
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Specialty</label>
-                <Select>
-                  <SelectTrigger className="w-full rounded-xl bg-accent/20 border-none">
-                    <SelectValue placeholder="All Specialties" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="psychology">Psychology</SelectItem>
-                    <SelectItem value="cardiology">Cardiology</SelectItem>
-                    <SelectItem value="dermatology">Dermatology</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                  Consultation Type
-                </label>
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" className="justify-start rounded-xl bg-transparent gap-3 border-border/40">
-                    <Video className="h-4 w-4" /> Online Session
-                  </Button>
-                  <Button variant="outline" className="justify-start rounded-xl bg-transparent gap-3 border-border/40">
-                    <Home className="h-4 w-4" /> In-person Visit
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Price Range</label>
-                <div className="pt-4 px-2">
-                  <Slider defaultValue={[20000, 80000]} max={100000} step={5000} className="text-primary" />
-                  <div className="flex justify-between mt-4 text-xs font-medium">
-                    <span>$20k</span>
-                    <span>$100k+</span>
+              {filtersOpen && (
+                <div className="mt-4 space-y-6 pt-4 border-t border-border/40">
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-foreground">
+                      {language === "es" ? "Especialidad" : "Specialty"}
+                    </label>
+                    <Select>
+                      <SelectTrigger className="w-full rounded-xl bg-accent/20 border-none">
+                        <SelectValue placeholder={language === "es" ? "Todas las especialidades" : "All Specialties"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="psychology">{language === "es" ? "Psicología" : "Psychology"}</SelectItem>
+                        <SelectItem value="cardiology">{language === "es" ? "Cardiología" : "Cardiology"}</SelectItem>
+                        <SelectItem value="dermatology">{language === "es" ? "Dermatología" : "Dermatology"}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Language</label>
-                <div className="flex flex-wrap gap-2">
-                  {["Spanish", "English", "Italian", "French"].map((lang) => (
-                    <Badge
-                      key={lang}
-                      variant="outline"
-                      className="rounded-full px-3 py-1 cursor-pointer hover:border-primary hover:text-primary transition-all bg-transparent"
-                    >
-                      {lang}
-                    </Badge>
-                  ))}
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-foreground">
+                      {language === "es" ? "Tipo de consulta" : "Consultation Type"}
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <Button variant="outline" className="justify-start rounded-xl bg-transparent gap-3 border-border/40">
+                        <Video className="h-4 w-4" /> 
+                        {language === "es" ? "Consulta online" : "Online Session"}
+                      </Button>
+                      <Button variant="outline" className="justify-start rounded-xl bg-transparent gap-3 border-border/40">
+                        <Home className="h-4 w-4" /> 
+                        {language === "es" ? "Consulta presencial" : "In-person Visit"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-foreground">
+                      {language === "es" ? "Rango de precio" : "Price Range"}
+                    </label>
+                    <div className="pt-4 px-2">
+                      <Slider defaultValue={[20000, 80000]} max={100000} step={5000} className="text-primary" />
+                      <div className="flex justify-between mt-4 text-xs font-medium">
+                        <span>$20k</span>
+                        <span>$100k+</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-sm font-semibold text-foreground">
+                      {language === "es" ? "Idioma" : "Language"}
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {["Spanish", "English", "Italian", "French"].map((lang) => (
+                        <Badge
+                          key={lang}
+                          variant="outline"
+                          className="rounded-full px-3 py-1 cursor-pointer hover:border-primary hover:text-primary transition-all bg-transparent"
+                        >
+                          {lang}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full text-primary text-sm font-medium"
+                    onClick={() => {
+                      setSelectedSpecialties([])
+                      setFiltersOpen(false)
+                    }}
+                  >
+                    {language === "es" ? "Limpiar filtros" : "Clear all"}
+                  </Button>
                 </div>
-              </div>
+              )}
             </div>
           </aside>
 
@@ -129,110 +349,89 @@ export default function SearchResultsPage() {
           <section className="flex-1 space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-4 rounded-2xl border border-border/40 shadow-sm">
               <div>
-                <h1 className="text-2xl font-bold">124 professionals found</h1>
-                <p className="text-sm text-muted-foreground">Psychologists in Santiago • Online</p>
+                <h1 className="text-xl font-semibold">
+                  {language === "es" 
+                    ? `${filteredProfessionals.length} profesionales encontrados`
+                    : `${filteredProfessionals.length} professionals found`}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {language === "es" ? "En Santiago • Online" : "In Santiago • Online"}
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 border border-border/40 rounded-xl overflow-hidden">
+                  <Button
+                    variant={view === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setView("grid")}
+                    className="rounded-none border-none"
+                  >
+                    <Grid3x3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={view === "list" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setView("list")}
+                    className="rounded-none border-none"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+                <span className="text-sm font-medium text-muted-foreground">{language === "es" ? "Ordenar:" : "Sort by:"}</span>
                 <Select defaultValue="relevance">
                   <SelectTrigger className="w-40 border-none bg-accent/20 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="relevance">Relevance</SelectItem>
-                    <SelectItem value="rating">Top Rated</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
+                    <SelectItem value="relevance">{language === "es" ? "Relevancia" : "Relevance"}</SelectItem>
+                    <SelectItem value="rating">{language === "es" ? "Mejor Calificados" : "Top Rated"}</SelectItem>
+                    <SelectItem value="price-low">{language === "es" ? "Precio: Menor a Mayor" : "Price: Low to High"}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="grid gap-6">
-              {professionals.map((prof) => (
-                <Card key={prof.id} className="border-border/40 overflow-hidden hover:shadow-lg transition-all group">
-                  <CardContent className="p-0 flex flex-col sm:flex-row">
-                    <div className="w-full sm:w-56 h-56 sm:h-auto relative overflow-hidden shrink-0">
-                      <img
-                        src={`/prof-${prof.id}.jpg?height=300&width=300&query=professional-headshot`}
-                        alt={prof.name}
-                        className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
-                      />
-                      {prof.verified && (
-                        <div className="absolute top-4 left-4">
-                          <Badge className="bg-primary text-white border-none rounded-full px-3 py-1 text-[10px] uppercase font-bold tracking-widest shadow-lg">
-                            Verified
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-6 flex-1 flex flex-col justify-between">
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h2 className="text-2xl font-bold group-hover:text-primary transition-colors tracking-tight">
-                              {prof.name}
-                            </h2>
-                            <p className="text-primary font-bold">{prof.specialty}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="flex items-center justify-end gap-1 text-primary mb-1">
-                              <Star className="h-4 w-4 fill-current" />
-                              <span className="font-bold">{prof.rating}</span>
-                            </div>
-                            <span className="text-xs text-muted-foreground">{prof.reviews} reviews</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-4 pt-2">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="h-4 w-4 text-primary" />
-                            {prof.location}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CalendarDays className="h-4 w-4 text-primary" />
-                            Next available: <span className="text-foreground font-bold">Tomorrow</span>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          {prof.languages.map((l) => (
-                            <Badge
-                              key={l}
-                              variant="secondary"
-                              className="bg-accent/30 text-accent-foreground border-none text-[10px]"
-                            >
-                              {l}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row justify-between items-center mt-6 pt-6 border-t border-border/40 gap-4">
-                        <div className="text-center sm:text-left">
-                          <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-1">
-                            Consultation from
-                          </p>
-                          <p className="text-2xl font-bold">
-                            ${prof.price.toLocaleString("es-CL")}{" "}
-                            <span className="text-xs font-normal text-muted-foreground">/ session</span>
-                          </p>
-                        </div>
-                        <div className="flex gap-3 w-full sm:w-auto">
-                          <Button variant="outline" className="rounded-xl flex-1 sm:flex-none bg-transparent">
-                            View Profile
-                          </Button>
-                          <Button className="rounded-xl flex-1 sm:flex-none px-8 font-bold">Book Now</Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className={cn(
+              "gap-6",
+              view === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col"
+            )}>
+              {filteredProfessionals.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-lg font-semibold text-foreground mb-2">
+                    {language === "es" ? "No se encontraron profesionales" : "No professionals found"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {language === "es" 
+                      ? "Intenta con otros filtros o elimina algunos tags para ver más resultados."
+                      : "Try different filters or remove some tags to see more results."}
+                  </p>
+                </div>
+              ) : (
+                filteredProfessionals.map((prof) => (
+                <DoctorCard
+                  key={prof.id}
+                  id={prof.id}
+                  name={prof.name}
+                  specialty={language === "es" ? prof.specialty : prof.specialtyEn}
+                  avatar={prof.image}
+                  rating={prof.rating}
+                  patientsServed={prof.patientsServed}
+                  isOnline={prof.isOnline}
+                  availableToday={prof.availableToday}
+                  availableUntil={prof.availableUntil}
+                  location={prof.location}
+                  consultationPrice={prof.price}
+                />
+                ))
+              )}
             </div>
           </section>
         </div>
+            </div>
+            <StackedCircularFooter />
+          </div>
+        </WavyBackground>
       </div>
-      <Footer />
     </main>
   )
 }

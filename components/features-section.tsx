@@ -1,45 +1,52 @@
+"use client"
+
 import { Heart, ShieldCheck, Zap, Users } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
+import { useTranslations } from "@/lib/i18n"
 
 export function FeaturesSection() {
+  const { language } = useLanguage()
+  const t = useTranslations(language)
+
   const benefits = [
     {
       icon: Heart,
-      title: "Human Connection",
-      description: "We focus on professionals who prioritize empathetic and personalized care for every patient.",
+      title: t.landing.features.humanConnection,
+      description: t.landing.features.humanConnectionDesc,
       color: "bg-primary/10 text-primary",
     },
     {
       icon: ShieldCheck,
-      title: "Verified Excellence",
-      description: "Every professional on NUREA undergoes a rigorous verification process for your peace of mind.",
+      title: t.landing.features.verifiedExcellence,
+      description: t.landing.features.verifiedExcellenceDesc,
       color: "bg-secondary/10 text-secondary",
     },
     {
       icon: Zap,
-      title: "Instant Booking",
-      description: "Real-time availability allows you to book your consultation in seconds, no waiting lines.",
+      title: t.landing.features.instantBooking,
+      description: t.landing.features.instantBookingDesc,
       color: "bg-accent/40 text-accent-foreground",
     },
     {
       icon: Users,
-      title: "Patient First",
-      description: "A platform designed for your comfort, from profile management to secure chat with experts.",
+      title: t.landing.features.patientFirst,
+      description: t.landing.features.patientFirstDesc,
       color: "bg-muted text-muted-foreground",
     },
   ]
 
   return (
-    <section className="py-24 px-6 bg-background" id="how-it-works">
+    <section className="py-16 md:py-20 px-6 bg-transparent relative" id="how-it-works">
       <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-[450px_1fr] gap-16 items-center">
-          <div className="space-y-6">
-            <p className="text-primary font-bold text-sm uppercase tracking-[0.2em]">Why choose NUREA</p>
-            <h2 className="text-4xl lg:text-5xl text-foreground font-bold leading-[1.1] tracking-tight">
-              A healthcare marketplace built on <span className="text-primary">trust</span>.
-            </h2>
+        <div className="grid lg:grid-cols-[450px_1fr] gap-12 md:gap-16 items-center">
+          <div className="space-y-6 pl-6 md:pl-8">
+            <p className="text-primary font-bold text-sm uppercase tracking-[0.2em]">{t.landing.features.whyChoose}</p>
+            <h2 
+              className="text-4xl lg:text-5xl text-foreground font-bold leading-[1.1] tracking-tight"
+              dangerouslySetInnerHTML={{ __html: t.landing.features.title }}
+            />
             <p className="text-lg text-muted-foreground leading-relaxed">
-              NUREA isn't just a directory. It's a bridge between you and the best healthcare professionals in the
-              region, focusing on human-centric care and seamless accessibility.
+              {t.landing.features.description}
             </p>
             <div className="pt-4">
               <div className="inline-flex items-center gap-4 p-4 rounded-2xl bg-accent/20 border border-accent/30">
@@ -53,18 +60,19 @@ export function FeaturesSection() {
                     </div>
                   ))}
                 </div>
-                <p className="text-sm font-medium">
-                  Join <span className="text-primary font-bold">2,500+</span> specialists today
-                </p>
+                <p 
+                  className="text-sm font-medium"
+                  dangerouslySetInnerHTML={{ __html: t.landing.features.joinSpecialists }}
+                />
               </div>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8 pl-6 md:pl-8">
             {benefits.map((benefit, idx) => (
               <div
                 key={idx}
-                className="group p-8 rounded-[2rem] bg-card border border-border hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+                className="group p-6 md:p-8 rounded-[2rem] bg-card border border-border hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
               >
                 <div
                   className={`w-14 h-14 rounded-2xl ${benefit.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}

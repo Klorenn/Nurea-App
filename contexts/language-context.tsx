@@ -12,12 +12,19 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("es")
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Load from localStorage
+    setMounted(true)
+    // Set default to Spanish if nothing is saved
     const saved = localStorage.getItem("nurea-language") as Language
     if (saved && (saved === "es" || saved === "en")) {
       setLanguageState(saved)
+    } else {
+      // Ensure Spanish is the default
+      setLanguageState("es")
+      localStorage.setItem("nurea-language", "es")
+      document.documentElement.lang = "es"
     }
   }, [])
 

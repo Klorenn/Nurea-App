@@ -2,19 +2,13 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Globe } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { ThemeToggle } from "@/components/theme-toggle"
+import ThemeSwitch from "@/components/ui/theme-switch"
+import { LanguageSelector } from "@/components/ui/language-selector"
 
 export function Navbar() {
-  const { language, setLanguage } = useLanguage()
+  const { language } = useLanguage()
   const t = useTranslations(language)
 
   return (
@@ -26,48 +20,27 @@ export function Navbar() {
             <span className="ml-2 text-xs text-muted-foreground">.app</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#find-professionals" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              {t.nav.findProfessionals}
-            </a>
-            <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <div className="hidden lg:flex items-center gap-6">
+            <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               {t.nav.howItWorks}
             </a>
-            <a href="#for-professionals" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="#for-professionals" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               {t.nav.forProfessionals}
             </a>
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               {t.nav.pricing}
             </a>
           </div>
 
-          <div className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-sm gap-2">
-                  <Globe className="h-4 w-4" />
-                  {language.toUpperCase()}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setLanguage("es")}>
-                  Español
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLanguage("en")}>
-                  English
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button size="sm" className="text-sm rounded-full bg-primary hover:bg-primary/90" asChild>
-              <Link href="/search">Agendar</Link>
-            </Button>
-            <ThemeToggle />
-            <Button variant="ghost" size="sm" className="text-sm" asChild>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-9 px-4 text-sm hidden sm:inline-flex" asChild>
               <Link href="/login">{t.nav.signIn}</Link>
             </Button>
-            <Button size="sm" className="text-sm rounded-full" asChild>
+            <Button size="sm" className="h-9 px-6 text-sm rounded-full font-medium" asChild>
               <Link href="/signup">{t.nav.getStarted}</Link>
             </Button>
+            <LanguageSelector />
+            <ThemeSwitch />
           </div>
         </div>
       </div>
