@@ -453,11 +453,12 @@ export function LoginForm() {
 /**
  * A glassmorphism-style signup form component with animated labels and Google signup.
  */
-export function SignupForm() {
+export function SignupForm({ initialRole }: { initialRole?: "patient" | "professional" }) {
   const { language } = useLanguage()
   const t = useTranslations(language)
+  const isSpanish = language === "es"
   const router = useRouter()
-  const [role, setRole] = useState<"patient" | "professional" | null>(null)
+  const [role, setRole] = useState<"patient" | "professional" | null>(initialRole || null)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
@@ -469,7 +470,12 @@ export function SignupForm() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!role) return
+    // Si hay initialRole, usar ese. Si no, usar el rol seleccionado
+    const finalRole = initialRole || role
+    if (!finalRole) {
+      setError(isSpanish ? "Por favor, selecciona un tipo de cuenta" : "Please select an account type")
+      return
+    }
 
     setLoading(true)
     setError(null)
@@ -483,7 +489,7 @@ export function SignupForm() {
           password,
           firstName,
           lastName,
-          role,
+          role: finalRole,
         }),
       })
 
@@ -533,67 +539,91 @@ export function SignupForm() {
         </div>
       )}
 
-      <div className="space-y-3">
-        <label className="text-center block text-xs font-semibold text-gray-700 dark:text-teal-300">
-          {t.auth.selectAccountType}
-        </label>
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              setRole("patient")
-            }}
-            className={cn(
-              "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
-              role === "patient"
-                ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
-                : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
-            )}
-          >
-            <div
+      {/* Solo mostrar selector de rol si no hay initialRole */}
+      {!initialRole && (
+        <div className="space-y-3">
+          <label className="text-center block text-xs font-semibold text-gray-700 dark:text-teal-300">
+            {t.auth.selectAccountType}
+          </label>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setRole("patient")
+              }}
               className={cn(
-                "p-1.5 rounded-lg",
-                role === "patient" 
-                  ? "bg-teal-500 text-white" 
-                  : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
+                "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
+                role === "patient"
+                  ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
+                  : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
               )}
             >
-              <User className="h-4 w-4" />
-            </div>
-            <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imPatient}</span>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              setRole("professional")
-            }}
-            className={cn(
-              "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
-              role === "professional"
-                ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
-                : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
-            )}
-          >
-            <div
+              <div
+                className={cn(
+                  "p-1.5 rounded-lg",
+                  role === "patient" 
+                    ? "bg-teal-500 text-white" 
+                    : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
+                )}
+              >
+                <User className="h-4 w-4" />
+              </div>
+              <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imPatient}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setRole("professional")
+              }}
               className={cn(
-                "p-1.5 rounded-lg",
-                role === "professional" 
-                  ? "bg-teal-500 text-white" 
-                  : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
+                "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
+                role === "professional"
+                  ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
+                  : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
               )}
             >
-              <Stethoscope className="h-4 w-4" />
-            </div>
-            <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imProfessional}</span>
-          </button>
+              <div
+                className={cn(
+                  "p-1.5 rounded-lg",
+                  role === "professional" 
+                    ? "bg-teal-500 text-white" 
+                    : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
+                )}
+              >
+                <Stethoscope className="h-4 w-4" />
+              </div>
+              <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imProfessional}</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {role && (
+      {/* Mostrar badge del rol si hay initialRole */}
+      {initialRole && (
+        <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-teal-50 dark:bg-teal-500/20 border border-teal-200 dark:border-teal-500/30">
+          {initialRole === "patient" ? (
+            <>
+              <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <span className="text-sm font-semibold text-teal-700 dark:text-teal-300">
+                {isSpanish ? "Registrándote como Paciente" : "Registering as Patient"}
+              </span>
+            </>
+          ) : (
+            <>
+              <Stethoscope className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+              <span className="text-sm font-semibold text-teal-700 dark:text-teal-300">
+                {isSpanish ? "Registrándote como Profesional" : "Registering as Professional"}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      {(role || initialRole) && (
         <form onSubmit={handleSignUp} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid grid-cols-2 gap-3">
             {/* First Name Input */}

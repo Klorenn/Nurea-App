@@ -6,7 +6,21 @@ export async function POST(request: Request) {
 
   if (!email || !password || !firstName || !lastName || !role) {
     return NextResponse.json(
-      { error: 'Missing required fields' },
+      { 
+        error: 'Missing required fields',
+        message: 'Por favor, completa todos los campos requeridos, incluyendo el tipo de cuenta.'
+      },
+      { status: 400 }
+    )
+  }
+
+  // Validar que el rol sea válido
+  if (!['patient', 'professional'].includes(role)) {
+    return NextResponse.json(
+      { 
+        error: 'Invalid role',
+        message: 'El rol debe ser "patient" o "professional".'
+      },
       { status: 400 }
     )
   }

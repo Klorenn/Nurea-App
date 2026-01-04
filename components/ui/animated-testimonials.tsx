@@ -43,8 +43,10 @@ export const AnimatedTestimonials = ({
     }
   }, [autoplay])
 
-  const randomRotateY = () => {
-    return Math.floor(Math.random() * 21) - 10
+  // Use fixed rotations based on index to avoid hydration mismatch
+  const getRotateY = (index: number) => {
+    const rotations = [-7, -4, -8, 8, 6, -2, 5, -6, 3, -5]
+    return rotations[index % rotations.length]
   }
 
   return (
@@ -60,13 +62,13 @@ export const AnimatedTestimonials = ({
                     opacity: 0,
                     scale: 0.9,
                     z: -100,
-                    rotate: randomRotateY(),
+                    rotate: getRotateY(index),
                   }}
                   animate={{
                     opacity: isActive(index) ? 1 : 0.7,
                     scale: isActive(index) ? 1 : 0.95,
                     z: isActive(index) ? 0 : -100,
-                    rotate: isActive(index) ? 0 : randomRotateY(),
+                    rotate: isActive(index) ? 0 : getRotateY(index),
                     zIndex: isActive(index) ? 999 : testimonials.length + 2 - index,
                     y: isActive(index) ? [0, -80, 0] : 0,
                   }}
@@ -74,7 +76,7 @@ export const AnimatedTestimonials = ({
                     opacity: 0,
                     scale: 0.9,
                     z: 100,
-                    rotate: randomRotateY(),
+                    rotate: getRotateY(index),
                   }}
                   transition={{
                     duration: 0.4,
@@ -82,14 +84,22 @@ export const AnimatedTestimonials = ({
                   }}
                   className="absolute inset-0 origin-bottom"
                 >
-                  <Image
-                    src={testimonial.src || "/placeholder.svg"}
-                    alt={testimonial.name}
-                    width={500}
-                    height={500}
-                    draggable={false}
-                    className="h-full w-full rounded-3xl object-cover object-center"
-                  />
+                  {testimonial.src && testimonial.src !== "/placeholder-avatar.jpg" ? (
+                    <Image
+                      src={testimonial.src}
+                      alt={testimonial.name}
+                      width={500}
+                      height={500}
+                      draggable={false}
+                      className="h-full w-full rounded-3xl object-cover object-center"
+                    />
+                  ) : (
+                    <div className="h-full w-full rounded-3xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                      <div className="text-6xl font-bold text-primary/40">
+                        {testimonial.name.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>

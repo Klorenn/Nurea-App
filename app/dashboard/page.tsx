@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Bell,
   Video,
-  ExternalLink
+  ExternalLink,
+  Search
 } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
@@ -264,6 +265,30 @@ export default function PatientDashboard() {
                         </div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-green-600 transition-colors" />
+                    </div>
+                  </Link>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ x: 4 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <Link href="/search">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer group">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                          <Search className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">
+                            {language === "es" ? "Buscar Profesional" : "Search Professional"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {language === "es" ? "Encuentra especialistas" : "Find specialists"}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-teal-600 transition-colors" />
                     </div>
                   </Link>
                 </motion.div>

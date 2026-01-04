@@ -62,29 +62,55 @@ export async function hasRole(requiredRole: UserRole | UserRole[]): Promise<bool
 
 /**
  * Verifica si el usuario puede acceder a una ruta basada en su rol
+ * 
+ * Reglas estrictas:
+ * - /dashboard/* → solo patient o admin
+ * - /professional/* → solo professional o admin
+ * - /admin/* → solo admin
  */
 export function canAccessRoute(userRole: UserRole, route: string): boolean {
-  // Rutas públicas
-  const publicRoutes = ['/', '/login', '/signup', '/forgot-password', '/verify-email', '/legal']
-  if (publicRoutes.some(route => route.startsWith(route))) {
+  // Rutas públicas (no requieren autenticación)
+  const publicRoutes = [
+    '/',
+    '/login',
+    '/signup',
+    '/auth',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+    '/legal',
+    '/test-supabase',
+    '/search',
+    '/pacientes',
+    '/profesionales',
+    '/professionals',
+  ]
+  
+  if (publicRoutes.some(publicRoute => route === publicRoute || route.startsWith(publicRoute + '/'))) {
     return true
   }
 
-  // Rutas de paciente
-  if (route.startsWith('/dashboard') || route.startsWith('/search') || route.startsWith('/professionals')) {
+  // Rutas de paciente - SOLO patient o admin
+  if (route.startsWith('/dashboard')) {
     return userRole === 'patient' || userRole === 'admin'
   }
 
-  // Rutas de profesional
+  // Rutas de profesional - SOLO professional o admin
   if (route.startsWith('/professional')) {
     return userRole === 'professional' || userRole === 'admin'
   }
 
-  // Rutas de admin
+  // Rutas de admin - SOLO admin
   if (route.startsWith('/admin')) {
     return userRole === 'admin'
   }
 
+  // Rutas de API - se validan en cada endpoint
+  if (route.startsWith('/api')) {
+    return true // Las APIs validan por separado
+  }
+
+  // Por defecto, denegar acceso
   return false
 }
 

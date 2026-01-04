@@ -88,12 +88,31 @@ export const UserDropdown = ({
   const [mounted, setMounted] = React.useState(false)
   const [helpDialogOpen, setHelpDialogOpen] = React.useState(false)
   const [emailCopied, setEmailCopied] = React.useState(false)
+  const [currentStatus, setCurrentStatus] = React.useState<string>(selectedStatus || "online")
+  const [statusLoading, setStatusLoading] = React.useState(false)
   
   React.useEffect(() => {
     setMounted(true)
+    loadUserStatus()
   }, [])
   
   const isDark = mounted && resolvedTheme === "dark"
+
+  // Cargar el estado actual del usuario
+  const loadUserStatus = async () => {
+    if (!authUser) return
+    
+    try {
+      const response = await fetch("/api/user/status")
+      const data = await response.json()
+      
+      if (data.success && data.status) {
+        setCurrentStatus(data.status)
+      }
+    } catch (error) {
+      console.error("Error loading user status:", error)
+    }
+  }
 
   const supportEmail = "soporte@nurea.app"
   const emergencyEmail = "soporte@nurea.app"
@@ -119,7 +138,7 @@ export const UserDropdown = ({
     email: authUser?.email || `${role}@nurea.app`,
     avatar: authUser?.user_metadata?.avatar_url || `/placeholder-user.jpg`,
     initials: authUser?.user_metadata?.first_name?.[0] || (role === "patient" ? "AB" : "EV"),
-    status: "online" as const,
+    status: (currentStatus as "online" | "offline" | "busy") || "online",
   }
 
   const currentUser = user || defaultUser
@@ -195,9 +214,36 @@ export const UserDropdown = ({
     }
   }
 
-  const handleStatusChange = (status: string) => {
-    if (onStatusChange) {
-      onStatusChange(status)
+  const handleStatusChange = async (status: string) => {
+    setStatusLoading(true)
+    
+    try {
+      const response = await fetch("/api/user/status", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || (language === "es" ? "No se pudo actualizar el estado" : "Could not update status"))
+      }
+
+      // Actualizar el estado local
+      setCurrentStatus(status)
+      
+      // Llamar al callback si existe
+      if (onStatusChange) {
+        onStatusChange(status)
+      }
+    } catch (error) {
+      console.error("Error updating status:", error)
+      alert(error instanceof Error ? error.message : (language === "es" 
+        ? "No se pudo actualizar el estado"
+        : "Could not update status"))
+    } finally {
+      setStatusLoading(false)
     }
   }
 
@@ -246,7 +292,7 @@ export const UserDropdown = ({
     profile: [
       { icon: User, label: language === "es" ? "Mi Perfil" : "My Profile", action: "profile", href: "/professional/profile/edit" },
       { icon: Calendar, label: language === "es" ? "Calendario" : "Calendar", action: "calendar", href: "/professional/dashboard" },
-      { icon: MessageSquare, label: t.professional.messages, action: "messages", href: "/professional/messages" },
+      { icon: MessageSquare, label: language === "es" ? "Mensajes" : "Messages", action: "messages", href: "/professional/chat" },
       { icon: Star, label: t.professional.reviews, action: "reviews", href: "/professional/reviews" },
       { icon: TrendingUp, label: language === "es" ? "Ingresos" : "Earnings", action: "earnings", href: "/professional/dashboard" },
     ],
@@ -397,11 +443,24 @@ export const UserDropdown = ({
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="bg-white dark:bg-gray-900/50 backdrop-blur-lg border-teal-200/20 dark:border-teal-800/30">
-                  <DropdownMenuRadioGroup value={selectedStatus} onValueChange={handleStatusChange}>
+                  <DropdownMenuRadioGroup 
+                    value={currentStatus} 
+                    onValueChange={handleStatusChange}
+                  >
                     {menuItems.status.map((status, index) => (
-                      <DropdownMenuRadioItem className="gap-2 hover:bg-teal-50 dark:hover:bg-teal-950/20" key={index} value={status.value}>
+                      <DropdownMenuRadioItem 
+                        className="gap-2 hover:bg-teal-50 dark:hover:bg-teal-950/20 cursor-pointer" 
+                        key={index} 
+                        value={status.value}
+                        disabled={statusLoading}
+                      >
                         <Icon icon={status.icon} className="size-5 text-teal-600 dark:text-teal-400" />
                         {status.label}
+                        {statusLoading && currentStatus === status.value && (
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {language === "es" ? "Actualizando..." : "Updating..."}
+                          </span>
+                        )}
                       </DropdownMenuRadioItem>
                     ))}
                   </DropdownMenuRadioGroup>
@@ -416,10 +475,10 @@ export const UserDropdown = ({
           <DropdownMenuSeparator className="bg-teal-200/20 dark:bg-teal-800/30" />
           <DropdownMenuGroup>{menuItems.settings.map(renderMenuItem)}</DropdownMenuGroup>
 
-          {menuItems.premium && (
+          {role === "professional" && professionalMenuItems.premium && (
             <>
               <DropdownMenuSeparator className="bg-teal-200/20 dark:bg-teal-800/30" />
-              <DropdownMenuGroup>{menuItems.premium.map(renderMenuItem)}</DropdownMenuGroup>
+              <DropdownMenuGroup>{professionalMenuItems.premium.map(renderMenuItem)}</DropdownMenuGroup>
             </>
           )}
 

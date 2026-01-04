@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { DashboardLayout } from "@/components/dashboard-layout"
+import { RouteGuard } from "@/components/auth/route-guard"
 import { HealthChat } from "@/components/messaging/health-chat"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
@@ -141,11 +141,13 @@ function ChatContent() {
 
 export default function ProfessionalChatPage() {
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
-      <Suspense fallback={null}>
-        <ChatContent />
-      </Suspense>
-    </div>
+    <RouteGuard requiredRole="professional">
+      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <Suspense fallback={null}>
+          <ChatContent />
+        </Suspense>
+      </div>
+    </RouteGuard>
   )
 }
 

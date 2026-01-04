@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
-import { StackedCircularFooter } from "@/components/ui/stacked-circular-footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Filter, Video, Home, Grid3x3, List, Search as SearchIcon, Plus, ChevronDown, ChevronUp } from "lucide-react"
@@ -190,30 +189,33 @@ export default function SearchResultsPage() {
     : professionals
 
   return (
-    <main className="min-h-screen relative pt-20">
+    <main className="min-h-screen relative">
       <PaperShaderBackground />
-      <div className="absolute inset-0">
-        <WavyBackground className="absolute inset-0">
-          <div className="relative z-10">
-            <Navbar />
-            <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="absolute inset-0 pointer-events-none">
+        <WavyBackground className="absolute inset-0" />
+      </div>
+      <div className="relative z-10 min-h-screen">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
         {/* Search Bar with Tags */}
         <div className="mb-8 space-y-4">
-          <div className="bg-card rounded-2xl border border-teal-200/30 dark:border-teal-800/30 p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
+          <div className="bg-card rounded-2xl border border-teal-200/30 dark:border-teal-800/30 p-6 sm:p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
               <SearchIcon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               <h2 className="text-lg font-bold text-foreground">
                 {language === "es" ? "Buscar por Especialidad" : "Search by Specialty"}
               </h2>
             </div>
-            <InputWithTags
-              placeholder={language === "es" ? "Buscar por especialidad..." : "Search by specialty..."}
-              predefinedTags={predefinedSpecialties}
-              value={selectedSpecialties}
-              onChange={setSelectedSpecialties}
-              limit={5}
-              allowCustomTags={false}
-            />
+            <div className="mb-4">
+              <InputWithTags
+                placeholder={language === "es" ? "Buscar por especialidad..." : "Search by specialty..."}
+                predefinedTags={predefinedSpecialties}
+                value={selectedSpecialties}
+                onChange={setSelectedSpecialties}
+                limit={5}
+                allowCustomTags={false}
+              />
+            </div>
           </div>
 
           {/* Suggest Missing Professional */}
@@ -246,7 +248,7 @@ export default function SearchResultsPage() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-6 lg:gap-8">
           {/* Filters Sidebar - Collapsible */}
           <aside className="w-full md:w-72 shrink-0">
             <div className="bg-card rounded-2xl border border-border/40 p-4">
@@ -346,8 +348,8 @@ export default function SearchResultsPage() {
           </aside>
 
           {/* Search Results */}
-          <section className="flex-1 space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-4 rounded-2xl border border-border/40 shadow-sm">
+          <section className="flex-1 space-y-6 min-w-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card p-4 sm:p-6 rounded-2xl border border-border/40 shadow-sm">
               <div>
                 <h1 className="text-xl font-semibold">
                   {language === "es" 
@@ -392,8 +394,7 @@ export default function SearchResultsPage() {
             </div>
 
             <div className={cn(
-              "gap-6",
-              view === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "flex flex-col"
+              view === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "flex flex-col gap-6"
             )}>
               {filteredProfessionals.length === 0 ? (
                 <div className="col-span-full text-center py-12">
@@ -427,10 +428,7 @@ export default function SearchResultsPage() {
             </div>
           </section>
         </div>
-            </div>
-            <StackedCircularFooter />
-          </div>
-        </WavyBackground>
+        </div>
       </div>
     </main>
   )

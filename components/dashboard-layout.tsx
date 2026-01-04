@@ -1,7 +1,7 @@
 "use client"
 
-import type * as React from "react"
-import { Calendar, CreditCard, Heart, LayoutDashboard, MessageSquare, Settings, User, LogOut, Bell, Star, MoreVertical } from "lucide-react"
+import * as React from "react"
+import { Calendar, CreditCard, Heart, LayoutDashboard, MessageSquare, Settings, User, LogOut, Bell, Star, HelpCircle, Users, FileText, DollarSign, Headphones } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -17,22 +17,11 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/hooks/use-auth"
 import { UserDropdown } from "@/components/ui/user-dropdown"
-import { ActivityDropdown } from "@/components/ui/activity-dropdown"
+import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import WavyBackground from "@/components/ui/wavy-background"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
 
 export function DashboardLayout({
   children,
@@ -53,14 +42,19 @@ export function DashboardLayout({
           { icon: Heart, label: t.dashboard.favorites, href: "/dashboard/favorites" },
           { icon: MessageSquare, label: t.dashboard.messages, href: "/dashboard/chat" },
           { icon: CreditCard, label: t.dashboard.payments, href: "/dashboard/payments" },
+          { icon: Headphones, label: language === "es" ? "Soporte" : "Support", href: "/dashboard/support" },
+          { icon: HelpCircle, label: language === "es" ? "Ayuda" : "Help", href: "/dashboard/help" },
         ]
       : [
-          { icon: LayoutDashboard, label: language === "es" ? "Panel" : "Dashboard", href: "/professional/dashboard" },
-          { icon: Calendar, label: language === "es" ? "Calendario" : "Calendar", href: "/professional/dashboard" },
-          { icon: MessageSquare, label: t.professional.messages, href: "/professional/chat" },
-          { icon: Star, label: t.professional.reviews, href: "/professional/reviews" },
-          { icon: User, label: language === "es" ? "Perfil Público" : "Public Profile", href: "/professional/profile/edit" },
-          { icon: Settings, label: language === "es" ? "Configuración" : "Settings", href: "/professional/profile/edit" },
+          { icon: LayoutDashboard, label: language === "es" ? "Resumen" : "Overview", href: "/professional/dashboard" },
+          { icon: Calendar, label: language === "es" ? "Agenda" : "Schedule", href: "/professional/schedule" },
+          { icon: Users, label: language === "es" ? "Pacientes" : "Patients", href: "/professional/patients" },
+          { icon: FileText, label: language === "es" ? "Historial Clínico" : "Clinical History", href: "/professional/clinical-history" },
+          { icon: MessageSquare, label: language === "es" ? "Mensajes" : "Messages", href: "/professional/chat" },
+          { icon: DollarSign, label: language === "es" ? "Ingresos" : "Income", href: "/professional/income" },
+          { icon: Headphones, label: language === "es" ? "Soporte" : "Support", href: "/professional/support" },
+          { icon: User, label: language === "es" ? "Perfil Profesional" : "Professional Profile", href: "/professional/profile/edit" },
+          { icon: Settings, label: language === "es" ? "Configuración" : "Settings", href: "/professional/settings" },
         ]
 
   return (
@@ -69,34 +63,14 @@ export function DashboardLayout({
         <Sidebar collapsible="icon" className="border-r border-border bg-card relative overflow-hidden">
           <WavyBackground className="absolute inset-0">
             <div className="relative z-10 h-full flex flex-col">
-              <SidebarHeader className="h-16 flex items-center justify-between px-6 border-b border-border/40 relative z-20">
-                <div className="flex items-center gap-2 overflow-hidden">
+              <SidebarHeader className="h-16 flex items-center gap-3 px-6 border-b border-border/40 relative z-20">
+                <div className="flex items-center gap-2 overflow-hidden flex-1">
                   <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
                     <span className="text-white font-bold text-lg leading-none">N</span>
                   </div>
                   <span className="font-bold text-xl text-primary dark:text-teal-400 group-data-[collapsible=icon]:hidden transition-all duration-300">
                     NUREA<span className="text-xs text-muted-foreground ml-1">.app</span>
                   </span>
-                </div>
-                <div className="group-data-[collapsible=icon]:hidden">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-1.5 rounded-lg hover:bg-accent/50 transition-colors">
-                        <MoreVertical className="h-5 w-5 text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuItem>
-                        <span className="font-semibold">NUREA.app</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        {language === "es" ? "Configuración" : "Settings"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        {language === "es" ? "Ayuda" : "Help"}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
               </SidebarHeader>
               <SidebarContent className="py-4 relative z-20">
@@ -124,10 +98,14 @@ export function DashboardLayout({
         </Sidebar>
 
         <SidebarInset className="flex flex-col relative">
-          <WavyBackground className="absolute inset-0">
-            <header className="h-16 flex items-center justify-between px-6 bg-background/50 backdrop-blur-md border-b border-border/40 sticky top-0 z-30">
+          <PaperShaderBackground />
+          <div className="absolute inset-0">
+            <WavyBackground className="absolute inset-0">
+              <header className="h-16 flex items-center justify-between px-6 bg-background/50 backdrop-blur-md border-b border-border/40 sticky top-0 z-30 relative">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
+                <div className="h-4 w-px bg-border/20" />
+                <span className="font-bold text-lg text-primary dark:text-teal-400">NUREA<span className="text-xs text-muted-foreground ml-1">.app</span></span>
                 <div className="h-4 w-px bg-border/20" />
                 <h1 className="text-lg font-semibold">
                   {role === "patient" 
@@ -139,7 +117,7 @@ export function DashboardLayout({
 
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <ActivityDropdown role={role} />
+                  <NotificationsDropdown role={role} />
                 </div>
                 <UserDropdown
                   role={role}
@@ -163,7 +141,8 @@ export function DashboardLayout({
             <main className="flex-1 p-6 overflow-y-auto relative z-10">
               <div className="max-w-7xl mx-auto space-y-8">{children}</div>
             </main>
-          </WavyBackground>
+              </WavyBackground>
+            </div>
         </SidebarInset>
       </div>
     </SidebarProvider>

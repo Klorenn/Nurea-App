@@ -7,6 +7,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Star, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/language-context"
+import { useTranslations } from "@/lib/i18n"
+import { RatingInteraction } from "@/components/ui/emoji-rating"
 
 interface ReviewModalProps {
   isOpen: boolean
@@ -16,6 +19,8 @@ interface ReviewModalProps {
 }
 
 export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }: ReviewModalProps) {
+  const { language } = useLanguage()
+  const t = useTranslations(language)
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [comment, setComment] = useState("")
@@ -25,7 +30,7 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      setError("Por favor selecciona una calificación")
+      setError(language === "es" ? "Por favor selecciona una calificación" : "Please select a rating")
       return
     }
 
@@ -48,8 +53,10 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: "Error al guardar la reseña" }))
-        throw new Error(errorData.message || "Error al guardar la reseña")
+        const errorData = await response.json().catch(() => ({ 
+          message: language === "es" ? "Error al guardar la reseña" : "Error saving review" 
+        }))
+        throw new Error(errorData.message || (language === "es" ? "Error al guardar la reseña" : "Error saving review"))
       }
 
       // Success
@@ -62,7 +69,7 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
         setError(null)
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al guardar la reseña. Por favor intenta de nuevo.")
+      setError(err instanceof Error ? err.message : (language === "es" ? "Error al guardar la reseña. Por favor intenta de nuevo." : "Error saving review. Please try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -86,8 +93,8 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
               <CheckCircle2 className="h-16 w-16" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-3xl font-bold">¡Gracias!</h3>
-              <p className="text-muted-foreground">Tu reseña ha sido enviada exitosamente.</p>
+              <h3 className="text-3xl font-bold">{t.reviews.thankYou}</h3>
+              <p className="text-muted-foreground">{t.reviews.reviewSubmitted}</p>
             </div>
           </div>
         </DialogContent>
@@ -99,9 +106,9 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg p-0 overflow-hidden border-none shadow-2xl">
         <div className="bg-primary/5 p-8 border-b border-primary/10">
-          <DialogTitle className="text-2xl font-bold text-primary">Califica tu Experiencia</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-primary">{t.reviews.rateExperience}</DialogTitle>
           <DialogDescription className="mt-2 text-muted-foreground">
-            Comparte tu opinión sobre tu consulta con {professionalName}
+            {t.reviews.shareOpinion} {professionalName}
           </DialogDescription>
         </div>
 
@@ -116,53 +123,29 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
           )}
 
           <div className="space-y-4">
-            <Label className="text-lg font-bold">Calificación General</Label>
-            <div className="flex gap-2 justify-center">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoveredRating(star)}
-                  onMouseLeave={() => setHoveredRating(0)}
-                  className="transition-transform hover:scale-110"
-                >
-                  <Star
-                    className={cn(
-                      "h-12 w-12 transition-colors",
-                      star <= (hoveredRating || rating)
-                        ? "fill-primary text-primary"
-                        : "fill-none text-muted-foreground/30",
-                    )}
-                  />
-                </button>
-              ))}
-            </div>
-            {rating > 0 && (
-              <p className="text-center text-sm text-muted-foreground">
-                {rating === 5 && "¡Excelente!"}
-                {rating === 4 && "¡Muy bueno!"}
-                {rating === 3 && "Bueno"}
-                {rating === 2 && "Regular"}
-                {rating === 1 && "Malo"}
-              </p>
-            )}
+            <Label className="text-lg font-bold text-center block">{t.reviews.generalRating}</Label>
+            <RatingInteraction
+              onChange={(value) => setRating(value)}
+              value={rating}
+              disabled={isSubmitting}
+              className="py-4"
+            />
           </div>
 
           <div className="space-y-3">
             <Label htmlFor="comment" className="text-lg font-bold">
-              Tu Reseña (Opcional)
+              {t.reviews.yourReview}
             </Label>
             <Textarea
               id="comment"
-              placeholder="Comparte tu experiencia... ¿Qué te gustó? ¿Cómo podría mejorar?"
+              placeholder={t.reviews.shareExperience}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               className="min-h-[120px] rounded-xl bg-accent/20 border-none resize-none"
               disabled={isSubmitting}
             />
             <p className="text-xs text-muted-foreground">
-              Tu reseña será visible en el perfil del profesional y ayudará a otros pacientes a tomar decisiones informadas.
+              {t.reviews.reviewVisible}
             </p>
           </div>
 
@@ -173,7 +156,7 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
               disabled={isSubmitting}
               className="flex-1 rounded-xl bg-transparent"
             >
-              Cancelar
+              {t.reviews.cancel}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -183,10 +166,10 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
+                  {language === "es" ? "Guardando..." : "Saving..."}
                 </>
               ) : (
-                "Enviar Reseña"
+                t.reviews.submitReview
               )}
             </Button>
           </div>

@@ -6,20 +6,24 @@ import { Testimonials } from "@/components/testimonials"
 import { Pricing } from "@/components/pricing"
 import { FaqSection } from "@/components/faq-section"
 import { CtaSection } from "@/components/cta-section"
-import { Footer } from "@/components/footer"
+import { StackedCircularFooter } from "@/components/ui/stacked-circular-footer"
+import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
-      <Navbar />
-      <HeroSection />
-      <FeaturesSection />
-      <HowItWorks />
-      <Testimonials />
-      <Pricing />
-      <FaqSection />
-      <CtaSection />
-      <Footer />
+    <main className="min-h-screen relative">
+      <PaperShaderBackground />
+      <div className="relative z-10">
+        <Navbar />
+        <HeroSection />
+        <FeaturesSection />
+        <HowItWorks />
+        <Testimonials />
+        <Pricing />
+        <FaqSection />
+        <CtaSection />
+        <StackedCircularFooter />
+      </div>
     </main>
   )
 }

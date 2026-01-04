@@ -1,41 +1,49 @@
+"use client"
+
 import { Search, CalendarDays, MessageSquare, Star } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
+import { useTranslations } from "@/lib/i18n"
 
 export function HowItWorks() {
+  const { language } = useLanguage()
+  const t = useTranslations(language)
+
   const steps = [
     {
       icon: Search,
-      title: "1. Search",
-      description: "Find the right professional by specialty, location, or insurance coverage.",
+      title: t.landing.howItWorks.step1,
+      description: t.landing.howItWorks.step1Desc,
       img: "/search-professionals.jpg",
     },
     {
       icon: CalendarDays,
-      title: "2. Book",
-      description: "Choose a time that works for you and confirm your appointment instantly.",
+      title: t.landing.howItWorks.step2,
+      description: t.landing.howItWorks.step2Desc,
       img: "/booking-calendar.jpg",
     },
     {
       icon: MessageSquare,
-      title: "3. Connect",
-      description: "Use our secure chat for pre-consultation questions or online sessions.",
+      title: t.landing.howItWorks.step3,
+      description: t.landing.howItWorks.step3Desc,
       img: "/secure-chat.jpg",
     },
     {
       icon: Star,
-      title: "4. Review",
-      description: "Share your experience to help our community grow and maintain quality.",
+      title: t.landing.howItWorks.step4,
+      description: t.landing.howItWorks.step4Desc,
       img: "/professional-rating.jpg",
     },
   ]
 
   return (
-    <section className="py-24 px-6 bg-accent/10">
+    <section className="py-16 md:py-20 px-6 bg-transparent relative">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center space-y-4 mb-20">
-          <p className="text-secondary font-bold text-sm uppercase tracking-widest">Simple Process</p>
-          <h2 className="text-4xl lg:text-6xl text-foreground font-bold tracking-tight">
-            How NUREA works for <span className="text-secondary">patients</span>
-          </h2>
+        <div className="text-center space-y-4 mb-12 md:mb-16">
+          <p className="text-secondary font-bold text-sm uppercase tracking-widest">{t.landing.howItWorks.simpleProcess}</p>
+          <h2 
+            className="text-4xl lg:text-6xl text-foreground font-bold tracking-tight"
+            dangerouslySetInnerHTML={{ __html: t.landing.howItWorks.title }}
+          />
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">

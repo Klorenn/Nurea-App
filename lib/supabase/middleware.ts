@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { canAccessRoute } from '@/lib/auth/utils'
+import { validateRouteAccess } from '@/lib/auth/authorization'
 
 export async function updateSession(request: NextRequest) {
   // Skip Supabase if not configured (for development/testing)
@@ -48,6 +49,7 @@ export async function updateSession(request: NextRequest) {
     '/',
     '/login',
     '/signup',
+    '/auth',
     '/forgot-password',
     '/reset-password',
     '/verify-email',
@@ -76,15 +78,34 @@ export async function updateSession(request: NextRequest) {
     // Obtener el rol del usuario desde el perfil
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, blocked')
       .eq('id', user.id)
       .single()
 
     const userRole = (profile?.role as 'patient' | 'professional' | 'admin') || 'patient'
 
-    // Verificar si el usuario puede acceder a esta ruta
+    // Verificar si la cuenta está bloqueada
+    if (profile?.blocked) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'account_blocked')
+      return NextResponse.redirect(url)
+    }
+
+    // Verificar acceso a la ruta con validación estricta
+    const routeValidation = validateRouteAccess(pathname, userRole)
+    
+    if (!routeValidation.allowed) {
+      // Redirigir según el resultado de la validación
+      const redirectPath = routeValidation.redirectTo || 
+        (userRole === 'professional' ? '/professional/dashboard' : '/dashboard')
+      const url = request.nextUrl.clone()
+      url.pathname = redirectPath
+      return NextResponse.redirect(url)
+    }
+
+    // Verificación adicional con canAccessRoute (doble validación)
     if (!canAccessRoute(userRole, pathname)) {
-      // Redirigir según el rol del usuario
       const redirectPath = userRole === 'professional' ? '/professional/dashboard' : '/dashboard'
       const url = request.nextUrl.clone()
       url.pathname = redirectPath
