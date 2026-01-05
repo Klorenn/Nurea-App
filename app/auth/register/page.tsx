@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
@@ -11,7 +11,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const router = useRouter()
@@ -77,6 +77,21 @@ export default function RegisterPage() {
         <SignupForm initialRole={role as "patient" | "professional"} />
       </div>
     </main>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <main className="relative min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Cargando...</p>
+        </div>
+      </main>
+    }>
+      <RegisterPageContent />
+    </Suspense>
   )
 }
 
