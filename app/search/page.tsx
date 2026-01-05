@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Filter, Video, Home, Grid3x3, List, Search as SearchIcon, Plus, ChevronDown, ChevronUp } from "lucide-react"
+import { Filter, Video, Home, Grid3x3, List, Search as SearchIcon, Plus, ChevronDown, ChevronUp, Loader2 } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
@@ -116,7 +116,7 @@ const professionals = [
   },
 ]
 
-export default function SearchResultsPage() {
+function SearchResultsPageContent() {
   const searchParams = useSearchParams()
   const [view, setView] = useState<"grid" | "list">("grid")
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
@@ -431,5 +431,23 @@ export default function SearchResultsPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function SearchResultsPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen relative">
+        <PaperShaderBackground />
+        <div className="absolute inset-0 pointer-events-none">
+          <WavyBackground className="absolute inset-0" />
+        </div>
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </main>
+    }>
+      <SearchResultsPageContent />
+    </Suspense>
   )
 }

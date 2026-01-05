@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { RouteGuard } from "@/components/auth/route-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,7 +24,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 
-export default function ClinicalHistoryPage() {
+function ClinicalHistoryPageContent() {
   const { language } = useLanguage()
   const searchParams = useSearchParams()
   const patientId = searchParams.get("patientId")
@@ -342,6 +342,22 @@ export default function ClinicalHistoryPage() {
         </div>
       </DashboardLayout>
     </RouteGuard>
+  )
+}
+
+export default function ClinicalHistoryPage() {
+  return (
+    <Suspense fallback={
+      <RouteGuard requiredRole="professional">
+        <DashboardLayout role="professional">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </DashboardLayout>
+      </RouteGuard>
+    }>
+      <ClinicalHistoryPageContent />
+    </Suspense>
   )
 }
 

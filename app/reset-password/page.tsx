@@ -1,17 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardTitle } from "@/components/ui/card"
-import { Lock, ArrowLeft, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react"
+import { Lock, ArrowLeft, CheckCircle2, AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { authMessages } from "@/lib/auth/messages"
 
-export default function ResetPasswordPage() {
+function ResetPasswordPageContent() {
   const { language } = useLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -233,6 +233,21 @@ export default function ResetPasswordPage() {
         </CardFooter>
       </Card>
     </main>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center p-4 bg-accent/5">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground">Cargando...</p>
+        </div>
+      </main>
+    }>
+      <ResetPasswordPageContent />
+    </Suspense>
   )
 }
 
