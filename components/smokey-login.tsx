@@ -727,10 +727,16 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                 type="text"
                 id="floating_firstname"
                 label={t.auth.firstName}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                value={fields.firstName.value}
+                onChange={(e) => {
+                  setFieldValue("firstName", e.target.value)
+                }}
+                onBlur={() => setFieldTouched("firstName")}
                 disabled={loading}
                 required
+                error={errors.firstName}
+                touched={touched.firstName}
+                showValidation={true}
               />
               <p className="text-[9px] text-muted-foreground px-1">
                 {language === "es" ? "Tu nombre" : "Your name"}
@@ -743,10 +749,16 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                 type="text"
                 id="floating_lastname"
                 label={t.auth.lastName}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                value={fields.lastName.value}
+                onChange={(e) => {
+                  setFieldValue("lastName", e.target.value)
+                }}
+                onBlur={() => setFieldTouched("lastName")}
                 disabled={loading}
                 required
+                error={errors.lastName}
+                touched={touched.lastName}
+                showValidation={true}
               />
               <p className="text-[9px] text-muted-foreground px-1">
                 {language === "es" ? "Tu apellido" : "Your last name"}
@@ -760,11 +772,17 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               type="email"
               id="floating_email_signup"
               label={t.auth.email}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={fields.email.value}
+              onChange={(e) => {
+                setFieldValue("email", e.target.value)
+              }}
+              onBlur={() => setFieldTouched("email")}
               disabled={loading}
               required
               icon={User}
+              error={errors.email}
+              touched={touched.email}
+              showValidation={true}
             />
             <p className="text-[10px] text-muted-foreground px-1">
               {language === "es" 
@@ -779,12 +797,17 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               type="password"
               id="floating_password_signup"
               label={t.auth.password}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={fields.password.value}
+              onChange={(e) => {
+                setFieldValue("password", e.target.value)
+              }}
+              onBlur={() => setFieldTouched("password")}
               disabled={loading}
               required
-              minLength={6}
               icon={Lock}
+              error={errors.password}
+              touched={touched.password}
+              showValidation={true}
             />
             <p className="text-[10px] text-muted-foreground px-1">
               {language === "es" 
