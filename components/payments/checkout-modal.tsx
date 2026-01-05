@@ -27,6 +27,8 @@ import {
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { Separator } from "@/components/ui/separator"
+import { useFormValidation, validationRules } from "@/hooks/use-form-validation"
+import { cn } from "@/lib/utils"
 
 interface CheckoutModalProps {
   isOpen: boolean
@@ -48,12 +50,105 @@ export function CheckoutModal({ isOpen, onClose, appointment, onSuccess }: Check
   const t = useTranslations(language)
   const isSpanish = language === "es"
   const [loading, setLoading] = useState(false)
-  const [cardNumber, setCardNumber] = useState("")
-  const [cardName, setCardName] = useState("")
-  const [expiry, setExpiry] = useState("")
-  const [cvv, setCvv] = useState("")
+
+  // Validate expiry date (MM/YY format and not expired)
+  const validateExpiryFormat = (value: string): boolean => {
+    if (!value) return false
+    if (!/^\d{2}\/\d{2}$/.test(value)) return false
+    const [month, year] = value.split("/")
+    const expiryDate = new Date(2000 + parseInt(year), parseInt(month) - 1)
+    const now = new Date()
+    return expiryDate >= now
+  }
+
+  // Validate card number (Luhn algorithm)
+  const validateCardNumberLuhn = (value: string): boolean => {
+    const cleaned = value.replace(/\s/g, "")
+    if (cleaned.length < 13 || cleaned.length > 19) return false
+    // Luhn algorithm
+    let sum = 0
+    let isEven = false
+    for (let i = cleaned.length - 1; i >= 0; i--) {
+      let digit = parseInt(cleaned[i])
+      if (isEven) {
+        digit *= 2
+        if (digit > 9) digit -= 9
+      }
+      sum += digit
+      isEven = !isEven
+    }
+    return sum % 10 === 0
+  }
+
+  const {
+    fields,
+    errors,
+    touched,
+    isValid,
+    setFieldValue,
+    setFieldTouched,
+    validateAll,
+  } = useFormValidation({
+    cardNumber: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "El número de tarjeta es requerido" : "Card number is required"),
+        { 
+          test: (v) => {
+            const cleaned = v.replace(/\s/g, "")
+            return cleaned.length >= 13 && cleaned.length <= 19
+          }, 
+          message: isSpanish ? "El número de tarjeta debe tener entre 13 y 19 dígitos" : "Card number must be between 13 and 19 digits" 
+        },
+        { 
+          test: validateCardNumberLuhn, 
+          message: isSpanish ? "Número de tarjeta inválido" : "Invalid card number" 
+        },
+      ],
+    },
+    cardName: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "El nombre en la tarjeta es requerido" : "Name on card is required"),
+        validationRules.minLength(2, isSpanish ? "El nombre debe tener al menos 2 caracteres" : "Name must be at least 2 characters"),
+      ],
+    },
+    expiry: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "La fecha de vencimiento es requerida" : "Expiry date is required"),
+        { 
+          test: (v) => /^\d{2}\/\d{2}$/.test(v), 
+          message: isSpanish ? "Formato inválido. Use MM/YY" : "Invalid format. Use MM/YY" 
+        },
+        { 
+          test: validateExpiryFormat, 
+          message: isSpanish ? "La tarjeta está vencida" : "Card is expired" 
+        },
+      ],
+    },
+    cvv: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "El CVV es requerido" : "CVV is required"),
+        { test: (v) => /^\d{3,4}$/.test(v), message: isSpanish ? "El CVV debe tener 3 o 4 dígitos" : "CVV must be 3 or 4 digits" },
+      ],
+    },
+  })
 
   const handlePayment = async () => {
+    // Mark all fields as touched
+    setFieldTouched("cardNumber")
+    setFieldTouched("cardName")
+    setFieldTouched("expiry")
+    setFieldTouched("cvv")
+
+    // Validate all fields
+    const validationErrors = validateAll()
+    if (Object.keys(validationErrors).length > 0) {
+      return // Don't submit if there are validation errors
+    }
+
     setLoading(true)
     try {
       // Crear payment intent
@@ -64,6 +159,10 @@ export function CheckoutModal({ isOpen, onClose, appointment, onSuccess }: Check
           appointmentId: appointment.id,
           amount: appointment.price,
           currency: "clp",
+          cardNumber: fields.cardNumber.value.replace(/\s/g, ""),
+          cardName: fields.cardName.value,
+          expiry: fields.expiry.value,
+          cvv: fields.cvv.value,
         }),
       })
 
@@ -173,12 +272,28 @@ export function CheckoutModal({ isOpen, onClose, appointment, onSuccess }: Check
                 </Label>
                 <Input
                   id="cardNumber"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value.replace(/\s/g, "").slice(0, 16))}
+                  value={fields.cardNumber.value}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\s/g, "").slice(0, 19)
+                    // Add spaces every 4 digits
+                    const formatted = value.replace(/(.{4})/g, "$1 ").trim()
+                    setFieldValue("cardNumber", formatted)
+                  }}
+                  onBlur={() => setFieldTouched("cardNumber")}
                   placeholder="1234 5678 9012 3456"
-                  className="rounded-xl"
-                  maxLength={19}
+                  className={cn(
+                    "rounded-xl",
+                    touched.cardNumber && errors.cardNumber && "border-red-500 focus-visible:ring-red-500"
+                  )}
+                  maxLength={23}
+                  aria-describedby={touched.cardNumber && errors.cardNumber ? "cardNumber-error" : undefined}
                 />
+                {touched.cardNumber && errors.cardNumber && (
+                  <p id="cardNumber-error" className="text-sm text-red-500 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.cardNumber}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -187,11 +302,22 @@ export function CheckoutModal({ isOpen, onClose, appointment, onSuccess }: Check
                 </Label>
                 <Input
                   id="cardName"
-                  value={cardName}
-                  onChange={(e) => setCardName(e.target.value)}
+                  value={fields.cardName.value}
+                  onChange={(e) => setFieldValue("cardName", e.target.value)}
+                  onBlur={() => setFieldTouched("cardName")}
                   placeholder={isSpanish ? "Juan Pérez" : "John Doe"}
-                  className="rounded-xl"
+                  className={cn(
+                    "rounded-xl",
+                    touched.cardName && errors.cardName && "border-red-500 focus-visible:ring-red-500"
+                  )}
+                  aria-describedby={touched.cardName && errors.cardName ? "cardName-error" : undefined}
                 />
+                {touched.cardName && errors.cardName && (
+                  <p id="cardName-error" className="text-sm text-red-500 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.cardName}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -201,15 +327,27 @@ export function CheckoutModal({ isOpen, onClose, appointment, onSuccess }: Check
                   </Label>
                   <Input
                     id="expiry"
-                    value={expiry}
+                    value={fields.expiry.value}
                     onChange={(e) => {
                       const value = e.target.value.replace(/\D/g, "").slice(0, 4)
-                      setExpiry(value.length === 4 ? `${value.slice(0, 2)}/${value.slice(2)}` : value)
+                      const formatted = value.length === 4 ? `${value.slice(0, 2)}/${value.slice(2)}` : value
+                      setFieldValue("expiry", formatted)
                     }}
+                    onBlur={() => setFieldTouched("expiry")}
                     placeholder="MM/YY"
-                    className="rounded-xl"
+                    className={cn(
+                      "rounded-xl",
+                      touched.expiry && errors.expiry && "border-red-500 focus-visible:ring-red-500"
+                    )}
                     maxLength={5}
+                    aria-describedby={touched.expiry && errors.expiry ? "expiry-error" : undefined}
                   />
+                  {touched.expiry && errors.expiry && (
+                    <p id="expiry-error" className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {errors.expiry}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cvv">
@@ -218,12 +356,23 @@ export function CheckoutModal({ isOpen, onClose, appointment, onSuccess }: Check
                   <Input
                     id="cvv"
                     type="password"
-                    value={cvv}
-                    onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    value={fields.cvv.value}
+                    onChange={(e) => setFieldValue("cvv", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    onBlur={() => setFieldTouched("cvv")}
                     placeholder="123"
-                    className="rounded-xl"
+                    className={cn(
+                      "rounded-xl",
+                      touched.cvv && errors.cvv && "border-red-500 focus-visible:ring-red-500"
+                    )}
                     maxLength={4}
+                    aria-describedby={touched.cvv && errors.cvv ? "cvv-error" : undefined}
                   />
+                  {touched.cvv && errors.cvv && (
+                    <p id="cvv-error" className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {errors.cvv}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -272,7 +421,7 @@ export function CheckoutModal({ isOpen, onClose, appointment, onSuccess }: Check
           </Button>
           <Button
             onClick={handlePayment}
-            disabled={loading || !cardNumber || !cardName || !expiry || !cvv}
+            disabled={loading || !isValid}
             className="w-full sm:w-auto rounded-xl font-bold shadow-lg shadow-primary/20"
           >
             {loading ? (
