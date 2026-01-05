@@ -1,45 +1,73 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Star, Heart, MapPin, Video, Phone, ArrowRight, Search } from "lucide-react"
+import { Star, Heart, MapPin, Video, Phone, ArrowRight, Search, Loader2 } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
+import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
-
-const favorites = [
-  {
-    id: "1",
-    name: "Dr. Sofia Rossi",
-    specialty: "Dermatologist",
-    rating: 4.9,
-    reviews: 127,
-    location: "Las Condes, Santiago",
-    price: 45000,
-    image: "/fav-1.jpg",
-    available: true,
-    consultationTypes: ["Online", "In-person"],
-  },
-  {
-    id: "2",
-    name: "Dr. Lucas Mendez",
-    specialty: "Pediatrician",
-    rating: 4.8,
-    reviews: 89,
-    location: "Providencia, Santiago",
-    price: 50000,
-    image: "/fav-2.jpg",
-    available: true,
-    consultationTypes: ["In-person"],
-  },
-]
 
 export default function FavoritesPage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
+  const { user } = useAuth()
+  const [favorites, setFavorites] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadFavorites = async () => {
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await fetch("/api/favorites")
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.message || "Error al cargar favoritos")
+        }
+
+        setFavorites(data.favorites || [])
+      } catch (err) {
+        console.error("Error loading favorites:", err)
+        setError(err instanceof Error ? err.message : "Error al cargar favoritos")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadFavorites()
+  }, [user])
+
+  const handleRemoveFavorite = async (professionalId: string) => {
+    try {
+      const response = await fetch(`/api/favorites?professionalId=${professionalId}`, {
+        method: "DELETE",
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Error al eliminar favorito")
+      }
+
+      // Remove from local state
+      setFavorites((prev) => prev.filter((fav) => fav.professionalId !== professionalId))
+    } catch (err) {
+      console.error("Error removing favorite:", err)
+      alert(err instanceof Error ? err.message : "Error al eliminar favorito")
+    }
+  }
 
   return (
     <DashboardLayout role="patient">
@@ -62,7 +90,20 @@ export default function FavoritesPage() {
           </Button>
         </div>
 
-        {favorites.length > 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <Card className="border-border/40">
+            <CardContent className="p-12 text-center">
+              <p className="text-destructive font-medium mb-2">{error}</p>
+              <Button className="rounded-xl mt-4" onClick={() => window.location.reload()}>
+                {language === "es" ? "Reintentar" : "Retry"}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : favorites.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2">
             {favorites.map((favorite) => (
               <Card key={favorite.id} className="border-border/40 hover:shadow-lg transition-all group">
@@ -71,7 +112,7 @@ export default function FavoritesPage() {
                     <Avatar className="h-20 w-20 rounded-2xl border-2 border-border/40">
                       <AvatarImage src={favorite.image} />
                       <AvatarFallback>
-                        {favorite.name.split(" ").map(n => n[0]).join("")}
+                        {favorite.name.split(" ").map((n: string) => n[0]).join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-3">
@@ -83,7 +124,12 @@ export default function FavoritesPage() {
                             </h3>
                             <p className="text-sm text-muted-foreground">{favorite.specialty}</p>
                           </div>
-                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="rounded-full h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                            onClick={() => handleRemoveFavorite(favorite.professionalId)}
+                          >
                             <Heart className="h-4 w-4 fill-current" />
                           </Button>
                         </div>
@@ -112,7 +158,7 @@ export default function FavoritesPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {favorite.consultationTypes.map((type) => (
+                          {favorite.consultationTypes.map((type: string) => (
                             <Badge 
                               key={type}
                               variant="outline" 
@@ -131,12 +177,12 @@ export default function FavoritesPage() {
 
                       <div className="flex gap-2 pt-2">
                         <Button className="rounded-xl flex-1" asChild>
-                          <Link href={`/professionals/${favorite.id}`}>
+                          <Link href={`/professionals/${favorite.professionalId}`}>
                             {language === "es" ? "Ver Perfil" : "View Profile"}
                           </Link>
                         </Button>
                         <Button variant="outline" className="rounded-xl" asChild>
-                          <Link href={`/search?professional=${favorite.id}`}>
+                          <Link href={`/search?professional=${favorite.professionalId}`}>
                             {t.dashboard.bookNew}
                           </Link>
                         </Button>

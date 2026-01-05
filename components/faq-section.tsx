@@ -76,20 +76,20 @@ export function FaqSection() {
     <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8 bg-transparent relative">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-10 md:mb-12">
-          <p className="text-sm font-medium text-primary mb-2">{t.landing.faq.questions}</p>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-medium text-primary mb-4">
+          <p className="text-sm font-medium text-white mb-2">{t.landing.faq.questions}</p>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-medium text-white mb-4">
             {t.landing.faq.title}
           </h2>
-          <p className="text-lg text-muted-foreground">{t.landing.faq.subtitle}</p>
+          <p className="text-lg text-white/90">{t.landing.faq.subtitle}</p>
         </div>
 
         <Accordion type="single" collapsible className="w-full">
           {faqs.map((faq, index) => (
             <AccordionItem key={index} value={`item-${index}`}>
-              <AccordionTrigger className="text-base font-medium text-primary hover:text-primary/80">
+              <AccordionTrigger className="text-base font-medium text-white hover:text-white/80">
                 {faq.question}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">{faq.answer}</AccordionContent>
+              <AccordionContent className="text-white/90">{faq.answer}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>

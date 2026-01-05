@@ -39,11 +39,25 @@ export function QuickActions({
   const [newDate, setNewDate] = useState("")
   const [newTime, setNewTime] = useState("")
   const [cancelReason, setCancelReason] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
 
   const handleReschedule = async () => {
-    if (!newDate || !newTime) return
+    if (!newDate || !newTime) {
+      setError(isSpanish ? "Por favor, selecciona una fecha y hora" : "Please select a date and time")
+      return
+    }
+
+    // Validar que la fecha no sea en el pasado
+    const selectedDateTime = new Date(`${newDate}T${newTime}`)
+    if (selectedDateTime < new Date()) {
+      setError(isSpanish ? "La fecha y hora deben ser en el futuro" : "Date and time must be in the future")
+      return
+    }
 
     setLoading(true)
+    setError(null)
+    setSuccess(null)
     try {
       const response = await fetch("/api/appointments/reschedule", {
         method: "POST",
@@ -58,15 +72,22 @@ export function QuickActions({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "No pudimos reagendar la cita")
+        throw new Error(data.message || (isSpanish ? "No pudimos reagendar la cita" : "Could not reschedule appointment"))
       }
 
-      setShowReschedule(false)
-      onReschedule?.()
-      // Mostrar mensaje de éxito
+      setSuccess(isSpanish 
+        ? "Cita reagendada exitosamente. El profesional confirmará la nueva fecha."
+        : "Appointment rescheduled successfully. The professional will confirm the new date.")
+      setNewDate("")
+      setNewTime("")
+      setTimeout(() => {
+        setShowReschedule(false)
+        setSuccess(null)
+        onReschedule?.()
+      }, 2000)
     } catch (error) {
       console.error("Error rescheduling:", error)
-      // Mostrar mensaje de error
+      setError(error instanceof Error ? error.message : (isSpanish ? "Error al reagendar la cita" : "Error rescheduling appointment"))
     } finally {
       setLoading(false)
     }
@@ -74,6 +95,8 @@ export function QuickActions({
 
   const handleCancel = async () => {
     setLoading(true)
+    setError(null)
+    setSuccess(null)
     try {
       const response = await fetch("/api/appointments/cancel", {
         method: "POST",
@@ -87,15 +110,27 @@ export function QuickActions({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || "No pudimos cancelar la cita")
+        throw new Error(data.message || (isSpanish ? "No pudimos cancelar la cita" : "Could not cancel appointment"))
       }
 
-      setShowCancel(false)
-      onCancel?.()
-      // Mostrar mensaje de éxito con información de reembolso si aplica
+      const refundMessage = data.refundAmount > 0
+        ? (isSpanish 
+          ? `Cita cancelada exitosamente. Reembolso de $${data.refundAmount.toLocaleString()} CLP será procesado en 3-5 días hábiles.`
+          : `Appointment cancelled successfully. Refund of $${data.refundAmount.toLocaleString()} CLP will be processed in 3-5 business days.`)
+        : (isSpanish
+          ? "Cita cancelada exitosamente."
+          : "Appointment cancelled successfully.")
+
+      setSuccess(refundMessage || data.message)
+      setCancelReason("")
+      setTimeout(() => {
+        setShowCancel(false)
+        setSuccess(null)
+        onCancel?.()
+      }, 3000)
     } catch (error) {
       console.error("Error cancelling:", error)
-      // Mostrar mensaje de error
+      setError(error instanceof Error ? error.message : (isSpanish ? "Error al cancelar la cita" : "Error cancelling appointment"))
     } finally {
       setLoading(false)
     }
@@ -138,6 +173,18 @@ export function QuickActions({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl p-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 rounded-xl p-3 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                <p className="text-sm">{success}</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>
                 {isSpanish ? "Nueva Fecha" : "New Date"}
@@ -145,7 +192,10 @@ export function QuickActions({
               <Input
                 type="date"
                 value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
+                onChange={(e) => {
+                  setNewDate(e.target.value)
+                  setError(null)
+                }}
                 min={new Date().toISOString().split('T')[0]}
                 className="rounded-xl"
               />
@@ -157,7 +207,10 @@ export function QuickActions({
               <Input
                 type="time"
                 value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
+                onChange={(e) => {
+                  setNewTime(e.target.value)
+                  setError(null)
+                }}
                 className="rounded-xl"
               />
             </div>
@@ -196,6 +249,18 @@ export function QuickActions({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl p-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 rounded-xl p-3 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                <p className="text-sm">{success}</p>
+              </div>
+            )}
             {/* Política de cancelación */}
             <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-xl p-4 space-y-2">
               <div className="flex items-start gap-2">
@@ -231,7 +296,10 @@ export function QuickActions({
               </Label>
               <Textarea
                 value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
+                onChange={(e) => {
+                  setCancelReason(e.target.value)
+                  setError(null)
+                }}
                 placeholder={isSpanish ? "¿Por qué cancelas esta cita?" : "Why are you cancelling this appointment?"}
                 className="rounded-xl min-h-[80px]"
               />

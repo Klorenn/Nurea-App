@@ -43,21 +43,108 @@ export default function PatientDashboard() {
     unreadMessages: 0,
     pendingPayments: 0,
   })
+  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
+  const [favorites, setFavorites] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const loadStats = async () => {
-      if (!user) return
+      if (!user) {
+        setLoading(false)
+        return
+      }
 
       try {
-        // Aquí cargarías datos reales de Supabase
-        // Por ahora usamos datos de ejemplo
+        const today = new Date().toISOString().split('T')[0]
+        
+        // Load today's appointments
+        const todayResponse = await supabase
+          .from('appointments')
+          .select('id', { count: 'exact', head: true })
+          .eq('patient_id', user.id)
+          .eq('appointment_date', today)
+          .in('status', ['confirmed', 'pending'])
+
+        // Load upcoming appointments
+        const upcomingResponse = await supabase
+          .from('appointments')
+          .select('id', { count: 'exact', head: true })
+          .eq('patient_id', user.id)
+          .gte('appointment_date', today)
+          .in('status', ['confirmed', 'pending'])
+
+        // Load unread messages
+        const messagesResponse = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('receiver_id', user.id)
+          .eq('read', false)
+
+        // Load pending payments
+        const paymentsResponse = await supabase
+          .from('payments')
+          .select('id', { count: 'exact', head: true })
+          .eq('patient_id', user.id)
+          .eq('status', 'pending')
+
         setStats({
-          todayAppointments: 1,
-          upcomingAppointments: 2,
-          unreadMessages: 3,
-          pendingPayments: 0,
+          todayAppointments: todayResponse.count || 0,
+          upcomingAppointments: upcomingResponse.count || 0,
+          unreadMessages: messagesResponse.count || 0,
+          pendingPayments: paymentsResponse.count || 0,
         })
+
+        // Load upcoming appointments details
+        const upcomingDetailsResponse = await supabase
+          .from('appointments')
+          .select(`
+            id,
+            appointment_date,
+            appointment_time,
+            type,
+            status,
+            professional:profiles!appointments_professional_id_fkey(
+              id,
+              first_name,
+              last_name,
+              avatar_url
+            )
+          `)
+          .eq('patient_id', user.id)
+          .gte('appointment_date', today)
+          .in('status', ['confirmed', 'pending'])
+          .order('appointment_date', { ascending: true })
+          .order('appointment_time', { ascending: true })
+          .limit(2)
+
+        if (upcomingDetailsResponse.data) {
+          const formatted = upcomingDetailsResponse.data.map((apt: any) => ({
+            id: apt.id,
+            date: new Date(apt.appointment_date).toLocaleDateString(
+              language === "es" ? "es-ES" : "en-US",
+              { year: "numeric", month: "short", day: "numeric" }
+            ),
+            day: new Date(apt.appointment_date).getDate(),
+            month: new Date(apt.appointment_date).toLocaleDateString(
+              language === "es" ? "es-ES" : "en-US",
+              { month: "short" }
+            ).toUpperCase(),
+            time: apt.appointment_time,
+            professional: `Dr. ${apt.professional?.first_name || ''} ${apt.professional?.last_name || ''}`.trim(),
+            specialty: '', // TODO: get from professionals table
+            type: apt.type,
+            status: apt.status,
+            image: apt.professional?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
+          }))
+          setUpcomingAppointments(formatted)
+        }
+
+        // Load favorites
+        const favoritesResponse = await fetch("/api/favorites")
+        if (favoritesResponse.ok) {
+          const favoritesData = await favoritesResponse.json()
+          setFavorites(favoritesData.favorites?.slice(0, 3) || [])
+        }
       } catch (error) {
         console.error("Error loading stats:", error)
       } finally {
@@ -66,7 +153,7 @@ export default function PatientDashboard() {
     }
 
     loadStats()
-  }, [user])
+  }, [user, supabase, language])
 
   const firstName = user?.user_metadata?.first_name || t.dashboard.user
 
@@ -313,103 +400,70 @@ export default function PatientDashboard() {
             </Button>
           </div>
 
-          {stats.upcomingAppointments > 0 ? (
+          {upcomingAppointments.length > 0 ? (
             <div className="grid gap-4">
-              <motion.div
-                variants={cardVariants}
-                whileHover={{ scale: 1.01, y: -2 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <Card className="border-border/40 hover:shadow-md transition-all group">
-                  <CardContent className="p-5">
-                    <div className="flex flex-col sm:flex-row justify-between gap-4">
-                      <div className="flex gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-accent/20 flex flex-col items-center justify-center text-primary font-bold overflow-hidden shrink-0">
-                          <div className="bg-primary w-full text-[10px] text-white py-0.5 text-center uppercase tracking-tighter">
-                            {t.dashboard.oct}
-                          </div>
-                          <div className="text-2xl pt-1 leading-none tracking-tighter">05</div>
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
-                            {t.dashboard.drElenaVargas}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {t.dashboard.clinicalPsychologist} • {t.dashboard.onlineSession}
-                          </p>
-                          <div className="flex flex-wrap gap-4 pt-2">
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock className="h-3.5 w-3.5" /> 14:30 - 15:30
+              {upcomingAppointments.map((apt, index) => (
+                <motion.div
+                  key={apt.id}
+                  variants={cardVariants}
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <Card className="border-border/40 hover:shadow-md transition-all group">
+                    <CardContent className="p-5">
+                      <div className="flex flex-col sm:flex-row justify-between gap-4">
+                        <div className="flex gap-4">
+                          <div className="w-16 h-16 rounded-2xl bg-accent/20 flex flex-col items-center justify-center text-primary font-bold overflow-hidden shrink-0">
+                            <div className="bg-primary w-full text-[10px] text-white py-0.5 text-center uppercase tracking-tighter">
+                              {apt.month}
                             </div>
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Video className="h-3.5 w-3.5" /> {t.dashboard.secureLink}
-                            </div>
+                            <div className="text-2xl pt-1 leading-none tracking-tighter">{apt.day}</div>
                           </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                          <Button variant="outline" className="rounded-xl bg-transparent" asChild>
-                            <Link href="/dashboard/appointments">
-                              {t.dashboard.joinMeeting}
-                            </Link>
-                          </Button>
-                        </motion.div>
-                        <Button variant="ghost" size="icon" className="rounded-xl" asChild>
-                          <Link href="/dashboard/appointments">
-                            <ChevronRight className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div
-                variants={cardVariants}
-                whileHover={{ scale: 1.01, y: -2 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <Card className="border-border/40 hover:shadow-md transition-all opacity-90 group">
-                  <CardContent className="p-5">
-                    <div className="flex flex-col sm:flex-row justify-between gap-4">
-                      <div className="flex gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-accent/20 flex flex-col items-center justify-center text-muted-foreground font-bold overflow-hidden shrink-0">
-                          <div className="bg-muted w-full text-[10px] text-muted-foreground py-0.5 text-center uppercase tracking-tighter">
-                            {t.dashboard.oct}
-                          </div>
-                          <div className="text-2xl pt-1 leading-none tracking-tighter">12</div>
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="font-bold text-lg group-hover:text-secondary transition-colors">
-                            {t.dashboard.drMarcoPolo}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {t.dashboard.cardiologist} • {t.dashboard.inPersonVisit}
-                          </p>
-                          <div className="flex flex-wrap gap-4 pt-2">
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock className="h-3.5 w-3.5" /> 09:00 - 09:45
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <MapPin className="h-3.5 w-3.5" /> {t.dashboard.lasCondesSantiago}
+                          <div className="space-y-1">
+                            <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
+                              {apt.professional}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {apt.specialty || (language === "es" ? "Profesional" : "Professional")} • {apt.type === "online" ? t.dashboard.onlineSession : t.dashboard.inPersonVisit}
+                            </p>
+                            <div className="flex flex-wrap gap-4 pt-2">
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Clock className="h-3.5 w-3.5" /> {apt.time}
+                              </div>
+                              {apt.type === "online" ? (
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <Video className="h-3.5 w-3.5" /> {t.dashboard.secureLink}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <MapPin className="h-3.5 w-3.5" /> {language === "es" ? "Presencial" : "In-person"}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-2">
+                          {apt.type === "online" && (
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                              <Button variant="outline" className="rounded-xl bg-transparent" asChild>
+                                <Link href="/dashboard/appointments">
+                                  {t.dashboard.joinMeeting}
+                                </Link>
+                              </Button>
+                            </motion.div>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className="rounded-lg h-9 px-4 border-primary/20 bg-primary/5 text-primary"
+                          >
+                            {apt.status === "confirmed" ? t.dashboard.confirmed : t.dashboard.pending}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className="rounded-lg h-9 px-4 border-secondary/20 bg-secondary/5 text-secondary"
-                        >
-                          {t.dashboard.confirmed}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
           ) : (
             <motion.div variants={cardVariants}>
@@ -498,45 +552,46 @@ export default function PatientDashboard() {
           </div>
           
           <div className="grid gap-4 md:grid-cols-2">
-            {[
-              { name: t.dashboard.drSofiaRossi, specialty: t.dashboard.dermatologist, rating: "4.9" },
-              { name: t.dashboard.drLucasMendez, specialty: t.dashboard.pediatrician, rating: "4.8" },
-            ].map((specialist, i) => (
-              <motion.div
-                key={i}
-                variants={cardVariants}
-                whileHover={{ scale: 1.02, x: 4 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <Card className="border-border/40 hover:shadow-sm transition-all">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-12 w-12 rounded-xl border border-border/40">
-                        <AvatarImage src={`/fav-${i + 1}.jpg?height=48&width=48&query=doctor-${i + 1}`} />
-                        <AvatarFallback>DR</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold truncate">
-                          {specialist.name}
-                        </h4>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {specialist.specialty}
-                        </p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star className="h-3 w-3 fill-primary text-primary" />
-                          <span className="text-xs font-bold">{specialist.rating}</span>
+            {favorites.length > 0 ? (
+              favorites.map((favorite) => (
+                <motion.div
+                  key={favorite.id}
+                  variants={cardVariants}
+                  whileHover={{ scale: 1.02, x: 4 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                >
+                  <Card className="border-border/40 hover:shadow-sm transition-all">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-12 w-12 rounded-xl border border-border/40">
+                          <AvatarImage src={favorite.image} />
+                          <AvatarFallback>
+                            {favorite.name.split(" ").map((n: string) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold truncate">
+                            {favorite.name}
+                          </h4>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {favorite.specialty}
+                          </p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Star className="h-3 w-3 fill-primary text-primary" />
+                            <span className="text-xs font-bold">{favorite.rating}</span>
+                          </div>
                         </div>
+                        <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" asChild>
+                          <Link href={`/professionals/${favorite.professionalId}`}>
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" asChild>
-                        <Link href="/dashboard/favorites">
-                          <ArrowRight className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))
+            ) : null}
             <motion.div
               variants={cardVariants}
               whileHover={{ scale: 1.02 }}

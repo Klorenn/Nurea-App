@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Mail, Phone, Calendar, MapPin, Save, Edit2 } from "lucide-react"
+import { User, Mail, Phone, Calendar, MapPin, Save, Edit2, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
@@ -17,29 +17,134 @@ export default function ProfilePage() {
   const t = useTranslations(language)
   const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingProfile, setLoadingProfile] = useState(true)
 
   const [formData, setFormData] = useState({
-    firstName: user?.user_metadata?.first_name || "",
-    lastName: user?.user_metadata?.last_name || "",
-    email: user?.email || "",
+    firstName: "",
+    lastName: "",
+    email: "",
     phone: "",
     dateOfBirth: "",
     address: "",
   })
 
+  // Cargar datos del perfil desde la API
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return
+      
+      setLoadingProfile(true)
+      try {
+        const response = await fetch("/api/user/profile")
+        const data = await response.json()
+        
+        if (data.profile) {
+          setFormData({
+            firstName: data.profile.first_name || user.user_metadata?.first_name || "",
+            lastName: data.profile.last_name || user.user_metadata?.last_name || "",
+            email: user.email || "",
+            phone: data.profile.phone || "",
+            dateOfBirth: data.profile.date_of_birth || "",
+            address: data.profile.address || "",
+          })
+        } else {
+          // Si no hay perfil, usar datos de user_metadata
+          setFormData({
+            firstName: user.user_metadata?.first_name || "",
+            lastName: user.user_metadata?.last_name || "",
+            email: user.email || "",
+            phone: "",
+            dateOfBirth: "",
+            address: "",
+          })
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error)
+        // Fallback a user_metadata
+        setFormData({
+          firstName: user.user_metadata?.first_name || "",
+          lastName: user.user_metadata?.last_name || "",
+          email: user.email || "",
+          phone: "",
+          dateOfBirth: "",
+          address: "",
+        })
+      } finally {
+        setLoadingProfile(false)
+      }
+    }
+
+    if (user) {
+      loadProfile()
+    }
+  }, [user])
+
   const handleSave = async () => {
     setLoading(true)
-    // Aquí guardarías los datos en Supabase
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+          date_of_birth: formData.dateOfBirth,
+          address: formData.address,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || (language === "es" ? "Error al guardar el perfil" : "Error saving profile"))
+      }
+
+      setSuccess(language === "es" ? "Perfil actualizado correctamente" : "Profile updated successfully")
+      setError(null)
       setIsEditing(false)
-    }, 1000)
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (error) {
+      console.error("Error saving profile:", error)
+      setError(error instanceof Error ? error.message : (language === "es" ? "No se pudo guardar el perfil" : "Could not save profile"))
+      setSuccess(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loadingProfile) {
+    return (
+      <DashboardLayout role="patient">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
     <DashboardLayout role="patient">
-      <div className="space-y-8">
+      <div className="space-y-8 pb-8">
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
+            <div className="h-5 w-5 text-red-500 shrink-0 mt-0.5">⚠️</div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
+            </div>
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-4 flex items-start gap-3">
+            <div className="h-5 w-5 text-green-500 shrink-0 mt-0.5">✓</div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-green-700 dark:text-green-300">{success}</p>
+            </div>
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
@@ -75,7 +180,7 @@ export default function ProfilePage() {
                 <Avatar className="h-32 w-32 rounded-2xl border-2 border-border/40">
                   <AvatarImage src={user?.user_metadata?.avatar_url} />
                   <AvatarFallback className="text-2xl">
-                    {formData.firstName[0]}{formData.lastName[0]}
+                    {formData.firstName?.[0] || ""}{formData.lastName?.[0] || ""}
                   </AvatarFallback>
                 </Avatar>
                 {isEditing && (

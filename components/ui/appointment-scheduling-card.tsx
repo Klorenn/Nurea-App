@@ -2,11 +2,13 @@
 
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
-import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, Video, Star, CheckCircle2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, Video, Star, CheckCircle2, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
+import { generateWeekSchedule } from "@/lib/utils/schedule-generator"
+import { formatShortDate, parseShortDate } from "@/lib/utils/date-helpers"
 
 interface TimeSlot {
   time: string
@@ -31,6 +33,7 @@ interface Professional {
   imageUrl: string
   price: number
   consultationType?: "online" | "in-person" | "both"
+  availability?: any
 }
 
 interface AppointmentSchedulingProps {
@@ -110,7 +113,7 @@ const defaultWeekSchedule: DaySchedule[] = [
 
 export function AppointmentSchedulingCard({
   professional,
-  weekSchedule = defaultWeekSchedule,
+  weekSchedule: propWeekSchedule,
   onTimeSlotSelect,
   onWeekChange,
   onConfirm,
@@ -119,27 +122,114 @@ export function AppointmentSchedulingCard({
 }: AppointmentSchedulingProps) {
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const [weekRange] = useState("Ene 15 - Ene 19")
+  const [currentWeekStart, setCurrentWeekStart] = useState(new Date())
+  const [weekSchedule, setWeekSchedule] = useState<DaySchedule[]>(propWeekSchedule || defaultWeekSchedule)
+  const [loadingSchedule, setLoadingSchedule] = useState(!propWeekSchedule)
   const [showConfirmationView, setShowConfirmationView] = useState(false)
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ day: string; time: string; dayName: string } | null>(null)
   const [selectedType, setSelectedType] = useState<"online" | "in-person">("online")
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
   const shouldReduceMotion = useReducedMotion()
   const shouldAnimate = enableAnimations && !shouldReduceMotion
 
-  const handleTimeSlotClick = (day: string, time: string) => {
-    const dayInfo = weekSchedule.find((d) => d.date === day)
-    setSelectedTimeSlot({
-      day,
-      time,
-      dayName: dayInfo?.dayName || day,
-    })
-    // Si solo hay un tipo de consulta, confirmar directamente
-    if (professional.consultationType === "online" || professional.consultationType === "in-person") {
-      setSelectedType(professional.consultationType)
-      handleConfirmBooking(day, time, professional.consultationType)
-    } else {
-      setShowConfirmationView(true)
-      onTimeSlotSelect?.(day, time)
+  // Cargar horarios reales si no se proporcionaron
+  useEffect(() => {
+    if (propWeekSchedule) {
+      setWeekSchedule(propWeekSchedule)
+      return
+    }
+
+    const loadSchedule = async () => {
+      if (!professional.availability) {
+        setLoadingSchedule(false)
+        return
+      }
+
+      setLoadingSchedule(true)
+      try {
+        // Obtener citas existentes del profesional para esta semana
+        const startDate = new Date(currentWeekStart)
+        startDate.setHours(0, 0, 0, 0)
+        const endDate = new Date(startDate)
+        endDate.setDate(endDate.getDate() + 7)
+
+        const response = await fetch(
+          `/api/professionals/${professional.id}/appointments?dateFrom=${startDate.toISOString().split('T')[0]}&dateTo=${endDate.toISOString().split('T')[0]}`
+        )
+        
+        let existingAppointments: any[] = []
+        if (response.ok) {
+          const data = await response.json()
+          existingAppointments = data.appointments || []
+        }
+
+        // Generar horarios reales
+        const schedule = generateWeekSchedule(
+          professional.availability || {},
+          existingAppointments,
+          currentWeekStart,
+          language
+        )
+
+        setWeekSchedule(schedule)
+      } catch (error) {
+        console.error("Error loading schedule:", error)
+        // En caso de error, usar horarios por defecto
+        setWeekSchedule(defaultWeekSchedule)
+      } finally {
+        setLoadingSchedule(false)
+      }
+    }
+
+    loadSchedule()
+  }, [professional.id, professional.availability, currentWeekStart, language, propWeekSchedule])
+
+  // Calcular rango de semana para mostrar
+  const weekRange = weekSchedule.length > 0
+    ? `${weekSchedule[0].date} - ${weekSchedule[weekSchedule.length - 1].date}`
+    : ""
+
+  const handleTimeSlotClick = async (day: string, time: string) => {
+    setAvailabilityError(null)
+    setCheckingAvailability(true)
+
+    try {
+      // Parsear fecha usando helper
+      const dateISO = parseShortDate(day, language)
+
+      // Verificar disponibilidad en tiempo real
+      const response = await fetch(
+        `/api/appointments/check-availability?professionalId=${professional.id}&date=${dateISO}&time=${time}`
+      )
+      const data = await response.json()
+
+      if (!response.ok || !data.available) {
+        setAvailabilityError(data.message || (language === "es" ? "Este horario no está disponible" : "This time slot is not available"))
+        setCheckingAvailability(false)
+        return
+      }
+
+      const dayInfo = weekSchedule.find((d) => d.date === day)
+      setSelectedTimeSlot({
+        day,
+        time,
+        dayName: dayInfo?.dayName || day,
+      })
+      
+      // Si solo hay un tipo de consulta, confirmar directamente
+      if (professional.consultationType === "online" || professional.consultationType === "in-person") {
+        setSelectedType(professional.consultationType)
+        handleConfirmBooking(day, time, professional.consultationType)
+      } else {
+        setShowConfirmationView(true)
+        onTimeSlotSelect?.(day, time)
+      }
+    } catch (error) {
+      console.error("Error checking availability:", error)
+      setAvailabilityError(language === "es" ? "Error al verificar disponibilidad" : "Error checking availability")
+    } finally {
+      setCheckingAvailability(false)
     }
   }
 
@@ -161,6 +251,13 @@ export function AppointmentSchedulingCard({
   }
 
   const handleWeekNavigation = (direction: "prev" | "next") => {
+    const newWeekStart = new Date(currentWeekStart)
+    if (direction === "prev") {
+      newWeekStart.setDate(newWeekStart.getDate() - 7)
+    } else {
+      newWeekStart.setDate(newWeekStart.getDate() + 7)
+    }
+    setCurrentWeekStart(newWeekStart)
     onWeekChange?.(direction)
   }
 
@@ -301,9 +398,31 @@ export function AppointmentSchedulingCard({
             </div>
           </motion.div>
 
+          {/* Loading State */}
+          {loadingSchedule && (
+            <motion.div variants={shouldAnimate ? itemVariants : {}} className="px-6 pb-6 flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-teal-600 dark:text-teal-400" />
+              <span className="ml-2 text-sm text-muted-foreground">
+                {language === "es" ? "Cargando horarios..." : "Loading schedule..."}
+              </span>
+            </motion.div>
+          )}
+
+          {/* Availability Error */}
+          {availabilityError && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mx-6 mb-4 p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-sm"
+            >
+              {availabilityError}
+            </motion.div>
+          )}
+
           {/* Daily Schedule */}
-          <motion.div variants={shouldAnimate ? itemVariants : {}} className="px-6 pb-6 space-y-4">
-            {weekSchedule.map((day) => (
+          {!loadingSchedule && (
+            <motion.div variants={shouldAnimate ? itemVariants : {}} className="px-6 pb-6 space-y-4">
+              {weekSchedule.map((day) => (
               <motion.div key={day.date} variants={shouldAnimate ? itemVariants : {}} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-foreground">
@@ -327,8 +446,8 @@ export function AppointmentSchedulingCard({
                         variants={shouldAnimate ? timeSlotVariants : {}}
                         whileHover={shouldAnimate && slot.available ? { scale: 1.05, y: -2 } : {}}
                         whileTap={shouldAnimate && slot.available ? { scale: 0.98 } : {}}
-                        onClick={() => slot.available && handleTimeSlotClick(day.date, slot.time)}
-                        disabled={!slot.available}
+                        onClick={() => slot.available && !checkingAvailability && handleTimeSlotClick(day.date, slot.time)}
+                        disabled={!slot.available || checkingAvailability}
                         className={cn(
                           "px-3 py-1.5 text-sm rounded-lg border transition-colors",
                           slot.available
@@ -342,8 +461,9 @@ export function AppointmentSchedulingCard({
                   </motion.div>
                 )}
               </motion.div>
-            ))}
-          </motion.div>
+              ))}
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Confirmation View */}

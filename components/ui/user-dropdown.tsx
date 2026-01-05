@@ -254,11 +254,11 @@ export const UserDropdown = ({
       { value: "offline", icon: "solar:moon-sleep-line-duotone", label: language === "es" ? "Aparecer como desconectado" : "Appear Offline" },
     ],
     profile: [
-      { icon: User, label: language === "es" ? "Mi Perfil" : "My Profile", action: "profile", href: "/dashboard" },
-      { icon: Calendar, label: t.dashboard.appointments, action: "appointments", href: "/dashboard/appointments" },
-      { icon: Heart, label: t.dashboard.favorites, action: "favorites", href: "/dashboard/favorites" },
-      { icon: MessageSquare, label: t.dashboard.messages, action: "messages", href: "/dashboard/chat" },
-      { icon: CreditCard, label: t.dashboard.payments, action: "payments", href: "/dashboard/payments" },
+      { icon: User, label: language === "es" ? "Mi Perfil" : "My Profile", action: "profile" },
+      { icon: Calendar, label: t.dashboard.appointments, action: "appointments" },
+      { icon: Heart, label: t.dashboard.favorites, action: "favorites" },
+      { icon: MessageSquare, label: t.dashboard.messages, action: "messages" },
+      { icon: CreditCard, label: t.dashboard.payments, action: "payments" },
     ],
     settings: [
       { icon: Settings, label: language === "es" ? "Configuración" : "Settings", action: "settings" },
@@ -290,14 +290,14 @@ export const UserDropdown = ({
       { value: "offline", icon: "solar:moon-sleep-line-duotone", label: language === "es" ? "No disponible" : "Unavailable" },
     ],
     profile: [
-      { icon: User, label: language === "es" ? "Mi Perfil" : "My Profile", action: "profile", href: "/professional/profile/edit" },
-      { icon: Calendar, label: language === "es" ? "Calendario" : "Calendar", action: "calendar", href: "/professional/dashboard" },
-      { icon: MessageSquare, label: language === "es" ? "Mensajes" : "Messages", action: "messages", href: "/professional/chat" },
-      { icon: Star, label: t.professional.reviews, action: "reviews", href: "/professional/reviews" },
-      { icon: TrendingUp, label: language === "es" ? "Ingresos" : "Earnings", action: "earnings", href: "/professional/dashboard" },
+      { icon: User, label: language === "es" ? "Mi Perfil" : "My Profile", action: "profile" },
+      { icon: Calendar, label: language === "es" ? "Calendario" : "Calendar", action: "calendar" },
+      { icon: MessageSquare, label: language === "es" ? "Mensajes" : "Messages", action: "messages" },
+      { icon: Star, label: t.professional.reviews, action: "reviews" },
+      { icon: TrendingUp, label: language === "es" ? "Ingresos" : "Earnings", action: "earnings" },
     ],
     settings: [
-      { icon: Settings, label: language === "es" ? "Configuración" : "Settings", action: "settings", href: "/professional/profile/edit" },
+      { icon: Settings, label: language === "es" ? "Configuración" : "Settings", action: "settings" },
       { icon: Bell, label: language === "es" ? "Notificaciones" : "Notifications", action: "notifications" },
       { icon: Shield, label: language === "es" ? "Estado de Suscripción" : "Subscription Status", action: "subscription" },
       { 

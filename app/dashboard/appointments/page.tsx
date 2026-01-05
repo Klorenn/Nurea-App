@@ -11,39 +11,16 @@ import { ReviewModal } from "@/components/review-modal"
 import { QuickActions } from "@/components/appointments/quick-actions"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
+import { useAuth } from "@/hooks/use-auth"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Loader2 } from "lucide-react"
 import Link from "next/link"
-
-const appointments = [
-  {
-    id: "NR-99231",
-    professional: "Dr. Elena Vargas",
-    specialty: "Clinical Psychologist",
-    date: "Oct 5, 2024",
-    time: "14:30",
-    mode: "Online Video",
-    status: "confirmed",
-    paymentStatus: "paid",
-    price: 45000,
-    image: "/prof-1.jpg",
-  },
-  {
-    id: "NR-98112",
-    professional: "Dr. Marco Polo",
-    specialty: "Cardiologist",
-    date: "Sep 28, 2024",
-    time: "10:00",
-    mode: "In-person",
-    status: "completed",
-    paymentStatus: "paid",
-    price: 55000,
-    image: "/prof-2.jpg",
-  },
-]
 
 export default function AppointmentsPage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
+  const { user } = useAuth()
+  const [appointments, setAppointments] = useState<any[]>([])
   const [reviewModal, setReviewModal] = useState<{
     isOpen: boolean
     professionalName: string
@@ -53,7 +30,65 @@ export default function AppointmentsPage() {
     professionalName: "",
     appointmentId: "",
   })
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadAppointments = async () => {
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await fetch("/api/appointments/history")
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.message || "Error al cargar citas")
+        }
+
+        // Format appointments
+        const formattedAppointments = (data.appointments || []).map((apt: any) => {
+          const professional = apt.professional
+          const professionalName = professional 
+            ? `${professional.first_name || ''} ${professional.last_name || ''}`.trim()
+            : 'Profesional'
+          
+          return {
+            id: apt.id,
+            professional: `Dr. ${professionalName}`,
+            specialty: apt.specialty || '',
+            date: new Date(apt.appointment_date).toLocaleDateString(
+              language === "es" ? "es-ES" : "en-US",
+              { year: "numeric", month: "short", day: "numeric" }
+            ),
+            time: apt.appointment_time,
+            mode: apt.type === "online" ? "Online Video" : "In-person",
+            status: apt.status,
+            paymentStatus: apt.payment_status,
+            price: apt.price || 0,
+            image: professional?.avatar_url || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop",
+            professionalId: apt.professional_id,
+            appointmentDate: apt.appointment_date,
+            appointmentTime: apt.appointment_time,
+            type: apt.type,
+          }
+        })
+
+        setAppointments(formattedAppointments)
+      } catch (err) {
+        console.error("Error loading appointments:", err)
+        setError(err instanceof Error ? err.message : "Error al cargar citas")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadAppointments()
+  }, [user, language])
 
   const openReviewModal = (professionalName: string, appointmentId: string) => {
     setReviewModal({
@@ -85,9 +120,9 @@ export default function AppointmentsPage() {
     }
   }
 
-  const upcomingAppointments = appointments.filter(a => a.status === "confirmed" || a.status === "pending")
-  const completedAppointments = appointments.filter(a => a.status === "completed")
-  const cancelledAppointments = appointments.filter(a => a.status === "cancelled")
+  const upcomingAppointments = appointments.filter((a: any) => a.status === "confirmed" || a.status === "pending")
+  const completedAppointments = appointments.filter((a: any) => a.status === "completed")
+  const cancelledAppointments = appointments.filter((a: any) => a.status === "cancelled")
 
   const getPaymentStatusBadge = (status: string) => {
     const isSpanish = language === "es"
@@ -177,8 +212,21 @@ export default function AppointmentsPage() {
 
           {/* Upcoming Appointments */}
           <TabsContent value="upcoming" className="space-y-4 mt-6">
-            {upcomingAppointments.length > 0 ? (
-              upcomingAppointments.map((appointment) => (
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : error ? (
+              <Card className="border-border/40">
+                <CardContent className="p-12 text-center">
+                  <p className="text-destructive font-medium mb-2">{error}</p>
+                  <Button className="rounded-xl mt-4" onClick={() => window.location.reload()}>
+                    {language === "es" ? "Reintentar" : "Retry"}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : upcomingAppointments.length > 0 ? (
+              upcomingAppointments.map((appointment: any) => (
                 <Card key={appointment.id} className="border-border/40 hover:shadow-md transition-all">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row gap-6">
@@ -287,8 +335,12 @@ export default function AppointmentsPage() {
 
           {/* Completed Appointments */}
           <TabsContent value="completed" className="space-y-4 mt-6">
-            {completedAppointments.length > 0 ? (
-              completedAppointments.map((appointment) => (
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : completedAppointments.length > 0 ? (
+              completedAppointments.map((appointment: any) => (
                 <Card key={appointment.id} className="border-border/40 hover:shadow-md transition-all">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row gap-6">
@@ -359,8 +411,12 @@ export default function AppointmentsPage() {
 
           {/* Cancelled Appointments */}
           <TabsContent value="cancelled" className="space-y-4 mt-6">
-            {cancelledAppointments.length > 0 ? (
-              cancelledAppointments.map((appointment) => (
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : cancelledAppointments.length > 0 ? (
+              cancelledAppointments.map((appointment: any) => (
                 <Card key={appointment.id} className="border-border/40 opacity-75">
                   <CardContent className="p-6">
                     <div className="flex flex-col lg:flex-row gap-6">

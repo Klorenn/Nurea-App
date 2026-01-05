@@ -27,7 +27,7 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout role="patient">
-      <div className="space-y-8">
+      <div className="space-y-8 pb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             {t.dashboard.settings}

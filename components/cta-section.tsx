@@ -2,6 +2,7 @@
 
 import { LuminousCTAButton } from "@/components/luminous-cta-button"
 import Image from "next/image"
+import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 
@@ -30,8 +31,13 @@ export function CtaSection() {
                 {t.landing.cta.subtitle}
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <LuminousCTAButton variant="navy" text={t.landing.cta.startFreeTrial} className="px-8 py-4 text-base" />
-                <button className="px-8 py-4 text-primary font-medium border-2 border-primary rounded-full hover:bg-primary hover:text-background transition-colors duration-300">
+                <Link href="/register">
+                  <LuminousCTAButton variant="navy" text={t.landing.cta.startFreeTrial} className="px-8 py-4 text-base" />
+                </Link>
+                <button 
+                  disabled
+                  className="px-8 py-4 text-primary/60 font-medium border-2 border-primary/30 rounded-full cursor-not-allowed opacity-60"
+                >
                   {t.landing.cta.watchDemo}
                 </button>
               </div>

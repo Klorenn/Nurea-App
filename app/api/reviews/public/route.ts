@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
+    const professionalId = searchParams.get('professionalId')
 
-    // Get public reviews with patient information
-    const { data: reviews, error } = await supabase
+    // Build query
+    let query = supabase
       .from("reviews")
       .select(`
         id,
@@ -14,6 +16,7 @@ export async function GET() {
         comment,
         created_at,
         patient_id,
+        professional_id,
         profiles!reviews_patient_id_fkey(
           id,
           first_name,
@@ -22,7 +25,13 @@ export async function GET() {
         )
       `)
       .order("created_at", { ascending: false })
-      .limit(10)
+
+    // Filter by professional if provided
+    if (professionalId) {
+      query = query.eq('professional_id', professionalId)
+    }
+
+    const { data: reviews, error } = await query.limit(professionalId ? 50 : 10)
 
     if (error) {
       console.error("Error fetching reviews:", error)

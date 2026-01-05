@@ -16,105 +16,7 @@ import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import WavyBackground from "@/components/ui/wavy-background"
 import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
-
-const professionals = [
-  {
-    id: "1",
-    name: "Dr. Elena Vargas",
-    specialty: "Psicóloga Clínica",
-    specialtyEn: "Clinical Psychologist",
-    location: "Online / Santiago",
-    rating: 4.9,
-    patientsServed: 342,
-    price: 45000,
-    languages: ["ES", "EN"],
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop",
-    verified: true,
-    isOnline: true,
-    availableToday: true,
-    availableUntil: "7:00 PM",
-  },
-  {
-    id: "2",
-    name: "Dr. Carlos Méndez",
-    specialty: "Dentista",
-    specialtyEn: "Dentist",
-    location: "Las Condes, Santiago",
-    rating: 4.8,
-    patientsServed: 289,
-    price: 55000,
-    languages: ["ES"],
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop",
-    verified: true,
-    isOnline: true,
-    availableToday: true,
-    availableUntil: "6:00 PM",
-  },
-  {
-    id: "3",
-    name: "Dra. María González",
-    specialty: "Matrona",
-    specialtyEn: "Midwife",
-    location: "Providencia, Santiago",
-    rating: 4.9,
-    patientsServed: 512,
-    price: 50000,
-    languages: ["ES"],
-    image: "https://images.unsplash.com/photo-1594824476966-48cb8e844905?w=400&h=400&fit=crop",
-    verified: true,
-    isOnline: false,
-    availableToday: true,
-    availableUntil: "5:00 PM",
-  },
-  {
-    id: "4",
-    name: "Dr. Roberto González",
-    specialty: "Psiquiatra",
-    specialtyEn: "Psychiatrist",
-    location: "Online / Providencia",
-    rating: 4.8,
-    patientsServed: 321,
-    price: 52000,
-    languages: ["ES", "EN"],
-    image: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=400&h=400&fit=crop",
-    verified: true,
-    isOnline: true,
-    availableToday: true,
-    availableUntil: "9:00 PM",
-  },
-  {
-    id: "5",
-    name: "Dra. Ana Silva",
-    specialty: "Kinesióloga",
-    specialtyEn: "Physiotherapist",
-    location: "Vitacura, Santiago",
-    rating: 4.9,
-    patientsServed: 456,
-    price: 48000,
-    languages: ["ES", "EN"],
-    image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=400&fit=crop",
-    verified: true,
-    isOnline: true,
-    availableToday: true,
-    availableUntil: "7:30 PM",
-  },
-  {
-    id: "6",
-    name: "Dr. Pablo Martínez",
-    specialty: "Psicólogo",
-    specialtyEn: "Psychologist",
-    location: "Ñuñoa, Santiago",
-    rating: 4.7,
-    patientsServed: 198,
-    price: 40000,
-    languages: ["ES"],
-    image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&h=400&fit=crop",
-    verified: true,
-    isOnline: true,
-    availableToday: true,
-    availableUntil: "8:00 PM",
-  },
-]
+import { Loader2 } from "lucide-react"
 
 function SearchResultsPageContent() {
   const searchParams = useSearchParams()
@@ -124,10 +26,43 @@ function SearchResultsPageContent() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const { language } = useLanguage()
   const t = useTranslations(language)
+  const [professionals, setProfessionals] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const predefinedSpecialties = language === "es" 
     ? ["Psicólogo", "Dentista", "Matrona", "Psiquiatra", "Kinesiólogo", "Nutricionista"]
     : ["Psychologist", "Dentist", "Midwife", "Psychiatrist", "Physiotherapist", "Nutritionist"]
+
+  // Load professionals from API
+  useEffect(() => {
+    const loadProfessionals = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const params = new URLSearchParams()
+        if (selectedSpecialties.length > 0) {
+          params.append('specialty', selectedSpecialties[0]) // Use first specialty for now
+        }
+
+        const response = await fetch(`/api/professionals?${params.toString()}`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Error al cargar profesionales')
+        }
+
+        setProfessionals(data.professionals || [])
+      } catch (err) {
+        console.error('Error loading professionals:', err)
+        setError(err instanceof Error ? err.message : 'Error al cargar profesionales')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProfessionals()
+  }, [selectedSpecialties])
 
   // Read search query from URL parameters
   useEffect(() => {
@@ -179,11 +114,13 @@ function SearchResultsPageContent() {
   }
 
   // Filter professionals based on selected specialties
+  // Filter professionals by selected specialties (client-side filtering for additional filters)
   const filteredProfessionals = selectedSpecialties.length > 0
     ? professionals.filter((prof) => {
         const profSpecialty = language === "es" ? prof.specialty : prof.specialtyEn
         return selectedSpecialties.some((spec) => 
-          profSpecialty.toLowerCase().includes(spec.toLowerCase())
+          profSpecialty.toLowerCase().includes(spec.toLowerCase()) ||
+          spec.toLowerCase().includes(profSpecialty.toLowerCase())
         )
       })
     : professionals
@@ -396,7 +333,21 @@ function SearchResultsPageContent() {
             <div className={cn(
               view === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "flex flex-col gap-6"
             )}>
-              {filteredProfessionals.length === 0 ? (
+              {loading ? (
+                <div className="col-span-full text-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground">
+                    {language === "es" ? "Cargando profesionales..." : "Loading professionals..."}
+                  </p>
+                </div>
+              ) : error ? (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-lg font-semibold text-destructive mb-2">
+                    {language === "es" ? "Error al cargar profesionales" : "Error loading professionals"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{error}</p>
+                </div>
+              ) : filteredProfessionals.length === 0 ? (
                 <div className="col-span-full text-center py-12">
                   <p className="text-lg font-semibold text-foreground mb-2">
                     {language === "es" ? "No se encontraron profesionales" : "No professionals found"}

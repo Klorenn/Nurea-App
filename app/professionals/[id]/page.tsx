@@ -1,7 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter, useParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
+import { Loader2 } from "lucide-react"
+import { isTestProfessional, mockProfessional, shouldUseMockData } from "@/lib/mock-data"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,70 +33,178 @@ import { MapEmbed } from "@/components/map-embed"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { parseShortDate } from "@/lib/utils/date-helpers"
 import Link from "next/link"
-
-const professional = {
-  id: "1",
-  name: "Elena Vargas",
-  title: "Psicóloga Clínica",
-  specialty: "Psicología Clínica",
-  yearsExperience: 12,
-  location: "Santiago, Chile",
-  rating: 4.9,
-  reviewsCount: 124,
-  price: 45000,
-  languages: ["Español", "Inglés"],
-  bio: "Mi nombre es Elena y llevo más de 12 años acompañando a personas en sus procesos de crecimiento personal y bienestar emocional. Mi enfoque es cercano y empático, porque creo que cada persona es única y merece un espacio seguro para expresarse.",
-  bioExtended: "Trabajo principalmente con adultos que enfrentan ansiedad, depresión o están pasando por momentos de cambio en sus vidas. No uso un lenguaje complicado ni términos médicos innecesarios - prefiero hablar contigo de forma clara y directa, como lo haría un amigo que realmente te escucha.",
-  services: ["Terapia Individual", "Acompañamiento en Ansiedad", "Apoyo en Momentos Difíciles", "Crecimiento Personal"],
-  consultationTypes: ["online", "in-person"],
-  availability: {
-    monday: { available: true, hours: "09:00 - 18:00" },
-    tuesday: { available: true, hours: "09:00 - 18:00" },
-    wednesday: { available: true, hours: "09:00 - 18:00" },
-    thursday: { available: true, hours: "09:00 - 18:00" },
-    friday: { available: true, hours: "09:00 - 14:00" },
-    saturday: { available: false, hours: null },
-    sunday: { available: false, hours: null },
-  },
-  documents: [
-    { id: "1", name: "Registro Profesional", type: "PDF", size: "245 KB" },
-    { id: "2", name: "Certificado de Especialidad", type: "PDF", size: "1.2 MB" },
-  ],
-  professionalRegistration: {
-    number: "PSI-12345",
-    institution: "Colegio de Psicólogos de Chile",
-    verified: true,
-  },
-  reviews: [
-    {
-      id: 1,
-      user: "Nicolas M.",
-      rating: 5,
-      date: "Hace 2 semanas",
-      text: "Elena es excepcionalmente empática y profesional. Su acompañamiento ha sido transformador para mi salud mental.",
-    },
-    {
-      id: 2,
-      user: "Camila S.",
-      rating: 5,
-      date: "Hace 1 mes",
-      text: "Excelente experiencia. Las sesiones online son muy convenientes y la plataforma funciona perfectamente.",
-    },
-  ],
-}
 
 export default function ProfessionalProfilePage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
+  const router = useRouter()
+  const params = useParams()
+  const professionalId = params?.id as string
+  const [professional, setProfessional] = useState<any>(null)
+  const [reviews, setReviews] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isBookingOpen, setIsBookingOpen] = useState(false)
+  const isSpanish = language === "es"
 
-  const handleConfirmBooking = (day: string, time: string, type: "online" | "in-person") => {
-    console.log("Booking confirmed:", { day, time, type })
-    setIsBookingOpen(false)
+  useEffect(() => {
+    const loadProfessional = async () => {
+      if (!professionalId) {
+        setLoading(false)
+        return
+      }
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        // Si es el profesional de prueba y estamos en desarrollo, usar datos mock
+        if (isTestProfessional(professionalId) && shouldUseMockData()) {
+          setProfessional(mockProfessional)
+          setLoading(false)
+          return
+        }
+        
+        // Si es el profesional de prueba pero estamos en producción, no existe
+        if (isTestProfessional(professionalId) && !shouldUseMockData()) {
+          setError(isSpanish ? "Profesional no encontrado" : "Professional not found")
+          setLoading(false)
+          return
+        }
+
+        // Cargar desde API
+        const response = await fetch(`/api/professionals/${professionalId}`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.message || "Error al cargar profesional")
+        }
+
+        setProfessional(data.professional)
+
+        // Cargar reviews si es profesional real
+        if (!isTestProfessional(professionalId) || !shouldUseMockData()) {
+          try {
+            const reviewsResponse = await fetch(`/api/reviews/public?professionalId=${professionalId}`)
+            if (reviewsResponse.ok) {
+              const reviewsData = await reviewsResponse.json()
+              setReviews(reviewsData.reviews || [])
+            }
+          } catch (err) {
+            console.error("Error loading reviews:", err)
+            // Si no hay reviews, usar array vacío
+            setReviews([])
+          }
+        } else {
+          // Para el profesional de prueba en desarrollo, usar reviews mock
+          setReviews(mockProfessional.reviews || [])
+        }
+      } catch (err) {
+        console.error("Error loading professional:", err)
+        setError(err instanceof Error ? err.message : "Error al cargar profesional")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProfessional()
+  }, [professionalId])
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </main>
+    )
   }
 
-  const isSpanish = language === "es"
+  if (error || !professional) {
+    return (
+      <main className="min-h-screen bg-background">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
+          <p className="text-destructive font-medium mb-4">{error || "Profesional no encontrado"}</p>
+          <Button onClick={() => router.push("/search")}>
+            {isSpanish ? "Volver a búsqueda" : "Back to search"}
+          </Button>
+        </div>
+      </main>
+    )
+  }
+
+  const handleConfirmBooking = async (day: string, time: string, type: "online" | "in-person") => {
+    try {
+      // Parsear la fecha del formato "Ene 15" a una fecha completa usando el helper
+      const appointmentDateStr = parseShortDate(day, language)
+      
+      // Verificar disponibilidad antes de intentar crear la cita
+      const availabilityCheck = await fetch(
+        `/api/appointments/check-availability?professionalId=${professional.id}&date=${appointmentDateStr}&time=${time}`
+      )
+      const availabilityData = await availabilityCheck.json()
+
+      if (!availabilityCheck.ok || !availabilityData.available) {
+        throw new Error(
+          availabilityData.message || 
+          (isSpanish ? "Este horario no está disponible" : "This time slot is not available")
+        )
+      }
+      
+      const response = await fetch("/api/appointments/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          professionalId: professional.id,
+          appointmentDate: appointmentDateStr,
+          appointmentTime: time,
+          type: type,
+          duration: 60,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || (isSpanish ? "Error al agendar la cita" : "Error booking appointment"))
+      }
+
+      // Mostrar mensaje de éxito y redirigir
+      const successMessage = isSpanish 
+        ? "¡Cita agendada exitosamente! Te enviaremos un recordatorio antes de la fecha."
+        : "Appointment booked successfully! We'll send you a reminder before the date."
+      
+      // Usar un mensaje temporal en lugar de alert
+      const successDiv = document.createElement('div')
+      successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-xl shadow-lg z-50'
+      successDiv.textContent = successMessage
+      document.body.appendChild(successDiv)
+      
+      setIsBookingOpen(false)
+      
+      // Redirigir a la página de citas después de un breve delay
+      setTimeout(() => {
+        document.body.removeChild(successDiv)
+        router.push("/dashboard/appointments")
+      }, 2000)
+    } catch (error) {
+      console.error("Error booking appointment:", error)
+      const errorMessage = error instanceof Error ? error.message : (isSpanish ? "Error al agendar la cita" : "Error booking appointment")
+      
+      // Mostrar error de forma más elegante
+      const errorDiv = document.createElement('div')
+      errorDiv.className = 'fixed top-4 right-4 bg-destructive text-white px-6 py-4 rounded-xl shadow-lg z-50'
+      errorDiv.textContent = errorMessage
+      document.body.appendChild(errorDiv)
+      
+      setTimeout(() => {
+        if (document.body.contains(errorDiv)) {
+          document.body.removeChild(errorDiv)
+        }
+      }, 5000)
+    }
+  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -168,7 +279,7 @@ export default function ProfessionalProfilePage() {
               <div className="relative">
                 <div className="w-64 h-64 md:w-80 md:h-80 rounded-3xl overflow-hidden border-2 border-primary/20 shadow-2xl">
                   <img
-                    src="/prof-1.jpg?height=400&width=400&query=professional-portrait"
+                    src={professional.imageUrl || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop"}
                     alt={professional.name}
                     className="w-full h-full object-cover"
                   />
@@ -373,37 +484,60 @@ export default function ProfessionalProfilePage() {
                     {professional.reviewsCount} {isSpanish ? "reseñas" : "reviews"} • {isSpanish ? "Promedio:" : "Average:"} {professional.rating}
                   </p>
                 </div>
-                {professional.reviews.map((review) => (
-                  <Card key={review.id} className="border-border/40 bg-card rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                            {review.user[0]}
+                {reviews.length > 0 ? (
+                  reviews.map((review: any) => {
+                    const reviewDate = review.createdAt 
+                      ? new Date(review.createdAt).toLocaleDateString(
+                          isSpanish ? "es-ES" : "en-US",
+                          { year: "numeric", month: "short", day: "numeric" }
+                        )
+                      : review.date || (isSpanish ? "Fecha no disponible" : "Date not available")
+                    const reviewerName = review.name || review.user || (isSpanish ? "Paciente" : "Patient")
+                    const reviewText = review.comment || review.text || review.quote || ""
+                    
+                    return (
+                      <Card key={review.id} className="border-border/40 bg-card rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                        <CardContent className="p-6 space-y-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                                {reviewerName[0]?.toUpperCase() || "P"}
+                              </div>
+                              <div>
+                                <p className="font-bold text-lg">{reviewerName}</p>
+                                <p className="text-sm text-muted-foreground">{reviewDate}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={cn(
+                                    "h-5 w-5",
+                                    star <= (review.rating || 5)
+                                      ? "fill-primary text-primary"
+                                      : "fill-none text-muted-foreground/30"
+                                  )}
+                                />
+                              ))}
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-lg">{review.user}</p>
-                            <p className="text-sm text-muted-foreground">{review.date}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={cn(
-                                "h-5 w-5",
-                                star <= review.rating
-                                  ? "fill-primary text-primary"
-                                  : "fill-none text-muted-foreground/30"
-                              )}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-muted-foreground leading-relaxed text-base">"{review.text}"</p>
+                          {reviewText && (
+                            <p className="text-muted-foreground leading-relaxed text-base">"{reviewText}"</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })
+                ) : (
+                  <Card className="border-border/40">
+                    <CardContent className="p-12 text-center">
+                      <p className="text-muted-foreground">
+                        {isSpanish ? "Aún no hay reseñas para este profesional" : "No reviews yet for this professional"}
+                      </p>
                     </CardContent>
                   </Card>
-                ))}
+                )}
               </TabsContent>
 
               {/* Location Tab */}
@@ -473,8 +607,8 @@ export default function ProfessionalProfilePage() {
                     <Clock className="h-4 w-4" /> {isSpanish ? "Horarios disponibles" : "Available hours"}
                   </p>
                   <div className="space-y-2">
-                    {Object.entries(professional.availability).map(([day, schedule]) => {
-                      if (!schedule.available) return null
+                    {professional.availability && Object.entries(professional.availability).map(([day, schedule]: [string, any]) => {
+                      if (!schedule || !schedule.available) return null
                       const dayNames: Record<string, string> = {
                         monday: isSpanish ? "Lunes" : "Monday",
                         tuesday: isSpanish ? "Martes" : "Tuesday",
@@ -527,10 +661,11 @@ export default function ProfessionalProfilePage() {
                 specialty: professional.specialty,
                 location: professional.location,
                 rating: professional.rating,
-                reviewCount: professional.reviewsCount,
-                imageUrl: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop",
-                price: professional.price,
-                consultationType: "both",
+                reviewCount: professional.reviewsCount || 0,
+                imageUrl: professional.imageUrl || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop",
+                price: professional.price || professional.consultationPrice || 0,
+                consultationType: professional.consultationType || (professional.consultationTypes?.includes("online") && professional.consultationTypes?.includes("in-person") ? "both" : professional.consultationTypes?.includes("online") ? "online" : "in-person") || "both",
+                availability: professional.availability,
               }}
               onConfirm={handleConfirmBooking}
               onWeekChange={(direction) => {

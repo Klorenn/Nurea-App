@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { RouteGuard } from "@/components/auth/route-guard"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -12,7 +13,10 @@ import {
   Shield, 
   Globe,
   Moon,
-  Sun
+  Sun,
+  Loader2,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTheme } from "next-themes"
@@ -21,6 +25,127 @@ export default function ProfessionalSettingsPage() {
   const { language } = useLanguage()
   const { theme, setTheme } = useTheme()
   const isSpanish = language === "es"
+  
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  
+  // Notification settings
+  const [appointmentNotifications, setAppointmentNotifications] = useState(true)
+  const [messageNotifications, setMessageNotifications] = useState(true)
+  const [paymentNotifications, setPaymentNotifications] = useState(true)
+  
+  // Privacy settings
+  const [profileVisible, setProfileVisible] = useState(true)
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await fetch("/api/professional/settings")
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || (isSpanish ? "Error al cargar configuración" : "Error loading settings"))
+      }
+
+      const settings = data.settings
+      
+      // Set notification preferences
+      if (settings.notifications) {
+        setAppointmentNotifications(settings.notifications.appointments ?? true)
+        setMessageNotifications(settings.notifications.messages ?? true)
+        setPaymentNotifications(settings.notifications.payments ?? true)
+      }
+      
+      // Set privacy settings
+      if (settings.privacy) {
+        setProfileVisible(settings.privacy.profileVisible ?? true)
+      }
+    } catch (err) {
+      console.error("Error loading settings:", err)
+      setError(err instanceof Error ? err.message : (isSpanish ? "Error al cargar configuración" : "Error loading settings"))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const saveSettings = async () => {
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await fetch("/api/professional/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notifications: {
+            appointments: appointmentNotifications,
+            messages: messageNotifications,
+            payments: paymentNotifications,
+          },
+          privacy: {
+            profileVisible,
+          },
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || (isSpanish ? "Error al guardar configuración" : "Error saving settings"))
+      }
+
+      setSuccess(isSpanish ? "Configuración actualizada exitosamente" : "Settings updated successfully")
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      console.error("Error saving settings:", err)
+      setError(err instanceof Error ? err.message : (isSpanish ? "Error al guardar configuración" : "Error saving settings"))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleNotificationChange = async (type: 'appointments' | 'messages' | 'payments', value: boolean) => {
+    if (type === 'appointments') {
+      setAppointmentNotifications(value)
+    } else if (type === 'messages') {
+      setMessageNotifications(value)
+    } else if (type === 'payments') {
+      setPaymentNotifications(value)
+    }
+    
+    // Auto-save notification preferences
+    setTimeout(() => {
+      saveSettings()
+    }, 500)
+  }
+
+  const handlePrivacyChange = async (value: boolean) => {
+    setProfileVisible(value)
+    // Auto-save privacy preferences
+    setTimeout(() => {
+      saveSettings()
+    }, 500)
+  }
+
+  if (loading) {
+    return (
+      <RouteGuard requiredRole="professional">
+        <DashboardLayout role="professional">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </DashboardLayout>
+      </RouteGuard>
+    )
+  }
 
   return (
     <RouteGuard requiredRole="professional">
@@ -37,6 +162,20 @@ export default function ProfessionalSettingsPage() {
                 : "Manage your preferences and settings"}
             </p>
           </div>
+
+          {/* Success/Error Messages */}
+          {success && (
+            <div className="bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 rounded-xl p-4 flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              <p>{success}</p>
+            </div>
+          )}
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl p-4 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              <p>{error}</p>
+            </div>
+          )}
 
           {/* Notifications */}
           <Card>
@@ -61,7 +200,11 @@ export default function ProfessionalSettingsPage() {
                       : "Receive notifications about new appointments and changes"}
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={appointmentNotifications}
+                  onCheckedChange={(checked) => handleNotificationChange('appointments', checked)}
+                  disabled={saving}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -72,7 +215,11 @@ export default function ProfessionalSettingsPage() {
                       : "Receive notifications when you receive messages"}
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={messageNotifications}
+                  onCheckedChange={(checked) => handleNotificationChange('messages', checked)}
+                  disabled={saving}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -83,7 +230,11 @@ export default function ProfessionalSettingsPage() {
                       : "Receive notifications about received payments"}
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch 
+                  checked={paymentNotifications}
+                  onCheckedChange={(checked) => handleNotificationChange('payments', checked)}
+                  disabled={saving}
+                />
               </div>
             </CardContent>
           </Card>
@@ -133,17 +284,21 @@ export default function ProfessionalSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>{isSpanish ? "Visibilidad del Perfil" : "Profile Visibility"}</Label>
-                <p className="text-sm text-muted-foreground">
-                  {isSpanish 
-                    ? "Tu perfil profesional es visible para pacientes que buscan atención"
-                    : "Your professional profile is visible to patients seeking care"}
-                </p>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>{isSpanish ? "Visibilidad del Perfil" : "Profile Visibility"}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {isSpanish 
+                      ? "Tu perfil profesional es visible para pacientes que buscan atención"
+                      : "Your professional profile is visible to patients seeking care"}
+                  </p>
+                </div>
+                <Switch 
+                  checked={profileVisible}
+                  onCheckedChange={handlePrivacyChange}
+                  disabled={saving}
+                />
               </div>
-              <Button variant="outline" className="w-full sm:w-auto">
-                {isSpanish ? "Gestionar Privacidad" : "Manage Privacy"}
-              </Button>
             </CardContent>
           </Card>
 
