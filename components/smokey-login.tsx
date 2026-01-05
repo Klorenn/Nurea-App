@@ -11,6 +11,7 @@ import { AnimatedInput } from "@/components/ui/animated-input"
 import { useTheme } from "next-themes"
 import { TermsDialog } from "@/components/ui/terms-dialog"
 import { PrivacyDialog } from "@/components/ui/privacy-dialog"
+import { useFormValidation, validationRules } from "@/hooks/use-form-validation"
 
 // Vertex shader source code
 const vertexSmokeySource = `
@@ -249,13 +250,48 @@ export function LoginForm() {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const isSpanish = language === "es"
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const {
+    fields,
+    errors,
+    touched,
+    isValid,
+    setFieldValue,
+    setFieldTouched,
+    validateAll,
+  } = useFormValidation({
+    email: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "El email es requerido" : "Email is required"),
+        validationRules.email(isSpanish ? "Por favor ingresa un email válido" : "Please enter a valid email address"),
+      ],
+    },
+    password: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "La contraseña es requerida" : "Password is required"),
+        validationRules.minLength(6, isSpanish ? "La contraseña debe tener al menos 6 caracteres" : "Password must be at least 6 characters"),
+      ],
+    },
+  })
+
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Mark all fields as touched
+    setFieldTouched("email")
+    setFieldTouched("password")
+    
+    // Validate all fields
+    const validationErrors = validateAll()
+    if (Object.keys(validationErrors).length > 0) {
+      return // Don't submit if there are validation errors
+    }
+
     setLoading(true)
     setError(null)
 
@@ -263,7 +299,7 @@ export function LoginForm() {
       const response = await fetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: fields.email.value, password: fields.password.value }),
       })
 
       const data = await response.json()
@@ -324,14 +360,20 @@ export function LoginForm() {
             type="email"
             id="floating_email"
             label={t.auth.email}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={fields.email.value}
+            onChange={(e) => {
+              setFieldValue("email", e.target.value)
+            }}
+            onBlur={() => setFieldTouched("email")}
             disabled={loading}
             required
             icon={User}
+            error={errors.email}
+            touched={touched.email}
+            showValidation={true}
           />
           <p className="text-[10px] text-muted-foreground px-1">
-            {language === "es" 
+            {isSpanish 
               ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas."
               : "Your email is your identity on NUREA. We use it to confirm your appointments."}
           </p>
@@ -343,14 +385,20 @@ export function LoginForm() {
             type="password"
             id="floating_password"
             label={t.auth.password}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={fields.password.value}
+            onChange={(e) => {
+              setFieldValue("password", e.target.value)
+            }}
+            onBlur={() => setFieldTouched("password")}
             disabled={loading}
             required
             icon={Lock}
+            error={errors.password}
+            touched={touched.password}
+            showValidation={true}
           />
           <p className="text-[10px] text-muted-foreground px-1">
-            {language === "es" 
+            {isSpanish 
               ? "Una contraseña fuerte protege tu información de salud."
               : "A strong password protects your health information."}
           </p>
@@ -367,7 +415,7 @@ export function LoginForm() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !isValid}
           className="group w-full flex items-center justify-center py-3 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 disabled:cursor-not-allowed rounded-lg text-white font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300"
         >
           {loading ? (
@@ -459,14 +507,49 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
   const isSpanish = language === "es"
   const router = useRouter()
   const [role, setRole] = useState<"patient" | "professional" | null>(initialRole || null)
-  const [firstName, setFirstName] = useState("")
-  const [lastName, setLastName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
+
+  const {
+    fields,
+    errors,
+    touched,
+    isValid,
+    setFieldValue,
+    setFieldTouched,
+    validateAll,
+  } = useFormValidation({
+    firstName: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "El nombre es requerido" : "First name is required"),
+        validationRules.minLength(2, isSpanish ? "El nombre debe tener al menos 2 caracteres" : "First name must be at least 2 characters"),
+      ],
+    },
+    lastName: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "El apellido es requerido" : "Last name is required"),
+        validationRules.minLength(2, isSpanish ? "El apellido debe tener al menos 2 caracteres" : "Last name must be at least 2 characters"),
+      ],
+    },
+    email: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "El email es requerido" : "Email is required"),
+        validationRules.email(isSpanish ? "Por favor ingresa un email válido" : "Please enter a valid email address"),
+      ],
+    },
+    password: {
+      value: "",
+      rules: [
+        validationRules.required(isSpanish ? "La contraseña es requerida" : "Password is required"),
+        validationRules.password(isSpanish ? "La contraseña debe tener al menos 8 caracteres con mayúscula, minúscula y número" : "Password must be at least 8 characters with uppercase, lowercase, and number"),
+      ],
+    },
+  })
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -477,6 +560,18 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
       return
     }
 
+    // Mark all fields as touched
+    setFieldTouched("firstName")
+    setFieldTouched("lastName")
+    setFieldTouched("email")
+    setFieldTouched("password")
+
+    // Validate all fields
+    const validationErrors = validateAll()
+    if (Object.keys(validationErrors).length > 0) {
+      return // Don't submit if there are validation errors
+    }
+
     setLoading(true)
     setError(null)
 
@@ -485,10 +580,10 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email,
-          password,
-          firstName,
-          lastName,
+          email: fields.email.value,
+          password: fields.password.value,
+          firstName: fields.firstName.value,
+          lastName: fields.lastName.value,
           role: finalRole,
         }),
       })
@@ -730,7 +825,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
 
           <button
             type="submit"
-            disabled={loading || !role || !acceptedTerms || !acceptedPrivacy}
+            disabled={loading || !role || !acceptedTerms || !acceptedPrivacy || !isValid}
             className="group w-full flex items-center justify-center py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 disabled:cursor-not-allowed rounded-lg text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 relative z-10"
           >
             {loading ? (
