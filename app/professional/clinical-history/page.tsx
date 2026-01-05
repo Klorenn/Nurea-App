@@ -345,3 +345,19 @@ export default function ClinicalHistoryPage() {
   )
 }
 
+export default function ClinicalHistoryPage() {
+  return (
+    <Suspense fallback={
+      <RouteGuard requiredRole="professional">
+        <DashboardLayout role="professional">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </DashboardLayout>
+      </RouteGuard>
+    }>
+      <ClinicalHistoryPageContent />
+    </Suspense>
+  )
+}
+
