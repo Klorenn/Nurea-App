@@ -17,23 +17,7 @@ export const metadata: Metadata = {
   title: "NUREA - Healthcare Marketplace",
   description: "Connect with trusted healthcare professionals in Chile. Book appointments, manage your health journey.",
   generator: "v0.app",
-  icons: {
-    icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-    apple: "/apple-icon.png",
-  },
+  // Icons removidos - sin favicon personalizado
 }
 
 export default function RootLayout({
