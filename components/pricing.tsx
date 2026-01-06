@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -8,15 +8,115 @@ import { CheckCheck, GraduationCap } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { SubscriptionSuccessDialog } from "@/components/subscription-success-dialog"
-import { motion } from "framer-motion"
+import { motion, useInView } from "framer-motion"
 import { cn } from "@/lib/utils"
+
+// Componente simplificado para VerticalCutReveal
+const VerticalCutReveal = ({ children, className }: { children: string; className?: string }) => {
+  const words = children.split(" ")
+  return (
+    <span className={className}>
+      {words.map((word, i) => (
+        <motion.span
+          key={i}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{
+            delay: i * 0.1,
+            type: "spring",
+            stiffness: 250,
+            damping: 40,
+          }}
+          className="inline-block mr-2"
+        >
+          {word}
+        </motion.span>
+      ))}
+    </span>
+  )
+}
+
+// Componente simplificado para TimelineContent
+const TimelineContent = ({
+  as: Component = "div",
+  animationNum,
+  timelineRef,
+  customVariants,
+  children,
+  className,
+  ...props
+}: {
+  as?: any
+  animationNum: number
+  timelineRef: React.RefObject<HTMLDivElement>
+  customVariants?: any
+  children: React.ReactNode
+  className?: string
+  [key: string]: any
+}) => {
+  const isInView = useInView(timelineRef || { current: null }, { once: true, margin: "-100px" })
+  const variants = customVariants || {
+    visible: { y: 0, opacity: 1, filter: "blur(0px)" },
+    hidden: { filter: "blur(10px)", y: -20, opacity: 0 },
+  }
+
+  return (
+    <Component
+      className={className}
+      {...props}
+    >
+      <motion.div
+        initial="hidden"
+        animate={isInView ? "visible" : "hidden"}
+        variants={variants}
+        custom={animationNum}
+      >
+        {children}
+      </motion.div>
+    </Component>
+  )
+}
+
+// Componente para animar números (alternativa a NumberFlow)
+const AnimatedNumber = ({ value, className }: { value: number; className?: string }) => {
+  const [displayValue, setDisplayValue] = useState(0)
+  const isInView = useInView({ once: true })
+
+  useEffect(() => {
+    if (!isInView) return
+
+    const duration = 1000
+    const steps = 30
+    const increment = value / steps
+    let current = 0
+    let step = 0
+
+    const timer = setInterval(() => {
+      step++
+      current = Math.min(value, increment * step)
+      setDisplayValue(Math.floor(current))
+
+      if (step >= steps) {
+        clearInterval(timer)
+        setDisplayValue(value)
+      }
+    }, duration / steps)
+
+    return () => clearInterval(timer)
+  }, [value, isInView])
+
+  return <span className={className}>{displayValue.toLocaleString("es-CL")}</span>
+}
 
 const PricingSwitch = ({
   onSwitch,
   className,
+  savingsPercentage,
 }: {
   onSwitch: (value: string) => void
   className?: string
+  savingsPercentage?: number
 }) => {
   const { language } = useLanguage()
   const [selected, setSelected] = useState("0")
@@ -68,9 +168,11 @@ const PricingSwitch = ({
           )}
           <span className="relative flex items-center gap-2">
             {language === "es" ? "Facturación Anual" : "Yearly Billing"}
-            <span className="rounded-full bg-primary/20 dark:bg-primary/30 px-2 py-0.5 text-xs font-medium text-primary dark:text-primary">
-              {language === "es" ? "Ahorra $30.000" : "Save $30.000"}
-            </span>
+            {savingsPercentage && (
+              <span className="rounded-full bg-primary/20 dark:bg-primary/30 px-2 py-0.5 text-xs font-medium text-primary dark:text-primary">
+                {language === "es" ? `Ahorra ${savingsPercentage}%` : `Save ${savingsPercentage}%`}
+              </span>
+            )}
           </span>
         </button>
       </div>
@@ -84,28 +186,36 @@ export function Pricing() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: string } | null>(null)
   const [isYearly, setIsYearly] = useState(false)
+  const pricingRef = useRef<HTMLDivElement>(null)
 
   // Precios en CLP
   const monthlyPrices = {
-    standard: 25000,
+    professional: 25000,
     recentGraduate: 15000,
   }
 
-  const calculateYearlyPrice = (monthlyPrice: number) => {
-    return monthlyPrice * 12 - 30000
+  const calculateYearlyPrice = (monthlyPrice: number, discountPercent: number = 38) => {
+    const yearlyWithoutDiscount = monthlyPrice * 12
+    const discount = (yearlyWithoutDiscount * discountPercent) / 100
+    return Math.round(yearlyWithoutDiscount - discount)
   }
+
+  const calculateSavingsPercentage = (monthlyPrice: number, discountPercent: number = 38) => {
+    return discountPercent
+  }
+
+  // Calcular porcentaje de ahorro promedio (38% para plan profesional)
+  const averageSavingsPercentage = calculateSavingsPercentage(monthlyPrices.professional, 38)
 
   const plans = [
     {
-      name: t.landing.pricing.standard,
-      monthlyPrice: monthlyPrices.standard,
-      yearlyPrice: calculateYearlyPrice(monthlyPrices.standard),
-      description: t.landing.pricing.standardDesc,
+      name: t.landing.pricing.professional,
+      monthlyPrice: monthlyPrices.professional,
+      yearlyPrice: calculateYearlyPrice(monthlyPrices.professional, 38),
+      description: t.landing.pricing.professionalDesc,
       features: [
         t.landing.pricing.unlimitedBookings,
         t.landing.pricing.profileVisibility,
-        t.landing.pricing.videoConsultations,
-        t.landing.pricing.messagingSystem,
         t.landing.pricing.calendarManagement,
         t.landing.pricing.reviewSystem,
         t.landing.pricing.paymentProcessing,
@@ -122,7 +232,7 @@ export function Pricing() {
       description: t.landing.pricing.recentGraduateDesc,
       badge: language === "es" ? "OFERTA" : "OFFER",
       features: [
-        t.landing.pricing.everythingInStandard,
+        t.landing.pricing.everythingInProfessional,
         t.landing.pricing.firstMonthsDiscount,
         t.landing.pricing.prioritySupport,
         t.landing.pricing.marketingAssistance,
@@ -137,129 +247,153 @@ export function Pricing() {
     setIsYearly(Number.parseInt(value) === 1)
   }
 
-  const formatPrice = (price: number) => {
-    // Formatear precio en CLP con separadores de miles
-    return new Intl.NumberFormat("es-CL", {
-      style: "currency",
-      currency: "CLP",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(price).replace("CLP", "").trim()
+  const revealVariants = {
+    visible: (i: number) => ({
+      y: 0,
+      opacity: 1,
+      filter: "blur(0px)",
+      transition: {
+        delay: i * 0.2,
+        duration: 0.5,
+      },
+    }),
+    hidden: {
+      filter: "blur(10px)",
+      y: -20,
+      opacity: 0,
+    },
   }
 
   return (
-    <section id="pricing" className="py-16 md:py-20 px-4 bg-transparent relative">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center space-y-4 mb-12 md:mb-16">
-          <h2 className="font-sans text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+    <section
+      id="pricing"
+      className="px-4 pt-20 pb-16 md:py-20 min-h-screen max-w-7xl mx-auto relative"
+      ref={pricingRef}
+    >
+      <article className="text-left mb-6 space-y-4 max-w-2xl">
+        <h2 className="md:text-6xl text-4xl capitalize font-medium text-foreground mb-4">
+          <VerticalCutReveal>
             {t.landing.pricing.title}
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            {t.landing.pricing.subtitle}
-          </p>
-        </div>
+          </VerticalCutReveal>
+        </h2>
 
-        <div className="flex justify-center mb-8">
-          <PricingSwitch onSwitch={togglePricingPeriod} />
-        </div>
+        <TimelineContent
+          as="p"
+          animationNum={0}
+          timelineRef={pricingRef}
+          customVariants={revealVariants}
+          className="md:text-base text-sm text-muted-foreground w-[80%]"
+        >
+          {t.landing.pricing.subtitle}
+        </TimelineContent>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto mb-16">
-          {plans.map((plan, index) => {
-            const currentPrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice
-            const priceDisplay = formatPrice(currentPrice)
+        <TimelineContent
+          as="div"
+          animationNum={1}
+          timelineRef={pricingRef}
+          customVariants={revealVariants}
+        >
+          <PricingSwitch onSwitch={togglePricingPeriod} savingsPercentage={averageSavingsPercentage} className="w-fit" />
+        </TimelineContent>
+      </article>
 
-            return (
-              <motion.div
-                key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+      <div className="grid md:grid-cols-2 gap-4 py-6">
+        {plans.map((plan, index) => {
+          const currentPrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice
+
+          return (
+            <TimelineContent
+              key={plan.name}
+              as="div"
+              animationNum={2 + index}
+              timelineRef={pricingRef}
+              customVariants={revealVariants}
+              className="h-full"
+            >
+              <Card
+                className={cn(
+                  "relative border rounded-2xl overflow-hidden transition-all h-full flex flex-col",
+                  plan.popular
+                    ? "ring-2 ring-primary bg-primary/5 dark:bg-primary/10 border-primary"
+                    : "bg-card border-border/40"
+                )}
               >
-                <Card
-                  className={cn(
-                    "relative border rounded-2xl overflow-hidden transition-all",
-                    plan.popular
-                      ? "ring-2 ring-primary bg-primary/5 dark:bg-primary/10 border-primary shadow-lg shadow-primary/10"
-                      : "bg-card border-border/40 hover:border-primary/50"
-                  )}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
-                      <Badge className="bg-primary text-primary-foreground border-none px-3 py-1 rounded-full text-xs font-bold shadow-md shadow-primary/30 uppercase tracking-wide">
+                <CardHeader className="text-left pb-4 pt-8">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="xl:text-3xl md:text-2xl text-3xl font-semibold text-foreground flex items-center gap-2">
+                      {plan.name === t.landing.pricing.recentGraduate && (
+                        <GraduationCap className="h-6 w-6 text-primary" />
+                      )}
+                      {plan.name}
+                    </h3>
+                    {plan.popular && (
+                      <Badge className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
                         {t.landing.pricing.mostPopular}
                       </Badge>
-                    </div>
-                  )}
-                  {plan.badge && (
-                    <div className="absolute -top-2 right-4 z-10">
-                      <Badge className="bg-primary text-primary-foreground border-none px-3 py-1 rounded-full text-xs font-bold shadow-md shadow-primary/30 uppercase tracking-wide">
+                    )}
+                    {plan.badge && (
+                      <Badge className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
                         {plan.badge}
                       </Badge>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  <p className="xl:text-sm md:text-xs text-sm text-muted-foreground mb-4">
+                    {plan.description}
+                  </p>
+                  <div className="flex items-baseline">
+                    <span className="text-4xl font-semibold text-foreground">
+                      $
+                      <AnimatedNumber
+                        value={currentPrice}
+                        className="text-4xl font-semibold"
+                      />
+                    </span>
+                    <span className="text-muted-foreground ml-1">
+                      /{isYearly ? (language === "es" ? "año" : "year") : (language === "es" ? "mes" : "month")}
+                    </span>
+                  </div>
+                </CardHeader>
 
-                  <CardHeader className="text-left pb-4 pt-8">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="text-3xl font-semibold text-foreground flex items-center gap-2">
-                        {plan.name === t.landing.pricing.recentGraduate && (
-                          <GraduationCap className="h-6 w-6 text-primary" />
-                        )}
-                        {plan.name}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-                    <div className="flex items-baseline">
-                      <span className="text-4xl font-semibold text-primary">
-                        ${formatPrice(currentPrice)}
-                      </span>
-                      <span className="text-muted-foreground ml-2 text-lg">
-                        /{isYearly ? (language === "es" ? "año" : "year") : (language === "es" ? "mes" : "month")}
-                      </span>
-                    </div>
-                  </CardHeader>
+                <CardContent className="pt-0 flex-1 flex flex-col">
+                  <Button
+                    className={cn(
+                      "w-full mb-6 p-4 text-xl rounded-xl font-semibold transition-all",
+                      plan.popular
+                        ? "bg-gradient-to-t from-primary to-primary/90 shadow-lg shadow-primary/30 border border-primary/50 text-primary-foreground hover:shadow-xl hover:shadow-primary/40"
+                        : plan.buttonVariant === "outline"
+                          ? "bg-gradient-to-t from-foreground to-foreground/90 dark:from-foreground dark:to-foreground/90 shadow-lg shadow-foreground/20 border border-border text-background dark:text-background hover:shadow-xl"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                    )}
+                    onClick={() => {
+                      setSelectedPlan({ name: plan.name, price: `$${currentPrice.toLocaleString("es-CL")}` })
+                      setTimeout(() => {
+                        setShowSuccessDialog(true)
+                      }, 1500)
+                    }}
+                  >
+                    {plan.buttonText}
+                  </Button>
 
-                  <CardContent className="pt-0 pb-6">
-                    <Button
-                      className={cn(
-                        "w-full mb-6 p-4 text-lg rounded-xl font-semibold transition-all",
-                        plan.popular
-                          ? "bg-gradient-to-t from-primary to-primary/90 shadow-lg shadow-primary/30 border border-primary/50 text-primary-foreground hover:shadow-xl hover:shadow-primary/40"
-                          : plan.buttonVariant === "outline"
-                            ? "bg-gradient-to-t from-foreground to-foreground/90 dark:from-foreground dark:to-foreground/90 shadow-lg shadow-foreground/20 border border-border text-background dark:text-background hover:shadow-xl"
-                            : "bg-primary text-primary-foreground hover:bg-primary/90"
-                      )}
-                      onClick={() => {
-                        setSelectedPlan({ name: plan.name, price: priceDisplay })
-                        setTimeout(() => {
-                          setShowSuccessDialog(true)
-                        }, 1500)
-                      }}
-                    >
-                      {plan.buttonText}
-                    </Button>
-
-                    <div className="space-y-3 pt-4 border-t border-border/40">
-                      <h2 className="text-xl font-semibold uppercase text-foreground mb-3">
-                        {language === "es" ? "Características" : "Features"}
-                      </h2>
-                      <ul className="space-y-2">
-                        {plan.features.map((feature, featureIndex) => (
-                          <li key={featureIndex} className="flex items-start">
-                            <span className="h-6 w-6 bg-primary/10 dark:bg-primary/20 border border-primary rounded-full grid place-content-center mt-0.5 mr-3 shrink-0">
-                              <CheckCheck className="h-4 w-4 text-primary" />
-                            </span>
-                            <span className="text-sm text-muted-foreground leading-relaxed">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )
-          })}
-        </div>
+                  <div className="space-y-3 pt-4 border-t border-border/40 flex-1">
+                    <h2 className="text-xl font-semibold uppercase text-foreground mb-3">
+                      {language === "es" ? "Características" : "Features"}
+                    </h2>
+                    <ul className="space-y-2">
+                      {plan.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-center">
+                          <span className="h-6 w-6 bg-primary/10 dark:bg-primary/20 border border-primary rounded-full grid place-content-center mt-0.5 mr-3 shrink-0">
+                            <CheckCheck className="h-4 w-4 text-primary" />
+                          </span>
+                          <span className="text-sm text-muted-foreground leading-relaxed">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </TimelineContent>
+          )
+        })}
       </div>
 
       {/* Success Dialog */}
