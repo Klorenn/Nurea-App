@@ -180,7 +180,7 @@ const PricingSwitch = ({
 
 export function Pricing() {
   const { language } = useLanguage()
-  const t = useTranslations(language)
+  const t = useTranslations(language || "es")
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: string } | null>(null)
   const [isYearly, setIsYearly] = useState(false)
@@ -271,7 +271,7 @@ export function Pricing() {
       <article className="text-left mb-6 space-y-4 max-w-2xl">
         <h2 className="md:text-6xl text-4xl capitalize font-medium text-foreground mb-4">
           <VerticalCutReveal>
-            {t.landing.pricing.title}
+            {t?.landing?.pricing?.title || "Planes de Suscripción para Profesionales"}
           </VerticalCutReveal>
         </h2>
 
@@ -282,7 +282,7 @@ export function Pricing() {
           customVariants={revealVariants}
           className="md:text-base text-sm text-muted-foreground w-[80%]"
         >
-          {t.landing.pricing.subtitle}
+          {t?.landing?.pricing?.subtitle || "Precios asequibles diseñados para profesionales de la salud en Chile y más allá"}
         </TimelineContent>
 
         <TimelineContent

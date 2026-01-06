@@ -9,7 +9,7 @@ import { motion } from "framer-motion"
 
 export function CtaSection() {
   const { language } = useLanguage()
-  const t = useTranslations(language)
+  const t = useTranslations(language || "es")
   const isSpanish = language === "es"
   const [email, setEmail] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -69,15 +69,15 @@ export function CtaSection() {
           className="bg-card/90 dark:bg-card/80 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-border/40 shadow-2xl"
         >
           <div className="text-center space-y-6">
-            {/* Headline */}
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary leading-tight">
-              {t.cta.title}
-            </h2>
+                  {/* Headline */}
+                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary leading-tight">
+                    {t?.cta?.title || "Comienza tu viaje hacia una mejor salud hoy"}
+                  </h2>
 
-            {/* Subtitle */}
-            <p className="text-lg md:text-xl text-foreground/90 max-w-3xl mx-auto leading-relaxed">
-              {t.cta.subtitle}
-            </p>
+                  {/* Subtitle */}
+                  <p className="text-lg md:text-xl text-foreground/90 max-w-3xl mx-auto leading-relaxed">
+                    {t?.cta?.subtitle || "Únete a miles de personas que han transformado su acceso a la salud. Encuentra el profesional adecuado y experimenta la diferencia."}
+                  </p>
 
             {/* Buttons - Solo "Demo Próximamente" */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -91,15 +91,15 @@ export function CtaSection() {
                   className="h-14 px-8 rounded-2xl text-base font-medium border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary hover:text-primary"
                   disabled
                 >
-                  {t.cta.watchDemo}
-                </Button>
-              </motion.div>
-            </div>
+                        {t?.cta?.watchDemo || "Demo Próximamente"}
+                      </Button>
+                    </motion.div>
+                  </div>
 
-            {/* Small Print */}
-            <p className="text-sm text-muted-foreground pt-2">
-              {t.cta.noCreditCard}
-            </p>
+                  {/* Small Print */}
+                  <p className="text-sm text-muted-foreground pt-2">
+                    {t?.cta?.noCreditCard || "Sin tarjeta de crédito requerida • Prueba gratuita • Cancela cuando quieras"}
+                  </p>
           </div>
         </motion.div>
 

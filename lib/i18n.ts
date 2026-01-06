@@ -989,7 +989,8 @@ export const translations = {
 } as const
 
 export function useTranslations(lang: Language = "es") {
-  return translations[lang]
+  const validLang = (lang === "es" || lang === "en") ? lang : "es"
+  return translations[validLang] || translations.es
 }
 
 export function t(lang: Language, key: string): string {
