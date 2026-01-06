@@ -85,22 +85,25 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setLoading(true)
     try {
+      // Preparar datos solo con valores definidos
+      const updateData: any = {}
+      if (formData.firstName?.trim()) updateData.first_name = formData.firstName.trim()
+      if (formData.lastName?.trim()) updateData.last_name = formData.lastName.trim()
+      if (formData.phone?.trim()) updateData.phone = formData.phone.trim()
+      if (formData.dateOfBirth) updateData.date_of_birth = formData.dateOfBirth
+      if (formData.address?.trim()) updateData.address = formData.address.trim()
+
       const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          phone: formData.phone,
-          date_of_birth: formData.dateOfBirth,
-          address: formData.address,
-        }),
+        body: JSON.stringify(updateData),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || (language === "es" ? "Error al guardar el perfil" : "Error saving profile"))
+        const errorMessage = data.message || data.error || (language === "es" ? "Error al guardar el perfil" : "Error saving profile")
+        throw new Error(errorMessage)
       }
 
       setSuccess(language === "es" ? "Perfil actualizado correctamente" : "Profile updated successfully")

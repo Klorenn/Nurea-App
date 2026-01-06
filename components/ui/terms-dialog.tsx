@@ -10,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import React, { useRef, useState } from "react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import React, { useRef, useState, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { FileText } from "lucide-react"
@@ -26,17 +27,41 @@ export function TermsDialog({ children, onAccept, onOpenChange }: TermsDialogPro
   const t = useTranslations(language)
   const [hasReadToBottom, setHasReadToBottom] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
-  const contentRef = useRef<HTMLDivElement>(null)
+  const dialogContentRef = useRef<HTMLDivElement>(null)
 
-  const handleScroll = () => {
-    const content = contentRef.current
-    if (!content) return
+  useEffect(() => {
+    if (!isOpen) return
+    
+    let cleanup: (() => void) | undefined
+    
+    // Wait for ScrollArea to render
+    const timeoutId = setTimeout(() => {
+      const dialogContent = dialogContentRef.current
+      if (!dialogContent) return
 
-    const scrollPercentage = content.scrollTop / (content.scrollHeight - content.clientHeight)
-    if (scrollPercentage >= 0.99 && !hasReadToBottom) {
-      setHasReadToBottom(true)
+      const viewport = dialogContent.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement
+      if (!viewport) return
+
+      const handleScroll = () => {
+        const scrollPercentage = viewport.scrollTop / (viewport.scrollHeight - viewport.clientHeight)
+        if (scrollPercentage >= 0.99 && !hasReadToBottom) {
+          setHasReadToBottom(true)
+        }
+      }
+
+      viewport.addEventListener('scroll', handleScroll)
+      
+      // Store cleanup function
+      cleanup = () => {
+        viewport.removeEventListener('scroll', handleScroll)
+      }
+    }, 100)
+
+    return () => {
+      clearTimeout(timeoutId)
+      if (cleanup) cleanup()
     }
-  }
+  }, [isOpen, hasReadToBottom])
 
   const handleAccept = () => {
     if (hasReadToBottom && onAccept) {
@@ -52,9 +77,16 @@ export function TermsDialog({ children, onAccept, onOpenChange }: TermsDialogPro
     }
     if (!open) {
       setHasReadToBottom(false)
-      if (contentRef.current) {
-        contentRef.current.scrollTop = 0
-      }
+      // Reset scroll when dialog closes
+      setTimeout(() => {
+        const dialogContent = dialogContentRef.current
+        if (dialogContent) {
+          const viewport = dialogContent.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement
+          if (viewport) {
+            viewport.scrollTop = 0
+          }
+        }
+      }, 100)
     }
   }
 
@@ -228,23 +260,19 @@ export function TermsDialog({ children, onAccept, onOpenChange }: TermsDialogPro
     <>
       {triggerElement}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex flex-col gap-0 p-0 sm:max-h-[min(640px,80vh)] sm:max-w-lg [&>button:last-child]:top-3.5">
+      <DialogContent ref={dialogContentRef} className="flex flex-col gap-0 p-0 sm:max-h-[min(640px,80vh)] sm:max-w-lg [&>button:last-child]:top-3.5">
         <DialogHeader className="contents space-y-0 text-left">
           <DialogTitle className="border-b border-border px-6 py-4 text-base flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
             {language === "es" ? "Términos de Uso" : "Terms of Service"}
           </DialogTitle>
-          <div 
-            ref={contentRef} 
-            onScroll={handleScroll} 
-            className="overflow-y-auto max-h-[400px]"
-          >
+          <ScrollArea className="max-h-[400px]">
             <DialogDescription asChild>
               <div className="px-6 py-4">
                 {termsContent}
               </div>
             </DialogDescription>
-          </div>
+          </ScrollArea>
         </DialogHeader>
         <DialogFooter className="border-t border-border px-6 py-4 sm:items-center">
           {!hasReadToBottom && (

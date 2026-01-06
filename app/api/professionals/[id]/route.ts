@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { mockProfessional, isTestProfessional, shouldUseMockData } from '@/lib/mock-data'
+import { isTestProfessional, NUREA_DOCTOR_ID } from '@/lib/mock-data'
 
 /**
  * GET /api/professionals/[id]
@@ -12,28 +12,84 @@ export async function GET(
 ) {
   try {
     const { id } = params
+    const supabase = await createClient()
 
-    // Si es el profesional de prueba y estamos en desarrollo, retornar datos mock
-    if (isTestProfessional(id) && shouldUseMockData()) {
-      return NextResponse.json({
-        success: true,
-        professional: mockProfessional
-      })
-    }
+    // Si es el profesional de prueba, buscar en la base de datos
+    if (isTestProfessional(id)) {
+      const { data: testProfessional, error: testError } = await supabase
+        .from('professionals')
+        .select(`
+          *,
+          profile:profiles!professionals_id_fkey(
+            id,
+            first_name,
+            last_name,
+            email,
+            avatar_url,
+            phone,
+            date_of_birth
+          )
+        `)
+        .eq('id', NUREA_DOCTOR_ID)
+        .maybeSingle()
 
-    // Si es el profesional de prueba pero estamos en producción, no existe
-    if (isTestProfessional(id) && !shouldUseMockData()) {
-      return NextResponse.json(
-        { 
-          error: 'not_found',
-          message: 'Profesional no encontrado.'
-        },
-        { status: 404 }
-      )
+      if (testProfessional && !testError) {
+        // Calcular rating y reviewsCount desde reviews
+        const { data: reviewsData } = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('professional_id', NUREA_DOCTOR_ID)
+
+        const reviewsCount = reviewsData?.length || 0
+        const averageRating = reviewsData && reviewsData.length > 0
+          ? reviewsData.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewsData.length
+          : 4.9
+
+        const formattedProfessional = {
+          id: testProfessional.id,
+          name: `Dr. ${testProfessional.profile?.first_name || 'Nurea'} ${testProfessional.profile?.last_name || 'Doctor'}`.trim(),
+          title: testProfessional.specialty || 'Médico General',
+          specialty: testProfessional.specialty || 'Médico General',
+          specialtyEn: testProfessional.specialty || 'General Medicine',
+          yearsExperience: testProfessional.years_experience || 5,
+          location: testProfessional.location || 'Santiago, Chile',
+          rating: Math.round(averageRating * 10) / 10,
+          reviewsCount: reviewsCount,
+          price: testProfessional.consultation_price || 35000,
+          consultationPrice: testProfessional.consultation_price || 35000,
+          languages: testProfessional.languages || ['Español', 'Inglés'],
+          bio: testProfessional.bio || '',
+          bioExtended: testProfessional.bio_extended || '',
+          services: testProfessional.services || [],
+          consultationTypes: testProfessional.consultation_type === 'both' 
+            ? ['online', 'in-person']
+            : testProfessional.consultation_type === 'online'
+            ? ['online']
+            : ['in-person'],
+          consultationType: testProfessional.consultation_type || 'both',
+          availability: testProfessional.availability || {},
+          documents: [],
+          professionalRegistration: {
+            number: testProfessional.registration_number || 'TEST-001',
+            institution: testProfessional.registration_institution || 'Colegio Médico de Prueba',
+            verified: testProfessional.verified || true,
+          },
+          imageUrl: testProfessional.profile?.avatar_url || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&auto=format',
+          verified: testProfessional.verified || true,
+          isOnline: true,
+          availableToday: true,
+          availableUntil: '7:00 PM',
+          patientsServed: 0,
+        }
+
+        return NextResponse.json({
+          success: true,
+          professional: formattedProfessional
+        })
+      }
     }
 
     // Buscar profesional real en Supabase
-    const supabase = await createClient()
     
     const { data: professional, error: professionalError } = await supabase
       .from('professionals')

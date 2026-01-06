@@ -397,7 +397,8 @@ export function FunctionalChat({
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-8 bg-accent/5" ref={scrollAreaRef}>
+          <ScrollArea className="flex-1 p-8 bg-accent/5 h-full" ref={scrollAreaRef}>
+            <div className="pr-4">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground">
@@ -465,6 +466,7 @@ export function FunctionalChat({
                 <div ref={messagesEndRef} />
               </div>
             )}
+            </div>
           </ScrollArea>
 
           {/* Chat Input */}

@@ -1,9 +1,13 @@
 /**
  * Datos mock para el profesional de prueba
  * Este profesional se usa para testing y desarrollo
+ * 
+ * NOTA: El nuevo ID es "nurea-doctor-test" que se almacena en la base de datos.
+ * Este ID antiguo se mantiene para compatibilidad.
  */
 
-export const TEST_PROFESSIONAL_ID = "test-professional-001"
+export const TEST_PROFESSIONAL_ID = "test-professional-001" // Deprecated, mantener para compatibilidad
+export const NUREA_DOCTOR_ID = "nurea-doctor-test" // Nuevo ID del profesional de prueba en BD
 
 export const mockProfessional = {
   id: TEST_PROFESSIONAL_ID,
@@ -89,7 +93,7 @@ export const mockProfessionalForSearch = {
  * Verifica si un ID corresponde al profesional de prueba
  */
 export function isTestProfessional(id: string | null | undefined): boolean {
-  return id === TEST_PROFESSIONAL_ID
+  return id === TEST_PROFESSIONAL_ID || id === NUREA_DOCTOR_ID
 }
 
 /**

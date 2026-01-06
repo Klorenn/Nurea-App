@@ -182,47 +182,60 @@ export async function PUT(request: Request) {
     } = body
 
     // Actualizar perfil en tabla profiles
-    if (firstName || lastName) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          first_name: firstName || undefined,
-          last_name: lastName || undefined,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
+    if (firstName !== undefined || lastName !== undefined) {
+      const profileUpdate: any = {
+        updated_at: new Date().toISOString(),
+      }
+      
+      if (firstName !== undefined && firstName !== null && firstName.trim() !== '') {
+        profileUpdate.first_name = firstName.trim()
+      }
+      if (lastName !== undefined && lastName !== null && lastName.trim() !== '') {
+        profileUpdate.last_name = lastName.trim()
+      }
 
-      if (profileError) {
-        console.error('Error updating profile:', profileError)
+      if (Object.keys(profileUpdate).length > 1) { // More than just updated_at
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(profileUpdate)
+          .eq('id', user.id)
+
+        if (profileError) {
+          console.error('Error updating profile:', profileError)
+          // Log but don't fail - profile update is secondary to professional update
+        }
       }
     }
 
-    // Preparar datos para actualizar tabla professionals
+    // Preparar datos para actualizar tabla professionals (solo campos definidos y no nulos)
     const professionalUpdate: any = {
       updated_at: new Date().toISOString(),
     }
 
-    if (title !== undefined) professionalUpdate.specialty = title
-    if (bio !== undefined) professionalUpdate.bio = bio
-    if (bioExtended !== undefined) professionalUpdate.bio_extended = bioExtended
-    if (specialties !== undefined) professionalUpdate.services = specialties
-    if (languages !== undefined) professionalUpdate.languages = languages
-    if (consultationType !== undefined) professionalUpdate.consultation_type = consultationType
-    if (onlinePrice !== undefined) professionalUpdate.online_price = onlinePrice
-    if (inPersonPrice !== undefined) professionalUpdate.in_person_price = inPersonPrice
-    if (videoPlatform !== undefined) professionalUpdate.video_platform = videoPlatform
-    if (clinicAddress !== undefined) professionalUpdate.clinic_address = clinicAddress
-    if (availability !== undefined) professionalUpdate.availability = availability
-    if (bankAccount !== undefined) professionalUpdate.bank_account = bankAccount
-    if (bankName !== undefined) professionalUpdate.bank_name = bankName
-    if (registrationNumber !== undefined) professionalUpdate.registration_number = registrationNumber
-    if (registrationInstitution !== undefined) professionalUpdate.registration_institution = registrationInstitution
-    if (location !== undefined) professionalUpdate.location = location
-    if (yearsExperience !== undefined) professionalUpdate.years_experience = yearsExperience
+    if (title !== undefined && title !== null) professionalUpdate.specialty = title.trim() || null
+    if (bio !== undefined && bio !== null) professionalUpdate.bio = bio.trim() || null
+    if (bioExtended !== undefined && bioExtended !== null) professionalUpdate.bio_extended = bioExtended.trim() || null
+    if (specialties !== undefined && specialties !== null) professionalUpdate.services = Array.isArray(specialties) ? specialties : []
+    if (languages !== undefined && languages !== null) professionalUpdate.languages = Array.isArray(languages) ? languages : []
+    if (consultationType !== undefined && consultationType !== null) professionalUpdate.consultation_type = consultationType
+    if (onlinePrice !== undefined && onlinePrice !== null) professionalUpdate.online_price = typeof onlinePrice === 'number' ? onlinePrice : parseFloat(onlinePrice) || null
+    if (inPersonPrice !== undefined && inPersonPrice !== null) professionalUpdate.in_person_price = typeof inPersonPrice === 'number' ? inPersonPrice : parseFloat(inPersonPrice) || null
+    if (videoPlatform !== undefined && videoPlatform !== null) professionalUpdate.video_platform = videoPlatform.trim() || null
+    if (clinicAddress !== undefined && clinicAddress !== null) professionalUpdate.clinic_address = clinicAddress.trim() || null
+    if (availability !== undefined && availability !== null) professionalUpdate.availability = availability
+    if (bankAccount !== undefined && bankAccount !== null) professionalUpdate.bank_account = bankAccount.trim() || null
+    if (bankName !== undefined && bankName !== null) professionalUpdate.bank_name = bankName.trim() || null
+    if (registrationNumber !== undefined && registrationNumber !== null) professionalUpdate.registration_number = registrationNumber.trim() || null
+    if (registrationInstitution !== undefined && registrationInstitution !== null) professionalUpdate.registration_institution = registrationInstitution.trim() || null
+    if (location !== undefined && location !== null) professionalUpdate.location = location.trim() || null
+    if (yearsExperience !== undefined && yearsExperience !== null) professionalUpdate.years_experience = typeof yearsExperience === 'number' ? yearsExperience : parseInt(yearsExperience) || null
 
     // Si se actualiza el precio online o presencial, también actualizar consultation_price como fallback
     if (onlinePrice !== undefined || inPersonPrice !== undefined) {
-      professionalUpdate.consultation_price = onlinePrice || inPersonPrice || 0
+      const fallbackPrice = onlinePrice || inPersonPrice
+      if (fallbackPrice !== undefined && fallbackPrice !== null) {
+        professionalUpdate.consultation_price = typeof fallbackPrice === 'number' ? fallbackPrice : parseFloat(fallbackPrice) || 0
+      }
     }
 
     // Actualizar profesional

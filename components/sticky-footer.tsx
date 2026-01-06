@@ -75,7 +75,7 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
       {...props}
     >
       <div className="fixed bottom-0 h-[720px] w-full bg-background">
-        <div className="sticky top-[calc(100vh-720px)] h-full overflow-y-auto">
+        <div className="sticky top-[calc(100vh-720px)] h-full overflow-y-auto overflow-x-hidden scroll-smooth">
           <div className="relative flex size-full flex-col justify-between gap-5 border-t border-teal-200/20 dark:border-teal-800/30 px-4 py-8 md:px-12 bg-gradient-to-b from-background via-teal-50/5 dark:via-teal-950/5 to-background">
             <div aria-hidden className="absolute inset-0 isolate z-0 contain-strict">
               <div className="bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,oklch(0.65_0.15_180/.08)_0,oklch(0.65_0.15_180/.03)_50%,oklch(0.65_0.15_180/.01)_80%)] absolute top-0 left-0 h-320 w-140 -translate-y-87.5 -rotate-45 rounded-full" />

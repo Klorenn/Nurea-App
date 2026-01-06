@@ -404,7 +404,7 @@ export function ProfessionalDashboard({
           <section
             aria-label="Citas"
             className={cx(
-              "flex-1 overflow-y-auto",
+              "flex-1 overflow-y-auto overflow-x-hidden scroll-smooth",
               viewMode === "grid"
                 ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
                 : cx("flex flex-col", spacing.gap.sm)

@@ -501,7 +501,8 @@ export function HealthChat({
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-8 bg-accent/5">
+          <ScrollArea className="flex-1 p-8 bg-accent/5 h-full">
+            <div className="pr-4">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground">{t.chat.loadingMessages}</p>
@@ -607,6 +608,7 @@ export function HealthChat({
                 <div ref={messagesEndRef} />
               </div>
             )}
+            </div>
           </ScrollArea>
 
           {/* Chat Input */}

@@ -62,27 +62,7 @@ export async function GET(request: Request) {
     const formattedFavorites = (favorites || []).map((fav: any) => {
       const prof = fav.professional
       
-      // Si es el profesional de prueba y estamos en desarrollo, usar datos mock
-      if (isTestProfessional(prof?.id) && shouldUseMockData()) {
-        return {
-          id: fav.id,
-          professionalId: prof.id,
-          name: 'Dr. Elena Vargas',
-          specialty: 'Psicóloga Clínica',
-          rating: 4.9,
-          reviews: 124,
-          location: 'Santiago, Chile',
-          price: 45000,
-          image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
-          available: true,
-          consultationTypes: ['Online', 'In-person'],
-        }
-      }
-      
-      // Si es el profesional de prueba pero estamos en producción, omitirlo
-      if (isTestProfessional(prof?.id) && !shouldUseMockData()) {
-        return null
-      }
+      // El profesional de prueba ahora está en la BD, se maneja como cualquier otro
 
       return {
         id: fav.id,
@@ -174,22 +154,21 @@ export async function POST(request: Request) {
       )
     }
 
-    // Si es el profesional de prueba y estamos en desarrollo, no guardar en BD (solo retornar éxito)
-    if (isTestProfessional(professionalId)) {
-      if (shouldUseMockData()) {
-        return NextResponse.json({
-          success: true,
-          message: 'Profesional agregado a favoritos.'
-        })
-      } else {
-        return NextResponse.json(
-          { 
-            error: 'not_found',
-            message: 'Profesional no encontrado.'
-          },
-          { status: 404 }
-        )
-      }
+    // Verificar que el profesional existe (incluye el profesional de prueba de la BD)
+    const { data: professional } = await supabase
+      .from('professionals')
+      .select('id')
+      .eq('id', professionalId)
+      .maybeSingle()
+
+    if (!professional) {
+      return NextResponse.json(
+        { 
+          error: 'not_found',
+          message: 'Profesional no encontrado.'
+        },
+        { status: 404 }
+      )
     }
 
     // Agregar a favoritos
@@ -264,23 +243,7 @@ export async function DELETE(request: Request) {
       )
     }
 
-    // Si es el profesional de prueba y estamos en desarrollo, solo retornar éxito
-    if (isTestProfessional(professionalId)) {
-      if (shouldUseMockData()) {
-        return NextResponse.json({
-          success: true,
-          message: 'Profesional eliminado de favoritos.'
-        })
-      } else {
-        return NextResponse.json(
-          { 
-            error: 'not_found',
-            message: 'Profesional no encontrado.'
-          },
-          { status: 404 }
-        )
-      }
-    }
+    // El profesional de prueba ahora está en la BD, se maneja como cualquier otro
 
     // Eliminar de favoritos
     const { error: deleteError } = await supabase

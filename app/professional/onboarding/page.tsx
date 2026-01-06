@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { normalizeAvailability } from "@/lib/utils/availability-helpers"
 
 const TOTAL_STEPS = 6
@@ -418,7 +419,9 @@ export default function ProfessionalOnboardingPage() {
                 {currentStep === 6 && (isSpanish ? "Registro Profesional" : "Professional Registration")}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 max-h-[calc(100vh-300px)] overflow-hidden">
+              <ScrollArea className="h-full pr-4">
+                <div className="space-y-6">
               {/* Step 1: Basic Info */}
               {currentStep === 1 && (
                 <div className="space-y-4">
@@ -766,7 +769,9 @@ export default function ProfessionalOnboardingPage() {
               )}
 
               {/* Navigation Buttons */}
-              <div className="flex justify-between pt-6">
+                </div>
+              </ScrollArea>
+              <div className="flex justify-between pt-6 border-t border-border mt-6">
                 <Button
                   type="button"
                   variant="outline"

@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { isTestProfessional, shouldUseMockData } from '@/lib/mock-data'
 
 /**
  * GET /api/professionals/[id]/appointments
@@ -16,14 +15,6 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
-
-    // Si es el profesional de prueba y estamos en desarrollo, retornar array vacío
-    if (isTestProfessional(id) && shouldUseMockData()) {
-      return NextResponse.json({
-        success: true,
-        appointments: []
-      })
-    }
 
     const supabase = await createClient()
 

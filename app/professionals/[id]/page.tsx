@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { Loader2 } from "lucide-react"
-import { isTestProfessional, mockProfessional, shouldUseMockData } from "@/lib/mock-data"
+import { isTestProfessional, NUREA_DOCTOR_ID } from "@/lib/mock-data"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -61,21 +61,7 @@ export default function ProfessionalProfilePage() {
       setError(null)
 
       try {
-        // Si es el profesional de prueba y estamos en desarrollo, usar datos mock
-        if (isTestProfessional(professionalId) && shouldUseMockData()) {
-          setProfessional(mockProfessional)
-          setLoading(false)
-          return
-        }
-        
-        // Si es el profesional de prueba pero estamos en producción, no existe
-        if (isTestProfessional(professionalId) && !shouldUseMockData()) {
-          setError(isSpanish ? "Profesional no encontrado" : "Professional not found")
-          setLoading(false)
-          return
-        }
-
-        // Cargar desde API
+        // Cargar desde API (incluye profesional de prueba si existe en BD)
         const response = await fetch(`/api/professionals/${professionalId}`)
         const data = await response.json()
 
@@ -85,22 +71,17 @@ export default function ProfessionalProfilePage() {
 
         setProfessional(data.professional)
 
-        // Cargar reviews si es profesional real
-        if (!isTestProfessional(professionalId) || !shouldUseMockData()) {
-          try {
-            const reviewsResponse = await fetch(`/api/reviews/public?professionalId=${professionalId}`)
-            if (reviewsResponse.ok) {
-              const reviewsData = await reviewsResponse.json()
-              setReviews(reviewsData.reviews || [])
-            }
-          } catch (err) {
-            console.error("Error loading reviews:", err)
-            // Si no hay reviews, usar array vacío
-            setReviews([])
+        // Cargar reviews
+        try {
+          const reviewsResponse = await fetch(`/api/reviews/public?professionalId=${professionalId}`)
+          if (reviewsResponse.ok) {
+            const reviewsData = await reviewsResponse.json()
+            setReviews(reviewsData.reviews || [])
           }
-        } else {
-          // Para el profesional de prueba en desarrollo, usar reviews mock
-          setReviews(mockProfessional.reviews || [])
+        } catch (err) {
+          console.error("Error loading reviews:", err)
+          // Si no hay reviews, usar array vacío
+          setReviews([])
         }
       } catch (err) {
         console.error("Error loading professional:", err)

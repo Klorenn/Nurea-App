@@ -138,7 +138,7 @@ export function DashboardLayout({
               </div>
             </header>
 
-            <main className="flex-1 p-6 overflow-y-auto relative z-10">
+            <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden relative z-10 h-[calc(100vh-4rem)]">
               <div className="max-w-7xl mx-auto space-y-8">{children}</div>
             </main>
               </WavyBackground>

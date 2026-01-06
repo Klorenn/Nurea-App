@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { mockProfessionalForSearch, TEST_PROFESSIONAL_ID, shouldUseMockData } from '@/lib/mock-data'
+
+const TEST_PROFESSIONAL_ID = 'nurea-doctor-test'
 
 /**
  * GET /api/professionals
@@ -66,47 +67,70 @@ export async function GET(request: Request) {
 
     const { data: professionals, error: professionalsError } = await query
 
-    if (professionalsError) {
-      console.error('Error fetching professionals:', professionalsError)
-      // Si hay error y estamos en desarrollo, retornar solo el profesional de prueba
-      if (shouldUseMockData()) {
-        return NextResponse.json({
-          success: true,
-          professionals: [mockProfessionalForSearch],
-          count: 1
-        })
+    // Formatear profesionales reales (excluyendo el de prueba para agregarlo después)
+    const formattedProfessionals = (professionals || [])
+      .filter((prof: any) => prof.id !== TEST_PROFESSIONAL_ID) // Excluir el de prueba de la query normal
+      .map((prof: any) => ({
+        id: prof.id,
+        name: `Dr. ${prof.profile?.first_name || ''} ${prof.profile?.last_name || ''}`.trim() || 'Profesional',
+        specialty: prof.specialty || '',
+        specialtyEn: prof.specialty || '', // TODO: agregar traducción si existe
+        location: prof.location || '',
+        rating: 4.8, // TODO: calcular desde reviews
+        patientsServed: 0, // TODO: calcular desde appointments
+        price: prof.consultation_price || 0,
+        languages: ['ES'], // TODO: obtener desde perfil
+        image: prof.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
+        verified: prof.verified || false,
+        isOnline: false, // TODO: implementar estado en tiempo real
+        availableToday: true, // TODO: calcular desde disponibilidad
+        availableUntil: '6:00 PM', // TODO: calcular desde disponibilidad
+      }))
+
+    // Obtener profesional de prueba de la base de datos
+    let testProfessional = null
+    const { data: testProfData } = await supabase
+      .from('professionals')
+      .select(`
+        id,
+        specialty,
+        consultation_type,
+        consultation_price,
+        verified,
+        location,
+        years_experience,
+        profile:profiles!professionals_id_fkey(
+          id,
+          first_name,
+          last_name,
+          avatar_url
+        )
+      `)
+      .eq('id', TEST_PROFESSIONAL_ID)
+      .maybeSingle()
+
+    if (testProfData) {
+      testProfessional = {
+        id: testProfData.id,
+        name: `Dr. ${testProfData.profile?.first_name || 'Nurea'} ${testProfData.profile?.last_name || 'Doctor'}`.trim(),
+        specialty: testProfData.specialty || 'Médico General',
+        specialtyEn: testProfData.specialty || 'General Medicine',
+        location: testProfData.location || 'Santiago, Chile',
+        rating: 4.9,
+        patientsServed: 0,
+        price: testProfData.consultation_price || 35000,
+        languages: ['ES', 'EN'],
+        image: testProfData.profile?.avatar_url || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&auto=format',
+        verified: testProfData.verified || true,
+        isOnline: true,
+        availableToday: true,
+        availableUntil: '7:00 PM',
       }
-      // En producción, retornar error
-      return NextResponse.json(
-        { 
-          error: 'fetch_failed',
-          message: 'No pudimos obtener los profesionales. Por favor, intenta nuevamente.'
-        },
-        { status: 500 }
-      )
     }
 
-    // Formatear profesionales reales
-    const formattedProfessionals = (professionals || []).map((prof: any) => ({
-      id: prof.id,
-      name: `Dr. ${prof.profile?.first_name || ''} ${prof.profile?.last_name || ''}`.trim() || 'Profesional',
-      specialty: prof.specialty || '',
-      specialtyEn: prof.specialty || '', // TODO: agregar traducción si existe
-      location: prof.location || '',
-      rating: 4.8, // TODO: calcular desde reviews
-      patientsServed: 0, // TODO: calcular desde appointments
-      price: prof.consultation_price || 0,
-      languages: ['ES'], // TODO: obtener desde perfil
-      image: prof.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
-      verified: prof.verified || false,
-      isOnline: false, // TODO: implementar estado en tiempo real
-      availableToday: true, // TODO: calcular desde disponibilidad
-      availableUntil: '6:00 PM', // TODO: calcular desde disponibilidad
-    }))
-
-    // Agregar profesional de prueba al final solo en desarrollo
-    const allProfessionals = shouldUseMockData() 
-      ? [...formattedProfessionals, mockProfessionalForSearch]
+    // Agregar profesional de prueba al final si existe
+    const allProfessionals = testProfessional 
+      ? [...formattedProfessionals, testProfessional]
       : formattedProfessionals
 
     // Aplicar filtros al profesional de prueba también si aplica
@@ -138,7 +162,7 @@ export async function GET(request: Request) {
     if (consultationType && consultationType !== 'both') {
       filteredProfessionals = filteredProfessionals.filter(p => {
         if (p.id === TEST_PROFESSIONAL_ID) {
-          return mockProfessionalForSearch.verified // El mock siempre está disponible
+          return true // El profesional de prueba siempre está disponible
         }
         return true // Para profesionales reales, ya se filtró en la query
       })

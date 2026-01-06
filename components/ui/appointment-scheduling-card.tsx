@@ -429,7 +429,7 @@ export function AppointmentSchedulingCard({
 
           {/* Daily Schedule */}
           {!loadingSchedule && (
-            <motion.div variants={shouldAnimate ? itemVariants : {}} className="px-6 pb-6 space-y-4">
+            <motion.div variants={shouldAnimate ? itemVariants : {}} className="px-6 pb-6 space-y-4 max-h-[500px] overflow-y-auto overflow-x-hidden scroll-smooth">
               {weekSchedule.map((day) => (
               <motion.div key={day.date} variants={shouldAnimate ? itemVariants : {}} className="space-y-2">
                 <div className="flex items-center justify-between">
