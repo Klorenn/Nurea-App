@@ -123,25 +123,31 @@ export function FeaturesSection() {
               {t.landing.features.description}
             </p>
             <div className="pt-4">
-              <div className="inline-flex items-center gap-4 p-4 rounded-2xl bg-accent/20 border border-accent/30">
+              <div className="inline-flex items-center gap-4 p-4 rounded-2xl bg-muted/50 border border-border/40">
                 <div className="flex -space-x-3">
-                  {[
-                    'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=40&h=40&fit=crop&auto=format',
-                    'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=40&h=40&fit=crop&auto=format',
-                    'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=40&h=40&fit=crop&auto=format',
-                  ].map((avatar, i) => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-muted overflow-hidden">
-                      <img
-                        src={avatar}
-                        alt="Professional"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback to default image if error
-                          e.currentTarget.src = 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=40&h=40&fit=crop&auto=format'
-                        }}
-                      />
-                    </div>
-                  ))}
+                  {professionalAvatars.length > 0 ? (
+                    // Mostrar avatares reales de los doctores (máximo 3)
+                    professionalAvatars.slice(0, 3).map((avatar, i) => (
+                      <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-muted overflow-hidden">
+                        <img
+                          src={avatar}
+                          alt="Professional"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Fallback a imagen por defecto si hay error
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=40&h=40&fit=crop&auto=format'
+                          }}
+                        />
+                      </div>
+                    ))
+                  ) : (
+                    // Si no hay avatares, no mostrar nada (o mostrar placeholder solo si hay profesionales)
+                    professionalCount !== null && professionalCount > 0 && (
+                      <div className="w-10 h-10 rounded-full border-2 border-background bg-muted/50 flex items-center justify-center">
+                        <Users className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )
+                  )}
                 </div>
                 <p className="text-sm font-medium">
                   {loading ? (

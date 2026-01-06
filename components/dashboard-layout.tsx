@@ -59,7 +59,7 @@ export function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-accent/10">
+      <div className="flex min-h-screen w-full bg-transparent">
         <Sidebar collapsible="icon" className="border-r border-border bg-card relative overflow-hidden">
           <WavyBackground className="absolute inset-0">
             <div className="relative z-10 h-full flex flex-col">
@@ -99,9 +99,11 @@ export function DashboardLayout({
 
         <SidebarInset className="flex flex-col relative">
           <PaperShaderBackground />
-          <div className="absolute inset-0">
-            <WavyBackground className="absolute inset-0">
-              <header className="h-16 flex items-center justify-between px-6 bg-background/50 backdrop-blur-md border-b border-border/40 sticky top-0 z-30 relative">
+          <div className="absolute inset-0 pointer-events-none">
+            <WavyBackground className="absolute inset-0" />
+          </div>
+          <div className="relative z-10 flex flex-col min-h-screen">
+            <header className="h-16 flex items-center justify-between px-6 bg-background/50 backdrop-blur-md border-b border-border/40 sticky top-0 z-30">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
                 <div className="h-4 w-px bg-border/20" />
@@ -141,8 +143,7 @@ export function DashboardLayout({
             <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden relative z-10 h-[calc(100vh-4rem)]">
               <div className="max-w-7xl mx-auto space-y-8">{children}</div>
             </main>
-              </WavyBackground>
-            </div>
+          </div>
         </SidebarInset>
       </div>
     </SidebarProvider>

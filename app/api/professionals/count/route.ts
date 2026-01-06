@@ -35,10 +35,23 @@ export async function GET() {
       return response
     }
 
-    // Get first 3 professionals with their avatars for display
+    // Get first 3 professionals with their avatars for display (excluding test professional from count but including in avatars if exists)
     // Handle foreign key relationship gracefully
     let avatars: string[] = []
     try {
+      // First, try to get the test professional avatar if it exists
+      const TEST_PROFESSIONAL_ID = 'nurea-doctor-test'
+      const { data: testProf } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', TEST_PROFESSIONAL_ID)
+        .maybeSingle()
+      
+      if (testProf?.avatar_url) {
+        avatars.push(testProf.avatar_url)
+      }
+
+      // Get other professionals (excluding test professional)
       const { data: professionals, error: profError } = await supabase
         .from('professionals')
         .select(`
@@ -47,14 +60,15 @@ export async function GET() {
             avatar_url
           )
         `)
-        .limit(3)
+        .neq('id', TEST_PROFESSIONAL_ID)
+        .limit(3 - avatars.length) // Fill remaining slots
         .order('created_at', { ascending: false })
 
       if (!profError && professionals && Array.isArray(professionals)) {
         professionals.forEach((prof: any) => {
           // Handle both nested profile object and direct avatar_url
           const avatarUrl = prof.profile?.avatar_url || prof.avatar_url
-          if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim() !== '') {
+          if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.trim() !== '' && avatars.length < 3) {
             avatars.push(avatarUrl)
           }
         })
@@ -65,17 +79,21 @@ export async function GET() {
           .from('profiles')
           .select('avatar_url')
           .eq('role', 'professional')
+          .neq('id', TEST_PROFESSIONAL_ID)
           .not('avatar_url', 'is', null)
-          .limit(3)
+          .limit(3 - avatars.length)
         
         if (simpleProfessionals && Array.isArray(simpleProfessionals)) {
           simpleProfessionals.forEach((prof: any) => {
-            if (prof.avatar_url && typeof prof.avatar_url === 'string') {
+            if (prof.avatar_url && typeof prof.avatar_url === 'string' && avatars.length < 3) {
               avatars.push(prof.avatar_url)
             }
           })
         }
       }
+      
+      // Limit to maximum 3 avatars
+      avatars = avatars.slice(0, 3)
     } catch (avatarError) {
       // If avatar fetching fails completely, just return empty array
       console.warn('Error fetching professional avatars:', avatarError)

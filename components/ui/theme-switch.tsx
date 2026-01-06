@@ -29,8 +29,13 @@ const ThemeSwitch = ({
   const handleCheckedChange = useCallback(
     (isChecked: boolean) => {
       setChecked(isChecked)
-      // Siempre establecer el tema explícitamente (no "system")
-      setTheme(isChecked ? "dark" : "light")
+      // Siempre establecer el tema explícitamente (no "system") para que persista
+      const newTheme = isChecked ? "dark" : "light"
+      setTheme(newTheme)
+      // Asegurar que se guarde en localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nurea-theme', newTheme)
+      }
     },
     [setTheme],
   )
