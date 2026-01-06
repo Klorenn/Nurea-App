@@ -9,14 +9,22 @@ import { LanguageSelector } from "@/components/ui/language-selector"
 import { useAuth } from "@/hooks/use-auth"
 import { UserDropdown } from "@/components/ui/user-dropdown"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
 
-export function Navbar() {
+interface NavbarProps {
+  sticky?: boolean
+}
+
+export function Navbar({ sticky = true }: NavbarProps) {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const { user, loading } = useAuth()
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <nav className={cn(
+      "left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border",
+      sticky ? "fixed top-0" : "relative"
+    )}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center">

@@ -131,7 +131,7 @@ function SearchResultsPageContent() {
         <WavyBackground className="absolute inset-0" />
       </div>
       <div className="relative z-10 min-h-screen">
-        <Navbar />
+        <Navbar sticky={false} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
         {/* Search Bar with Tags */}
         <div className="mb-8 space-y-4">
