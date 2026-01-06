@@ -53,8 +53,10 @@ function CompleteProfileContent() {
       const data = await response.json()
       
       if (data.profile?.date_of_birth) {
-        // Profile is complete, redirect to dashboard
-        router.push("/dashboard")
+        // Profile is complete, redirect based on role
+        const userRole = data.profile?.role || 'patient'
+        const redirectPath = userRole === 'professional' ? '/professional/onboarding' : '/dashboard'
+        router.push(redirectPath)
       }
     } catch (err) {
       console.error("Error checking profile:", err)
@@ -120,8 +122,9 @@ function CompleteProfileContent() {
         throw new Error(data.error || (language === "es" ? "Error al completar el perfil" : "Error completing profile"))
       }
 
-      // Redirect to dashboard
-      router.push("/dashboard")
+      // Redirect based on role (returned from API or fetch user role)
+      const redirectPath = data.redirectPath || "/dashboard"
+      router.push(redirectPath)
     } catch (err) {
       setError(err instanceof Error ? err.message : (language === "es" ? "Error al completar el perfil" : "Error completing profile"))
     } finally {

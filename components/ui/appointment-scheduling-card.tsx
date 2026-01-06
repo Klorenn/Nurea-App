@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion, AnimatePresence } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
-import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, Video, Star, CheckCircle2, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, Video, Home, Star, CheckCircle2, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
@@ -164,12 +164,14 @@ export function AppointmentSchedulingCard({
           existingAppointments = data.appointments || []
         }
 
-        // Generar horarios reales
+        // Generar horarios reales con soporte para horarios por tipo
         const schedule = generateWeekSchedule(
           professional.availability || {},
           existingAppointments,
           currentWeekStart,
-          language
+          language,
+          undefined, // consultationType - mostrar ambos si es "both"
+          professional.consultationType || 'both'
         )
 
         setWeekSchedule(schedule)
@@ -198,9 +200,15 @@ export function AppointmentSchedulingCard({
       // Parsear fecha usando helper
       const dateISO = parseShortDate(day, language)
 
-      // Verificar disponibilidad en tiempo real
+      // Determinar el tipo de consulta para este slot (si está disponible en el slot)
+      const slotInfo = weekSchedule
+        .find(d => d.date === day)
+        ?.slots.find(s => s.time === time)
+      const slotType = slotInfo?.type || (professional.consultationType === 'both' ? 'online' : professional.consultationType)
+      
+      // Verificar disponibilidad en tiempo real con el tipo de consulta
       const response = await fetch(
-        `/api/appointments/check-availability?professionalId=${professional.id}&date=${dateISO}&time=${time}`
+        `/api/appointments/check-availability?professionalId=${professional.id}&date=${dateISO}&time=${time}&type=${slotType}`
       )
       const data = await response.json()
 
@@ -440,24 +448,34 @@ export function AppointmentSchedulingCard({
                     variants={shouldAnimate ? containerVariants : {}}
                     className="flex flex-wrap gap-2"
                   >
-                    {day.slots.map((slot) => (
-                      <motion.button
-                        key={`${day.date}-${slot.time}`}
-                        variants={shouldAnimate ? timeSlotVariants : {}}
-                        whileHover={shouldAnimate && slot.available ? { scale: 1.05, y: -2 } : {}}
-                        whileTap={shouldAnimate && slot.available ? { scale: 0.98 } : {}}
-                        onClick={() => slot.available && !checkingAvailability && handleTimeSlotClick(day.date, slot.time)}
-                        disabled={!slot.available || checkingAvailability}
-                        className={cn(
-                          "px-3 py-1.5 text-sm rounded-lg border transition-colors",
-                          slot.available
-                            ? "bg-background border-teal-200/50 dark:border-teal-800/50 hover:border-teal-400 dark:hover:border-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/20 text-foreground cursor-pointer"
-                            : "bg-muted/50 border-border/30 text-muted-foreground cursor-not-allowed opacity-60"
-                        )}
-                      >
-                        {slot.time}
-                      </motion.button>
-                    ))}
+                    {day.slots.map((slot) => {
+                      // Mostrar ícono solo si el profesional ofrece "both" y el slot tiene tipo definido
+                      const showTypeIcon = professional.consultationType === 'both' && slot.type
+                      const IconComponent = slot.type === 'online' ? Video : slot.type === 'in-person' ? Home : null
+                      
+                      return (
+                        <motion.button
+                          key={`${day.date}-${slot.time}`}
+                          variants={shouldAnimate ? timeSlotVariants : {}}
+                          whileHover={shouldAnimate && slot.available ? { scale: 1.05, y: -2 } : {}}
+                          whileTap={shouldAnimate && slot.available ? { scale: 0.98 } : {}}
+                          onClick={() => slot.available && !checkingAvailability && handleTimeSlotClick(day.date, slot.time)}
+                          disabled={!slot.available || checkingAvailability}
+                          className={cn(
+                            "px-3 py-1.5 text-sm rounded-lg border transition-colors flex items-center gap-1.5",
+                            slot.available
+                              ? "bg-background border-teal-200/50 dark:border-teal-800/50 hover:border-teal-400 dark:hover:border-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/20 text-foreground cursor-pointer"
+                              : "bg-muted/50 border-border/30 text-muted-foreground cursor-not-allowed opacity-60"
+                          )}
+                          title={showTypeIcon ? (slot.type === 'online' ? (language === "es" ? "Online" : "Online") : (language === "es" ? "Presencial" : "In-Person")) : undefined}
+                        >
+                          {showTypeIcon && IconComponent && (
+                            <IconComponent className="h-3 w-3" />
+                          )}
+                          {slot.time}
+                        </motion.button>
+                      )
+                    })}
                   </motion.div>
                 )}
               </motion.div>

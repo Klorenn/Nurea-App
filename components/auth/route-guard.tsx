@@ -32,6 +32,7 @@ export function RouteGuard({
   const { user, loading: authLoading } = useAuth()
   const [profile, setProfile] = useState<any>(null)
   const [profileLoading, setProfileLoading] = useState(true)
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -61,6 +62,53 @@ export function RouteGuard({
           }
 
           setProfile(data)
+
+          // If user is a professional, check onboarding status
+          // Only check for professional routes (not onboarding page itself)
+          if (data?.role === "professional" && typeof window !== "undefined") {
+            const currentPath = window.location.pathname
+            // Don't check onboarding for the onboarding page itself
+            if (currentPath !== "/professional/onboarding") {
+              try {
+                const onboardingResponse = await fetch("/api/professional/onboarding/status", {
+                  method: "GET",
+                  credentials: "include",
+                })
+                
+                if (!onboardingResponse.ok) {
+                  // If API call fails, allow access (don't block user)
+                  console.warn("Onboarding status check failed, allowing access")
+                  setOnboardingComplete(true)
+                  return
+                }
+                
+                const onboardingData = await onboardingResponse.json()
+                
+                if (onboardingData.success !== false) {
+                  setOnboardingComplete(onboardingData.isComplete !== false)
+                  
+                  // If onboarding is incomplete, redirect to onboarding page
+                  if (onboardingData.isComplete === false) {
+                    router.push("/professional/onboarding")
+                    return
+                  }
+                } else {
+                  // API returned error but not a critical one, allow access
+                  setOnboardingComplete(true)
+                }
+              } catch (onboardingError) {
+                console.error("Error checking onboarding status:", onboardingError)
+                // Don't block access if we can't check onboarding status
+                // Allow user to proceed - they can complete onboarding later
+                setOnboardingComplete(true)
+              }
+            } else {
+              // On onboarding page, allow access
+              setOnboardingComplete(true)
+            }
+          } else {
+            setOnboardingComplete(true)
+          }
         } catch (error) {
           console.error("Error loading profile:", error)
         } finally {
@@ -71,11 +119,12 @@ export function RouteGuard({
       loadProfile()
     } else {
       setProfileLoading(false)
+      setOnboardingComplete(true)
     }
   }, [user, authLoading, requiredRole, requireEmailVerification, requireProfileComplete, router, redirectTo, supabase])
 
   // Mostrar loading mientras se verifica
-  if (authLoading || profileLoading) {
+  if (authLoading || profileLoading || onboardingComplete === null) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">

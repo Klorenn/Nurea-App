@@ -437,7 +437,7 @@ export const translations = {
         whyChoose: "Por qué elegir NUREA",
         title: "Un mercado de salud construido sobre la <span>confianza</span>.",
         description: "NUREA no es solo un directorio. Es un puente entre ti y los mejores profesionales de la salud en la región, enfocándose en atención centrada en las personas y accesibilidad sin fricciones.",
-        joinSpecialists: "Únete a <span>2,500+</span> especialistas hoy",
+        joinSpecialists: "Únete a especialistas hoy", // Deprecated: Use dynamic count from API
         humanConnection: "Conexión Humana",
         humanConnectionDesc: "Nos enfocamos en profesionales que priorizan atención empática y personalizada para cada paciente.",
         verifiedExcellence: "Excelencia Verificada",
@@ -915,7 +915,7 @@ export const translations = {
         whyChoose: "Why choose NUREA",
         title: "A healthcare marketplace built on <span>trust</span>.",
         description: "NUREA isn't just a directory. It's a bridge between you and the best healthcare professionals in the region, focusing on human-centric care and seamless accessibility.",
-        joinSpecialists: "Join <span>2,500+</span> specialists today",
+        joinSpecialists: "Join specialists today", // Deprecated: Use dynamic count from API
         humanConnection: "Human Connection",
         humanConnectionDesc: "We focus on professionals who prioritize empathetic and personalized care for every patient.",
         verifiedExcellence: "Verified Excellence",

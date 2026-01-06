@@ -16,7 +16,8 @@ import {
   Loader2,
   TrendingUp,
   User,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/hooks/use-auth"
@@ -37,10 +38,31 @@ export default function ProfessionalDashboardPage() {
     todayAppointments: 0,
   })
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
+  const [onboardingStatus, setOnboardingStatus] = useState<{
+    isComplete: boolean
+    missingFields: string[]
+  } | null>(null)
 
   useEffect(() => {
     loadDashboardData()
+    checkOnboardingStatus()
   }, [])
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const response = await fetch('/api/professional/onboarding/status')
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
+        setOnboardingStatus({
+          isComplete: data.isComplete,
+          missingFields: data.missingFields || []
+        })
+      }
+    } catch (error) {
+      console.error("Error checking onboarding status:", error)
+    }
+  }
 
   const loadDashboardData = async () => {
     setLoading(true)
@@ -154,6 +176,56 @@ export default function ProfessionalDashboardPage() {
                 : "Overview of your activity and upcoming appointments"}
             </p>
           </div>
+
+          {/* Onboarding Incomplete Alert */}
+          {onboardingStatus && !onboardingStatus.isComplete && (
+            <motion.div variants={itemVariants}>
+              <Card className="border-amber-500/50 bg-amber-500/10">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-4">
+                    <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                        {isSpanish 
+                          ? "Configuración de Perfil Incompleta" 
+                          : "Profile Setup Incomplete"}
+                      </h3>
+                      <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                        {isSpanish 
+                          ? "Completa tu perfil profesional para comenzar a recibir pacientes. Faltan los siguientes campos:"
+                          : "Complete your professional profile to start receiving patients. The following fields are missing:"}
+                      </p>
+                      <ul className="list-disc list-inside text-sm text-amber-800 dark:text-amber-200 mb-4 space-y-1">
+                        {onboardingStatus.missingFields.map((field) => {
+                          const fieldNames: { [key: string]: { es: string; en: string } } = {
+                            specialty: { es: "Especialidad", en: "Specialty" },
+                            bio: { es: "Biografía", en: "Biography" },
+                            consultation_type: { es: "Tipo de Consulta", en: "Consultation Type" },
+                            online_price: { es: "Precio Online", en: "Online Price" },
+                            in_person_price: { es: "Precio Presencial", en: "In-Person Price" },
+                            availability: { es: "Disponibilidad", en: "Availability" },
+                            bank_account: { es: "Cuenta Bancaria", en: "Bank Account" },
+                            bank_name: { es: "Nombre del Banco", en: "Bank Name" },
+                            registration_number: { es: "Número de Registro", en: "Registration Number" },
+                            registration_institution: { es: "Institución de Registro", en: "Registration Institution" },
+                          }
+                          const fieldName = fieldNames[field]?.[isSpanish ? "es" : "en"] || field
+                          return <li key={field}>{fieldName}</li>
+                        })}
+                      </ul>
+                      <Button
+                        onClick={() => router.push("/professional/onboarding")}
+                        className="bg-amber-600 hover:bg-amber-700"
+                      >
+                        {isSpanish ? "Completar Configuración" : "Complete Setup"}
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {loading ? (
             <div className="flex items-center justify-center py-12">

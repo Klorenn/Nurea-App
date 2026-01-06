@@ -16,7 +16,6 @@ import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import WavyBackground from "@/components/ui/wavy-background"
 import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
-import { Loader2 } from "lucide-react"
 
 function SearchResultsPageContent() {
   const searchParams = useSearchParams()

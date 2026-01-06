@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     .from('profiles')
     .select('id')
     .eq('id', data.user.id)
-    .single()
+    .maybeSingle()
 
   // If profile doesn't exist, create it manually
   if (!existingProfile) {
@@ -92,6 +92,55 @@ export async function POST(request: Request) {
       console.error('Profile creation error:', profileError)
       // Don't fail the signup if profile creation fails, but log it
       // The trigger might still create it later
+    }
+  }
+
+  // If user is a professional, create entry in professionals table
+  if (role === 'professional') {
+    // Wait a bit more to ensure profile is created
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Check if professional record already exists using maybeSingle()
+    const { data: existingProfessional, error: checkError } = await supabase
+      .from('professionals')
+      .select('id')
+      .eq('id', data.user.id)
+      .maybeSingle()
+
+    // If check failed or record doesn't exist, try to create it
+    if (checkError || !existingProfessional) {
+      try {
+        const { error: professionalError } = await supabase
+          .from('professionals')
+          .insert({
+            id: data.user.id,
+            specialty: '',
+            bio: '',
+            consultation_type: 'both',
+            consultation_price: 0,
+            online_price: 0,
+            in_person_price: 0,
+            availability: {},
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+
+        if (professionalError) {
+          console.error('Professional record creation error:', professionalError)
+          // Log detailed error for debugging
+          if (professionalError.code) {
+            console.error('Error code:', professionalError.code)
+            console.error('Error details:', professionalError.details)
+            console.error('Error hint:', professionalError.hint)
+          }
+          // Don't fail the signup - the onboarding API will create it if needed
+        } else {
+          console.log('Professional record created successfully for user:', data.user.id)
+        }
+      } catch (insertError) {
+        console.error('Exception during professional record creation:', insertError)
+        // Don't fail the signup - continue anyway
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Heart, ShieldCheck, Zap, Users } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
@@ -7,6 +8,79 @@ import { useTranslations } from "@/lib/i18n"
 export function FeaturesSection() {
   const { language } = useLanguage()
   const t = useTranslations(language)
+  const [professionalCount, setProfessionalCount] = useState<number | null>(null)
+  const [professionalAvatars, setProfessionalAvatars] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Load real professional count and avatars
+    const loadData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        // Add cache-busting timestamp to ensure fresh data
+        const timestamp = new Date().getTime()
+        const response = await fetch(`/api/professionals/count?t=${timestamp}`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+        })
+        
+        console.log('FeaturesSection: Fetching professional count, status:', response.status)
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}: ${response.statusText}`)
+        }
+        
+        const data = await response.json()
+        console.log('FeaturesSection: Received data:', {
+          count: data.count,
+          avatarsCount: data.professionals?.length || 0,
+          timestamp: data.timestamp
+        })
+        
+        if (data.count !== undefined) {
+          setProfessionalCount(data.count)
+          console.log('FeaturesSection: Set professional count to:', data.count)
+        } else {
+          console.warn('FeaturesSection: No count in response, setting to 0')
+          setProfessionalCount(0)
+        }
+        
+        // Use avatars from the count endpoint if available
+        if (data.professionals && Array.isArray(data.professionals) && data.professionals.length > 0) {
+          setProfessionalAvatars(data.professionals)
+          console.log('FeaturesSection: Set avatars:', data.professionals)
+        } else {
+          console.log('FeaturesSection: No avatars in response, using defaults')
+          setProfessionalAvatars([])
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        console.error('FeaturesSection: Error loading professional data:', err)
+        
+        // Check if it's a network error (server not running)
+        const isNetworkError = err instanceof TypeError && err.message.includes('fetch')
+        if (isNetworkError) {
+          console.warn('FeaturesSection: Server appears to be unavailable, showing fallback message')
+          setError('server_unavailable')
+        } else {
+          setError(errorMessage)
+        }
+        
+        // Set defaults on error - never show hardcoded 2,500+
+        setProfessionalCount(null) // null means "show generic message"
+        setProfessionalAvatars([])
+      } finally {
+        setLoading(false)
+        console.log('FeaturesSection: Loading complete, count:', professionalCount)
+      }
+    }
+    loadData()
+  }, [])
 
   const benefits = [
     {
@@ -51,19 +125,64 @@ export function FeaturesSection() {
             <div className="pt-4">
               <div className="inline-flex items-center gap-4 p-4 rounded-2xl bg-accent/20 border border-accent/30">
                 <div className="flex -space-x-3">
-                  {[1, 2, 3].map((i) => (
+                  {[
+                    'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=40&h=40&fit=crop&auto=format',
+                    'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=40&h=40&fit=crop&auto=format',
+                    'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=40&h=40&fit=crop&auto=format',
+                  ].map((avatar, i) => (
                     <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-muted overflow-hidden">
                       <img
-                        src={`/professional-.jpg?height=40&width=40&query=professional-${i}`}
+                        src={avatar}
                         alt="Professional"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to default image if error
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=40&h=40&fit=crop&auto=format'
+                        }}
                       />
                     </div>
                   ))}
                 </div>
-                <p 
-                  className="text-sm font-medium"
-                  dangerouslySetInnerHTML={{ __html: t.landing.features.joinSpecialists }}
-                />
+                <p className="text-sm font-medium">
+                  {loading ? (
+                    <span className="text-muted-foreground">
+                      {language === "es" ? "Cargando..." : "Loading..."}
+                    </span>
+                  ) : error || professionalCount === null ? (
+                    // Always show generic message when error or null - NEVER show hardcoded 2,500+
+                    <span>
+                      {language === "es" ? "Únete a especialistas hoy" : "Join specialists today"}
+                    </span>
+                  ) : language === "es" ? (
+                    // professionalCount is guaranteed to be a number here (not null)
+                    professionalCount === 0 ? (
+                      <>Sé el primero en unirte</>
+                    ) : (
+                      <>
+                        Únete a{" "}
+                        <span className="font-bold text-primary">
+                          {professionalCount.toLocaleString('es-ES')}
+                          {professionalCount > 0 ? "+" : ""}
+                        </span>{" "}
+                        especialistas hoy
+                      </>
+                    )
+                  ) : (
+                    // professionalCount is guaranteed to be a number here (not null)
+                    professionalCount === 0 ? (
+                      <>Be the first to join</>
+                    ) : (
+                      <>
+                        Join{" "}
+                        <span className="font-bold text-primary">
+                          {professionalCount.toLocaleString('en-US')}
+                          {professionalCount > 0 ? "+" : ""}
+                        </span>{" "}
+                        specialists today
+                      </>
+                    )
+                  )}
+                </p>
               </div>
             </div>
           </div>

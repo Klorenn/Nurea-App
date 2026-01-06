@@ -34,6 +34,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { parseShortDate } from "@/lib/utils/date-helpers"
+import { normalizeAvailability, isLegacyFormat } from "@/lib/utils/availability-helpers"
 import Link from "next/link"
 
 export default function ProfessionalProfilePage() {
@@ -139,9 +140,9 @@ export default function ProfessionalProfilePage() {
       // Parsear la fecha del formato "Ene 15" a una fecha completa usando el helper
       const appointmentDateStr = parseShortDate(day, language)
       
-      // Verificar disponibilidad antes de intentar crear la cita
+      // Verificar disponibilidad antes de intentar crear la cita (incluyendo el tipo de consulta)
       const availabilityCheck = await fetch(
-        `/api/appointments/check-availability?professionalId=${professional.id}&date=${appointmentDateStr}&time=${time}`
+        `/api/appointments/check-availability?professionalId=${professional.id}&date=${appointmentDateStr}&time=${time}&type=${type}`
       )
       const availabilityData = await availabilityCheck.json()
 
@@ -607,27 +608,71 @@ export default function ProfessionalProfilePage() {
                     <Clock className="h-4 w-4" /> {isSpanish ? "Horarios disponibles" : "Available hours"}
                   </p>
                   <div className="space-y-2">
-                    {professional.availability && Object.entries(professional.availability).map(([day, schedule]: [string, any]) => {
-                      if (!schedule || !schedule.available) return null
-                      const dayNames: Record<string, string> = {
-                        monday: isSpanish ? "Lunes" : "Monday",
-                        tuesday: isSpanish ? "Martes" : "Tuesday",
-                        wednesday: isSpanish ? "Miércoles" : "Wednesday",
-                        thursday: isSpanish ? "Jueves" : "Thursday",
-                        friday: isSpanish ? "Viernes" : "Friday",
-                        saturday: isSpanish ? "Sábado" : "Saturday",
-                        sunday: isSpanish ? "Domingo" : "Sunday",
-                      }
-                      return (
-                        <div
-                          key={day}
-                          className="flex items-center justify-between p-2 rounded-lg bg-accent/10 text-sm"
-                        >
-                          <span className="font-medium">{dayNames[day]}</span>
-                          <span className="text-muted-foreground">{schedule.hours}</span>
-                        </div>
+                    {(() => {
+                      // Normalizar disponibilidad al nuevo formato
+                      const normalizedAvailability = normalizeAvailability(
+                        professional.availability || {},
+                        professional.consultationType || 'both'
                       )
-                    })}
+                      const isLegacy = isLegacyFormat(professional.availability || {})
+                      
+                      return Object.entries(normalizedAvailability).map(([day, dayData]: [string, any]) => {
+                        const dayNames: Record<string, string> = {
+                          monday: isSpanish ? "Lunes" : "Monday",
+                          tuesday: isSpanish ? "Martes" : "Tuesday",
+                          wednesday: isSpanish ? "Miércoles" : "Wednesday",
+                          thursday: isSpanish ? "Jueves" : "Thursday",
+                          friday: isSpanish ? "Viernes" : "Friday",
+                          saturday: isSpanish ? "Sábado" : "Saturday",
+                          sunday: isSpanish ? "Domingo" : "Sunday",
+                        }
+                        
+                        const onlineAvailable = dayData?.online?.available && dayData?.online?.hours
+                        const inPersonAvailable = dayData?.['in-person']?.available && dayData?.['in-person']?.hours
+                        
+                        // Si no hay disponibilidad para este día, no mostrar
+                        if (!onlineAvailable && !inPersonAvailable) return null
+                        
+                        // Si es formato legacy o solo un tipo, mostrar simple
+                        if (isLegacy || (professional.consultationType !== 'both' && !onlineAvailable && !inPersonAvailable)) {
+                          const hours = onlineAvailable ? dayData.online.hours : dayData['in-person']?.hours
+                          if (!hours) return null
+                          return (
+                            <div
+                              key={day}
+                              className="flex items-center justify-between p-2 rounded-lg bg-accent/10 text-sm"
+                            >
+                              <span className="font-medium">{dayNames[day]}</span>
+                              <span className="text-muted-foreground">{hours}</span>
+                            </div>
+                          )
+                        }
+                        
+                        // Formato nuevo con ambos tipos
+                        return (
+                          <div key={day} className="space-y-1.5">
+                            {onlineAvailable && (
+                              <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/20 text-sm">
+                                <span className="font-medium flex items-center gap-2">
+                                  <Video className="h-3.5 w-3.5" />
+                                  {dayNames[day]} - {isSpanish ? "Online" : "Online"}
+                                </span>
+                                <span className="text-muted-foreground">{dayData.online.hours}</span>
+                              </div>
+                            )}
+                            {inPersonAvailable && (
+                              <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/5 border border-secondary/20 text-sm">
+                                <span className="font-medium flex items-center gap-2">
+                                  <Home className="h-3.5 w-3.5" />
+                                  {dayNames[day]} - {isSpanish ? "Presencial" : "In-Person"}
+                                </span>
+                                <span className="text-muted-foreground">{dayData['in-person'].hours}</span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    })()}
                   </div>
                 </div>
 

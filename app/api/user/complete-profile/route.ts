@@ -60,7 +60,20 @@ export async function POST(request: Request) {
       )
     }
 
-    return NextResponse.json({ success: true })
+    // Get user role to determine redirect path
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const userRole = profileData?.role || 'patient'
+    const redirectPath = userRole === 'professional' ? '/professional/onboarding' : '/dashboard'
+
+    return NextResponse.json({ 
+      success: true,
+      redirectPath 
+    })
   } catch (error) {
     console.error('Complete profile error:', error)
     return NextResponse.json(

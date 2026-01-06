@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { isFutureDateTime, combineDateTime } from '@/lib/utils/date-helpers'
+import { normalizeAvailability, getAvailabilityForType, hasAnyAvailability } from '@/lib/utils/availability-helpers'
 
 /**
  * GET /api/appointments/check-availability
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
     const professionalId = searchParams.get('professionalId')
     const date = searchParams.get('date')
     const time = searchParams.get('time')
+    const type = searchParams.get('type') as 'online' | 'in-person' | null // Tipo de consulta solicitada
 
     if (!professionalId || !date || !time) {
       return NextResponse.json(
@@ -37,7 +39,7 @@ export async function GET(request: Request) {
     // Obtener información del profesional
     const { data: professional, error: profError } = await supabase
       .from('professionals')
-      .select('availability, consultation_type, online_price, in_person_price, consultation_price')
+      .select('availability, consultation_type, online_price, in_person_price, consultation_price, specialty, bio, bank_account, bank_name, registration_number, registration_institution')
       .eq('id', professionalId)
       .single()
 
@@ -49,6 +51,58 @@ export async function GET(request: Request) {
         },
         { status: 404 }
       )
+    }
+
+    // Verificar que el profesional tenga el perfil completo
+    const missingFields: string[] = []
+    
+    if (!professional.specialty || professional.specialty.trim() === '') {
+      missingFields.push('specialty')
+    }
+    if (!professional.bio || professional.bio.trim() === '') {
+      missingFields.push('bio')
+    }
+    if (!professional.consultation_type || professional.consultation_type === '') {
+      missingFields.push('consultation_type')
+    }
+    
+    const consultationType = professional.consultation_type || 'both'
+    if (consultationType === 'online' || consultationType === 'both') {
+      if (!professional.online_price || professional.online_price === 0) {
+        missingFields.push('online_price')
+      }
+    }
+    if (consultationType === 'in-person' || consultationType === 'both') {
+      if (!professional.in_person_price || professional.in_person_price === 0) {
+        missingFields.push('in_person_price')
+      }
+    }
+    
+    // Verificar disponibilidad usando helper (soporta formato antiguo y nuevo)
+    if (!hasAnyAvailability(professional.availability, professional.consultation_type || 'both')) {
+      missingFields.push('availability')
+    }
+    
+    if (!professional.bank_account || professional.bank_account.trim() === '') {
+      missingFields.push('bank_account')
+    }
+    if (!professional.bank_name || professional.bank_name.trim() === '') {
+      missingFields.push('bank_name')
+    }
+    if (!professional.registration_number || professional.registration_number.trim() === '') {
+      missingFields.push('registration_number')
+    }
+    if (!professional.registration_institution || professional.registration_institution.trim() === '') {
+      missingFields.push('registration_institution')
+    }
+
+    if (missingFields.length > 0) {
+      return NextResponse.json({
+        available: false,
+        reason: 'professional_profile_incomplete',
+        message: 'El profesional aún no ha completado su configuración de perfil.',
+        missingFields
+      })
     }
 
     // Verificar disponibilidad según el horario de trabajo
@@ -67,19 +121,29 @@ export async function GET(request: Request) {
     }
     
     const dayName = dayMap[dayOfWeek]
-    const availability = professional.availability || {}
-    const dayAvailability = availability[dayName]
+    
+    // Normalizar disponibilidad al nuevo formato
+    const normalizedAvailability = normalizeAvailability(
+      professional.availability || {},
+      professional.consultation_type || 'both'
+    )
 
-    // Verificar si el día está disponible
+    // Determinar el tipo de consulta a verificar
+    const consultationTypeToCheck = type || (professional.consultation_type === 'both' ? 'online' : professional.consultation_type)
+    
+    // Obtener disponibilidad para el tipo de consulta solicitado
+    const dayAvailability = getAvailabilityForType(normalizedAvailability, consultationTypeToCheck as 'online' | 'in-person', dayName)
+
+    // Verificar si el día está disponible para este tipo de consulta
     if (!dayAvailability || !dayAvailability.available) {
       return NextResponse.json({
         available: false,
         reason: 'day_not_available',
-        message: 'El profesional no tiene disponibilidad en este día.'
+        message: `El profesional no tiene disponibilidad ${consultationTypeToCheck === 'online' ? 'online' : 'presencial'} en este día.`
       })
     }
 
-    // Verificar si la hora está dentro del horario de trabajo
+    // Verificar si la hora está dentro del horario de trabajo para este tipo
     if (dayAvailability.hours) {
       const [startTime, endTime] = dayAvailability.hours.split(' - ')
       const appointmentHour = parseInt(time.split(':')[0])
@@ -96,7 +160,7 @@ export async function GET(request: Request) {
           return NextResponse.json({
             available: false,
             reason: 'outside_working_hours',
-            message: 'La hora seleccionada está fuera del horario de trabajo del profesional.'
+            message: 'La hora seleccionada está fuera del horario de trabajo del profesional para este tipo de consulta.'
           })
         }
       }
