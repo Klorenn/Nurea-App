@@ -81,11 +81,9 @@ const TimelineContent = ({
 // Componente para animar números (alternativa a NumberFlow)
 const AnimatedNumber = ({ value, className }: { value: number; className?: string }) => {
   const [displayValue, setDisplayValue] = useState(0)
-  const isInView = useInView({ once: true })
 
   useEffect(() => {
-    if (!isInView) return
-
+    // Iniciar animación automáticamente al montar
     const duration = 1000
     const steps = 30
     const increment = value / steps
@@ -104,7 +102,7 @@ const AnimatedNumber = ({ value, className }: { value: number; className?: strin
     }, duration / steps)
 
     return () => clearInterval(timer)
-  }, [value, isInView])
+  }, [value])
 
   return <span className={className}>{displayValue.toLocaleString("es-CL")}</span>
 }
