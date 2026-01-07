@@ -8,6 +8,7 @@ import { CheckCheck, GraduationCap } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { SubscriptionSuccessDialog } from "@/components/subscription-success-dialog"
+import { WelcomeDialog } from "@/components/welcome-dialog"
 import { motion, useInView } from "framer-motion"
 import { cn } from "@/lib/utils"
 
@@ -181,6 +182,7 @@ const PricingSwitch = ({
 export function Pricing() {
   const { language } = useLanguage()
   const t = useTranslations(language || "es")
+  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: string } | null>(null)
   const [isYearly, setIsYearly] = useState(false)
@@ -210,6 +212,7 @@ export function Pricing() {
       name: t.landing.pricing.professional,
       monthlyPrice: monthlyPrices.professional,
       yearlyPrice: calculateYearlyPrice(monthlyPrices.professional, 38),
+      yearlyDiscountPercent: 38,
       description: t.landing.pricing.professionalDesc,
       features: [
         t.landing.pricing.unlimitedBookings,
@@ -226,7 +229,8 @@ export function Pricing() {
     {
       name: t.landing.pricing.recentGraduate,
       monthlyPrice: monthlyPrices.recentGraduate,
-      yearlyPrice: calculateYearlyPrice(monthlyPrices.recentGraduate),
+      yearlyPrice: calculateYearlyPrice(monthlyPrices.recentGraduate, 38),
+      yearlyDiscountPercent: 38,
       description: t.landing.pricing.recentGraduateDesc,
       badge: language === "es" ? "OFERTA" : "OFFER",
       features: [
@@ -235,6 +239,7 @@ export function Pricing() {
         t.landing.pricing.prioritySupport,
         t.landing.pricing.marketingAssistance,
         t.landing.pricing.mentorshipAccess,
+        t.landing.pricing.analyticsDashboard,
       ],
       buttonText: t.landing.pricing.applyForDiscount,
       buttonVariant: "outline" as const,
@@ -317,36 +322,43 @@ export function Pricing() {
                 )}
               >
                 <CardHeader className="text-left pb-4 pt-8">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="xl:text-3xl md:text-2xl text-3xl font-semibold text-foreground flex items-center gap-2">
+                  <div className="flex justify-between items-start mb-2 gap-2">
+                    <h3 className="xl:text-3xl md:text-2xl text-3xl font-semibold text-white flex items-center gap-2">
                       {plan.name === t.landing.pricing.recentGraduate && (
                         <GraduationCap className="h-6 w-6 text-primary" />
                       )}
                       {plan.name}
                     </h3>
-                    {plan.popular && (
-                      <Badge className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
-                        {t.landing.pricing.mostPopular}
-                      </Badge>
-                    )}
-                    {plan.badge && (
-                      <Badge className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
-                        {plan.badge}
-                      </Badge>
-                    )}
+                    <div className="flex flex-col items-end gap-2">
+                      {isYearly && plan.yearlyDiscountPercent && (
+                        <Badge className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap">
+                          {language === "es" ? `Ahorra ${plan.yearlyDiscountPercent}%` : `Save ${plan.yearlyDiscountPercent}%`}
+                        </Badge>
+                      )}
+                      {plan.popular && (
+                        <Badge className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
+                          {t.landing.pricing.mostPopular}
+                        </Badge>
+                      )}
+                      {plan.badge && !isYearly && (
+                        <Badge className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
+                          {plan.badge}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <p className="xl:text-sm md:text-xs text-sm text-muted-foreground mb-4">
+                  <p className="xl:text-sm md:text-xs text-sm text-white/80 mb-4">
                     {plan.description}
                   </p>
                   <div className="flex items-baseline">
-                    <span className="text-4xl font-semibold text-foreground">
+                    <span className="text-4xl font-semibold text-white">
                       $
                       <AnimatedNumber
                         value={currentPrice}
                         className="text-4xl font-semibold"
                       />
                     </span>
-                    <span className="text-muted-foreground ml-1">
+                    <span className="text-white/70 ml-1">
                       /{isYearly ? (language === "es" ? "año" : "year") : (language === "es" ? "mes" : "month")}
                     </span>
                   </div>
@@ -364,16 +376,14 @@ export function Pricing() {
                     )}
                     onClick={() => {
                       setSelectedPlan({ name: plan.name, price: `$${currentPrice.toLocaleString("es-CL")}` })
-                      setTimeout(() => {
-                        setShowSuccessDialog(true)
-                      }, 1500)
+                      setShowWelcomeDialog(true)
                     }}
                   >
                     {plan.buttonText}
                   </Button>
 
-                  <div className="space-y-3 pt-4 border-t border-border/40 flex-1">
-                    <h2 className="text-xl font-semibold uppercase text-foreground mb-3">
+                  <div className="space-y-3 pt-4 border-t border-white/20 dark:border-border/40 flex-1">
+                    <h2 className="text-xl font-semibold uppercase text-white mb-3">
                       {language === "es" ? "Características" : "Features"}
                     </h2>
                     <ul className="space-y-2">
@@ -382,7 +392,7 @@ export function Pricing() {
                           <span className="h-6 w-6 bg-primary/10 dark:bg-primary/20 border border-primary rounded-full grid place-content-center mt-0.5 mr-3 shrink-0">
                             <CheckCheck className="h-4 w-4 text-primary" />
                           </span>
-                          <span className="text-sm text-muted-foreground leading-relaxed">{feature}</span>
+                          <span className="text-sm text-white/90 leading-relaxed">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -393,6 +403,18 @@ export function Pricing() {
           )
         })}
       </div>
+
+      {/* Welcome Dialog */}
+      <WelcomeDialog
+        open={showWelcomeDialog}
+        onOpenChange={setShowWelcomeDialog}
+        onContinue={() => {
+          setShowWelcomeDialog(false)
+          setTimeout(() => {
+            setShowSuccessDialog(true)
+          }, 300)
+        }}
+      />
 
       {/* Success Dialog */}
       {selectedPlan && (
