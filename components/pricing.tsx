@@ -276,7 +276,7 @@ export function Pricing() {
         </h2>
 
         <TimelineContent
-          as="p"
+          as="div"
           animationNum={0}
           timelineRef={pricingRef}
           customVariants={revealVariants}

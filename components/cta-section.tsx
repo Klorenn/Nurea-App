@@ -1,19 +1,73 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/language-context"
-import { useTranslations } from "@/lib/i18n"
 import { motion } from "framer-motion"
 
 export function CtaSection() {
   const { language } = useLanguage()
-  const t = useTranslations(language || "es")
   const isSpanish = language === "es"
   const [email, setEmail] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [waitlistCount, setWaitlistCount] = useState(0)
+  
+  // Cuenta regresiva de 218 días desde hoy
+  const targetDate = new Date()
+  targetDate.setDate(targetDate.getDate() + 218)
+  
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  })
+
+  // Obtener conteo de waitlist
+  useEffect(() => {
+    const fetchWaitlistCount = async () => {
+      try {
+        const response = await fetch('/api/waitlist/count')
+        const data = await response.json()
+        setWaitlistCount(data.count || 0)
+      } catch (error) {
+        console.error('Error obteniendo conteo de waitlist:', error)
+      }
+    }
+
+    fetchWaitlistCount()
+    // Actualizar el conteo cada 30 segundos
+    const interval = setInterval(fetchWaitlistCount, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Calcular tiempo restante
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime()
+      const target = targetDate.getTime()
+      const difference = target - now
+
+      if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24))
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000)
+
+        setTimeLeft({ days, hours, minutes, seconds })
+      } else {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+      }
+    }
+
+    calculateTimeLeft()
+    const timer = setInterval(calculateTimeLeft, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,6 +87,16 @@ export function CtaSection() {
 
       if (response.ok) {
         setIsSubmitted(true)
+        // Actualizar el conteo después de registrarse
+        const responseData = await response.json()
+        if (responseData.count !== undefined) {
+          setWaitlistCount(responseData.count)
+        } else {
+          // Si no viene en la respuesta, hacer una nueva petición
+          const countResponse = await fetch('/api/waitlist/count')
+          const countData = await countResponse.json()
+          setWaitlistCount(countData.count || 0)
+        }
       } else {
         console.error('Error:', data.error)
         alert(isSpanish ? 'Error al agregar tu email. Intenta nuevamente.' : 'Error adding your email. Please try again.')
@@ -46,142 +110,125 @@ export function CtaSection() {
   }
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center px-4 py-20 overflow-hidden">
-      {/* Background Image - Natural Landscape */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80&auto=format&fit=crop')",
-        }}
-      >
-        {/* Dark overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-800/70 to-slate-900/80" />
-      </div>
-
-      {/* Content Container */}
-      <div className="relative z-10 max-w-5xl mx-auto w-full space-y-12">
-        {/* Main CTA Card */}
+    <section className="relative min-h-[70vh] flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      {/* Content Container - Centrado perfectamente horizontal y vertical */}
+      <div className="relative z-10 w-full max-w-md mx-auto">
+        {/* Waitlist Card */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="bg-card/90 dark:bg-card/80 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-border/40 shadow-2xl"
+          className="bg-white dark:bg-gray-900 rounded-2xl p-6 sm:p-8 shadow-xl border border-gray-200 dark:border-gray-800"
         >
-          <div className="text-center space-y-6">
-                  {/* Headline */}
-                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary leading-tight">
-                    {t?.cta?.title || "Comienza tu viaje hacia una mejor salud hoy"}
-                  </h2>
-
-                  {/* Subtitle */}
-                  <p className="text-lg md:text-xl text-foreground/90 max-w-3xl mx-auto leading-relaxed">
-                    {t?.cta?.subtitle || "Únete a miles de personas que han transformado su acceso a la salud. Encuentra el profesional adecuado y experimenta la diferencia."}
-                  </p>
-
-            {/* Buttons - Solo "Demo Próximamente" */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-14 px-8 rounded-2xl text-base font-medium border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary hover:text-primary"
-                  disabled
-                >
-                        {t?.cta?.watchDemo || "Demo Próximamente"}
-                      </Button>
-                    </motion.div>
-                  </div>
-
-                  {/* Small Print */}
-                  <p className="text-sm text-muted-foreground pt-2">
-                    {t?.cta?.noCreditCard || "Sin tarjeta de crédito requerida • Prueba gratuita • Cancela cuando quieras"}
-                  </p>
-          </div>
-        </motion.div>
-
-        {/* Waitlist Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-card/90 dark:bg-card/80 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-border/40 shadow-2xl"
-        >
-          <div className="text-center space-y-6">
-            <h3 className="text-3xl md:text-4xl font-bold text-foreground">
+          {/* Header Section */}
+          <div className="text-center space-y-4 mb-6">
+            <h3 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100">
               {isSpanish ? "Únete a la Lista de Espera" : "Join the Waitlist"}
             </h3>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
               {isSpanish
-                ? "Sé el primero en conocer las nuevas funcionalidades de NUREA"
-                : "Be the first to know about NUREA's new features"}
+                ? "Sé el primero en conocer las nuevas funcionalidades de NUREA - la plataforma inteligente de salud construida para equipos modernos"
+                : "Get early access to NUREA - the intelligent health platform built for modern teams"}
             </p>
+          </div>
 
-            {!isSubmitted ? (
-              <form onSubmit={handleSubmit} className="max-w-md mx-auto">
-                <div className="flex gap-3">
-                  <Input
-                    type="email"
-                    placeholder={isSpanish ? "tu@email.com" : "your@email.com"}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="flex-1 h-12 rounded-xl bg-background/50 border-border"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    size="lg"
-                    className="h-12 px-6 rounded-xl"
-                  >
-                    {isLoading
-                      ? (isSpanish ? "Enviando..." : "Sending...")
-                      : (isSpanish ? "Notificarme" : "Get Notified")}
-                  </Button>
-                </div>
-              </form>
-            ) : (
-              <div className="text-center py-4">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary/30 to-primary/50 flex items-center justify-center border border-primary/40">
-                  <svg
-                    className="w-8 h-8 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-semibold text-foreground mb-2">
-                  {isSpanish ? "¡Estás en la lista!" : "You're on the list!"}
-                </h4>
-                <p className="text-muted-foreground text-sm">
-                  {isSpanish
-                    ? "Te notificaremos cuando lancemos. ¡Gracias por unirte!"
-                    : "We'll notify you when we launch. Thanks for joining!"}
-                </p>
+          {/* Form Section */}
+          {!isSubmitted ? (
+            <form onSubmit={handleSubmit} className="mb-6">
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder={isSpanish ? "tu@email.com" : "your@email.com"}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="flex-1 h-11 rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+                />
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="h-11 px-5 sm:px-6 rounded-lg text-sm bg-gray-700 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white whitespace-nowrap"
+                >
+                  {isLoading
+                    ? (isSpanish ? "Enviando..." : "Sending...")
+                    : (isSpanish ? "Registrarse" : "Sign Up")}
+                </Button>
               </div>
-            )}
+            </form>
+          ) : (
+            <div className="text-center py-6 mb-6">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gradient-to-r from-primary/30 to-primary/50 flex items-center justify-center border border-primary/40">
+                <svg
+                  className="w-6 h-6 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                {isSpanish ? "¡Estás en la lista!" : "You're on the list!"}
+              </h4>
+              <p className="text-gray-600 dark:text-gray-400 text-xs">
+                {isSpanish
+                  ? "Te notificaremos cuando lancemos. ¡Gracias por unirte!"
+                  : "We'll notify you when we launch. Thanks for joining!"}
+              </p>
+            </div>
+          )}
 
-            <div className="flex items-center justify-center gap-3 pt-4">
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/80 border-2 border-background flex items-center justify-center text-primary-foreground text-xs font-medium">
-                  N
-                </div>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/80 to-primary/60 border-2 border-background flex items-center justify-center text-primary-foreground text-xs font-medium">
-                  U
-                </div>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/60 to-primary/40 border-2 border-background flex items-center justify-center text-primary-foreground text-xs font-medium">
-                  R
+          {/* Social Proof Section */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="flex -space-x-2">
+              <div className="w-8 h-8 rounded-full bg-blue-500 border-2 border-white dark:border-gray-900 flex items-center justify-center text-white text-xs font-medium shadow-sm">
+                N
+              </div>
+              <div className="w-8 h-8 rounded-full bg-green-500 border-2 border-white dark:border-gray-900 flex items-center justify-center text-white text-xs font-medium shadow-sm">
+                U
+              </div>
+              <div className="w-8 h-8 rounded-full bg-purple-500 border-2 border-white dark:border-gray-900 flex items-center justify-center text-white text-xs font-medium shadow-sm">
+                R
+              </div>
+            </div>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {isSpanish 
+                ? `${waitlistCount.toLocaleString()} persona${waitlistCount !== 1 ? 's' : ''} ya se ${waitlistCount !== 1 ? 'unieron' : 'unió'}`
+                : `${waitlistCount.toLocaleString()} ${waitlistCount === 1 ? 'person has' : 'people have'} already joined`}
+            </span>
+          </div>
+
+          {/* Countdown Timer Section */}
+          <div className="pt-6 border-t border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-center gap-3 sm:gap-4">
+              <div className="text-center min-w-[60px]">
+                <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{timeLeft.days}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide mt-1">
+                  {isSpanish ? "días" : "days"}
                 </div>
               </div>
-              <span className="text-muted-foreground text-sm">
-                {isSpanish ? "~2k+ personas ya se unieron" : "~2k+ people already joined"}
-              </span>
+              <div className="text-gray-400 text-sm">|</div>
+              <div className="text-center min-w-[60px]">
+                <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{timeLeft.hours}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide mt-1">
+                  {isSpanish ? "horas" : "hours"}
+                </div>
+              </div>
+              <div className="text-gray-400 text-sm">|</div>
+              <div className="text-center min-w-[60px]">
+                <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{timeLeft.minutes}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide mt-1">
+                  {isSpanish ? "min" : "min"}
+                </div>
+              </div>
+              <div className="text-gray-400 text-sm">|</div>
+              <div className="text-center min-w-[60px]">
+                <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{timeLeft.seconds}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide mt-1">
+                  {isSpanish ? "seg" : "sec"}
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>

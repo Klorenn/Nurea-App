@@ -56,10 +56,16 @@ export async function POST(request: Request) {
       )
     }
 
+    // Obtener el nuevo conteo después de insertar
+    const { count } = await supabase
+      .from('waitlist')
+      .select('*', { count: 'exact', head: true })
+
     return NextResponse.json({
       success: true,
       message: 'Email agregado a la lista de espera',
-      data
+      data,
+      count: count || 0
     })
   } catch (error) {
     console.error('Error en waitlist API:', error)
