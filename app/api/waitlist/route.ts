@@ -30,28 +30,60 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      // Si la tabla no existe, intentar crearla primero
+      // Si la tabla no existe
       if (error.code === '42P01') {
-        // Tabla no existe, pero no podemos crearla desde aquí
-        // Por ahora, retornamos éxito y guardamos en logs
-        console.log('Waitlist email:', email)
-        return NextResponse.json({
-          success: true,
-          message: 'Email agregado a la lista de espera'
-        })
+        console.error('Tabla waitlist no existe. Aplica la migración SQL primero.')
+        return NextResponse.json(
+          { 
+            success: false,
+            error: 'La tabla waitlist no existe. Por favor, aplica la migración SQL en Supabase primero.',
+            message: 'Error de configuración del servidor'
+          },
+          { status: 500 }
+        )
       }
 
       // Si es un error de duplicado, retornar éxito
       if (error.code === '23505') {
+        // Obtener el conteo actual
+        const { count } = await supabase
+          .from('waitlist')
+          .select('*', { count: 'exact', head: true })
+        
         return NextResponse.json({
           success: true,
-          message: 'Ya estás en la lista de espera'
+          message: 'Ya estás en la lista de espera',
+          count: count || 0
         })
       }
 
-      console.error('Error guardando email en waitlist:', error)
+      console.error('Error guardando email en waitlist:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+      
+      // Si es un error de RLS, dar un mensaje más específico
+      if (error.message?.includes('row-level security') || error.code === '42501') {
+        return NextResponse.json(
+          { 
+            success: false,
+            error: error.message || 'Error de permisos',
+            message: 'Error de configuración de seguridad. Por favor, ejecuta el script QUICK_FIX_WAITLIST_RLS.sql en Supabase.',
+            code: error.code
+          },
+          { status: 500 }
+        )
+      }
+      
       return NextResponse.json(
-        { error: 'Error al guardar el email' },
+        { 
+          success: false,
+          error: error.message || 'Error al guardar el email',
+          message: 'No se pudo agregar tu email. Por favor, intenta nuevamente.',
+          code: error.code
+        },
         { status: 500 }
       )
     }

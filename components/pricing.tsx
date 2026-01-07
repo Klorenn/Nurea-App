@@ -126,7 +126,7 @@ const PricingSwitch = ({
 
   return (
     <div className={cn("flex justify-center", className)}>
-      <div className="relative z-10 mx-auto flex w-fit rounded-xl bg-muted/50 dark:bg-muted/30 border border-border p-1">
+      <div className="relative z-10 mx-auto flex w-fit rounded-xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-white/30 dark:border-gray-700/30 p-1 shadow-lg">
         <button
           onClick={() => handleSwitch("0")}
           className={cn(
@@ -269,7 +269,7 @@ export function Pricing() {
       ref={pricingRef}
     >
       <article className="text-left mb-6 space-y-4 max-w-2xl">
-        <h2 className="md:text-6xl text-4xl capitalize font-medium text-foreground mb-4">
+        <h2 className="md:text-6xl text-4xl capitalize font-medium text-white drop-shadow-lg mb-4">
           <VerticalCutReveal>
             {t?.landing?.pricing?.title || "Planes de Suscripción para Profesionales"}
           </VerticalCutReveal>
@@ -280,7 +280,7 @@ export function Pricing() {
           animationNum={0}
           timelineRef={pricingRef}
           customVariants={revealVariants}
-          className="md:text-base text-sm text-muted-foreground w-[80%]"
+          className="md:text-base text-sm text-white/90 drop-shadow-md w-[80%]"
         >
           {t?.landing?.pricing?.subtitle || "Precios asequibles diseñados para profesionales de la salud en Chile y más allá"}
         </TimelineContent>
@@ -310,10 +310,10 @@ export function Pricing() {
             >
               <Card
                 className={cn(
-                  "relative border rounded-2xl overflow-hidden transition-all h-full flex flex-col",
+                  "relative border rounded-2xl overflow-hidden transition-all h-full flex flex-col backdrop-blur-xl",
                   plan.popular
-                    ? "ring-2 ring-primary bg-primary/5 dark:bg-primary/10 border-primary"
-                    : "bg-card border-border/40"
+                    ? "ring-2 ring-primary/50 bg-white/80 dark:bg-gray-900/80 border-primary/30 shadow-2xl shadow-primary/20"
+                    : "bg-white/70 dark:bg-gray-900/70 border-white/20 dark:border-gray-700/30 shadow-xl"
                 )}
               >
                 <CardHeader className="text-left pb-4 pt-8">

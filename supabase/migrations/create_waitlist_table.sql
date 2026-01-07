@@ -16,10 +16,11 @@ CREATE INDEX IF NOT EXISTS idx_waitlist_created_at ON public.waitlist(created_at
 ALTER TABLE public.waitlist ENABLE ROW LEVEL SECURITY;
 
 -- Política: Cualquiera puede insertar (para el formulario público)
+-- Usar 'public' permite tanto usuarios anónimos como autenticados
 CREATE POLICY "Allow public insert on waitlist"
   ON public.waitlist
   FOR INSERT
-  TO anon, authenticated
+  TO public
   WITH CHECK (true);
 
 -- Política: Cualquiera puede leer el conteo (pero no los emails individuales)

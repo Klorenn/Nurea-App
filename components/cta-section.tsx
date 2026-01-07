@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/language-context"
 import { motion } from "framer-motion"
+import { createClient } from "@/lib/supabase/client"
 
 export function CtaSection() {
   const { language } = useLanguage()
@@ -13,6 +14,14 @@ export function CtaSection() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [waitlistCount, setWaitlistCount] = useState(0)
+  
+  // Validar email
+  const isValidEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+  
+  const isEmailValid = isValidEmail(email)
   
   // Cuenta regresiva de 218 días desde hoy
   const targetDate = new Date()
@@ -71,39 +80,48 @@ export function CtaSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !email.includes('@')) return
+    if (!isEmailValid) return
 
     setIsLoading(true)
     try {
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      })
+      // Usar el cliente del navegador directamente (más simple y directo)
+      const supabase = createClient()
+      const { data: insertData, error: insertError } = await supabase
+        .from('waitlist')
+        .insert({
+          email: email.trim().toLowerCase(),
+        })
+        .select()
+        .single()
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setIsSubmitted(true)
-        // Actualizar el conteo después de registrarse
-        const responseData = await response.json()
-        if (responseData.count !== undefined) {
-          setWaitlistCount(responseData.count)
-        } else {
-          // Si no viene en la respuesta, hacer una nueva petición
-          const countResponse = await fetch('/api/waitlist/count')
-          const countData = await countResponse.json()
-          setWaitlistCount(countData.count || 0)
+      if (insertError) {
+        // Si es error de duplicado, considerar éxito
+        if (insertError.code === '23505') {
+          setIsSubmitted(true)
+          // Obtener conteo actualizado
+          const { count } = await supabase
+            .from('waitlist')
+            .select('*', { count: 'exact', head: true })
+          setWaitlistCount(count || 0)
+          return
         }
-      } else {
-        console.error('Error:', data.error)
-        alert(isSpanish ? 'Error al agregar tu email. Intenta nuevamente.' : 'Error adding your email. Please try again.')
+
+        // Cualquier otro error
+        console.error('Error insertando:', insertError)
+        throw new Error(insertError.message || 'Error al agregar email')
       }
-    } catch (error) {
+
+      // Éxito
+      setIsSubmitted(true)
+      // Obtener conteo actualizado
+      const { count } = await supabase
+        .from('waitlist')
+        .select('*', { count: 'exact', head: true })
+      setWaitlistCount(count || 0)
+    } catch (error: any) {
       console.error('Error:', error)
-      alert(isSpanish ? 'Error al agregar tu email. Intenta nuevamente.' : 'Error adding your email. Please try again.')
+      const errorMessage = error.message || (isSpanish ? 'Error al agregar tu email. Intenta nuevamente.' : 'Error adding your email. Please try again.')
+      alert(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -147,8 +165,12 @@ export function CtaSection() {
                 />
                 <Button
                   type="submit"
-                  disabled={isLoading}
-                  className="h-11 px-5 sm:px-6 rounded-lg text-sm bg-gray-700 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 text-white whitespace-nowrap"
+                  disabled={isLoading || !isEmailValid}
+                  className={`h-11 px-5 sm:px-6 rounded-lg text-sm text-white whitespace-nowrap transition-all duration-300 ${
+                    isEmailValid
+                      ? "bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 shadow-lg shadow-green-500/30"
+                      : "bg-gray-700 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 opacity-60 cursor-not-allowed"
+                  }`}
                 >
                   {isLoading
                     ? (isSpanish ? "Enviando..." : "Sending...")

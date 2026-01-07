@@ -1,6 +1,19 @@
 # Migración de Waitlist
 
-## Instrucciones para aplicar la migración en Supabase
+## ⚠️ IMPORTANTE: Si tienes error de RLS
+
+Si ves el error **"new row violates row-level security policy"**, ejecuta primero el fix rápido:
+
+### Fix Rápido (Ejecuta esto primero si tienes errores)
+
+1. Ve a tu proyecto en [Supabase Dashboard](https://app.supabase.com)
+2. Navega a **SQL Editor** en el menú lateral
+3. Haz clic en **New Query**
+4. Copia y pega el contenido completo del archivo **`QUICK_FIX_WAITLIST_RLS.sql`**
+5. Haz clic en **Run** o presiona `Cmd/Ctrl + Enter`
+6. Deberías ver que se creó la política correctamente
+
+## Instrucciones para aplicar la migración completa en Supabase
 
 ### Opción 1: Desde el Dashboard de Supabase (Recomendado)
 
