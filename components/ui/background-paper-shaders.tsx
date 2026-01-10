@@ -36,22 +36,16 @@ export function PaperShaderBackground() {
       <MeshGradient
         className="w-full h-full absolute inset-0"
         colors={colors}
-        speed={1.2}
+        speed={0.8}
       />
 
-      {/* Lighting overlay effects - reduced for performance */}
-      <div className="absolute inset-0 pointer-events-none will-change-opacity">
+      {/* Lighting overlay effects - optimized for performance */}
+      <div className="absolute inset-0 pointer-events-none">
         <div
           className={`absolute top-1/4 left-1/3 w-32 h-32 ${
             isDark ? "bg-teal-900/10" : "bg-teal-300/30"
           } rounded-full blur-3xl animate-pulse`}
-          style={{ animationDuration: "3s", willChange: "opacity" }}
-        />
-        <div
-          className={`absolute bottom-1/3 right-1/4 w-24 h-24 ${
-            isDark ? "bg-teal-800/10" : "bg-teal-400/30"
-          } rounded-full blur-2xl animate-pulse`}
-          style={{ animationDuration: "2s", animationDelay: "1s", willChange: "opacity" }}
+          style={{ animationDuration: "4s" }}
         />
       </div>
     </div>

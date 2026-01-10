@@ -129,8 +129,9 @@ export default function FavoritesPage() {
                             size="icon" 
                             className="rounded-full h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
                             onClick={() => handleRemoveFavorite(favorite.professionalId)}
+                            aria-label={language === "es" ? `Eliminar ${favorite.name} de favoritos` : `Remove ${favorite.name} from favorites`}
                           >
-                            <Heart className="h-4 w-4 fill-current" />
+                            <Heart className="h-4 w-4 fill-current" aria-hidden="true" />
                           </Button>
                         </div>
                         <div className="flex items-center gap-2 mt-2">

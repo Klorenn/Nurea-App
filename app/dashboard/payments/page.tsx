@@ -187,12 +187,12 @@ export default function PaymentsPage() {
                       </div>
                       <div className="flex gap-2">
                         {payment.status === "Paid" && (
-                          <Button variant="outline" size="icon" className="rounded-xl">
-                            <Download className="h-4 w-4" />
+                          <Button variant="outline" size="icon" className="rounded-xl" aria-label={language === "es" ? "Descargar recibo" : "Download receipt"}>
+                            <Download className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         )}
-                        <Button variant="outline" size="icon" className="rounded-xl">
-                          <Receipt className="h-4 w-4" />
+                        <Button variant="outline" size="icon" className="rounded-xl" aria-label={language === "es" ? "Ver recibo" : "View receipt"}>
+                          <Receipt className="h-4 w-4" aria-hidden="true" />
                         </Button>
                       </div>
                     </div>
@@ -235,11 +235,11 @@ export default function PaymentsPage() {
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="icon" className="rounded-xl">
-                            <Download className="h-4 w-4" />
+                          <Button variant="outline" size="icon" className="rounded-xl" aria-label={language === "es" ? "Descargar recibo" : "Download receipt"}>
+                            <Download className="h-4 w-4" aria-hidden="true" />
                           </Button>
-                          <Button variant="outline" size="icon" className="rounded-xl">
-                            <Receipt className="h-4 w-4" />
+                          <Button variant="outline" size="icon" className="rounded-xl" aria-label={language === "es" ? "Ver recibo" : "View receipt"}>
+                            <Receipt className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </div>
                       </div>

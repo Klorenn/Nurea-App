@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Heart, ShieldCheck, Zap, Users } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
+import Image from "next/image"
 
 export function FeaturesSection() {
   const { language } = useLanguage()
@@ -128,15 +129,13 @@ export function FeaturesSection() {
                   {professionalAvatars.length > 0 ? (
                     // Mostrar avatares reales de los doctores (máximo 3)
                     professionalAvatars.slice(0, 3).map((avatar, i) => (
-                      <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-muted overflow-hidden">
-                        <img
-                          src={avatar}
+                      <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-muted overflow-hidden relative">
+                        <Image
+                          src={avatar || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=40&h=40&fit=crop&auto=format'}
                           alt="Professional"
+                          width={40}
+                          height={40}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // Fallback a imagen por defecto si hay error
-                            e.currentTarget.src = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=40&h=40&fit=crop&auto=format'
-                          }}
                         />
                       </div>
                     ))

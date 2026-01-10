@@ -493,18 +493,18 @@ function DocumentCard({
               size="icon" 
               className="rounded-xl h-10 w-10"
               onClick={() => handleView(doc.id)}
-              title={isSpanish ? "Ver documento" : "View document"}
+              aria-label={isSpanish ? "Ver documento" : "View document"}
             >
-              <Eye className="h-4 w-4" />
+              <Eye className="h-4 w-4" aria-hidden="true" />
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
               className="rounded-xl h-10 w-10"
               onClick={() => handleDownload(doc.id)}
-              title={isSpanish ? "Descargar documento" : "Download document"}
+              aria-label={isSpanish ? "Descargar documento" : "Download document"}
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </div>

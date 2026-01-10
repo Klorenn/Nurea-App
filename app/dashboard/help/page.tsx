@@ -339,11 +339,14 @@ export default function HelpPage() {
                         variant="ghost"
                         size="icon"
                         className="shrink-0 h-8 w-8 rounded-lg"
+                        onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+                        aria-label={isSpanish ? openFAQ === index ? "Contraer pregunta" : "Expandir pregunta" : openFAQ === index ? "Collapse question" : "Expand question"}
+                        aria-expanded={openFAQ === index}
                       >
                         {openFAQ === index ? (
-                          <ChevronUp className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4" aria-hidden="true" />
                         ) : (
-                          <ChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4" aria-hidden="true" />
                         )}
                       </Button>
                     </div>

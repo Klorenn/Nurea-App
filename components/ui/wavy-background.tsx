@@ -29,7 +29,8 @@ const SWIRL_TIME_MULT = 5.0;
 const NOISE_SWIRL_FACTOR = 0.2;
 
 // Number of fractal noise octaves in fbm (must be integer).
-const FBM_OCTAVES = 10;
+// Reduced from 10 to 4 for better performance while maintaining visual quality
+const FBM_OCTAVES = 4;
 
 // Light mode: verde agua tipo calipso más fuerte y visible
 const lightSeaColors = [
@@ -367,13 +368,33 @@ export default function WavyBackground({
     const uTimeLoc = gl.getUniformLocation(program, "uTime");
 
     let startTime = performance.now();
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
+    let isVisible = true;
+    let lastResizeTime = 0;
+    const RESIZE_DEBOUNCE_MS = 150;
+
+    // Use IntersectionObserver to pause animation when not visible
+    const observer = new IntersectionObserver(
+      (entries) => {
+        isVisible = entries[0].isIntersecting;
+        if (isVisible && !animationFrameId) {
+          render();
+        }
+      },
+      { threshold: 0 }
+    );
+    observer.observe(canvas);
 
     function render() {
+      if (!isVisible) {
+        animationFrameId = null;
+        return;
+      }
+
       const currentTime = performance.now();
       const elapsed = (currentTime - startTime) * 0.001;
 
-      // Update canvas size based on container
+      // Update canvas size based on container (debounced)
       const container = canvas.parentElement;
       if (container) {
         const rect = container.getBoundingClientRect();
@@ -404,9 +425,24 @@ export default function WavyBackground({
       animationFrameId = requestAnimationFrame(render);
     }
 
-    render();
+    // Use requestIdleCallback to defer initial render if browser is busy
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => {
+        if (isVisible) {
+          render();
+        }
+      }, { timeout: 1000 });
+    } else {
+      render();
+    }
 
     const handleResize = () => {
+      const now = performance.now();
+      if (now - lastResizeTime < RESIZE_DEBOUNCE_MS) {
+        return;
+      }
+      lastResizeTime = now;
+
       const container = canvas.parentElement;
       if (container) {
         const rect = container.getBoundingClientRect();
@@ -418,23 +454,25 @@ export default function WavyBackground({
       }
       gl.viewport(0, 0, canvas.width, canvas.height);
     };
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", handleResize, { passive: true });
     
     // Use ResizeObserver for container size changes
-    const container = canvas.parentElement;
+    const containerElement = canvas.parentElement;
     let resizeObserver: ResizeObserver | null = null;
-    if (container && typeof ResizeObserver !== "undefined") {
+    if (containerElement && typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(handleResize);
-      resizeObserver.observe(container);
+      resizeObserver.observe(containerElement);
     }
 
     return () => {
+      observer.disconnect();
       window.removeEventListener("resize", handleResize);
-      if (resizeObserver && container) {
-        resizeObserver.unobserve(container);
+      if (resizeObserver && containerElement) {
+        resizeObserver.unobserve(containerElement);
       }
-      if (animationFrameId) {
+      if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
       }
       if (programRef.current) {
         gl.deleteProgram(programRef.current);

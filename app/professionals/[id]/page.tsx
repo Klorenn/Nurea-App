@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils"
 import { parseShortDate } from "@/lib/utils/date-helpers"
 import { normalizeAvailability, isLegacyFormat } from "@/lib/utils/availability-helpers"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function ProfessionalProfilePage() {
   const { language } = useLanguage()
@@ -259,15 +260,18 @@ export default function ProfessionalProfilePage() {
             {/* Right: Profile Picture */}
             <div className="flex justify-center lg:justify-end">
               <div className="relative">
-                <div className="w-64 h-64 md:w-80 md:h-80 rounded-3xl overflow-hidden border-2 border-primary/20 shadow-2xl">
-                  <img
+                <div className="w-64 h-64 md:w-80 md:h-80 rounded-3xl overflow-hidden border-2 border-primary/20 shadow-2xl relative">
+                  <Image
                     src={professional.imageUrl || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop"}
                     alt={professional.name}
+                    width={320}
+                    height={320}
                     className="w-full h-full object-cover"
+                    priority
                   />
                 </div>
                 {professional.professionalRegistration.verified && (
-                  <div className="absolute -bottom-2 -right-2 bg-green-500 text-white rounded-full p-3 shadow-lg">
+                  <div className="absolute -bottom-2 -right-2 bg-green-500 text-white rounded-full p-3 shadow-lg z-10">
                     <ShieldCheck className="h-6 w-6" />
                   </div>
                 )}

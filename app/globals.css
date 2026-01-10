@@ -21,10 +21,10 @@
   --secondary-foreground: oklch(0.99 0.003 60);
 
   --muted: oklch(0.94 0.01 180); /* Light teal-gray */
-  --muted-foreground: oklch(0.45 0.02 200);
+  --muted-foreground: oklch(0.40 0.025 200); /* Improved contrast for accessibility */
 
   --accent: oklch(0.90 0.02 180); /* Light teal accent */
-  --accent-foreground: oklch(0.30 0.02 200);
+  --accent-foreground: oklch(0.25 0.025 200); /* Improved contrast for accessibility */
 
   --destructive: oklch(0.55 0.18 25); /* Muted red for errors */
   --destructive-foreground: oklch(0.99 0.003 60);
@@ -40,7 +40,7 @@
   --sidebar-primary: oklch(0.65 0.15 180);
   --sidebar-primary-foreground: oklch(0.99 0.003 60);
   --sidebar-accent: oklch(0.90 0.02 180);
-  --sidebar-accent-foreground: oklch(0.30 0.02 200);
+  --sidebar-accent-foreground: oklch(0.25 0.025 200); /* Improved contrast for accessibility */
   --sidebar-border: oklch(0.88 0.015 180);
   --sidebar-ring: oklch(0.65 0.15 180);
 }
@@ -63,7 +63,7 @@
   --secondary-foreground: oklch(0.15 0.02 200);
 
   --muted: oklch(0.30 0.02 200); /* Muted teal-gray */
-  --muted-foreground: oklch(0.70 0.01 180);
+  --muted-foreground: oklch(0.75 0.015 180); /* Improved contrast for accessibility */
 
   --accent: oklch(0.40 0.03 200); /* Dark teal accent */
   --accent-foreground: oklch(0.95 0.01 180);
@@ -80,7 +80,7 @@
   --sidebar-primary: oklch(0.70 0.16 180);
   --sidebar-primary-foreground: oklch(0.15 0.02 200);
   --sidebar-accent: oklch(0.30 0.02 200);
-  --sidebar-accent-foreground: oklch(0.95 0.01 180);
+  --sidebar-accent-foreground: oklch(0.92 0.015 180); /* Improved contrast for accessibility */
   --sidebar-border: oklch(0.35 0.02 200);
   --sidebar-ring: oklch(0.70 0.16 180);
 }
@@ -168,5 +168,17 @@
   /* Fix adicional para Firefox */
   input[type="password"] {
     text-overflow: ellipsis;
+  }
+
+  /* Gentle rotate animation for heart icon */
+  @keyframes gentle-rotate {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(3deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(-3deg); }
+  }
+
+  .animate-gentle-rotate {
+    animation: gentle-rotate 4s ease-in-out infinite;
   }
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import { Calendar, CreditCard, Heart, LayoutDashboard, MessageSquare, Settings, User, LogOut, Bell, Star, HelpCircle, Users, FileText, DollarSign, Headphones } from "lucide-react"
 import {
   Sidebar,
@@ -20,8 +21,17 @@ import { UserDropdown } from "@/components/ui/user-dropdown"
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import WavyBackground from "@/components/ui/wavy-background"
-import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
+
+// Lazy load heavy WebGL components to improve initial page load
+const WavyBackground = dynamic(() => import("@/components/ui/wavy-background").then(mod => mod.default), {
+  ssr: false,
+  loading: () => <div className="absolute inset-0 bg-background" />
+})
+
+const PaperShaderBackground = dynamic(() => import("@/components/ui/background-paper-shaders").then(mod => ({ default: mod.PaperShaderBackground })), {
+  ssr: false,
+  loading: () => null
+})
 
 export function DashboardLayout({
   children,
@@ -99,9 +109,6 @@ export function DashboardLayout({
 
         <SidebarInset className="flex flex-col relative">
           <PaperShaderBackground />
-          <div className="absolute inset-0 pointer-events-none">
-            <WavyBackground className="absolute inset-0" />
-          </div>
           <div className="relative z-10 flex flex-col min-h-screen">
             <header className="h-16 flex items-center justify-between px-6 bg-background/50 backdrop-blur-md border-b border-border/40 sticky top-0 z-30">
               <div className="flex items-center gap-4">

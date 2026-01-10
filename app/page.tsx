@@ -11,7 +11,7 @@ import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
 
 export default function Home() {
   return (
-    <main className="min-h-screen relative">
+    <main className="min-h-screen relative" id="main-content">
       <PaperShaderBackground />
       <div className="relative z-10">
         <Navbar />

@@ -233,31 +233,16 @@ export default function PatientDashboard() {
                     )}
                     
                     <div className="pt-2">
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Button className="rounded-xl px-6 h-11" asChild>
-                          <Link href="/search">
-                            {t.dashboard.bookNew}
-                          </Link>
-                        </Button>
-                      </motion.div>
+                      <Button className="rounded-xl px-6 h-11 transition-transform hover:scale-105 active:scale-95" asChild>
+                        <Link href="/search">
+                          {t.dashboard.bookNew}
+                        </Link>
+                      </Button>
                     </div>
                   </div>
-                  <motion.div
-                    animate={{
-                      rotate: [0, 3, -3, 0],
-                    }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center text-primary"
-                  >
+                  <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center text-primary animate-gentle-rotate">
                     <Heart className="h-12 w-12 fill-current" />
-                  </motion.div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -272,12 +257,9 @@ export default function PatientDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                >
+                <div>
                   <Link href="/dashboard/appointments">
-                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer group">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-all cursor-pointer group hover:translate-x-1">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                           <Calendar className="h-5 w-5" />
@@ -294,14 +276,11 @@ export default function PatientDashboard() {
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                   </Link>
-                </motion.div>
+                </div>
 
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                >
+                <div>
                   <Link href="/dashboard/chat">
-                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer group">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-all cursor-pointer group hover:translate-x-1">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
                           <MessageSquare className="h-5 w-5" />
@@ -324,14 +303,11 @@ export default function PatientDashboard() {
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-secondary transition-colors" />
                     </div>
                   </Link>
-                </motion.div>
+                </div>
 
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                >
+                <div>
                   <Link href="/dashboard/payments">
-                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer group">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-all cursor-pointer group hover:translate-x-1">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 dark:text-green-400">
                           <CreditCard className="h-5 w-5" />
@@ -354,14 +330,11 @@ export default function PatientDashboard() {
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-green-600 transition-colors" />
                     </div>
                   </Link>
-                </motion.div>
+                </div>
 
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                >
+                <div>
                   <Link href="/search">
-                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-colors cursor-pointer group">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-all cursor-pointer group hover:translate-x-1">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
                           <Search className="h-5 w-5" />
@@ -378,7 +351,7 @@ export default function PatientDashboard() {
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-teal-600 transition-colors" />
                     </div>
                   </Link>
-                </motion.div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -406,10 +379,8 @@ export default function PatientDashboard() {
                 <motion.div
                   key={apt.id}
                   variants={cardVariants}
-                  whileHover={{ scale: 1.01, y: -2 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  <Card className="border-border/40 hover:shadow-md transition-all group">
+                  <Card className="border-border/40 hover:shadow-md transition-all group hover:scale-[1.01] hover:-translate-y-0.5">
                     <CardContent className="p-5">
                       <div className="flex flex-col sm:flex-row justify-between gap-4">
                         <div className="flex gap-4">
@@ -444,13 +415,11 @@ export default function PatientDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           {apt.type === "online" && (
-                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                              <Button variant="outline" className="rounded-xl bg-transparent" asChild>
-                                <Link href="/dashboard/appointments">
-                                  {t.dashboard.joinMeeting}
-                                </Link>
-                              </Button>
-                            </motion.div>
+                            <Button variant="outline" className="rounded-xl bg-transparent transition-transform hover:scale-105 active:scale-95" asChild>
+                              <Link href="/dashboard/appointments">
+                                {t.dashboard.joinMeeting}
+                              </Link>
+                            </Button>
                           )}
                           <Badge
                             variant="outline"
@@ -473,17 +442,13 @@ export default function PatientDashboard() {
                   <p className="text-muted-foreground font-medium">
                     {t.dashboard.noUpcomingAppointments}
                   </p>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="mt-4"
-                  >
-                    <Button className="rounded-xl" asChild>
+                  <div className="mt-4">
+                    <Button className="rounded-xl transition-transform hover:scale-105 active:scale-95" asChild>
                       <Link href="/search">
                         {t.dashboard.bookNew}
                       </Link>
                     </Button>
-                  </motion.div>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -515,10 +480,8 @@ export default function PatientDashboard() {
               <motion.div
                 key={i}
                 variants={cardVariants}
-                whileHover={{ scale: 1.02, y: -2 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
-                <Card className="border-border/40 hover:shadow-md transition-all cursor-pointer group">
+                <Card className="border-border/40 hover:shadow-md transition-all cursor-pointer group hover:scale-[1.02] hover:-translate-y-0.5">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <FileText className="h-8 w-8 text-primary opacity-60" />
@@ -557,10 +520,8 @@ export default function PatientDashboard() {
                 <motion.div
                   key={favorite.id}
                   variants={cardVariants}
-                  whileHover={{ scale: 1.02, x: 4 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
                 >
-                  <Card className="border-border/40 hover:shadow-sm transition-all">
+                  <Card className="border-border/40 hover:shadow-sm transition-all hover:scale-[1.02] hover:translate-x-1">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12 rounded-xl border border-border/40">
@@ -581,9 +542,9 @@ export default function PatientDashboard() {
                             <span className="text-xs font-bold">{favorite.rating}</span>
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" aria-label={language === "es" ? `Ver perfil de ${favorite.name}` : `View ${favorite.name}'s profile`} asChild>
                           <Link href={`/professionals/${favorite.professionalId}`}>
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className="h-4 w-4" aria-hidden="true" />
                           </Link>
                         </Button>
                       </div>
@@ -594,12 +555,10 @@ export default function PatientDashboard() {
             ) : null}
             <motion.div
               variants={cardVariants}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
             >
               <Button
                 variant="outline"
-                className="w-full rounded-xl border-dashed border-primary/20 hover:bg-primary/5 hover:border-primary/40 bg-transparent h-auto py-8"
+                className="w-full rounded-xl border-dashed border-primary/20 hover:bg-primary/5 hover:border-primary/40 bg-transparent h-auto py-8 transition-transform hover:scale-[1.02] active:scale-[0.98]"
                 asChild
               >
                 <Link href="/search">

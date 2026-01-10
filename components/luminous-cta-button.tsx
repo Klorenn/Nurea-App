@@ -13,7 +13,8 @@ type LuminousCTAButtonProps = {
   disabled?: boolean
   variant?: "cyan" | "purple" | "green" | "orange" | "navy"
   className?: string
-}
+  "aria-label"?: string
+} & React.ButtonHTMLAttributes<HTMLButtonElement>
 
 const variantStyles = {
   cyan: {
@@ -71,6 +72,8 @@ export const LuminousCTAButton = ({
   disabled = false,
   variant = "cyan",
   className,
+  "aria-label": ariaLabel,
+  ...props
 }: LuminousCTAButtonProps) => {
   const [isHovered, setIsHovered] = React.useState(false)
   const variantStyle = variantStyles[variant]
@@ -82,6 +85,7 @@ export const LuminousCTAButton = ({
       disabled={isDisabled}
       onMouseEnter={() => !isDisabled && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      aria-label={ariaLabel || text}
       className={cn(
         "relative flex items-center justify-center gap-2.5 overflow-hidden rounded-full px-6 py-3 text-white transition-all duration-300",
         isDisabled && "cursor-not-allowed opacity-50",
