@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { sanitizeMessage } from "@/lib/utils/sanitize"
 
 interface ChatMessage {
   id: string
@@ -272,15 +273,27 @@ export function HealthChat({
         fileType = selectedFile.type
       }
 
+      // Sanitizar contenido del mensaje antes de enviar
+      const messageContent = newMessage.trim() || (selectedFile ? (isSpanish ? "Archivo adjunto" : "File attached") : "")
+      const sanitizedContent = sanitizeMessage(messageContent)
+
+      if (!sanitizedContent && !fileUrl) {
+        alert(isSpanish 
+          ? "El mensaje no puede estar vacío o contener solo caracteres no válidos."
+          : "Message cannot be empty or contain only invalid characters.")
+        setSending(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from("messages")
         .insert({
           sender_id: currentUserId,
           receiver_id: selectedContact.id,
-          content: newMessage.trim() || (selectedFile ? (isSpanish ? "Archivo adjunto" : "File attached") : ""),
+          content: sanitizedContent,
           read: false,
           file_url: fileUrl || null,
-          file_name: fileName || null,
+          file_name: fileName ? sanitizeMessage(fileName) : null, // Sanitizar nombre de archivo también
           file_type: fileType || null,
         })
         .select()

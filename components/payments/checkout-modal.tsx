@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   CreditCard, 
   Shield, 
@@ -27,6 +28,7 @@ import {
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { Separator } from "@/components/ui/separator"
+import { isPaymentsEnabled } from "@/lib/utils/feature-flags"
 
 interface CheckoutModalProps {
   isOpen: boolean
@@ -52,8 +54,23 @@ export function CheckoutModal({ isOpen, onClose, appointment, onSuccess }: Check
   const [cardName, setCardName] = useState("")
   const [expiry, setExpiry] = useState("")
   const [cvv, setCvv] = useState("")
+  const [paymentsEnabled, setPaymentsEnabled] = useState(false)
+
+  // Verificar feature flag en el cliente
+  useEffect(() => {
+    // Feature flags en cliente necesitan ser accesibles desde el servidor
+    // Por ahora, verificamos desde el API o usamos variable de entorno pública
+    setPaymentsEnabled(process.env.NEXT_PUBLIC_ENABLE_PAYMENTS === 'true')
+  }, [])
 
   const handlePayment = async () => {
+    if (!paymentsEnabled) {
+      alert(isSpanish 
+        ? 'Los pagos están deshabilitados actualmente. Esta funcionalidad se activará próximamente.'
+        : 'Payments are currently disabled. This feature will be enabled soon.')
+      return
+    }
+
     setLoading(true)
     try {
       // Crear payment intent

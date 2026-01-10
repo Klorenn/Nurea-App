@@ -4,6 +4,7 @@ import { Geist, Lora } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { LanguageProvider } from "@/contexts/language-context"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 const _geist = Geist({ 
@@ -165,6 +166,7 @@ export default function RootLayout({
         <ThemeProvider>
           <LanguageProvider>
             {children}
+            <Toaster position="top-right" richColors closeButton />
             <Analytics />
           </LanguageProvider>
         </ThemeProvider>

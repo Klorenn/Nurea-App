@@ -20,16 +20,30 @@ export async function GET(request: Request) {
     const consultationType = searchParams.get('consultationType')
 
     // Construir query para profesionales reales
+    // NO ordenar aquí - ordenaremos después usando el sistema de ranking
     let query = supabase
       .from('professionals')
       .select(`
         id,
         specialty,
+        specialties,
         consultation_type,
+        consultation_types,
         consultation_price,
+        online_price,
+        in_person_price,
         verified,
         location,
+        city,
+        country,
         years_experience,
+        experience_years,
+        availability,
+        languages,
+        bio,
+        license_number,
+        registration_number,
+        registration_institution,
         profile:profiles!professionals_id_fkey(
           id,
           first_name,
@@ -38,7 +52,6 @@ export async function GET(request: Request) {
         )
       `)
       .eq('verified', true) // Solo profesionales verificados
-      .order('created_at', { ascending: false })
 
     // Aplicar filtros
     if (specialty) {
@@ -67,25 +80,102 @@ export async function GET(request: Request) {
 
     const { data: professionals, error: professionalsError } = await query
 
-    // Formatear profesionales reales (excluyendo el de prueba para agregarlo después)
-    const formattedProfessionals = (professionals || [])
-      .filter((prof: any) => prof.id !== TEST_PROFESSIONAL_ID) // Excluir el de prueba de la query normal
-      .map((prof: any) => ({
-        id: prof.id,
-        name: `Dr. ${prof.profile?.first_name || ''} ${prof.profile?.last_name || ''}`.trim() || 'Profesional',
-        specialty: prof.specialty || '',
-        specialtyEn: prof.specialty || '', // TODO: agregar traducción si existe
-        location: prof.location || '',
-        rating: 4.8, // TODO: calcular desde reviews
-        patientsServed: 0, // TODO: calcular desde appointments
-        price: prof.consultation_price || 0,
-        languages: ['ES'], // TODO: obtener desde perfil
-        image: prof.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
-        verified: prof.verified || false,
-        isOnline: false, // TODO: implementar estado en tiempo real
-        availableToday: true, // TODO: calcular desde disponibilidad
-        availableUntil: '6:00 PM', // TODO: calcular desde disponibilidad
-      }))
+    if (professionalsError) {
+      console.error('Error obteniendo profesionales:', professionalsError)
+      return NextResponse.json(
+        { 
+          error: 'server_error',
+          message: 'Algo salió mal. Por favor, intenta nuevamente en unos momentos.'
+        },
+        { status: 500 }
+      )
+    }
+
+    // Obtener IDs de profesionales reales (excluyendo el de prueba)
+    const realProfessionalIds = (professionals || [])
+      .filter((prof: any) => prof.id !== TEST_PROFESSIONAL_ID)
+      .map((prof: any) => prof.id)
+
+    // Calcular ratings y pacientes atendidos de forma eficiente
+    const { calculateMultipleRatings } = await import('@/lib/utils/calculate-rating')
+    const ratings = realProfessionalIds.length > 0
+      ? await calculateMultipleRatings(realProfessionalIds)
+      : {}
+
+    // Contar pacientes atendidos por profesional
+    const patientsServedMap: Record<string, number> = {}
+    if (realProfessionalIds.length > 0) {
+      const { data: completedAppointments } = await supabase
+        .from('appointments')
+        .select('professional_id, patient_id')
+        .eq('status', 'completed')
+        .in('professional_id', realProfessionalIds)
+
+      if (completedAppointments) {
+        // Contar pacientes únicos por profesional
+        const patientsByProf: Record<string, Set<string>> = {}
+        completedAppointments.forEach((apt: any) => {
+          if (!patientsByProf[apt.professional_id]) {
+            patientsByProf[apt.professional_id] = new Set()
+          }
+          patientsByProf[apt.professional_id].add(apt.patient_id)
+        })
+
+        Object.keys(patientsByProf).forEach((profId) => {
+          patientsServedMap[profId] = patientsByProf[profId].size
+        })
+      }
+    }
+
+    // Filtrar profesionales reales (excluyendo el de prueba para agregarlo después)
+    const realProfessionals = (professionals || [])
+      .filter((prof: any) => prof.id !== TEST_PROFESSIONAL_ID)
+
+    // Calcular scores de ranking para todos los profesionales
+    const { calculateMultipleRankingScores } = await import('@/lib/utils/calculate-ranking')
+    const rankingScores = realProfessionals.length > 0
+      ? await calculateMultipleRankingScores(realProfessionals, ratings)
+      : {}
+
+    // Formatear profesionales reales con sus scores de ranking
+    const formattedProfessionals = realProfessionals
+      .map((prof: any) => {
+        const ratingData = ratings[prof.id] || { rating: 4.8, reviewCount: 0 }
+        const rankingData = rankingScores[prof.id]
+        
+        return {
+          id: prof.id,
+          name: `Dr. ${prof.profile?.first_name || ''} ${prof.profile?.last_name || ''}`.trim() || 'Profesional',
+          specialty: prof.specialty || '',
+          specialtyEn: prof.specialty || '', // Traducción se puede agregar después
+          location: prof.location || '',
+          rating: ratingData.rating,
+          reviewCount: ratingData.reviewCount,
+          patientsServed: patientsServedMap[prof.id] || 0,
+          price: prof.consultation_price || prof.online_price || prof.in_person_price || 0,
+          languages: (prof.languages && Array.isArray(prof.languages) && prof.languages.length > 0)
+            ? prof.languages.map((lang: string) => {
+                const langMap: Record<string, string> = {
+                  'ES': 'Español',
+                  'EN': 'Inglés',
+                  'PT': 'Portugués',
+                  'FR': 'Francés',
+                  'DE': 'Alemán',
+                }
+                return langMap[lang] || lang
+              })
+            : ['Español'],
+          image: prof.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
+          verified: prof.verified || false,
+          isOnline: false, // Presencia en tiempo real se actualiza en el cliente
+          availableToday: true, // Se calculará dinámicamente si es necesario (puede ser costoso para listas grandes)
+          availableUntil: '6:00 PM', // Se calculará dinámicamente si es necesario
+          // Incluir score de ranking (para debug/admin, opcional en producción)
+          rankingScore: rankingData?.score || 0,
+        }
+      })
+      // Ordenar por score de ranking (mayor = mejor posición)
+      .sort((a: any, b: any) => (b.rankingScore || 0) - (a.rankingScore || 0))
 
     // Obtener profesional de prueba de la base de datos
     let testProfessional = null
@@ -128,9 +218,9 @@ export async function GET(request: Request) {
       }
     }
 
-    // Agregar profesional de prueba al final si existe
+    // Agregar profesional de prueba al final si existe (siempre al final, no afecta ranking)
     const allProfessionals = testProfessional 
-      ? [...formattedProfessionals, testProfessional]
+      ? [...formattedProfessionals, { ...testProfessional, rankingScore: 0 }]
       : formattedProfessionals
 
     // Aplicar filtros al profesional de prueba también si aplica

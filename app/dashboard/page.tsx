@@ -22,7 +22,8 @@ import {
   Bell,
   Video,
   ExternalLink,
-  Search
+  Search,
+  Loader2
 } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
@@ -46,6 +47,7 @@ export default function PatientDashboard() {
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
   const [favorites, setFavorites] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadStats = async () => {
@@ -53,6 +55,9 @@ export default function PatientDashboard() {
         setLoading(false)
         return
       }
+
+      setLoading(true)
+      setError(null)
 
       try {
         const today = new Date().toISOString().split('T')[0]
@@ -144,9 +149,12 @@ export default function PatientDashboard() {
         if (favoritesResponse.ok) {
           const favoritesData = await favoritesResponse.json()
           setFavorites(favoritesData.favorites?.slice(0, 3) || [])
+        } else {
+          console.warn("Error loading favorites:", favoritesResponse.statusText)
         }
       } catch (error) {
         console.error("Error loading stats:", error)
+        setError(error instanceof Error ? error.message : "Error al cargar el dashboard. Por favor, intenta nuevamente.")
       } finally {
         setLoading(false)
       }
@@ -193,6 +201,36 @@ export default function PatientDashboard() {
         damping: 15,
       },
     },
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout role="patient">
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">{t.dashboard.loading || "Cargando..."}</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="patient">
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center space-y-4 max-w-md">
+            <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
+            <p className="text-lg font-semibold">{t.dashboard.error || "Error"}</p>
+            <p className="text-muted-foreground">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              {t.dashboard.retry || "Reintentar"}
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (

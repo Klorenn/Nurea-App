@@ -30,21 +30,35 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar que la cita existe y pertenece al usuario
+    // Verificar que la cita existe y que el usuario es paciente o profesional de la cita
+    // Incluir explícitamente meeting_room_id para poder eliminarlo si es necesario
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
-      .select('*')
+      .select('*, meeting_room_id, type, appointment_date, appointment_time, duration_minutes, patient_id, professional_id')
       .eq('id', appointmentId)
-      .eq('patient_id', user.id)
       .single()
 
     if (appointmentError || !appointment) {
       return NextResponse.json(
         { 
           error: 'appointment_not_found',
-          message: 'No se encontró la cita o no tienes permiso para cancelarla.'
+          message: 'No se encontró la cita.'
         },
         { status: 404 }
+      )
+    }
+
+    // Verificar que el usuario es el paciente o el profesional de la cita
+    const isPatient = appointment.patient_id === user.id
+    const isProfessional = appointment.professional_id === user.id
+
+    if (!isPatient && !isProfessional) {
+      return NextResponse.json(
+        { 
+          error: 'unauthorized',
+          message: 'No tienes permiso para cancelar esta cita.'
+        },
+        { status: 403 }
       )
     }
 
@@ -70,7 +84,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Calcular si hay reembolso según política de cancelación
+    // Calcular reembolso solo si el PACIENTE cancela
+    // Si el profesional cancela, el paciente siempre recibe reembolso completo
     const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
     const now = new Date()
     const hoursUntilAppointment = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
@@ -78,16 +93,26 @@ export async function POST(request: Request) {
     let refundAmount = 0
     let refundMessage = ''
     
-    // Política: Reembolso completo si se cancela con más de 24 horas de anticipación
-    if (hoursUntilAppointment > 24) {
+    if (isProfessional) {
+      // Si el profesional cancela, reembolso completo siempre
       refundAmount = appointment.price || 0
       refundMessage = 'Reembolso completo aplicado. El dinero será devuelto en 3-5 días hábiles.'
-    } else if (hoursUntilAppointment > 12) {
-      // Reembolso del 50% si se cancela entre 12-24 horas antes
-      refundAmount = (appointment.price || 0) * 0.5
-      refundMessage = 'Reembolso del 50% aplicado. El dinero será devuelto en 3-5 días hábiles.'
-    } else {
-      refundMessage = 'No hay reembolso disponible por cancelación con menos de 12 horas de anticipación.'
+    } else if (isPatient) {
+      // Si el paciente cancela, aplicar política de reembolso
+      // Si la cita ya pasó, no debería haber reembolso (aunque esto no debería ocurrir por validación previa)
+      if (hoursUntilAppointment < 0) {
+        refundMessage = 'La cita ya pasó. No hay reembolso disponible para citas en el pasado.'
+      } else if (hoursUntilAppointment > 24) {
+        // Política: Reembolso completo si se cancela con más de 24 horas de anticipación
+        refundAmount = appointment.price || 0
+        refundMessage = 'Reembolso completo aplicado. El dinero será devuelto en 3-5 días hábiles.'
+      } else if (hoursUntilAppointment > 12) {
+        // Reembolso del 50% si se cancela entre 12-24 horas antes
+        refundAmount = (appointment.price || 0) * 0.5
+        refundMessage = 'Reembolso del 50% aplicado. El dinero será devuelto en 3-5 días hábiles.'
+      } else {
+        refundMessage = 'No hay reembolso disponible por cancelación con menos de 12 horas de anticipación.'
+      }
     }
 
     // Actualizar la cita
@@ -114,8 +139,117 @@ export async function POST(request: Request) {
       )
     }
 
-    // TODO: Procesar reembolso si aplica
-    // TODO: Enviar notificación al profesional
+    // Si es cita online y tiene meeting room, eliminarlo de Daily.co
+    if (appointment.type === 'online' && appointment.meeting_room_id) {
+      try {
+        // Solo eliminar el room si la cita no ha pasado hace más de 24 horas
+        // (los rooms expiran automáticamente después de 24h de la cita)
+        const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
+        const appointmentEndTime = new Date(appointmentDateTime.getTime() + (appointment.duration_minutes || 60) * 60 * 1000)
+        const now = new Date()
+        const hoursSinceAppointment = (now.getTime() - appointmentEndTime.getTime()) / (1000 * 60 * 60)
+        
+        // Solo intentar eliminar si la cita está en el futuro o pasó recientemente (< 24h)
+        if (hoursSinceAppointment < 24) {
+          const { deleteMeetingRoom } = await import('@/lib/services/daily')
+          // Daily.co requiere el nombre del room. meeting_room_id debería ser el name
+          const deleteResult = await deleteMeetingRoom(appointment.meeting_room_id)
+          
+          if (!deleteResult.success) {
+            console.error(`Error eliminando meeting room ${appointment.meeting_room_id} al cancelar cita ${appointmentId}:`, deleteResult.error)
+            // No fallar la cancelación si el delete del room falla, solo loguearlo
+            // El room expirará automáticamente según su configuración
+          } else {
+            console.log(`Meeting room ${appointment.meeting_room_id} eliminado exitosamente al cancelar cita ${appointmentId}`)
+          }
+        } else {
+          console.log(`Meeting room ${appointment.meeting_room_id} no se elimina porque la cita pasó hace más de 24 horas (probablemente ya expiró)`)
+        }
+      } catch (deleteRoomError) {
+        console.error('Error eliminando meeting room al cancelar cita:', deleteRoomError)
+        // No fallar la cancelación si el delete del room falla
+      }
+    }
+
+    // Obtener información del paciente y profesional para el email
+    const { data: patientProfile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', appointment.patient_id)
+      .single()
+
+    const { data: professionalProfile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', appointment.professional_id)
+      .single()
+
+    const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Paciente'
+    const professionalName = professionalProfile ? `${professionalProfile.first_name || ''} ${professionalProfile.last_name || ''}`.trim() : 'Profesional'
+
+    // Formatear fecha para el email
+    const appointmentDateObj = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
+    const formattedDate = appointmentDateObj.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+    const formattedTime = appointment.appointment_time
+
+    // Enviar email de cancelación al paciente (siempre)
+    if (patientProfile?.email) {
+      try {
+        const { appointmentCancelledEmail } = await import('@/lib/emails/templates')
+        const { sendAppointmentCancellation } = await import('@/lib/services/email')
+
+        // Ajustar mensaje según quién canceló
+        const cancellationReason = reason 
+          ? (isProfessional ? `Cancelada por el profesional. Motivo: ${reason}` : reason)
+          : (isProfessional ? 'Cancelada por el profesional' : undefined)
+
+        const emailTemplate = appointmentCancelledEmail({
+          patientName,
+          professionalName,
+          appointmentDate: formattedDate,
+          appointmentTime: formattedTime,
+          appointmentType: appointment.type as 'online' | 'in-person',
+          refundAmount: refundAmount > 0 ? refundAmount : undefined,
+          refundMessage: refundMessage || undefined,
+          reason: cancellationReason,
+        })
+
+        const language = 'es' // Determinar idioma si es posible
+        const { success, error: emailError } = await sendAppointmentCancellation(
+          patientProfile.email,
+          emailTemplate,
+          language
+        )
+
+        if (!success) {
+          console.error('Error enviando email de cancelación al paciente:', emailError)
+          // No fallar la cancelación si el email falla
+        } else {
+          console.log('Email de cancelación enviado exitosamente al paciente:', patientProfile.email)
+        }
+      } catch (emailError) {
+        console.error('Error preparando o enviando email de cancelación al paciente:', emailError)
+        // No fallar la cancelación si el email falla
+      }
+    }
+
+    // Enviar notificación al profesional si el paciente canceló
+    if (isPatient && professionalProfile?.email) {
+      try {
+        // TODO: Crear template de email para notificar al profesional sobre cancelación del paciente
+        console.log(`TODO: Enviar notificación de cancelación al profesional ${professionalProfile.email}`)
+        // Por ahora solo logueamos, se implementará después con template específico
+      } catch (emailError) {
+        console.error('Error preparando notificación para profesional:', emailError)
+      }
+    }
+
+    // TODO: Procesar reembolso real si aplica (cuando se implemente pasarela de pago)
 
     return NextResponse.json({
       success: true,

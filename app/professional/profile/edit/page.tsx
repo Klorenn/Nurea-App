@@ -299,8 +299,73 @@ export default function ProfessionalProfileEditPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-3">
-                    <Button variant="outline" className="rounded-xl bg-transparent" disabled>
-                      <Upload className="mr-2 h-4 w-4" /> {isSpanish ? "Subir Nueva Foto" : "Upload New Photo"}
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+
+                        // Validar tamaño
+                        if (file.size > 2 * 1024 * 1024) {
+                          setError(isSpanish ? "El archivo es demasiado grande. Máximo 2MB." : "File is too large. Max size 2MB.")
+                          return
+                        }
+
+                        // Validar tipo
+                        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+                        if (!allowedTypes.includes(file.type)) {
+                          setError(isSpanish ? "Tipo de archivo no permitido." : "File type not allowed.")
+                          return
+                        }
+
+                        setSaving(true)
+                        setError(null)
+
+                        try {
+                          const formData = new FormData()
+                          formData.append('file', file)
+
+                          const response = await fetch('/api/professional/upload-avatar', {
+                            method: 'POST',
+                            body: formData,
+                          })
+
+                          const data = await response.json()
+
+                          if (!response.ok) {
+                            throw new Error(data.message || 'Error al subir avatar')
+                          }
+
+                          setAvatarUrl(data.avatarUrl)
+                          setSuccess(isSpanish ? "Avatar actualizado exitosamente" : "Avatar updated successfully")
+                          setTimeout(() => setSuccess(null), 3000)
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : (isSpanish ? "Error al subir avatar" : "Error uploading avatar"))
+                        } finally {
+                          setSaving(false)
+                          // Reset input
+                          e.target.value = ''
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      className="rounded-xl bg-transparent"
+                      onClick={() => document.getElementById('avatar-upload')?.click()}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isSpanish ? "Subiendo..." : "Uploading..."}
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" /> {isSpanish ? "Subir Nueva Foto" : "Upload New Photo"}
+                        </>
+                      )}
                     </Button>
                     <p className="text-xs text-muted-foreground">
                       {isSpanish ? "JPG, PNG o GIF. Tamaño máximo 2MB" : "JPG, PNG or GIF. Max size 2MB"}

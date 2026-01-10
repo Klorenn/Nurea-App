@@ -291,6 +291,65 @@ export async function POST(request: Request) {
       )
     }
 
+    // Si es cita online, generar meeting link automáticamente
+    let meetingLink: string | null = null
+    let meetingRoomId: string | null = null
+    let meetingExpiresAt: Date | null = null
+
+    if (type === 'online') {
+      try {
+        const { createMeetingRoom, calculateMeetingExpiration } = await import('@/lib/services/daily')
+        
+        const expirationDate = calculateMeetingExpiration(
+          appointmentDate,
+          appointmentTime,
+          duration
+        )
+        
+        const roomName = `nurea-appt-${appointment.id}-${Date.now()}`
+        const { room, error: dailyError } = await createMeetingRoom({
+          name: roomName,
+          privacy: 'private',
+          properties: {
+            max_participants: 2,
+            enable_chat: true,
+            enable_screenshare: true,
+            enable_recording: false,
+            exp: Math.floor(expirationDate.getTime() / 1000), // Unix timestamp
+          },
+        })
+
+        if (!dailyError && room) {
+          meetingLink = room.url
+          // Daily.co requiere el nombre del room para operaciones posteriores (delete, etc.)
+          meetingRoomId = room.name || room.id
+          meetingExpiresAt = expirationDate
+
+          // Actualizar la cita con el meeting link
+          const { error: updateError } = await supabase
+            .from('appointments')
+            .update({
+              meeting_link: meetingLink,
+              meeting_room_id: meetingRoomId,
+              video_platform: 'daily',
+              meeting_expires_at: meetingExpiresAt.toISOString(),
+            })
+            .eq('id', appointment.id)
+
+          if (updateError) {
+            console.error('Error actualizando cita con meeting link:', updateError)
+            // No fallar la creación si el update falla, el meeting link se puede generar después
+          }
+        } else {
+          console.error('Error creando meeting room en Daily.co:', dailyError)
+          // No fallar la creación de la cita si Daily.co falla, se puede generar después
+        }
+      } catch (meetingError) {
+        console.error('Error generando meeting link:', meetingError)
+        // No fallar la creación de la cita si el meeting falla
+      }
+    }
+
     // Obtener información del paciente y profesional para el mensaje
     const { data: patientProfile } = await supabase
       .from('profiles')
@@ -319,24 +378,37 @@ export async function POST(request: Request) {
     const typeLabel = type === 'online' ? 'Online' : 'Presencial'
 
     // Crear mensaje predefinido en el chat
-    const messageContent = `¡Hola! Tu cita ha sido confirmada exitosamente.
+    // IMPORTANTE: El mensaje se crea DESPUÉS de intentar crear el meeting para incluir el link solo si existe
+    let messageContent = `¡Hola! Tu cita ha sido confirmada exitosamente.
 
 📅 Fecha: ${formattedDate}
 🕐 Hora: ${formattedTime}
 💻 Tipo: ${typeLabel}
-👨‍⚕️ Profesional: ${professionalName}
+👨‍⚕️ Profesional: ${professionalName}`
 
-Te recordaremos 24 horas antes de tu cita. Si necesitas cambiar o cancelar, puedes hacerlo desde tu panel de citas.
+    // Agregar meeting link solo si es online y el link fue creado exitosamente
+    if (type === 'online') {
+      if (meetingLink && meetingRoomId) {
+        messageContent += `\n\n🔗 Enlace de la reunión: ${meetingLink}\n\nPuedes unirte a la reunión desde tu panel de citas o usando el enlace de arriba.`
+      } else {
+        // Si es online pero el meeting falló, mencionarlo pero no bloquear
+        messageContent += `\n\n⚠️ El enlace de la reunión se generará próximamente. Te notificaremos cuando esté disponible.`
+      }
+    }
 
-¡Nos vemos pronto!`
+    messageContent += `\n\nTe recordaremos 24 horas antes de tu cita. Si necesitas cambiar o cancelar, puedes hacerlo desde tu panel de citas.\n\n¡Nos vemos pronto!`
 
     // Crear mensaje en la tabla messages (del profesional al paciente)
+    // Sanitizar contenido del mensaje antes de insertar
+    const { sanitizeMessage } = await import('@/lib/utils/sanitize')
+    const sanitizedMessageContent = sanitizeMessage(messageContent)
+
     const { error: messageError } = await supabase
       .from('messages')
       .insert({
         sender_id: professionalId,
         receiver_id: user.id,
-        content: messageContent,
+        content: sanitizedMessageContent,
         read: false,
       })
 
@@ -345,34 +417,58 @@ Te recordaremos 24 horas antes de tu cita. Si necesitas cambiar o cancelar, pued
       // No fallar la creación de la cita si el mensaje falla
     }
 
-    // Enviar email de confirmación (usando template)
-    // Nota: En producción, esto debería usar un servicio de email real (SendGrid, Resend, etc.)
-    // Por ahora, solo logueamos que se debería enviar
-    try {
-      const { appointmentConfirmedEmail } = await import('@/lib/emails/templates')
-      const emailTemplate = appointmentConfirmedEmail({
-        patientName,
-        professionalName,
-        appointmentDate: formattedDate,
-        appointmentTime: formattedTime,
-        appointmentType: type,
-      })
-      
-      // TODO: Implementar envío real de email con servicio de email
-      // Por ahora, solo logueamos
-      console.log('Email de confirmación preparado:', {
-        to: patientProfile?.email,
-        subject: emailTemplate.subject,
-      })
-    } catch (emailError) {
-      console.error('Error preparing email:', emailError)
-      // No fallar la creación de la cita si el email falla
+    // Enviar email de confirmación
+    if (patientProfile?.email) {
+      try {
+        const { appointmentConfirmedEmail } = await import('@/lib/emails/templates')
+        const { sendAppointmentConfirmation } = await import('@/lib/services/email')
+        
+        // Obtener dirección si es presencial (se implementará después)
+        let address: string | undefined = undefined
+        
+        // Solo incluir meetingLink en el email si fue creado exitosamente
+        const emailTemplate = appointmentConfirmedEmail({
+          patientName,
+          professionalName,
+          appointmentDate: formattedDate,
+          appointmentTime: formattedTime,
+          appointmentType: type,
+          meetingLink: (meetingLink && meetingRoomId) ? meetingLink : undefined,
+          address: address,
+        })
+        
+        // Enviar email
+        const language = patientProfile.email?.includes('@') ? 'es' : 'es' // Determinar idioma si es posible
+        const { success, error: emailError } = await sendAppointmentConfirmation(
+          patientProfile.email,
+          emailTemplate,
+          language
+        )
+        
+        if (!success) {
+          console.error('Error enviando email de confirmación:', emailError)
+          // No fallar la creación de la cita si el email falla
+        } else {
+          console.log('Email de confirmación enviado exitosamente a:', patientProfile.email)
+        }
+      } catch (emailError) {
+        console.error('Error preparando o enviando email:', emailError)
+        // No fallar la creación de la cita si el email falla
+      }
     }
 
+    // Incluir meeting_link en la respuesta si existe (para que el frontend pueda usarlo inmediatamente)
     return NextResponse.json({
       success: true,
-      appointment,
-      message: 'Cita creada exitosamente. Te enviaremos un recordatorio antes de la fecha.'
+      appointment: {
+        ...appointment,
+        meeting_link: meetingLink || appointment.meeting_link || null,
+        meeting_room_id: meetingRoomId || appointment.meeting_room_id || null,
+      },
+      meetingLink: meetingLink || null, // Incluir explícitamente para fácil acceso
+      message: type === 'online' && !meetingLink
+        ? 'Cita creada exitosamente. El enlace de la reunión se generará próximamente. Te enviaremos un recordatorio antes de la fecha.'
+        : 'Cita creada exitosamente. Te enviaremos un recordatorio antes de la fecha.'
     })
   } catch (error) {
     console.error('Create appointment error:', error)

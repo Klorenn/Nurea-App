@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { isPaymentsEnabled } from '@/lib/utils/feature-flags'
 
 // Para Stripe, necesitarías instalar: npm install stripe
 // import Stripe from 'stripe'
@@ -7,6 +8,17 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
+    // Verificar feature flag de pagos
+    if (!isPaymentsEnabled()) {
+      return NextResponse.json(
+        {
+          error: 'payments_disabled',
+          message: 'Los pagos están deshabilitados actualmente. Esta funcionalidad se activará próximamente.'
+        },
+        { status: 503 }
+      )
+    }
+
     const { appointmentId, amount, currency = 'clp' } = await request.json()
 
     if (!appointmentId || !amount) {

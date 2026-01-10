@@ -62,9 +62,13 @@ export async function POST(request: Request) {
       )
     }
 
+    // Sanitizar nombre de archivo antes de subir
+    const { sanitizeText } = await import('@/lib/utils/sanitize')
+    const sanitizedFileName = sanitizeText(file.name.replace(/[^a-zA-Z0-9.\-_ ]/g, '_')).substring(0, 255)
+
     // Subir archivo a Supabase Storage
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
+    const fileName = `${user.id}/${Date.now()}-${sanitizedFileName}`
     const filePath = `messages/${fileName}`
 
     const { data: uploadData, error: uploadError } = await supabase.storage

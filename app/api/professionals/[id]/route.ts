@@ -129,6 +129,54 @@ export async function GET(
       ? reviewsData.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewsData.length
       : 4.8
 
+    // Contar pacientes atendidos (citas completadas con pacientes únicos)
+    const { data: completedAppointments } = await supabase
+      .from('appointments')
+      .select('patient_id')
+      .eq('professional_id', id)
+      .eq('status', 'completed')
+
+    const uniquePatients = new Set(completedAppointments?.map((apt: any) => apt.patient_id) || [])
+    const patientsServed = uniquePatients.size
+
+    // Calcular disponibilidad real
+    let availableToday = true
+    let availableUntil = '6:00 PM'
+    try {
+      const { checkProfessionalAvailability } = await import('@/lib/utils/check-availability')
+      const availability = await checkProfessionalAvailability(
+        id,
+        professional.consultation_type as 'online' | 'in-person' | 'both'
+      )
+      availableToday = availability.availableToday
+      availableUntil = availability.availableUntil || '6:00 PM'
+    } catch (error) {
+      console.error('Error calculando disponibilidad:', error)
+      // Mantener valores por defecto
+    }
+
+    // Cargar documentos públicos del profesional
+    let documents: any[] = []
+    try {
+      const { data: documentsData } = await supabase
+        .from('documents')
+        .select('id, name, file_url, file_type, category, created_at')
+        .eq('professional_id', id)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+
+      documents = (documentsData || []).map((doc: any) => ({
+        id: doc.id,
+        name: doc.name,
+        type: doc.file_type || 'PDF',
+        url: doc.file_url,
+        category: doc.category,
+        size: 'N/A',
+      }))
+    } catch (error) {
+      console.error('Error cargando documentos:', error)
+    }
+
     // Formatear profesional real
     const formattedProfessional = {
       id: professional.id,
@@ -142,7 +190,19 @@ export async function GET(
       reviewsCount: reviewsCount,
       price: professional.consultation_price || 0,
       consultationPrice: professional.consultation_price || 0,
-      languages: ['Español'], // TODO: obtener desde perfil
+      languages: (professional.languages && Array.isArray(professional.languages) && professional.languages.length > 0)
+        ? professional.languages.map((lang: string) => {
+            // Mapear códigos a nombres completos
+            const langMap: Record<string, string> = {
+              'ES': 'Español',
+              'EN': 'Inglés',
+              'PT': 'Portugués',
+              'FR': 'Francés',
+              'DE': 'Alemán',
+            }
+            return langMap[lang] || lang
+          })
+        : ['Español'], // Default si no hay idiomas configurados
       bio: professional.bio || '',
       bioExtended: professional.bio_extended || '',
       services: professional.services || [],
@@ -153,7 +213,7 @@ export async function GET(
         : ['in-person'],
       consultationType: professional.consultation_type || 'both',
       availability: professional.availability || {},
-      documents: [], // TODO: cargar desde documents table
+      documents: documents,
       professionalRegistration: {
         number: professional.registration_number || '',
         institution: professional.registration_institution || '',
@@ -161,10 +221,10 @@ export async function GET(
       },
       imageUrl: professional.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
       verified: professional.verified || false,
-      isOnline: false, // TODO: implementar estado en tiempo real
-      availableToday: true, // TODO: calcular desde disponibilidad
-      availableUntil: '6:00 PM', // TODO: calcular desde disponibilidad
-      patientsServed: 0, // TODO: contar desde appointments
+      isOnline: false, // Presencia en tiempo real se actualiza en el cliente
+      availableToday: availableToday,
+      availableUntil: availableUntil,
+      patientsServed: patientsServed, // Calculado desde appointments completadas
     }
 
     return NextResponse.json({

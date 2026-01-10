@@ -257,6 +257,134 @@ export function appointmentReminderEmail(data: {
 }
 
 /**
+ * Email de cancelación de cita
+ */
+export function appointmentCancelledEmail(data: {
+  patientName: string
+  professionalName: string
+  appointmentDate: string
+  appointmentTime: string
+  appointmentType: 'online' | 'in-person'
+  refundAmount?: number
+  refundMessage?: string
+  reason?: string
+}): EmailTemplate {
+  const refundInfo = data.refundAmount && data.refundAmount > 0
+    ? `<div class="info-box">
+        <p><strong>Reembolso:</strong> $${data.refundAmount.toLocaleString()} CLP</p>
+        <p>${data.refundMessage || 'El reembolso será procesado en 3-5 días hábiles.'}</p>
+      </div>`
+    : ''
+
+  return {
+    subject: `Tu cita del ${data.appointmentDate} ha sido cancelada`,
+    subjectEn: `Your appointment on ${data.appointmentDate} has been cancelled`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .info-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .button { display: inline-block; background: #14b8a6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 20px 0; }
+          .footer { background: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 12px 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>✕ Cita Cancelada</h1>
+          </div>
+          <div class="content">
+            <p>Hola ${data.patientName},</p>
+            <p>Tu cita con <strong>${data.professionalName}</strong> ha sido cancelada.</p>
+            
+            <div class="info-box">
+              <p><strong>Fecha:</strong> ${data.appointmentDate}</p>
+              <p><strong>Hora:</strong> ${data.appointmentTime}</p>
+              <p><strong>Tipo:</strong> ${data.appointmentType === 'online' ? 'Consulta Online' : 'Consulta Presencial'}</p>
+              ${data.reason ? `<p><strong>Razón:</strong> ${data.reason}</p>` : ''}
+            </div>
+            
+            ${refundInfo}
+            
+            <p>Si deseas reagendar una nueva cita, puedes hacerlo desde tu panel en cualquier momento.</p>
+            
+            <a href="https://nurea.app/dashboard/appointments" class="button">Ver mis citas</a>
+            
+            <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
+              <strong>¿Necesitas ayuda?</strong><br>
+              Escríbenos a soporte@nurea.app o desde tu panel de paciente.
+            </p>
+          </div>
+          <div class="footer">
+            <p>NUREA - Conectando pacientes con profesionales de la salud</p>
+            <p>Este es un email automático, por favor no respondas a este mensaje.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    htmlEn: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+          .info-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .button { display: inline-block; background: #14b8a6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; margin: 20px 0; }
+          .footer { background: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #6b7280; border-radius: 0 0 12px 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>✕ Appointment Cancelled</h1>
+          </div>
+          <div class="content">
+            <p>Hello ${data.patientName},</p>
+            <p>Your appointment with <strong>${data.professionalName}</strong> has been cancelled.</p>
+            
+            <div class="info-box">
+              <p><strong>Date:</strong> ${data.appointmentDate}</p>
+              <p><strong>Time:</strong> ${data.appointmentTime}</p>
+              <p><strong>Type:</strong> ${data.appointmentType === 'online' ? 'Online Consultation' : 'In-person Visit'}</p>
+              ${data.reason ? `<p><strong>Reason:</strong> ${data.reason}</p>` : ''}
+            </div>
+            
+            ${refundInfo}
+            
+            <p>If you'd like to reschedule, you can do so from your dashboard at any time.</p>
+            
+            <a href="https://nurea.app/dashboard/appointments" class="button">View my appointments</a>
+            
+            <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
+              <strong>Need help?</strong><br>
+              Contact us at soporte@nurea.app or from your patient dashboard.
+            </p>
+          </div>
+          <div class="footer">
+            <p>NUREA - Connecting patients with healthcare professionals</p>
+            <p>This is an automated email, please do not reply to this message.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `Hola ${data.patientName},\n\nTu cita con ${data.professionalName} ha sido cancelada.\n\nFecha: ${data.appointmentDate}\nHora: ${data.appointmentTime}\n${data.reason ? `\nRazón: ${data.reason}` : ''}\n\n${data.refundAmount && data.refundAmount > 0 ? `Reembolso: $${data.refundAmount.toLocaleString()} CLP\n${data.refundMessage || ''}\n` : ''}Si deseas reagendar, puedes hacerlo desde tu panel.\n\nVer mis citas: https://nurea.app/dashboard/appointments`,
+    textEn: `Hello ${data.patientName},\n\nYour appointment with ${data.professionalName} has been cancelled.\n\nDate: ${data.appointmentDate}\nTime: ${data.appointmentTime}\n${data.reason ? `\nReason: ${data.reason}` : ''}\n\n${data.refundAmount && data.refundAmount > 0 ? `Refund: $${data.refundAmount.toLocaleString()} CLP\n${data.refundMessage || ''}\n` : ''}If you'd like to reschedule, you can do so from your dashboard.\n\nView my appointments: https://nurea.app/dashboard/appointments`
+  }
+}
+
+/**
  * Email de nuevo mensaje
  */
 export function newMessageEmail(data: {

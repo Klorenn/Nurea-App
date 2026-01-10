@@ -26,7 +26,8 @@ export async function GET(request: Request) {
         professional:profiles!appointments_professional_id_fkey(
           id,
           first_name,
-          last_name
+          last_name,
+          avatar_url
         )
       `)
       .eq('patient_id', user.id)

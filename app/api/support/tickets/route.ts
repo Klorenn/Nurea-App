@@ -162,14 +162,39 @@ export async function POST(request: Request) {
     const validPriorities = ['low', 'medium', 'high', 'urgent']
     const finalPriority = priority && validPriorities.includes(priority) ? priority : 'medium'
 
+    // Sanitizar subject y message antes de insertar
+    const { sanitizeText, sanitizeMessage } = await import('@/lib/utils/sanitize')
+    const sanitizedSubject = sanitizeText(subject.trim())
+    const sanitizedMessage = sanitizeMessage(message.trim())
+
+    if (!sanitizedSubject || sanitizedSubject.length === 0) {
+      return NextResponse.json(
+        {
+          error: 'invalid_subject',
+          message: 'El asunto no puede estar vacío o contener solo caracteres no válidos.'
+        },
+        { status: 400 }
+      )
+    }
+
+    if (!sanitizedMessage || sanitizedMessage.length === 0) {
+      return NextResponse.json(
+        {
+          error: 'invalid_message',
+          message: 'El mensaje no puede estar vacío o contener solo caracteres no válidos.'
+        },
+        { status: 400 }
+      )
+    }
+
     // Crear el ticket
     const { data: ticket, error: ticketError } = await supabase
       .from('support_tickets')
       .insert({
         user_id: user.id,
         user_role: profile.role,
-        subject: subject.trim(),
-        message: message.trim(),
+        subject: sanitizedSubject,
+        message: sanitizedMessage,
         category: finalCategory,
         priority: finalPriority,
         status: 'open'

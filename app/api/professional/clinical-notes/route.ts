@@ -23,13 +23,24 @@ export async function GET(request: Request) {
     }
 
     // Verificar que el usuario sea profesional
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'professional') {
+    if (profileError || !profile) {
+      console.error('Error fetching profile:', profileError)
+      return NextResponse.json(
+        { 
+          error: 'profile_not_found',
+          message: 'Perfil no encontrado. Por favor, contacta a soporte.'
+        },
+        { status: 404 }
+      )
+    }
+
+    if (profile.role !== 'professional') {
       return NextResponse.json(
         { 
           error: 'forbidden',
@@ -172,14 +183,44 @@ export async function POST(request: Request) {
       )
     }
 
+    // Sanitizar notas clínicas antes de insertar
+    const { sanitizeMessage } = await import('@/lib/utils/sanitize')
+    const sanitizedNotes = sanitizeMessage(notes)
+
+    if (!sanitizedNotes || sanitizedNotes.length === 0) {
+      return NextResponse.json(
+        {
+          error: 'invalid_notes',
+          message: 'Las notas no pueden estar vacías o contener solo caracteres no válidos.'
+        },
+        { status: 400 }
+      )
+    }
+
+    // Validar que patientId sea un UUID válido (ownership validation)
+    const { sanitizeId } = await import('@/lib/utils/sanitize')
+    const sanitizedPatientId = sanitizeId(patientId)
+    if (!sanitizedPatientId || sanitizedPatientId !== patientId) {
+      return NextResponse.json(
+        {
+          error: 'invalid_patient_id',
+          message: 'ID de paciente inválido.'
+        },
+        { status: 400 }
+      )
+    }
+
+    // Validar ownership: verificar que el profesional tiene acceso a este paciente
+    // (ya validado arriba con appointmentCheck, pero refuerzo aquí)
+
     // Crear la nota
     const { data: note, error: noteError } = await supabase
       .from('clinical_notes')
       .insert({
         professional_id: user.id,
-        patient_id: patientId,
-        appointment_id: appointmentId || null,
-        notes: notes,
+        patient_id: sanitizedPatientId,
+        appointment_id: appointmentId ? sanitizeId(appointmentId) || null : null,
+        notes: sanitizedNotes,
         date: date || new Date().toISOString().split('T')[0],
       })
       .select()

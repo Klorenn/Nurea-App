@@ -3,6 +3,21 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
+    // Validar tamaño del body desde headers (validación temprana)
+    const contentLength = request.headers.get('content-length')
+    if (contentLength) {
+      const size = parseInt(contentLength, 10)
+      if (!isNaN(size) && size > 25 * 1024 * 1024) {
+        return NextResponse.json(
+          {
+            error: 'body_too_large',
+            message: 'El archivo es demasiado grande. Máximo 25MB.'
+          },
+          { status: 413 }
+        )
+      }
+    }
+
     const supabase = await createClient()
     
     // Verificar autenticación
@@ -125,10 +140,27 @@ export async function POST(request: Request) {
       }
     }
 
+    // Sanitizar nombre del archivo antes de subir
+    const { sanitizeText } = await import('@/lib/utils/sanitize')
+    const sanitizedName = sanitizeText(name.trim())
+    
+    if (!sanitizedName || sanitizedName.length === 0) {
+      return NextResponse.json(
+        {
+          error: 'invalid_name',
+          message: 'El nombre del documento no puede estar vacío o contener solo caracteres no válidos.'
+        },
+        { status: 400 }
+      )
+    }
+
+    // Sanitizar nombre de archivo (remover caracteres peligrosos)
+    const sanitizedFileName = sanitizeText(file.name.replace(/[^a-zA-Z0-9.\-_ ]/g, '_')).substring(0, 255)
+    
     // Subir archivo a Supabase Storage (bucket privado)
-    const fileExt = file.name.split('.').pop()
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const timestamp = Date.now()
-    const fileName = `${user.id}/${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+    const fileName = `${user.id}/${timestamp}-${sanitizedFileName}`
     const filePath = `documents/${fileName}`
 
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -183,16 +215,34 @@ export async function POST(request: Request) {
       }
     }
 
+    // Sanitizar nombre del archivo antes de insertar
+    const { sanitizeText } = await import('@/lib/utils/sanitize')
+    const sanitizedName = sanitizeText(name.trim())
+    const sanitizedDescription = description ? (await import('@/lib/utils/sanitize')).sanitizeMessage(description.trim()) : null
+    const sanitizedFileName = sanitizeText(file.name.replace(/[^a-zA-Z0-9.\-_ ]/g, '_')).substring(0, 255)
+
+    if (!sanitizedName || sanitizedName.length === 0) {
+      // Intentar eliminar el archivo subido si falla la validación
+      await supabase.storage.from('documents').remove([filePath])
+      return NextResponse.json(
+        {
+          error: 'invalid_name',
+          message: 'El nombre del documento no puede estar vacío o contener solo caracteres no válidos.'
+        },
+        { status: 400 }
+      )
+    }
+
     // Crear registro en la base de datos
     const { data: document, error: documentError } = await supabase
       .from('documents')
       .insert({
         patient_id: finalPatientId,
         professional_id: finalProfessionalId,
-        appointment_id: appointmentId || null,
-        name: name.trim(),
-        description: description?.trim() || null,
-        file_name: file.name,
+        appointment_id: appointmentId ? (await import('@/lib/utils/sanitize')).sanitizeId(appointmentId) || null : null,
+        name: sanitizedName,
+        description: sanitizedDescription,
+        file_name: sanitizedFileName,
         file_url: signedUrlData?.signedUrl || filePath, // Usar signed URL si está disponible
         file_type: file.type,
         file_size: file.size,

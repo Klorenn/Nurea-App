@@ -15,11 +15,14 @@ import { Label } from "@/components/ui/label"
 import { Calendar, X, AlertCircle, CheckCircle2, Clock } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { Input } from "@/components/ui/input"
+import { sanitizeMessage } from "@/lib/utils/sanitize"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface QuickActionsProps {
   appointmentId: string
   appointmentDate: string
   appointmentTime: string
+  status?: string
   onReschedule?: () => void
   onCancel?: () => void
 }
@@ -28,6 +31,7 @@ export function QuickActions({
   appointmentId, 
   appointmentDate, 
   appointmentTime,
+  status = "pending",
   onReschedule,
   onCancel 
 }: QuickActionsProps) {
@@ -41,6 +45,30 @@ export function QuickActions({
   const [cancelReason, setCancelReason] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  // Determinar si las acciones están deshabilitadas
+  const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`)
+  const isPast = appointmentDateTime < new Date()
+  const isCompleted = status === "completed"
+  const isCancelled = status === "cancelled"
+  const canReschedule = !isPast && !isCompleted && !isCancelled && (status === "confirmed" || status === "pending")
+  const canCancel = !isPast && !isCompleted && !isCancelled && (status === "confirmed" || status === "pending")
+  
+  const getRescheduleDisabledReason = () => {
+    if (isPast) return isSpanish ? "Esta cita ya pasó" : "This appointment has already passed"
+    if (isCompleted) return isSpanish ? "Esta cita ya fue completada" : "This appointment is already completed"
+    if (isCancelled) return isSpanish ? "Esta cita ya fue cancelada" : "This appointment is already cancelled"
+    if (status !== "confirmed" && status !== "pending") return isSpanish ? "Esta cita no está confirmada" : "This appointment is not confirmed"
+    return null
+  }
+  
+  const getCancelDisabledReason = () => {
+    if (isPast) return isSpanish ? "Esta cita ya pasó" : "This appointment has already passed"
+    if (isCompleted) return isSpanish ? "Esta cita ya fue completada" : "This appointment is already completed"
+    if (isCancelled) return isSpanish ? "Esta cita ya fue cancelada" : "This appointment is already cancelled"
+    if (status !== "confirmed" && status !== "pending") return isSpanish ? "Esta cita no está confirmada" : "This appointment is not confirmed"
+    return null
+  }
 
   const handleReschedule = async () => {
     if (!newDate || !newTime) {
@@ -98,12 +126,15 @@ export function QuickActions({
     setError(null)
     setSuccess(null)
     try {
+      // Sanitizar motivo de cancelación
+      const sanitizedReason = cancelReason ? sanitizeMessage(cancelReason) : null
+
       const response = await fetch("/api/appointments/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           appointmentId,
-          reason: cancelReason,
+          reason: sanitizedReason,
         }),
       })
 
@@ -137,26 +168,50 @@ export function QuickActions({
   }
 
   return (
-    <>
+    <TooltipProvider>
       <div className="flex gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-xl"
-          onClick={() => setShowReschedule(true)}
-        >
-          <Calendar className="h-4 w-4 mr-2" />
-          {isSpanish ? "Reagendar" : "Reschedule"}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-xl text-destructive hover:text-destructive"
-          onClick={() => setShowCancel(true)}
-        >
-          <X className="h-4 w-4 mr-2" />
-          {isSpanish ? "Cancelar" : "Cancel"}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                onClick={() => setShowReschedule(true)}
+                disabled={!canReschedule || loading}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                {isSpanish ? "Reagendar" : "Reschedule"}
+              </Button>
+            </div>
+          </TooltipTrigger>
+          {getRescheduleDisabledReason() && (
+            <TooltipContent>
+              <p>{getRescheduleDisabledReason()}</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-destructive hover:text-destructive"
+                onClick={() => setShowCancel(true)}
+                disabled={!canCancel || loading}
+              >
+                <X className="h-4 w-4 mr-2" />
+                {isSpanish ? "Cancelar" : "Cancel"}
+              </Button>
+            </div>
+          </TooltipTrigger>
+          {getCancelDisabledReason() && (
+            <TooltipContent>
+              <p>{getCancelDisabledReason()}</p>
+            </TooltipContent>
+          )}
+        </Tooltip>
       </div>
 
       {/* Reschedule Dialog */}

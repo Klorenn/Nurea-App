@@ -1,8 +1,20 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { isPaymentsEnabled } from '@/lib/utils/feature-flags'
 
 export async function POST(request: Request) {
   try {
+    // Verificar feature flag de pagos
+    if (!isPaymentsEnabled()) {
+      return NextResponse.json(
+        {
+          error: 'payments_disabled',
+          message: 'Los pagos están deshabilitados actualmente.'
+        },
+        { status: 503 }
+      )
+    }
+
     const { paymentId, paymentIntentId } = await request.json()
 
     if (!paymentId) {

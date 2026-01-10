@@ -75,6 +75,8 @@ export default function AppointmentsPage() {
             appointmentDate: apt.appointment_date,
             appointmentTime: apt.appointment_time,
             type: apt.type,
+            meetingLink: apt.meeting_link || null,
+            meetingExpiresAt: apt.meeting_expires_at || null,
           }
         })
 
@@ -96,6 +98,57 @@ export default function AppointmentsPage() {
       professionalName,
       appointmentId,
     })
+  }
+
+  const handleJoinMeeting = async (appointmentId: string, existingMeetingLink: string | null) => {
+    try {
+      // Si ya tenemos el meeting link y no ha expirado, usarlo
+      if (existingMeetingLink) {
+        // Verificar si expiró (se verifica en el servidor también)
+        window.open(existingMeetingLink, '_blank', 'noopener,noreferrer')
+        return
+      }
+
+      // Si no tenemos el meeting link, obtenerlo del API
+      const response = await fetch(`/api/appointments/${appointmentId}/meeting`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Error al obtener el enlace de la reunión')
+      }
+
+      if (data.meeting_link) {
+        // Actualizar el estado local con el nuevo meeting link
+        setAppointments((prev) =>
+          prev.map((apt) =>
+            apt.id === appointmentId
+              ? {
+                  ...apt,
+                  meetingLink: data.meeting_link,
+                  meetingExpiresAt: data.expires_at,
+                }
+              : apt
+          )
+        )
+
+        // Abrir el meeting link
+        window.open(data.meeting_link, '_blank', 'noopener,noreferrer')
+      } else {
+        throw new Error('No se pudo obtener el enlace de la reunión')
+      }
+    } catch (error) {
+      console.error('Error al unirse a la reunión:', error)
+      alert(
+        error instanceof Error
+          ? error.message
+          : language === "es"
+          ? 'Error al unirse a la reunión. Por favor, intenta nuevamente.'
+          : 'Error joining meeting. Please try again.'
+      )
+    }
   }
 
   const handleExportHistory = async () => {
@@ -287,10 +340,11 @@ export default function AppointmentsPage() {
                       </div>
                       <div className="flex flex-col sm:flex-row gap-2 lg:flex-col lg:justify-start">
                         {appointment.mode === "Online Video" ? (
-                          <Button className="rounded-xl w-full sm:w-auto lg:w-full" asChild>
-                            <Link href="#">
-                              {t.dashboard.joinMeeting}
-                            </Link>
+                          <Button 
+                            className="rounded-xl w-full sm:w-auto lg:w-full"
+                            onClick={() => handleJoinMeeting(appointment.id, appointment.meetingLink)}
+                          >
+                            {t.dashboard.joinMeeting}
                           </Button>
                         ) : (
                           <Button variant="outline" className="rounded-xl w-full sm:w-auto lg:w-full" asChild>
@@ -301,8 +355,9 @@ export default function AppointmentsPage() {
                         )}
                         <QuickActions
                           appointmentId={appointment.id}
-                          appointmentDate={appointment.date}
+                          appointmentDate={appointment.appointmentDate || appointment.date}
                           appointmentTime={appointment.time}
+                          status={appointment.status}
                           onReschedule={() => window.location.reload()}
                           onCancel={() => window.location.reload()}
                         />

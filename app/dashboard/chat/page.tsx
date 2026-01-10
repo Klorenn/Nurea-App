@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { HealthChat } from "@/components/messaging/health-chat"
 import { useAuth } from "@/hooks/use-auth"
+import { usePresence } from "@/hooks/use-presence"
 import { createClient } from "@/lib/supabase/client"
 
 interface Contact {
@@ -23,6 +24,22 @@ function ChatContent() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  
+  // Obtener IDs de profesionales para presencia
+  const professionalIds = contacts.map((c) => c.id)
+  const { isOnline } = usePresence(professionalIds)
+  
+  // Actualizar estado online/offline de contactos
+  useEffect(() => {
+    if (professionalIds.length > 0) {
+      setContacts((prev) =>
+        prev.map((contact) => ({
+          ...contact,
+          status: isOnline(contact.id) ? 'online' : 'offline',
+        }))
+      )
+    }
+  }, [isOnline, professionalIds.length])
 
   useEffect(() => {
     if (!user || authLoading) return
@@ -65,7 +82,23 @@ function ChatContent() {
 
         // Fetch professional profiles
         const contactsData: Contact[] = []
-        for (const profId of Array.from(professionalIds)) {
+        const profIdsArray = Array.from(professionalIds)
+        
+        // Calcular tiempos de respuesta para todos los profesionales
+        const responseTimePromises = profIdsArray.map(async (profId) => {
+          try {
+            const response = await fetch(`/api/professionals/${profId}/response-time?patientId=${user.id}`)
+            const data = await response.json()
+            return { profId, responseTime: data.formatted || '2-4 horas' }
+          } catch {
+            return { profId, responseTime: '2-4 horas' }
+          }
+        })
+        
+        const responseTimes = await Promise.all(responseTimePromises)
+        const responseTimeMap = new Map(responseTimes.map((rt) => [rt.profId, rt.responseTime]))
+
+        for (const profId of profIdsArray) {
           const { data: profile } = await supabase
             .from("profiles")
             .select("id, first_name, last_name, avatar_url")
@@ -82,26 +115,31 @@ function ChatContent() {
               (m) => m.sender_id === profId && m.receiver_id === user.id && !m.read
             ).length || 0
 
-            // Get professional info for response time
+            // Get professional info for business hours
             const { data: professional } = await supabase
               .from("professionals")
               .select("availability")
               .eq("id", profId)
               .single()
 
-            // Calculate typical response time based on business hours
-            const responseTime = "2-4 horas" // Default, can be calculated from availability
-            const businessHours = "Lunes a Viernes, 9:00 - 18:00" // Default
+            // Calculate business hours from availability
+            let businessHours = "Lunes a Viernes, 9:00 - 18:00" // Default
+            if (professional?.availability) {
+              const monFri = professional.availability.monday || professional.availability.weekdays
+              if (monFri?.hours) {
+                businessHours = `Lunes a Viernes, ${monFri.hours}`
+              }
+            }
 
             contactsData.push({
               id: profile.id,
               name: `Dr. ${profile.first_name} ${profile.last_name}`,
               avatar: profile.avatar_url || undefined,
-              status: "offline", // TODO: Implement real-time status
+              status: "offline", // Se actualizará con usePresence
               lastMessage: lastMsg?.content,
               lastMessageTime: lastMsg?.created_at,
               unread: unreadCount,
-              responseTime,
+              responseTime: responseTimeMap.get(profId) || '2-4 horas',
               businessHours,
             })
           }
