@@ -122,9 +122,23 @@ function CompleteProfileContent() {
         throw new Error(data.error || (language === "es" ? "Error al completar el perfil" : "Error completing profile"))
       }
 
-      // Redirect based on role (returned from API or fetch user role)
-      const redirectPath = data.redirectPath || "/dashboard"
-      router.push(redirectPath)
+      // Redirect to onboarding if profile is not complete
+      // Check if we have all required fields
+      const profileResponse = await fetch("/api/user/profile")
+      const profileData = await profileResponse.json()
+      
+      const hasAllFields = profileData.profile?.first_name && 
+                          profileData.profile?.last_name && 
+                          profileData.profile?.date_of_birth && 
+                          profileData.profile?.avatar_url
+      
+      if (!hasAllFields) {
+        router.push("/onboarding")
+      } else {
+        // Redirect based on role
+        const redirectPath = data.redirectPath || "/dashboard"
+        router.push(redirectPath)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : (language === "es" ? "Error al completar el perfil" : "Error completing profile"))
     } finally {

@@ -10,6 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import DoctorCard from "@/components/ui/doctor-live-chat-card"
+import { ProfileCard } from "@/components/ui/profile-card"
 import { InputWithTags } from "@/components/ui/input-with-tags"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
@@ -359,19 +360,27 @@ function SearchResultsPageContent() {
                 </div>
               ) : (
                 filteredProfessionals.map((prof) => (
-                <DoctorCard
+                <ProfileCard
                   key={prof.id}
                   id={prof.id}
                   name={prof.name}
                   specialty={language === "es" ? prof.specialty : prof.specialtyEn}
-                  avatar={prof.image}
+                  avatarUrl={prof.image}
                   rating={prof.rating}
-                  patientsServed={prof.patientsServed}
-                  isOnline={prof.isOnline}
-                  availableToday={prof.availableToday}
-                  availableUntil={prof.availableUntil}
+                  reviewsCount={prof.reviewCount || 0}
+                  duration="60 min"
+                  rate={prof.price}
                   location={prof.location}
-                  consultationPrice={prof.price}
+                  consultationType={prof.consultationTypes?.includes('online') && prof.consultationTypes?.includes('in-person') 
+                    ? 'both' 
+                    : prof.consultationTypes?.includes('online') 
+                    ? 'online' 
+                    : 'in-person'}
+                  verified={prof.verified || false}
+                  isOnline={prof.isOnline}
+                  yearsExperience={prof.yearsExperience}
+                  languages={prof.languages}
+                  onGetInTouch={() => window.location.href = `/professionals/${prof.id}`}
                 />
                 ))
               )}

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useCallback } from "react"
 import { RouteGuard } from "@/components/auth/route-guard"
 import { HealthChat } from "@/components/messaging/health-chat"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
+import { usePresence } from "@/hooks/use-presence"
 
 interface Contact {
   id: string
@@ -23,90 +24,125 @@ function ChatContent() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  
+  // Get presence status for all contacts
+  const { getPresenceStatus } = usePresence()
+
+  const loadContacts = useCallback(async () => {
+    if (!user) return
+
+    try {
+      // Get all unique conversation partners (patients the professional has messaged with)
+      const { data: messages, error } = await supabase
+        .from("messages")
+        .select("sender_id, receiver_id, content, created_at, read")
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .order("created_at", { ascending: false })
+
+      if (error) throw error
+
+      // Get unique patient IDs
+      const patientIds = new Set<string>()
+      messages?.forEach((msg) => {
+        if (msg.sender_id !== user.id) {
+          patientIds.add(msg.sender_id)
+        }
+        if (msg.receiver_id !== user.id) {
+          patientIds.add(msg.receiver_id)
+        }
+      })
+
+      // If no messages, try to get patients from appointments
+      if (patientIds.size === 0) {
+        const { data: appointments } = await supabase
+          .from("appointments")
+          .select("patient_id")
+          .eq("professional_id", user.id)
+
+        appointments?.forEach((apt) => {
+          if (apt.patient_id) {
+            patientIds.add(apt.patient_id)
+          }
+        })
+      }
+
+      // Fetch patient profiles
+      const contactsData: Contact[] = []
+      for (const patientId of Array.from(patientIds)) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, avatar_url")
+          .eq("id", patientId)
+          .single()
+
+        if (profile) {
+          // Get last message and unread count
+          const lastMsg = messages?.find(
+            (m) =>
+              (m.sender_id === patientId && m.receiver_id === user.id) ||
+              (m.sender_id === user.id && m.receiver_id === patientId)
+          )
+
+          const unreadCount =
+            messages?.filter(
+              (m) => m.sender_id === patientId && m.receiver_id === user.id && !m.read
+            ).length || 0
+
+          // Get real-time presence status
+          const presenceStatus = getPresenceStatus(patientId)
+
+          contactsData.push({
+            id: profile.id,
+            name: `${profile.first_name} ${profile.last_name}`,
+            avatar: profile.avatar_url || undefined,
+            status: presenceStatus || "offline",
+            lastMessage: lastMsg?.content,
+            lastMessageTime: lastMsg?.created_at,
+            unread: unreadCount,
+          })
+        }
+      }
+
+      setContacts(contactsData)
+    } catch (error) {
+      console.error("Error loading contacts:", error)
+    } finally {
+      setLoading(false)
+    }
+  }, [user, supabase, getPresenceStatus])
 
   useEffect(() => {
     if (!user || authLoading) return
-
-    const loadContacts = async () => {
-      try {
-        // Get all unique conversation partners (patients the professional has messaged with)
-        const { data: messages, error } = await supabase
-          .from("messages")
-          .select("sender_id, receiver_id, content, created_at, read")
-          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-          .order("created_at", { ascending: false })
-
-        if (error) throw error
-
-        // Get unique patient IDs
-        const patientIds = new Set<string>()
-        messages?.forEach((msg) => {
-          if (msg.sender_id !== user.id) {
-            patientIds.add(msg.sender_id)
-          }
-          if (msg.receiver_id !== user.id) {
-            patientIds.add(msg.receiver_id)
-          }
-        })
-
-        // If no messages, try to get patients from appointments
-        if (patientIds.size === 0) {
-          const { data: appointments } = await supabase
-            .from("appointments")
-            .select("patient_id")
-            .eq("professional_id", user.id)
-
-          appointments?.forEach((apt) => {
-            if (apt.patient_id) {
-              patientIds.add(apt.patient_id)
-            }
-          })
-        }
-
-        // Fetch patient profiles
-        const contactsData: Contact[] = []
-        for (const patientId of Array.from(patientIds)) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id, first_name, last_name, avatar_url")
-            .eq("id", patientId)
-            .single()
-
-          if (profile) {
-            // Get last message and unread count
-            const lastMsg = messages?.find(
-              (m) =>
-                (m.sender_id === patientId && m.receiver_id === user.id) ||
-                (m.sender_id === user.id && m.receiver_id === patientId)
-            )
-
-            const unreadCount =
-              messages?.filter(
-                (m) => m.sender_id === patientId && m.receiver_id === user.id && !m.read
-              ).length || 0
-
-            contactsData.push({
-              id: profile.id,
-              name: `${profile.first_name} ${profile.last_name}`,
-              avatar: profile.avatar_url || undefined,
-              status: "offline", // TODO: Implement real-time status
-              lastMessage: lastMsg?.content,
-              lastMessageTime: lastMsg?.created_at,
-              unread: unreadCount,
-            })
-          }
-        }
-
-        setContacts(contactsData)
-      } catch (error) {
-        console.error("Error loading contacts:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     loadContacts()
-  }, [user, authLoading, supabase])
+  }, [user, authLoading, loadContacts])
+
+  // Subscribe to presence changes
+  useEffect(() => {
+    if (!user || contacts.length === 0) return
+
+    const channel = supabase.channel('presence-chat')
+    
+    // Subscribe to presence changes for all contacts
+    contacts.forEach(contact => {
+      channel.on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        const contactPresence = state[contact.id]?.[0] as { status?: 'online' | 'offline' } | undefined
+        if (contactPresence) {
+          setContacts(prev => prev.map(c => 
+            c.id === contact.id 
+              ? { ...c, status: contactPresence.status || 'offline' }
+              : c
+          ))
+        }
+      })
+    })
+
+    channel.subscribe()
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [user, contacts, supabase])
 
   if (authLoading || loading) {
     return (

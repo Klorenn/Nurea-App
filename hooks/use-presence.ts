@@ -111,9 +111,15 @@ export function usePresence(userIds: string[]) {
     return presence[userId]?.lastSeen
   }
 
+  // Función helper para obtener el status de presencia
+  const getPresenceStatus = (userId: string): 'online' | 'offline' => {
+    return presence[userId]?.online ? 'online' : 'offline'
+  }
+
   return {
     presence,
     isOnline,
     getLastSeen,
+    getPresenceStatus,
   }
 }

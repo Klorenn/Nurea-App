@@ -21,8 +21,13 @@ import {
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/hooks/use-auth"
+import { useProfessionalStats } from "@/hooks/use-professional-stats"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
+import { LoadingState } from "@/components/dashboard/loading-state"
+import { ErrorState } from "@/components/dashboard/error-state"
+import { StatsCard } from "@/components/dashboard/stats-card"
+import { EmptyState } from "@/components/dashboard/empty-state"
 
 export default function ProfessionalDashboardPage() {
   const { language } = useLanguage()
@@ -30,21 +35,13 @@ export default function ProfessionalDashboardPage() {
   const router = useRouter()
   const isSpanish = language === "es"
   
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
-    upcomingAppointments: 0,
-    activePatients: 0,
-    monthlyIncome: 0,
-    todayAppointments: 0,
-  })
-  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
+  const { stats, upcomingAppointments, loading, error, refetch } = useProfessionalStats({ period: 'month' })
   const [onboardingStatus, setOnboardingStatus] = useState<{
     isComplete: boolean
     missingFields: string[]
   } | null>(null)
 
   useEffect(() => {
-    loadDashboardData()
     checkOnboardingStatus()
   }, [])
 
@@ -61,60 +58,6 @@ export default function ProfessionalDashboardPage() {
       }
     } catch (error) {
       console.error("Error checking onboarding status:", error)
-    }
-  }
-
-  const loadDashboardData = async () => {
-    setLoading(true)
-    try {
-      // Cargar citas próximas
-      const appointmentsRes = await fetch('/api/professional/appointments?status=confirmed')
-      const appointmentsData = await appointmentsRes.json()
-      
-      if (appointmentsData.success) {
-        const now = new Date()
-        const upcoming = (appointmentsData.appointments || []).filter((apt: any) => {
-          const aptDate = new Date(`${apt.appointment_date}T${apt.appointment_time}`)
-          return aptDate >= now
-        }).slice(0, 5)
-        
-        setUpcomingAppointments(upcoming)
-        setStats(prev => ({
-          ...prev,
-          upcomingAppointments: appointmentsData.count || 0,
-          todayAppointments: (appointmentsData.appointments || []).filter((apt: any) => {
-            const aptDate = new Date(`${apt.appointment_date}T${apt.appointment_time}`)
-            const today = new Date()
-            return aptDate.toDateString() === today.toDateString()
-          }).length
-        }))
-      }
-
-      // Cargar pacientes activos
-      const patientsRes = await fetch('/api/professional/patients')
-      const patientsData = await patientsRes.json()
-      
-      if (patientsData.success) {
-        setStats(prev => ({
-          ...prev,
-          activePatients: patientsData.count || 0
-        }))
-      }
-
-      // Cargar ingresos del mes
-      const incomeRes = await fetch('/api/professional/income?period=month')
-      const incomeData = await incomeRes.json()
-      
-      if (incomeData.success) {
-        setStats(prev => ({
-          ...prev,
-          monthlyIncome: incomeData.income?.total || 0
-        }))
-      }
-    } catch (error) {
-      console.error("Error loading dashboard data:", error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -228,80 +171,47 @@ export default function ProfessionalDashboardPage() {
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <LoadingState message={isSpanish ? "Cargando datos..." : "Loading data..."} />
+          ) : error ? (
+            <ErrorState 
+              message={error} 
+              action={{ 
+                label: isSpanish ? "Reintentar" : "Retry", 
+                onClick: refetch 
+              }} 
+            />
           ) : (
             <>
               {/* Stats Cards */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <motion.div variants={itemVariants}>
-                  <Card className="border-primary/10 bg-gradient-to-br from-primary/5 via-background to-transparent">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        {isSpanish ? "Citas Hoy" : "Today's Appointments"}
-                      </CardTitle>
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.todayAppointments}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {isSpanish ? "Citas programadas para hoy" : "Scheduled for today"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
-                  <Card className="border-primary/10 bg-gradient-to-br from-primary/5 via-background to-transparent">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        {isSpanish ? "Próximas Citas" : "Upcoming Appointments"}
-                      </CardTitle>
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.upcomingAppointments}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {isSpanish ? "Citas confirmadas" : "Confirmed appointments"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
-                  <Card className="border-primary/10 bg-gradient-to-br from-primary/5 via-background to-transparent">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        {isSpanish ? "Pacientes Activos" : "Active Patients"}
-                      </CardTitle>
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.activePatients}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {isSpanish ? "Pacientes con citas" : "Patients with appointments"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div variants={itemVariants}>
-                  <Card className="border-primary/10 bg-gradient-to-br from-primary/5 via-background to-transparent">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        {isSpanish ? "Ingresos del Mes" : "Monthly Income"}
-                      </CardTitle>
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{formatCurrency(stats.monthlyIncome)}</div>
-                      <p className="text-xs text-muted-foreground">
-                        {isSpanish ? "Ingresos completados" : "Completed income"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                <StatsCard
+                  title={isSpanish ? "Citas Hoy" : "Today's Appointments"}
+                  value={stats.todayAppointments}
+                  description={isSpanish ? "Citas programadas para hoy" : "Scheduled for today"}
+                  icon={Calendar}
+                  variant="gradient"
+                />
+                <StatsCard
+                  title={isSpanish ? "Próximas Citas" : "Upcoming Appointments"}
+                  value={stats.upcomingAppointments}
+                  description={isSpanish ? "Citas confirmadas" : "Confirmed appointments"}
+                  icon={Clock}
+                  variant="gradient"
+                />
+                <StatsCard
+                  title={isSpanish ? "Pacientes Activos" : "Active Patients"}
+                  value={stats.activePatients}
+                  description={isSpanish ? "Pacientes con citas" : "Patients with appointments"}
+                  icon={Users}
+                  variant="gradient"
+                />
+                <StatsCard
+                  title={isSpanish ? "Ingresos del Mes" : "Monthly Income"}
+                  value={formatCurrency(stats.monthlyIncome)}
+                  description={isSpanish ? "Ingresos completados" : "Completed income"}
+                  icon={DollarSign}
+                  variant="gradient"
+                />
               </div>
 
               {/* Upcoming Appointments */}
@@ -323,14 +233,12 @@ export default function ProfessionalDashboardPage() {
                   </CardHeader>
                   <CardContent>
                     {upcomingAppointments.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>
-                          {isSpanish 
-                            ? "No tienes citas próximas programadas"
-                            : "You don't have any upcoming appointments scheduled"}
-                        </p>
-                      </div>
+                      <EmptyState
+                        icon={Calendar}
+                        title={isSpanish 
+                          ? "No tienes citas próximas programadas"
+                          : "You don't have any upcoming appointments scheduled"}
+                      />
                     ) : (
                       <div className="space-y-4">
                         {upcomingAppointments.map((appointment) => (

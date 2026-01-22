@@ -37,13 +37,8 @@ export default function PatientDashboard() {
   const t = useTranslations(language)
   const { user } = useAuth()
   const supabase = createClient()
+  const { stats: dashboardStats, loading: statsLoading, error: statsError, refetch: refetchStats } = useDashboardStats()
   
-  const [stats, setStats] = useState({
-    todayAppointments: 0,
-    upcomingAppointments: 0,
-    unreadMessages: 0,
-    pendingPayments: 0,
-  })
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([])
   const [favorites, setFavorites] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -92,14 +87,9 @@ export default function PatientDashboard() {
           .eq('patient_id', user.id)
           .eq('status', 'pending')
 
-        setStats({
-          todayAppointments: todayResponse.count || 0,
-          upcomingAppointments: upcomingResponse.count || 0,
-          unreadMessages: messagesResponse.count || 0,
-          pendingPayments: paymentsResponse.count || 0,
-        })
+        // Stats are now loaded via useDashboardStats hook
 
-        // Load upcoming appointments details
+        // Load upcoming appointments details with specialty
         const upcomingDetailsResponse = await supabase
           .from('appointments')
           .select(`
@@ -113,6 +103,10 @@ export default function PatientDashboard() {
               first_name,
               last_name,
               avatar_url
+            ),
+            professional_data:professionals!appointments_professional_id_fkey(
+              id,
+              specialty
             )
           `)
           .eq('patient_id', user.id)
@@ -136,7 +130,7 @@ export default function PatientDashboard() {
             ).toUpperCase(),
             time: apt.appointment_time,
             professional: `Dr. ${apt.professional?.first_name || ''} ${apt.professional?.last_name || ''}`.trim(),
-            specialty: '', // TODO: get from professionals table
+            specialty: apt.professional_data?.specialty || '',
             type: apt.type,
             status: apt.status,
             image: apt.professional?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
@@ -203,32 +197,27 @@ export default function PatientDashboard() {
     },
   }
 
-  if (loading) {
+  if (loading || statsLoading) {
     return (
       <DashboardLayout role="patient">
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground">{t.dashboard.loading || "Cargando..."}</p>
-          </div>
-        </div>
+        <LoadingState message={t.dashboard.loading || "Cargando..."} />
       </DashboardLayout>
     )
   }
 
-  if (error) {
+  if (error || statsError) {
     return (
       <DashboardLayout role="patient">
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="text-center space-y-4 max-w-md">
-            <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
-            <p className="text-lg font-semibold">{t.dashboard.error || "Error"}</p>
-            <p className="text-muted-foreground">{error}</p>
-            <Button onClick={() => window.location.reload()}>
-              {t.dashboard.retry || "Reintentar"}
-            </Button>
-          </div>
-        </div>
+        <ErrorState 
+          message={error || statsError || "Error desconocido"} 
+          action={{ 
+            label: t.dashboard.retry || "Reintentar", 
+            onClick: () => {
+              if (error) window.location.reload()
+              else refetchStats()
+            }
+          }} 
+        />
       </DashboardLayout>
     )
   }
@@ -257,12 +246,12 @@ export default function PatientDashboard() {
                       </p>
                     </div>
                     
-                    {stats.todayAppointments > 0 ? (
+                    {dashboardStats.todayAppointments > 0 ? (
                       <p className="text-muted-foreground">
                         {t.dashboard.todayAppointmentsCount
-                          .replace("{count}", stats.todayAppointments.toString())
-                          .replace("{appointment}", stats.todayAppointments === 1 ? t.dashboard.appointment : t.dashboard.appointments)
-                          .replace("{plural}", stats.todayAppointments === 1 ? "" : "s")}
+                          .replace("{count}", dashboardStats.todayAppointments.toString())
+                          .replace("{appointment}", dashboardStats.todayAppointments === 1 ? t.dashboard.appointment : t.dashboard.appointments)
+                          .replace("{plural}", dashboardStats.todayAppointments === 1 ? "" : "s")}
                       </p>
                     ) : (
                       <p className="text-muted-foreground">
@@ -307,7 +296,7 @@ export default function PatientDashboard() {
                             {t.dashboard.appointments}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {stats.upcomingAppointments} {t.dashboard.upcoming}
+                            {dashboardStats.upcomingAppointments} {t.dashboard.upcoming}
                           </p>
                         </div>
                       </div>
@@ -327,9 +316,9 @@ export default function PatientDashboard() {
                           <p className="font-semibold text-sm">
                             {t.dashboard.messages}
                           </p>
-                          {stats.unreadMessages > 0 ? (
+                          {dashboardStats.unreadMessages > 0 ? (
                             <p className="text-xs text-secondary font-medium">
-                              {stats.unreadMessages} {t.dashboard.new}
+                              {dashboardStats.unreadMessages} {t.dashboard.new}
                             </p>
                           ) : (
                             <p className="text-xs text-muted-foreground">
@@ -354,9 +343,9 @@ export default function PatientDashboard() {
                           <p className="font-semibold text-sm">
                             {t.dashboard.payments}
                           </p>
-                          {stats.pendingPayments > 0 ? (
+                          {dashboardStats.pendingPayments > 0 ? (
                             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                              {stats.pendingPayments} {t.dashboard.pending}
+                              {dashboardStats.pendingPayments} {t.dashboard.pending}
                             </p>
                           ) : (
                             <p className="text-xs text-muted-foreground">
@@ -473,23 +462,14 @@ export default function PatientDashboard() {
               ))}
             </div>
           ) : (
-            <motion.div variants={cardVariants}>
-              <Card className="border-border/40">
-                <CardContent className="p-12 text-center">
-                  <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground font-medium">
-                    {t.dashboard.noUpcomingAppointments}
-                  </p>
-                  <div className="mt-4">
-                    <Button className="rounded-xl transition-transform hover:scale-105 active:scale-95" asChild>
-                      <Link href="/search">
-                        {t.dashboard.bookNew}
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+            <EmptyState
+              icon={Calendar}
+              title={t.dashboard.noUpcomingAppointments}
+              action={{
+                label: t.dashboard.bookNew,
+                href: "/search"
+              }}
+            />
           )}
         </motion.div>
 

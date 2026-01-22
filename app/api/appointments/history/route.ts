@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       )
     }
 
-    // Obtener todas las citas del usuario
+    // Obtener todas las citas del usuario con información del profesional y su specialty
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
       .select(`
@@ -28,6 +28,10 @@ export async function GET(request: Request) {
           first_name,
           last_name,
           avatar_url
+        ),
+        professional_data:professionals!appointments_professional_id_fkey(
+          id,
+          specialty
         )
       `)
       .eq('patient_id', user.id)
@@ -45,10 +49,16 @@ export async function GET(request: Request) {
       )
     }
 
+    // Formatear appointments con specialty
+    const formattedAppointments = (appointments || []).map((apt: any) => ({
+      ...apt,
+      specialty: apt.professional_data?.specialty || null
+    }))
+
     return NextResponse.json({
       success: true,
-      appointments: appointments || [],
-      count: appointments?.length || 0
+      appointments: formattedAppointments,
+      count: formattedAppointments.length
     })
   } catch (error) {
     console.error('Get history error:', error)

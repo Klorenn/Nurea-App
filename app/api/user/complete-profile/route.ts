@@ -15,11 +15,15 @@ export async function POST(request: Request) {
       )
     }
 
-    const { dateOfBirth } = await request.json()
+    const { firstName, lastName, dateOfBirth, avatarUrl, phone } = await request.json()
 
-    if (!dateOfBirth) {
+    // Validar campos requeridos
+    if (!firstName || !lastName || !dateOfBirth) {
       return NextResponse.json(
-        { error: 'Date of birth is required' },
+        { 
+          error: 'Missing required fields',
+          message: 'Por favor, completa todos los campos requeridos (nombres, apellidos, fecha de nacimiento).'
+        },
         { status: 400 }
       )
     }
@@ -36,19 +40,42 @@ export async function POST(request: Request) {
 
     if (age < 18) {
       return NextResponse.json(
-        { error: 'User must be at least 18 years old' },
+        { 
+          error: 'User must be at least 18 years old',
+          message: 'Debes ser mayor de 18 años para usar NUREA.'
+        },
         { status: 400 }
       )
     }
 
+    // Si hay avatarUrl, subirlo a Supabase Storage si es necesario
+    let finalAvatarUrl = avatarUrl
+    if (avatarUrl && avatarUrl.startsWith('blob:')) {
+      // Si es un blob URL, necesitamos subirlo primero
+      // Por ahora, asumimos que el avatar ya fue subido por el cliente
+      // y solo guardamos la URL
+    }
+
     // Update or create profile
+    const profileUpdate: any = {
+      id: user.id,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      date_of_birth: dateOfBirth,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (avatarUrl) {
+      profileUpdate.avatar_url = avatarUrl
+    }
+
+    if (phone) {
+      profileUpdate.phone = phone.trim()
+    }
+
     const { error: profileError } = await supabase
       .from('profiles')
-      .upsert({
-        id: user.id,
-        date_of_birth: dateOfBirth,
-        updated_at: new Date().toISOString(),
-      }, {
+      .upsert(profileUpdate, {
         onConflict: 'id'
       })
 
@@ -72,7 +99,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true,
-      redirectPath 
+      redirectPath,
+      userRole
     })
   } catch (error) {
     console.error('Complete profile error:', error)

@@ -1,49 +1,28 @@
 "use client"
 
+import { useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, CheckCircle2, Clock, XCircle, Download, Receipt, Calendar } from "lucide-react"
+import { CreditCard, CheckCircle2, Clock, XCircle, Download, Receipt, Calendar, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-const payments = [
-  {
-    id: "PAY-001",
-    appointment: "Dr. Elena Vargas - Psicología",
-    date: "Oct 5, 2024",
-    amount: 45000,
-    status: "Paid",
-    method: "Credit Card",
-  },
-  {
-    id: "PAY-002",
-    appointment: "Dr. Marco Polo - Cardiología",
-    date: "Sep 28, 2024",
-    amount: 55000,
-    status: "Paid",
-    method: "Credit Card",
-  },
-  {
-    id: "PAY-003",
-    appointment: "Dr. Sofia Rossi - Dermatología",
-    date: "Oct 15, 2024",
-    amount: 45000,
-    status: "Pending",
-    method: "Credit Card",
-  },
-]
+import { usePayments } from "@/hooks/use-payments"
+import { LoadingState } from "@/components/dashboard/loading-state"
+import { EmptyState } from "@/components/dashboard/empty-state"
+import { ErrorState } from "@/components/dashboard/error-state"
+import { StatsCard } from "@/components/dashboard/stats-card"
 
 export default function PaymentsPage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
+  const { payments, loading, error, summary, refetch } = usePayments()
 
-  const paidPayments = payments.filter(p => p.status === "Paid")
-  const pendingPayments = payments.filter(p => p.status === "Pending")
-  const totalPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0)
-  const totalPending = pendingPayments.reduce((sum, p) => sum + p.amount, 0)
+  const paidPayments = payments.filter(p => p.status === "paid")
+  const pendingPayments = payments.filter(p => p.status === "pending")
+  const refundedPayments = payments.filter(p => p.status === "refunded")
 
   return (
     <DashboardLayout role="patient">
@@ -61,63 +40,36 @@ export default function PaymentsPage() {
 
         {/* Summary Cards */}
         <div className="grid gap-6 md:grid-cols-3">
-          <Card className="border-border/40">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {language === "es" ? "Total Pagado" : "Total Paid"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
-                ${totalPaid.toLocaleString()} {language === "es" ? "CLP" : "CLP"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {paidPayments.length} {language === "es" ? "pagos" : "payments"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/40">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {language === "es" ? "Pendientes" : "Pending"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                ${totalPending.toLocaleString()} {language === "es" ? "CLP" : "CLP"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {pendingPayments.length} {language === "es" ? "pagos" : "payments"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/40">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {language === "es" ? "Estado" : "Status"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {pendingPayments.length === 0 ? (
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                    {language === "es" ? "Al día" : "Up to date"}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                  <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                    {language === "es" ? "Pagos pendientes" : "Pending payments"}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <StatsCard
+            title={language === "es" ? "Total Pagado" : "Total Paid"}
+            value={`$${summary.totalPaid.toLocaleString()} ${language === "es" ? "CLP" : "CLP"}`}
+            description={`${paidPayments.length} ${language === "es" ? "pagos" : "payments"}`}
+            icon={CheckCircle2}
+            variant="gradient"
+          />
+          <StatsCard
+            title={language === "es" ? "Pendientes" : "Pending"}
+            value={`$${summary.totalPending.toLocaleString()} ${language === "es" ? "CLP" : "CLP"}`}
+            description={`${pendingPayments.length} ${language === "es" ? "pagos" : "payments"}`}
+            icon={Clock}
+            variant="outline"
+            className="text-orange-600 dark:text-orange-400"
+          />
+          <StatsCard
+            title={language === "es" ? "Estado" : "Status"}
+            value={pendingPayments.length === 0 
+              ? (language === "es" ? "Al día" : "Up to date")
+              : (language === "es" ? "Pendientes" : "Pending")}
+            description={pendingPayments.length === 0 
+              ? (language === "es" ? "Todo pagado" : "All paid")
+              : (language === "es" ? "Pagos pendientes" : "Pending payments")}
+            icon={pendingPayments.length === 0 ? CheckCircle2 : Clock}
+            variant="outline"
+          />
         </div>
+
+        {loading && <LoadingState message={language === "es" ? "Cargando pagos..." : "Loading payments..."} />}
+        {error && <ErrorState message={error} action={{ label: language === "es" ? "Reintentar" : "Retry", onClick: refetch }} />}
 
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="grid w-full grid-cols-3 rounded-xl bg-accent/20 p-1">
@@ -133,7 +85,16 @@ export default function PaymentsPage() {
           </TabsList>
 
           <TabsContent value="all" className="space-y-4 mt-6">
-            {payments.map((payment) => (
+            {!loading && !error && payments.length === 0 ? (
+              <EmptyState
+                icon={CreditCard}
+                title={language === "es" ? "No hay pagos registrados" : "No payments found"}
+                description={language === "es" 
+                  ? "Tus pagos aparecerán aquí cuando realices una consulta"
+                  : "Your payments will appear here when you make an appointment"}
+              />
+            ) : (
+              payments.map((payment) => (
               <Card key={payment.id} className="border-border/40 hover:shadow-md transition-all">
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -155,20 +116,34 @@ export default function PaymentsPage() {
                         <Badge
                           variant="outline"
                           className={
-                            payment.status === "Paid"
+                            payment.status === "paid"
                               ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400"
-                              : "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400"
+                              : payment.status === "pending"
+                              ? "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400"
+                              : payment.status === "refunded"
+                              ? "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
+                              : "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400"
                           }
                         >
-                          {payment.status === "Paid" ? (
+                          {payment.status === "paid" ? (
                             <>
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               {language === "es" ? "Pagado" : "Paid"}
                             </>
-                          ) : (
+                          ) : payment.status === "pending" ? (
                             <>
                               <Clock className="h-3 w-3 mr-1" />
                               {language === "es" ? "Pendiente" : "Pending"}
+                            </>
+                          ) : payment.status === "refunded" ? (
+                            <>
+                              <XCircle className="h-3 w-3 mr-1" />
+                              {language === "es" ? "Reembolsado" : "Refunded"}
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-3 w-3 mr-1" />
+                              {language === "es" ? "Fallido" : "Failed"}
                             </>
                           )}
                         </Badge>
@@ -186,12 +161,28 @@ export default function PaymentsPage() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        {payment.status === "Paid" && (
-                          <Button variant="outline" size="icon" className="rounded-xl" aria-label={language === "es" ? "Descargar recibo" : "Download receipt"}>
+                        {payment.status === "paid" && (
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="rounded-xl" 
+                            aria-label={language === "es" ? "Descargar recibo" : "Download receipt"}
+                            onClick={() => {
+                              window.open(`/api/payments/receipt?id=${payment.id}&format=pdf`, '_blank')
+                            }}
+                          >
                             <Download className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         )}
-                        <Button variant="outline" size="icon" className="rounded-xl" aria-label={language === "es" ? "Ver recibo" : "View receipt"}>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="rounded-xl" 
+                          aria-label={language === "es" ? "Ver recibo" : "View receipt"}
+                          onClick={() => {
+                            window.open(`/api/payments/receipt?id=${payment.id}&format=json`, '_blank')
+                          }}
+                        >
                           <Receipt className="h-4 w-4" aria-hidden="true" />
                         </Button>
                       </div>
@@ -199,11 +190,16 @@ export default function PaymentsPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )))}
           </TabsContent>
 
           <TabsContent value="paid" className="space-y-4 mt-6">
-            {paidPayments.length > 0 ? (
+            {!loading && !error && paidPayments.length === 0 ? (
+              <EmptyState
+                icon={CheckCircle2}
+                title={language === "es" ? "No hay pagos completados" : "No completed payments"}
+              />
+            ) : (
               paidPayments.map((payment) => (
                 <Card key={payment.id} className="border-border/40 hover:shadow-md transition-all">
                   <CardContent className="p-6">
@@ -235,10 +231,26 @@ export default function PaymentsPage() {
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="icon" className="rounded-xl" aria-label={language === "es" ? "Descargar recibo" : "Download receipt"}>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="rounded-xl" 
+                            aria-label={language === "es" ? "Descargar recibo" : "Download receipt"}
+                            onClick={() => {
+                              window.open(`/api/payments/receipt?id=${payment.id}&format=pdf`, '_blank')
+                            }}
+                          >
                             <Download className="h-4 w-4" aria-hidden="true" />
                           </Button>
-                          <Button variant="outline" size="icon" className="rounded-xl" aria-label={language === "es" ? "Ver recibo" : "View receipt"}>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="rounded-xl" 
+                            aria-label={language === "es" ? "Ver recibo" : "View receipt"}
+                            onClick={() => {
+                              window.open(`/api/payments/receipt?id=${payment.id}&format=json`, '_blank')
+                            }}
+                          >
                             <Receipt className="h-4 w-4" aria-hidden="true" />
                           </Button>
                         </div>
@@ -247,20 +259,17 @@ export default function PaymentsPage() {
                   </CardContent>
                 </Card>
               ))
-            ) : (
-              <Card className="border-border/40">
-                <CardContent className="p-12 text-center">
-                  <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground font-medium">
-                    {language === "es" ? "No hay pagos completados" : "No completed payments"}
-                  </p>
-                </CardContent>
-              </Card>
             )}
           </TabsContent>
 
           <TabsContent value="pending" className="space-y-4 mt-6">
-            {pendingPayments.length > 0 ? (
+            {!loading && !error && pendingPayments.length === 0 ? (
+              <EmptyState
+                icon={CheckCircle2}
+                title={language === "es" ? "No hay pagos pendientes" : "No pending payments"}
+                description={t.dashboard.everythingUpToDate}
+              />
+            ) : (
               pendingPayments.map((payment) => (
                 <Card key={payment.id} className="border-border/40 hover:shadow-md transition-all border-orange-500/20">
                   <CardContent className="p-6">
@@ -291,7 +300,14 @@ export default function PaymentsPage() {
                             ${payment.amount.toLocaleString()} {language === "es" ? "CLP" : "CLP"}
                           </p>
                         </div>
-                        <Button className="rounded-xl">
+                        <Button 
+                          className="rounded-xl"
+                          onClick={() => {
+                            if (payment.appointmentId) {
+                              window.location.href = `/payment?appointmentId=${payment.appointmentId}`
+                            }
+                          }}
+                        >
                           {language === "es" ? "Pagar Ahora" : "Pay Now"}
                         </Button>
                       </div>
@@ -299,18 +315,6 @@ export default function PaymentsPage() {
                   </CardContent>
                 </Card>
               ))
-            ) : (
-              <Card className="border-border/40">
-                <CardContent className="p-12 text-center">
-                  <CheckCircle2 className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground font-medium">
-                    {language === "es" ? "No hay pagos pendientes" : "No pending payments"}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {t.dashboard.everythingUpToDate}
-                  </p>
-                </CardContent>
-              </Card>
             )}
           </TabsContent>
         </Tabs>

@@ -50,8 +50,12 @@ export async function GET(request: Request) {
       // Check if email is verified
       const emailVerified = data.user.email_confirmed_at !== null
 
-      // Check if profile is complete
-      const profileComplete = profile?.date_of_birth && emailVerified
+      // Check if profile is complete (nombres, apellidos, fecha nacimiento, avatar)
+      const profileComplete = profile?.first_name && 
+                              profile?.last_name && 
+                              profile?.date_of_birth && 
+                              profile?.avatar_url && 
+                              emailVerified
 
       // Obtener el rol del usuario para redirección correcta
       const { data: roleData } = await supabase
@@ -66,8 +70,8 @@ export async function GET(request: Request) {
       let redirectPath = next
       
       if (!profileComplete) {
-        // Redirect to complete profile page
-        redirectPath = '/complete-profile'
+        // Redirect to onboarding page
+        redirectPath = '/onboarding'
       } else if (!emailVerified) {
         // Redirect to email verification page
         redirectPath = '/verify-email'

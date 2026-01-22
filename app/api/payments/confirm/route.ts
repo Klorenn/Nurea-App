@@ -98,6 +98,23 @@ export async function POST(request: Request) {
       })
       .eq('id', payment.appointment_id)
 
+    // Verificar automáticamente al profesional si no está verificado
+    if (payment.appointment?.professional_id) {
+      const { data: professional } = await supabase
+        .from('professionals')
+        .select('verified')
+        .eq('id', payment.appointment.professional_id)
+        .single()
+
+      // Si el profesional existe y no está verificado, verificarlo automáticamente
+      if (professional && !professional.verified) {
+        await supabase
+          .from('professionals')
+          .update({ verified: true })
+          .eq('id', payment.appointment.professional_id)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       payment: updatedPayment,
