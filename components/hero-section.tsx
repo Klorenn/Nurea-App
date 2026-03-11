@@ -29,16 +29,16 @@ export function HeroSection() {
     router.push(`/search${params.toString() ? `?${params.toString()}` : ""}`)
   }
   return (
-    <section className="relative min-h-[85vh] flex items-center justify-center px-4 py-16 md:py-20 overflow-hidden bg-transparent">
+    <section className="relative min-h-[85vh] flex items-center justify-center px-4 py-16 md:py-20 overflow-hidden bg-transparent" aria-label={t.hero.title}>
 
       {/* Decorative elements */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-3xl" aria-hidden="true" />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" aria-hidden="true" />
 
       {/* Content */}
-      <div className="relative z-10 max-w-6xl mx-auto text-center space-y-10">
-        <div className="space-y-6">
-          <h1 className="font-sans text-5xl md:text-7xl font-bold tracking-tight text-foreground text-balance leading-tight">
+      <div className="relative z-10 max-w-6xl mx-auto text-center space-y-10 w-full min-w-0">
+        <div className="space-y-6 min-w-0">
+          <h1 className="font-sans text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight text-foreground text-balance leading-tight break-words">
             {t.hero.title} <span className="text-primary italic">{t.hero.titleHighlight}</span>
             <motion.span
               className="inline-block ml-2 text-white dark:text-white"
@@ -51,18 +51,19 @@ export function HeroSection() {
                 times: [0, 0.5, 0.5, 0.75, 0.75, 1],
                 ease: "linear",
               }}
+              aria-hidden="true"
             >
               .
             </motion.span>
           </h1>
-          <p className="text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed text-muted-foreground font-light">
+          <p className="text-lg sm:text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed text-muted-foreground font-light break-words">
             {t.hero.subtitle}
           </p>
         </div>
 
-        <div className="bg-card shadow-2xl shadow-primary/10 rounded-3xl p-4 md:p-6 max-w-5xl mx-auto border border-border flex flex-col md:flex-row gap-4 items-center">
-          <div className="relative flex-1 w-full group">
-            <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors z-10 pointer-events-none" />
+        <div className="bg-card shadow-2xl shadow-primary/10 rounded-3xl p-4 md:p-6 max-w-5xl mx-auto border border-border flex flex-col md:flex-row gap-4 items-stretch md:items-center w-full min-w-0">
+          <div className="relative flex-1 w-full min-w-0 group">
+            <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors z-10 pointer-events-none" aria-hidden="true" />
             <Input
               placeholder={t.hero.searchPlaceholder}
               value={searchQuery}
@@ -72,14 +73,15 @@ export function HeroSection() {
                   handleSearch()
                 }
               }}
-              className="pl-12 h-14 bg-accent/30 border-none rounded-2xl focus-visible:ring-primary/20 w-full"
+              className="pl-12 h-14 bg-accent/30 border-none rounded-2xl focus-visible:ring-primary/20 w-full min-w-0"
+              aria-label={t.hero.searchPlaceholder}
             />
           </div>
 
-          <div className="relative flex-1 w-full">
-            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" />
+          <div className="relative flex-1 w-full min-w-0">
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10 pointer-events-none" aria-hidden="true" />
             <Select value={location} onValueChange={setLocation}>
-              <SelectTrigger className="pl-12 h-14 bg-accent/30 border-none rounded-2xl focus:ring-primary/20 w-full">
+              <SelectTrigger className="pl-12 h-14 bg-accent/30 border-none rounded-2xl focus:ring-primary/20 w-full min-w-0" aria-label={t.hero.locationPlaceholder}>
                 <SelectValue placeholder={t.hero.locationPlaceholder} />
               </SelectTrigger>
               <SelectContent>
@@ -94,9 +96,10 @@ export function HeroSection() {
           <Button
             size="lg"
             onClick={handleSearch}
-            className="h-14 px-8 md:px-10 rounded-2xl text-base md:text-lg font-medium shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all w-full md:w-auto shrink-0 flex items-center justify-center"
+            className="h-14 px-8 md:px-10 rounded-2xl text-base md:text-lg font-medium shadow-lg shadow-primary/20 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/25 active:scale-[0.98] active:shadow-md focus-visible:ring-2 focus-visible:ring-primary/40 transition-all w-full md:w-auto shrink-0 flex items-center justify-center"
+            aria-label={t.hero.searchButton}
           >
-            <Search className="mr-2 h-5 w-5" />
+            <Search className="mr-2 h-5 w-5" aria-hidden="true" />
             {t.hero.searchButton}
           </Button>
         </div>

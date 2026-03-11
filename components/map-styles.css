@@ -1,0 +1,41 @@
+/* Nurea map: marcadores y popups alineados con paleta teal */
+.nurea-marker-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.nurea-marker-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 4px 8px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid #14b8a6;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.nurea-marker-rating {
+  white-space: nowrap;
+}
+
+.nurea-marker-price {
+  font-size: 11px;
+  color: #0d9488;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  min-width: 240px;
+}

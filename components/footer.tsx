@@ -69,7 +69,7 @@ export function Footer() {
             <h4 className="font-medium mb-4">{t.footer.forProfessionals}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/signup" className="hover:text-foreground transition-colors">
+                <Link href="/login" className="hover:text-foreground transition-colors">
                   {t.footer.joinNurea}
                 </Link>
               </li>

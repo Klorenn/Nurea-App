@@ -52,7 +52,7 @@ export function AnalyticsChart({
     line: Line,
     bar: Bar,
     area: Area,
-  }[type]
+  }[type] as any
 
   return (
     <Card className={cn("border-border/40", className)}>

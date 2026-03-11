@@ -4,7 +4,8 @@ import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { SmokeyBackground, SignupForm } from "@/components/smokey-login"
+import { SmokeyBackground } from "@/components/ui/login-form"
+import { SignupForm } from "@/components/smokey-login"
 import ThemeSwitch from "@/components/ui/theme-switch"
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { useLanguage } from "@/contexts/language-context"
@@ -57,8 +58,8 @@ function RegisterPageContent() {
   }
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-      <SmokeyBackground backdropBlurAmount="md" color="#14B8A6" />
+    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-slate-200 dark:bg-[#0EA5E9]">
+      <SmokeyBackground backdropBlurAmount="lg" color="#0EA5E9" />
       
       <div className="absolute top-4 left-4 right-4 sm:top-8 sm:left-8 sm:right-8 z-50 flex items-center justify-between pointer-events-none">
         <Link

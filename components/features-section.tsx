@@ -111,13 +111,14 @@ export function FeaturesSection() {
   ]
 
   return (
-    <section className="py-16 md:py-20 px-6 bg-transparent relative" id="how-it-works">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-16 md:py-20 px-4 sm:px-6 bg-transparent relative" id="how-it-works" aria-labelledby="features-heading">
+      <div className="max-w-7xl mx-auto w-full min-w-0">
         <div className="grid lg:grid-cols-[450px_1fr] gap-12 md:gap-16 items-center">
-          <div className="space-y-6 pl-6 md:pl-8">
+          <div className="space-y-6 pl-4 md:pl-8 min-w-0">
             <p className="text-primary font-bold text-sm uppercase tracking-[0.2em]">{t.landing.features.whyChoose}</p>
-            <h2 
-              className="text-4xl lg:text-5xl text-foreground font-bold leading-[1.1] tracking-tight"
+            <h2
+              id="features-heading"
+              className="text-3xl sm:text-4xl lg:text-5xl text-foreground font-bold leading-[1.1] tracking-tight break-words"
               dangerouslySetInnerHTML={{ __html: t.landing.features.title }}
             />
             <p className="text-lg text-muted-foreground leading-relaxed">
@@ -132,7 +133,7 @@ export function FeaturesSection() {
                       <div key={i} className="w-10 h-10 rounded-full border-2 border-background bg-muted overflow-hidden relative">
                         <Image
                           src={avatar || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=40&h=40&fit=crop&auto=format'}
-                          alt="Professional"
+                          alt={language === "es" ? "Avatar de profesional de salud" : "Healthcare professional avatar"}
                           width={40}
                           height={40}
                           className="w-full h-full object-cover"
@@ -192,11 +193,11 @@ export function FeaturesSection() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 md:gap-8 pl-6 md:pl-8">
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8 pl-4 md:pl-8 min-w-0">
             {benefits.map((benefit, idx) => (
               <div
                 key={idx}
-                className="group p-6 md:p-8 rounded-[2rem] bg-card border border-border hover:shadow-xl hover:shadow-primary/5 transition-all duration-300"
+                className="group p-6 md:p-8 rounded-[2rem] bg-card border border-border hover:shadow-xl hover:shadow-primary/5 focus-within:shadow-xl focus-within:shadow-primary/5 transition-all duration-300"
               >
                 <div
                   className={`w-14 h-14 rounded-2xl ${benefit.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}

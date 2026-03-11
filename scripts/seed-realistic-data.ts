@@ -384,7 +384,7 @@ async function seedAppointments(professionalIds: string[], patientIds: string[])
   
   if (professionalIds.length === 0 || patientIds.length === 0) {
     console.warn('⚠️ No hay profesionales o pacientes para crear citas')
-    return
+    return []
   }
 
   const now = new Date()

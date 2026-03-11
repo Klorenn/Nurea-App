@@ -5,7 +5,7 @@ import { useTranslations } from "@/lib/i18n"
 import { Database, Shield, Lock, FileText, MessageSquare, Calendar, CreditCard, Eye, CheckCircle2, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { motion } from "framer-motion"
+import { motion, type Variants } from "framer-motion"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -14,22 +14,22 @@ export function PatientsInfo() {
   const t = useTranslations(language)
   const isSpanish = language === "es"
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-      },
+      } as any,
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
       y: 0,
-      transition: { type: "spring", stiffness: 100, damping: 15 }
+      transition: { type: "spring", stiffness: 100, damping: 15 } as any,
     },
   }
 

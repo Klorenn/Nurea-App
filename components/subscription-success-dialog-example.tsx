@@ -45,7 +45,7 @@ export function SubscriptionPaymentExample() {
       <SubscriptionSuccessDialog
         open={showSuccessDialog}
         onOpenChange={setShowSuccessDialog}
-        planName={t.landing.pricing.standard}
+        planName={t.landing.pricing.professional}
         amount={language === "es" ? "$25 USD" : "$25 USD"}
         nextBillingDate={undefined} // Se calculará automáticamente (30 días)
         onContinue={() => {

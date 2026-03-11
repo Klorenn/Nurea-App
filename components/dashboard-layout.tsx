@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import dynamic from "next/dynamic"
-import { Calendar, CreditCard, Heart, LayoutDashboard, MessageSquare, Settings, User, LogOut, Bell, Star, HelpCircle, Users, FileText, DollarSign, Headphones } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Calendar, CreditCard, Heart, LayoutDashboard, MessageSquare, Settings, User, LogOut, Bell, Star, HelpCircle, Users, FileText, DollarSign, Headphones, BarChart3, Globe } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -22,17 +22,6 @@ import { NotificationsDropdown } from "@/components/notifications/notifications-
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 
-// Lazy load heavy WebGL components to improve initial page load
-const WavyBackground = dynamic(() => import("@/components/ui/wavy-background").then(mod => mod.default), {
-  ssr: false,
-  loading: () => <div className="absolute inset-0 bg-background" />
-})
-
-const PaperShaderBackground = dynamic(() => import("@/components/ui/background-paper-shaders").then(mod => ({ default: mod.PaperShaderBackground })), {
-  ssr: false,
-  loading: () => null
-})
-
 export function DashboardLayout({
   children,
   role = "patient",
@@ -40,6 +29,7 @@ export function DashboardLayout({
   children: React.ReactNode
   role?: "patient" | "professional"
 }) {
+  const pathname = usePathname()
   const { user, signOut } = useAuth()
   const { language } = useLanguage()
   const t = useTranslations(language)
@@ -48,69 +38,66 @@ export function DashboardLayout({
     role === "patient"
       ? [
           { icon: LayoutDashboard, label: t.dashboard.overview, href: "/dashboard" },
-          { icon: Calendar, label: t.dashboard.appointments, href: "/dashboard/appointments" },
-          { icon: Heart, label: t.dashboard.favorites, href: "/dashboard/favorites" },
+          { icon: Calendar, label: language === "es" ? "Mis Citas" : "My Appointments", href: "/dashboard/appointments" },
+          { icon: Heart, label: language === "es" ? "Mis Favoritos" : "My Favorites", href: "/dashboard/favorites" },
+          { icon: FileText, label: language === "es" ? "Documentos y Recetas" : "Documents & Prescriptions", href: "/dashboard/documents" },
+          { icon: Users, label: language === "es" ? "Familiares" : "Family", href: "/dashboard/family" },
+          { icon: User, label: language === "es" ? "Mi Perfil" : "My Profile", href: "/dashboard/profile" },
           { icon: MessageSquare, label: t.dashboard.messages, href: "/dashboard/chat" },
           { icon: CreditCard, label: t.dashboard.payments, href: "/dashboard/payments" },
           { icon: Headphones, label: language === "es" ? "Soporte" : "Support", href: "/dashboard/support" },
           { icon: HelpCircle, label: language === "es" ? "Ayuda" : "Help", href: "/dashboard/help" },
         ]
       : [
-          { icon: LayoutDashboard, label: language === "es" ? "Resumen" : "Overview", href: "/professional/dashboard" },
-          { icon: Calendar, label: language === "es" ? "Agenda" : "Schedule", href: "/professional/schedule" },
-          { icon: Users, label: language === "es" ? "Pacientes" : "Patients", href: "/professional/patients" },
-          { icon: FileText, label: language === "es" ? "Historial Clínico" : "Clinical History", href: "/professional/clinical-history" },
-          { icon: MessageSquare, label: language === "es" ? "Mensajes" : "Messages", href: "/professional/chat" },
-          { icon: DollarSign, label: language === "es" ? "Ingresos" : "Income", href: "/professional/income" },
-          { icon: Headphones, label: language === "es" ? "Soporte" : "Support", href: "/professional/support" },
-          { icon: User, label: language === "es" ? "Perfil Profesional" : "Professional Profile", href: "/professional/profile/edit" },
-          { icon: Settings, label: language === "es" ? "Configuración" : "Settings", href: "/professional/settings" },
+          { icon: BarChart3, label: language === "es" ? "Estadísticas" : "Statistics", href: "/professional/dashboard" },
+          { icon: Calendar, label: language === "es" ? "Agenda" : "Agenda", href: "/professional/schedule" },
+          { icon: Users, label: language === "es" ? "Mis Pacientes" : "My Patients", href: "/professional/patients" },
+          { icon: MessageSquare, label: language === "es" ? "Mensajes" : "Messages", href: "/professional/messages" },
+          { icon: Star, label: language === "es" ? "Reseñas" : "Reviews", href: "/professional/reviews" },
+          { icon: Globe, label: language === "es" ? "Mi Perfil Público" : "My Public Profile", href: "/professional/profile/edit" },
+          { icon: CreditCard, label: language === "es" ? "Configuración de Pagos" : "Payment Settings", href: "/professional/settings" },
         ]
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-transparent">
-        <Sidebar collapsible="icon" className="border-r border-border bg-card relative overflow-hidden">
-          <WavyBackground className="absolute inset-0">
-            <div className="relative z-10 h-full flex flex-col">
-              <SidebarHeader className="h-16 flex items-center gap-3 px-6 border-b border-border/40 relative z-20">
-                <div className="flex items-center gap-2 overflow-hidden flex-1">
-                  <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-                    <span className="text-white font-bold text-lg leading-none">N</span>
-                  </div>
-                  <span className="font-bold text-xl text-primary dark:text-teal-400 group-data-[collapsible=icon]:hidden transition-all duration-300">
-                    NUREA<span className="text-xs text-muted-foreground ml-1">.app</span>
-                  </span>
-                </div>
-              </SidebarHeader>
-              <SidebarContent className="py-4 relative z-20">
-                <SidebarMenu>
-                  {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.label}>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={item.label}
-                        className="h-11 px-4 hover:bg-primary/10 hover:text-primary dark:hover:text-teal-300 data-[active=true]:bg-primary/15 data-[active=true]:text-primary dark:data-[active=true]:text-teal-300 rounded-xl mx-2 text-primary dark:text-teal-400"
-                      >
-                        <a href={item.href}>
-                          <item.icon className="h-5 w-5 text-primary dark:text-teal-400" />
-                          <span className="font-medium text-primary dark:text-teal-400">{item.label}</span>
-                        </a>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarContent>
-              <SidebarFooter className="p-4 border-t border-border/40 relative z-20">
-              </SidebarFooter>
+      <div className="flex min-h-screen w-full bg-background">
+        <Sidebar collapsible="icon" className="border-r border-border bg-card">
+          <SidebarHeader className="h-16 flex items-center gap-3 px-6 border-b border-border/40">
+            <div className="flex items-center gap-2 overflow-hidden flex-1">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+                <span className="text-white font-bold text-lg leading-none">N</span>
+              </div>
+              <span className="font-bold text-xl text-primary dark:text-teal-400 group-data-[collapsible=icon]:hidden transition-all duration-300">
+                NUREA<span className="text-xs text-muted-foreground ml-1">.app</span>
+              </span>
             </div>
-          </WavyBackground>
+          </SidebarHeader>
+          <SidebarContent className="py-4">
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    className="h-11 px-4 hover:bg-primary/10 hover:text-primary dark:hover:text-teal-300 data-[active=true]:bg-primary/15 data-[active=true]:text-primary dark:data-[active=true]:text-teal-300 rounded-xl mx-2 text-primary dark:text-teal-400"
+                  >
+                    <a href={item.href}>
+                      <item.icon className="h-5 w-5 text-primary dark:text-teal-400" />
+                      <span className="font-medium text-primary dark:text-teal-400">{item.label}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="p-4 border-t border-border/40">
+          </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="flex flex-col relative">
-          <PaperShaderBackground />
-          <div className="relative z-10 flex flex-col min-h-screen">
-            <header className="h-16 flex items-center justify-between px-6 bg-background/50 backdrop-blur-md border-b border-border/40 sticky top-0 z-30">
+        <SidebarInset className="flex flex-col">
+          <div className="flex flex-col min-h-screen">
+            <header className="h-16 flex items-center justify-between px-6 bg-background border-b border-border/40 sticky top-0 z-30">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
                 <div className="h-4 w-px bg-border/20" />
@@ -147,7 +134,7 @@ export function DashboardLayout({
               </div>
             </header>
 
-            <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden relative z-10 h-[calc(100vh-4rem)]">
+            <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden h-[calc(100vh-4rem)]">
               <div className="max-w-7xl mx-auto space-y-8">{children}</div>
             </main>
           </div>

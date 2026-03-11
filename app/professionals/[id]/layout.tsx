@@ -44,12 +44,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }
     }
 
-    const professionalName = professional.profile
-      ? `${professional.profile.first_name || ''} ${professional.profile.last_name || ''}`.trim()
-      : 'Healthcare Professional'
-    const specialty = professional.specialty || 'Healthcare Professional'
-    const bio = professional.bio ? professional.bio.substring(0, 160) : `View ${professionalName}'s profile and book appointments`
-    const imageUrl = professional.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=1200&h=630&fit=crop'
+    const profileRecord = Array.isArray(professional.profile)
+      ? professional.profile[0]
+      : professional.profile
+
+    const professionalName = profileRecord
+      ? `${profileRecord.first_name || ""} ${profileRecord.last_name || ""}`.trim()
+      : "Healthcare Professional"
+    const specialty = professional.specialty || "Healthcare Professional"
+    const bio = professional.bio
+      ? professional.bio.substring(0, 160)
+      : `View ${professionalName}'s profile and book appointments`
+    const imageUrl =
+      profileRecord?.avatar_url ||
+      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=1200&h=630&fit=crop"
 
     return {
       title: `${professionalName} - ${specialty} | NUREA`,

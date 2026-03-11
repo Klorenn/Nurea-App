@@ -25,3 +25,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent / IDE project files (optional local config)
+.agents/
+.claude/
+.qoder/
+.trae/
+.windsurf/
+skills-lock.json
+
+# temporary / generated
+tmp-dashboard-template/
+my_project/

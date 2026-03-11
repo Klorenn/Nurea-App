@@ -57,7 +57,7 @@ export function PatientsCTA() {
                 className="h-14 px-8 rounded-2xl text-base font-medium border-2"
                 asChild
               >
-                <Link href="/signup">
+                <Link href="/login">
                   {isSpanish ? "Crear cuenta gratis" : "Create free account"}
                 </Link>
               </Button>

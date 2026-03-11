@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Mail, Phone, Calendar, MapPin, Save, Edit2, Loader2 } from "lucide-react"
+import { User, Mail, Phone, Calendar, MapPin, Save, Edit2, Loader2, Shield } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
@@ -29,7 +29,19 @@ export default function ProfilePage() {
     phone: "",
     dateOfBirth: "",
     address: "",
+    healthInsurance: "",
   })
+
+  const HEALTH_INSURANCE_OPTIONS = [
+    { value: "", labelEs: "Sin previsión", labelEn: "None" },
+    { value: "fonasa", labelEs: "Fonasa", labelEn: "Fonasa" },
+    { value: "cruz_blanca", labelEs: "Cruz Blanca", labelEn: "Cruz Blanca" },
+    { value: "colmena", labelEs: "Colmena", labelEn: "Colmena" },
+    { value: "banmedica", labelEs: "Banmédica", labelEn: "Banmédica" },
+    { value: "consalud", labelEs: "Consalud", labelEn: "Consalud" },
+    { value: "vida_tres", labelEs: "Vida Tres", labelEn: "Vida Tres" },
+    { value: "other", labelEs: "Otra", labelEn: "Other" },
+  ]
 
   // Cargar datos del perfil desde la API
   useEffect(() => {
@@ -49,9 +61,9 @@ export default function ProfilePage() {
             phone: data.profile.phone || "",
             dateOfBirth: data.profile.date_of_birth || "",
             address: data.profile.address || "",
+            healthInsurance: data.profile.health_insurance || "",
           })
         } else {
-          // Si no hay perfil, usar datos de user_metadata
           setFormData({
             firstName: user.user_metadata?.first_name || "",
             lastName: user.user_metadata?.last_name || "",
@@ -59,6 +71,7 @@ export default function ProfilePage() {
             phone: "",
             dateOfBirth: "",
             address: "",
+            healthInsurance: "",
           })
         }
       } catch (error) {
@@ -71,6 +84,7 @@ export default function ProfilePage() {
           phone: "",
           dateOfBirth: "",
           address: "",
+          healthInsurance: "",
         })
       } finally {
         setLoadingProfile(false)
@@ -92,6 +106,7 @@ export default function ProfilePage() {
       if (formData.phone?.trim()) updateData.phone = formData.phone.trim()
       if (formData.dateOfBirth) updateData.date_of_birth = formData.dateOfBirth
       if (formData.address?.trim()) updateData.address = formData.address.trim()
+      if (formData.healthInsurance !== undefined) updateData.health_insurance = formData.healthInsurance
 
       const response = await fetch("/api/user/profile", {
         method: "PUT",
@@ -328,6 +343,34 @@ export default function ProfilePage() {
                 ) : (
                   <p className="text-sm font-medium py-2">
                     {formData.address || (language === "es" ? "No agregado" : "Not added")}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="healthInsurance" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  {language === "es" ? "Previsión de Salud" : "Health Insurance"}
+                </Label>
+                {isEditing ? (
+                  <select
+                    id="healthInsurance"
+                    value={formData.healthInsurance}
+                    onChange={(e) => setFormData({ ...formData, healthInsurance: e.target.value })}
+                    className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                    disabled={loading}
+                  >
+                    {HEALTH_INSURANCE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {language === "es" ? opt.labelEs : opt.labelEn}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-sm font-medium py-2">
+                    {formData.healthInsurance
+                      ? (HEALTH_INSURANCE_OPTIONS.find((o) => o.value === formData.healthInsurance)?.[language === "es" ? "labelEs" : "labelEn"] || formData.healthInsurance)
+                      : (language === "es" ? "No agregado" : "Not added")}
                   </p>
                 )}
               </div>

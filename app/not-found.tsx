@@ -36,6 +36,7 @@ export default function NotFound() {
 
   return (
     <div
+      suppressHydrationWarning
       className={cn(
         "relative min-h-screen w-full overflow-hidden bg-background flex items-center justify-center px-6",
       )}

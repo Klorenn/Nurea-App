@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     // Usaremos la tabla professionals para almacenar preferencias
     const { data: professional, error: professionalError } = await supabase
       .from('professionals')
-      .select('settings, notification_preferences')
+      .select('settings, notification_preferences, stellar_wallet')
       .eq('id', user.id)
       .single()
 
@@ -86,7 +86,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      settings
+      settings,
+      stellarWallet: professional?.stellar_wallet ?? null,
     })
   } catch (error) {
     console.error('Get professional settings error:', error)
@@ -144,11 +145,17 @@ export async function PUT(request: Request) {
       appearance,
       privacy,
       language,
+      stellar_wallet,
     } = body
 
     // Preparar actualización
     const updateData: any = {
       updated_at: new Date().toISOString(),
+    }
+
+    // Actualizar wallet Stellar (para recibir pagos del contrato de escrow)
+    if (stellar_wallet !== undefined) {
+      updateData.stellar_wallet = typeof stellar_wallet === 'string' && stellar_wallet.trim() !== '' ? stellar_wallet.trim() : null
     }
 
     // Actualizar preferencias de notificaciones

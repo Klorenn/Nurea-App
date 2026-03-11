@@ -289,9 +289,9 @@ function createShaderProgram(
 ////////////////////////////////////////////////////////////////////////////////
 export default function WavyBackground({
   children,
-  className
+  className,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -391,6 +391,11 @@ export default function WavyBackground({
         return;
       }
 
+      if (!canvas || !gl) {
+        animationFrameId = null;
+        return;
+      }
+
       const currentTime = performance.now();
       const elapsed = (currentTime - startTime) * 0.001;
 
@@ -437,6 +442,8 @@ export default function WavyBackground({
     }
 
     const handleResize = () => {
+      if (!canvas || !gl) return;
+
       const now = performance.now();
       if (now - lastResizeTime < RESIZE_DEBOUNCE_MS) {
         return;

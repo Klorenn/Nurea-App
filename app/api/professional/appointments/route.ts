@@ -44,6 +44,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status')
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
+    const patientId = searchParams.get('patientId')
 
     // Construir query
     let query = supabase
@@ -63,6 +64,9 @@ export async function GET(request: Request) {
       .order('appointment_time', { ascending: true })
 
     // Aplicar filtros
+    if (patientId) {
+      query = query.eq('patient_id', patientId)
+    }
     if (status && status !== 'all') {
       query = query.eq('status', status)
     }

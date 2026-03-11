@@ -117,8 +117,8 @@ export async function GET(request: Request) {
     // Enviar recordatorios
     for (const appointment of appointmentsInRange) {
       try {
-        const patient = appointment.patient
-        const professional = appointment.professional
+        const patient = appointment.patient as any
+        const professional = appointment.professional as any
 
         if (!patient?.email) {
           console.warn(`Paciente sin email para cita ${appointment.id}`)

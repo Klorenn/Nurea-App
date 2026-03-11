@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { createMeetingRoom, calculateMeetingExpiration } from '@/lib/services/daily'
 
 /**
@@ -7,11 +7,11 @@ import { createMeetingRoom, calculateMeetingExpiration } from '@/lib/services/da
  * Crea un room de Daily.co para una cita online
  */
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: appointmentId } = params
+    const { id: appointmentId } = await context.params
 
     if (!appointmentId) {
       return NextResponse.json(
@@ -209,7 +209,6 @@ export async function POST(
     }
 
     // Crear nuevo room en Daily.co
-    const appointmentDateTime = `${appointment.appointment_date}T${appointment.appointment_time}`
     const expirationDate = calculateMeetingExpiration(
       appointment.appointment_date,
       appointment.appointment_time,
@@ -302,11 +301,11 @@ export async function POST(
  * Obtiene el meeting link de una cita
  */
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: appointmentId } = params
+    const { id: appointmentId } = await context.params
 
     if (!appointmentId) {
       return NextResponse.json(

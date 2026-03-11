@@ -48,7 +48,7 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
     {
       label: language === "es" ? "Para Profesionales" : "For Professionals",
       links: [
-        { title: language === "es" ? "Únete a NUREA" : "Join NUREA", href: "/signup" },
+        { title: language === "es" ? "Únete a NUREA" : "Join NUREA", href: "/login" },
         { title: language === "es" ? "Planes de Precios" : "Pricing Plans", href: "#pricing" },
       ],
     },
@@ -149,8 +149,9 @@ export function StickyFooter({ className, ...props }: StickyFooterProps) {
   )
 }
 
-type AnimatedContainerProps = React.ComponentProps<typeof motion.div> & {
+type AnimatedContainerProps = {
   children?: React.ReactNode
+  className?: string
   delay?: number
 }
 

@@ -306,7 +306,7 @@ export async function PUT(request: Request) {
     // Verificar que la nota pertenezca al profesional
     const { data: existingNote } = await supabase
       .from('clinical_notes')
-      .select('professional_id')
+      .select('professional_id, date')
       .eq('id', id)
       .single()
 

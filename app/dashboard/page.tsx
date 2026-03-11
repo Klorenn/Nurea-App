@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, type Variants } from "framer-motion"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,8 @@ import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import { useDashboardStats } from "@/hooks/use-dashboard-stats"
+import { EmptyState } from "@/components/dashboard/empty-state"
 
 export default function PatientDashboard() {
   const { language } = useLanguage()
@@ -56,38 +58,6 @@ export default function PatientDashboard() {
 
       try {
         const today = new Date().toISOString().split('T')[0]
-        
-        // Load today's appointments
-        const todayResponse = await supabase
-          .from('appointments')
-          .select('id', { count: 'exact', head: true })
-          .eq('patient_id', user.id)
-          .eq('appointment_date', today)
-          .in('status', ['confirmed', 'pending'])
-
-        // Load upcoming appointments
-        const upcomingResponse = await supabase
-          .from('appointments')
-          .select('id', { count: 'exact', head: true })
-          .eq('patient_id', user.id)
-          .gte('appointment_date', today)
-          .in('status', ['confirmed', 'pending'])
-
-        // Load unread messages
-        const messagesResponse = await supabase
-          .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('receiver_id', user.id)
-          .eq('read', false)
-
-        // Load pending payments
-        const paymentsResponse = await supabase
-          .from('payments')
-          .select('id', { count: 'exact', head: true })
-          .eq('patient_id', user.id)
-          .eq('status', 'pending')
-
-        // Stats are now loaded via useDashboardStats hook
 
         // Load upcoming appointments details with specialty
         const upcomingDetailsResponse = await supabase
@@ -158,20 +128,20 @@ export default function PatientDashboard() {
   }, [user, supabase, language])
 
   const firstName = user?.user_metadata?.first_name || t.dashboard.user
-
+ 
   // Animation variants
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
         delayChildren: 0.2,
-      },
+      } as any,
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
@@ -180,11 +150,11 @@ export default function PatientDashboard() {
         type: "spring",
         stiffness: 100,
         damping: 15,
-      },
+      } as any,
     },
   }
 
-  const cardVariants = {
+  const cardVariants: Variants = {
     hidden: { opacity: 0, scale: 0.95 },
     visible: {
       opacity: 1,
@@ -193,47 +163,22 @@ export default function PatientDashboard() {
         type: "spring",
         stiffness: 100,
         damping: 15,
-      },
+      } as any,
     },
-  }
-
-  if (loading || statsLoading) {
-    return (
-      <DashboardLayout role="patient">
-        <LoadingState message={t.dashboard.loading || "Cargando..."} />
-      </DashboardLayout>
-    )
-  }
-
-  if (error || statsError) {
-    return (
-      <DashboardLayout role="patient">
-        <ErrorState 
-          message={error || statsError || "Error desconocido"} 
-          action={{ 
-            label: t.dashboard.retry || "Reintentar", 
-            onClick: () => {
-              if (error) window.location.reload()
-              else refetchStats()
-            }
-          }} 
-        />
-      </DashboardLayout>
-    )
   }
 
   return (
     <DashboardLayout role="patient">
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-8"
-      >
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-8"
+        >
         {/* Welcome Section */}
-        <motion.div variants={itemVariants} className="grid gap-6 md:grid-cols-3">
+          <motion.div variants={itemVariants} className="grid gap-6 md:grid-cols-3">
           <motion.div variants={cardVariants}>
-            <Card className="md:col-span-2 border-primary/10 bg-gradient-to-br from-primary/5 via-background to-transparent shadow-lg shadow-primary/5">
+            <Card className="md:col-span-2 border-border bg-card">
               <CardContent className="pt-8 pb-8">
                 <div className="flex flex-col md:flex-row justify-between items-start gap-6">
                   <div className="space-y-3">
@@ -260,14 +205,14 @@ export default function PatientDashboard() {
                     )}
                     
                     <div className="pt-2">
-                      <Button className="rounded-xl px-6 h-11 transition-transform hover:scale-105 active:scale-95" asChild>
+                      <Button className="rounded-xl px-6 h-11" asChild>
                         <Link href="/search">
                           {t.dashboard.bookNew}
                         </Link>
                       </Button>
                     </div>
                   </div>
-                  <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center text-primary animate-gentle-rotate">
+                  <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-primary border border-border">
                     <Heart className="h-12 w-12 fill-current" />
                   </div>
                 </div>
@@ -277,7 +222,7 @@ export default function PatientDashboard() {
 
           {/* Quick Stats */}
           <motion.div variants={cardVariants}>
-            <Card className="border-border/40">
+            <Card className="border-border bg-card">
               <CardHeader>
                 <CardTitle className="text-lg">
                   {t.dashboard.quickActions}
@@ -286,9 +231,9 @@ export default function PatientDashboard() {
               <CardContent className="space-y-3">
                 <div>
                   <Link href="/dashboard/appointments">
-                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-all cursor-pointer group hover:translate-x-1">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-primary">
                           <Calendar className="h-5 w-5" />
                         </div>
                         <div>
@@ -307,9 +252,9 @@ export default function PatientDashboard() {
 
                 <div>
                   <Link href="/dashboard/chat">
-                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-all cursor-pointer group hover:translate-x-1">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
+                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-secondary">
                           <MessageSquare className="h-5 w-5" />
                         </div>
                         <div>
@@ -334,9 +279,9 @@ export default function PatientDashboard() {
 
                 <div>
                   <Link href="/dashboard/payments">
-                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-all cursor-pointer group hover:translate-x-1">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 dark:text-green-400">
+                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-green-600 dark:text-green-400">
                           <CreditCard className="h-5 w-5" />
                         </div>
                         <div>
@@ -361,9 +306,9 @@ export default function PatientDashboard() {
 
                 <div>
                   <Link href="/search">
-                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/50 transition-all cursor-pointer group hover:translate-x-1">
+                    <div className="flex items-center justify-between p-3 rounded-xl hover:bg-accent/40 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-teal-600 dark:text-teal-400">
                           <Search className="h-5 w-5" />
                         </div>
                         <div>
@@ -400,25 +345,25 @@ export default function PatientDashboard() {
             </Button>
           </div>
 
-          {upcomingAppointments.length > 0 ? (
+              {upcomingAppointments.length > 0 ? (
             <div className="grid gap-4">
               {upcomingAppointments.map((apt, index) => (
                 <motion.div
                   key={apt.id}
                   variants={cardVariants}
                 >
-                  <Card className="border-border/40 hover:shadow-md transition-all group hover:scale-[1.01] hover:-translate-y-0.5">
+                  <Card className="border-border bg-card transition-colors group hover:bg-accent/30">
                     <CardContent className="p-5">
                       <div className="flex flex-col sm:flex-row justify-between gap-4">
                         <div className="flex gap-4">
-                          <div className="w-16 h-16 rounded-2xl bg-accent/20 flex flex-col items-center justify-center text-primary font-bold overflow-hidden shrink-0">
-                            <div className="bg-primary w-full text-[10px] text-white py-0.5 text-center uppercase tracking-tighter">
+                          <div className="w-16 h-16 rounded-2xl bg-muted flex flex-col items-center justify-center text-primary font-bold overflow-hidden shrink-0">
+                            <div className="w-full text-[10px] text-muted-foreground py-0.5 text-center uppercase tracking-tighter">
                               {apt.month}
                             </div>
                             <div className="text-2xl pt-1 leading-none tracking-tighter">{apt.day}</div>
                           </div>
                           <div className="space-y-1">
-                            <h4 className="font-bold text-lg group-hover:text-primary transition-colors">
+                            <h4 className="font-bold text-lg">
                               {apt.professional}
                             </h4>
                             <p className="text-sm text-muted-foreground">
@@ -440,11 +385,12 @@ export default function PatientDashboard() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                           {apt.type === "online" && (
-                            <Button variant="outline" className="rounded-xl bg-transparent transition-transform hover:scale-105 active:scale-95" asChild>
-                              <Link href="/dashboard/appointments">
-                                {t.dashboard.joinMeeting}
+                            <Button className="rounded-xl font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-shadow" size="lg" asChild>
+                              <Link href={`/consulta/${apt.id}`}>
+                                <Video className="h-5 w-5 mr-2" />
+                                {t.dashboard.enterConsultation}
                               </Link>
                             </Button>
                           )}

@@ -185,7 +185,9 @@ export async function validateResourceOwnership(
     .eq('id', resourceId)
     .single()
 
-  if (error || !resource) {
+  const typedResource = resource as Record<string, any> | null
+
+  if (error || !typedResource) {
     return {
       authorized: false,
       error: 'not_found',
@@ -193,7 +195,7 @@ export async function validateResourceOwnership(
     }
   }
 
-  const resourceUserId = resource[userIdColumn]
+  const resourceUserId = typedResource[userIdColumn] as string
   
   if (resourceUserId !== authResult.user.id) {
     return {

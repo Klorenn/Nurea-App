@@ -5,7 +5,10 @@ import { validateRouteAccess } from '@/lib/auth/authorization'
 
 export async function updateSession(request: NextRequest) {
   // Skip Supabase if not configured (for development/testing)
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !anonKey) {
     return NextResponse.next({ request })
   }
 
@@ -15,7 +18,7 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    anonKey,
     {
       cookies: {
         getAll() {

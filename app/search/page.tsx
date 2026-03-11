@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, useMemo, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Filter, Video, Home, Grid3x3, List, Search as SearchIcon, Plus, ChevronDown, ChevronUp, Loader2 } from "lucide-react"
+import { Filter, Video, Home, Grid3x3, List, Search as SearchIcon, Plus, ChevronDown, ChevronUp, Loader2, MapPin } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
@@ -17,11 +17,87 @@ import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import WavyBackground from "@/components/ui/wavy-background"
 import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
+import { createClient } from "@/lib/supabase/client"
+import { Map } from "@/components/Map"
+import type { ProfessionalWithCoords } from "@/components/Map"
+import { BookingModal } from "@/components/booking-modal"
+import { locationToCoords } from "@/lib/utils/geo"
+
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop"
+
+/** Fetch professionals from Supabase and map to the shape expected by the UI. */
+async function fetchProfessionals(): Promise<any[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from("professionals")
+    .select(`
+      id,
+      specialty,
+      location,
+      consultation_type,
+      consultation_price,
+      online_price,
+      in_person_price,
+      verified,
+      years_experience,
+      languages,
+      profile:profiles!professionals_id_fkey(first_name, last_name, avatar_url)
+    `)
+
+  if (error) throw error
+
+  const langMap: Record<string, string> = {
+    ES: "Español",
+    EN: "Inglés",
+    PT: "Portugués",
+    FR: "Francés",
+    DE: "Alemán",
+  }
+
+  return (data || []).map((row: any) => {
+    const profile = row.profile || {}
+    const name = `Dr. ${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Profesional"
+    const price = row.consultation_price ?? row.online_price ?? row.in_person_price ?? 0
+    const consultationType = row.consultation_type || "both"
+    const languagesArray = Array.isArray(row.languages) && row.languages.length > 0
+      ? row.languages.map((l: string) => langMap[l] || l)
+      : ["Español"]
+
+    return {
+      id: row.id,
+      name,
+      specialty: row.specialty || "",
+      specialtyEn: row.specialty || "",
+      image: profile.avatar_url || DEFAULT_AVATAR,
+      rating: 4.0,
+      reviewCount: 0,
+      price: typeof price === "number" ? String(price) : price,
+      location: row.location || "",
+      consultationTypes: consultationType === "both" ? ["online", "in-person"] : consultationType === "online" ? ["online"] : ["in-person"],
+      verified: !!row.verified,
+      isOnline: false,
+      yearsExperience: row.years_experience ?? 0,
+      languages: languagesArray,
+    }
+  })
+}
+
+// Mock data: al menos 6 profesionales ficticios para filtrado en tiempo real
+const MOCK_PROFESSIONALS = [
+  { id: "mock-1", name: "Dra. Elena Vargas", specialty: "Cardiología", specialtyEn: "Cardiology", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop", rating: 4.9, reviewCount: 124, price: "45.000", location: "Santiago", consultationTypes: ["online", "in-person"], verified: true, isOnline: true, yearsExperience: 12, languages: ["Español", "English"] },
+  { id: "mock-2", name: "Dr. Carlos Méndez", specialty: "Psicología", specialtyEn: "Psychology", image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop", rating: 4.8, reviewCount: 89, price: "35.000", location: "Santiago", consultationTypes: ["online"], verified: true, isOnline: false, yearsExperience: 8, languages: ["Español"] },
+  { id: "mock-3", name: "Dra. Ana Torres", specialty: "Dermatología", specialtyEn: "Dermatology", image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop", rating: 4.7, reviewCount: 56, price: "55.000", location: "Valparaíso", consultationTypes: ["in-person"], verified: true, isOnline: false, yearsExperience: 6, languages: ["Español", "Italiano"] },
+  { id: "mock-4", name: "Dr. Pablo Ruiz", specialty: "Cardiología", specialtyEn: "Cardiology", image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=200&h=200&fit=crop", rating: 4.6, reviewCount: 72, price: "50.000", location: "Temuco", consultationTypes: ["online", "in-person"], verified: false, isOnline: true, yearsExperience: 10, languages: ["Español"] },
+  { id: "mock-5", name: "Dra. María López", specialty: "Psicología", specialtyEn: "Psychology", image: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=200&h=200&fit=crop", rating: 5.0, reviewCount: 201, price: "40.000", location: "Concepción", consultationTypes: ["online"], verified: true, isOnline: true, yearsExperience: 15, languages: ["Español", "English"] },
+  { id: "mock-6", name: "Dr. Jorge Silva", specialty: "Nutricionista", specialtyEn: "Nutritionist", image: "https://images.unsplash.com/photo-1612349316228-59459a970da3?w=200&h=200&fit=crop", rating: 4.5, reviewCount: 43, price: "28.000", location: "Santiago", consultationTypes: ["online", "in-person"], verified: true, isOnline: false, yearsExperience: 5, languages: ["Español"] },
+]
 
 function SearchResultsPageContent() {
   const searchParams = useSearchParams()
   const [view, setView] = useState<"grid" | "list">("grid")
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedSpecialtyFilter, setSelectedSpecialtyFilter] = useState<string>("all")
   const [suggestedSpecialty, setSuggestedSpecialty] = useState("")
   const [filtersOpen, setFiltersOpen] = useState(false)
   const { language } = useLanguage()
@@ -29,82 +105,53 @@ function SearchResultsPageContent() {
   const [professionals, setProfessionals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mobileMapView, setMobileMapView] = useState(false)
+  const [bookingOpen, setBookingOpen] = useState(false)
+  const [selectedProfessional, setSelectedProfessional] = useState<any | null>(null)
 
   const predefinedSpecialties = language === "es" 
     ? ["Psicólogo", "Dentista", "Matrona", "Psiquiatra", "Kinesiólogo", "Nutricionista"]
     : ["Psychologist", "Dentist", "Midwife", "Psychiatrist", "Physiotherapist", "Nutritionist"]
 
-  // Load professionals from API
+  // Load professionals from Supabase; fallback to mock on error
   useEffect(() => {
-    const loadProfessionals = async () => {
+    async function load() {
       setLoading(true)
       setError(null)
       try {
-        const params = new URLSearchParams()
-        if (selectedSpecialties.length > 0) {
-          params.append('specialty', selectedSpecialties[0]) // Use first specialty for now
-        }
-
-        const response = await fetch(`/api/professionals?${params.toString()}`)
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.message || 'Error al cargar profesionales')
-        }
-
-        setProfessionals(data.professionals || [])
+        const list = await fetchProfessionals()
+        setProfessionals(list)
       } catch (err) {
-        console.error('Error loading professionals:', err)
-        setError(err instanceof Error ? err.message : 'Error al cargar profesionales')
+        console.error("Error loading professionals:", err)
+        setError(language === "es" ? "No se pudo cargar la lista desde la base de datos. Mostrando datos de ejemplo." : "Could not load from database. Showing sample data.")
+        setProfessionals(MOCK_PROFESSIONALS)
       } finally {
         setLoading(false)
       }
     }
-
-    loadProfessionals()
-  }, [selectedSpecialties])
+    load()
+  }, [language])
 
   // Read search query from URL parameters
   useEffect(() => {
     const query = searchParams.get("q")
-    
     if (query) {
-      // If there's a query parameter, try to match it with predefined specialties
+      setSearchTerm(query)
       const queryLower = query.toLowerCase()
       const matchingSpecialty = predefinedSpecialties.find(
         (spec) => spec.toLowerCase().includes(queryLower) || queryLower.includes(spec.toLowerCase())
       )
       if (matchingSpecialty) {
         setSelectedSpecialties((prev) => {
-          if (!prev.includes(matchingSpecialty)) {
-            return [...prev, matchingSpecialty]
-          }
+          if (!prev.includes(matchingSpecialty)) return [...prev, matchingSpecialty]
           return prev
         })
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
-
-  // Fix search functionality when switching tabs
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        // Re-initialize any necessary state when tab becomes visible
-        // This ensures the search input and filtering continue to work
-        // Force a re-render if needed by updating a dummy state
-      }
-    }
-
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-    }
-  }, [])
+  }, [searchParams, predefinedSpecialties])
 
   const handleSpecialtySubmit = () => {
     if (suggestedSpecialty.trim()) {
-      // Here you would send the suggestion to your backend
       console.log("Suggested specialty:", suggestedSpecialty)
       alert(language === "es" 
         ? `¡Gracias por tu sugerencia! Hemos recibido: ${suggestedSpecialty}`
@@ -113,17 +160,42 @@ function SearchResultsPageContent() {
     }
   }
 
-  // Filter professionals based on selected specialties
-  // Filter professionals by selected specialties (client-side filtering for additional filters)
-  const filteredProfessionals = selectedSpecialties.length > 0
-    ? professionals.filter((prof) => {
-        const profSpecialty = language === "es" ? prof.specialty : prof.specialtyEn
-        return selectedSpecialties.some((spec) => 
-          profSpecialty.toLowerCase().includes(spec.toLowerCase()) ||
-          spec.toLowerCase().includes(profSpecialty.toLowerCase())
-        )
+  // Filtrado en tiempo real: término de búsqueda + especialidad del sidebar (case-insensitive)
+  const filteredProfessionals = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase()
+    const specFilter = selectedSpecialtyFilter === "all" ? null : selectedSpecialtyFilter
+
+    return professionals.filter((prof) => {
+      const matchesTerm = !term || [
+        prof.name,
+        language === "es" ? prof.specialty : prof.specialtyEn,
+        prof.location,
+      ].some((field) => String(field || "").toLowerCase().includes(term))
+
+      const profSpecialtyLower = (language === "es" ? prof.specialty : prof.specialtyEn || prof.specialty)?.toLowerCase() ?? ""
+      const matchesSpecialty = !specFilter || 
+        profSpecialtyLower.includes(specFilter.toLowerCase()) ||
+        (specFilter === "psychology" && (profSpecialtyLower.includes("psicolog") || profSpecialtyLower.includes("psycholog"))) ||
+        (specFilter === "cardiology" && profSpecialtyLower.includes("cardio")) ||
+        (specFilter === "dermatology" && (profSpecialtyLower.includes("dermato") || profSpecialtyLower.includes("dermatology")))
+
+      return matchesTerm && matchesSpecialty
+    })
+  }, [professionals, searchTerm, selectedSpecialtyFilter, language])
+
+  const professionalsWithCoords = useMemo((): ProfessionalWithCoords[] => {
+    return filteredProfessionals
+      .map((p) => {
+        const coords = locationToCoords(p.location)
+        if (!coords) return null
+        return {
+          ...p,
+          lat: coords[0],
+          lng: coords[1],
+        }
       })
-    : professionals
+      .filter((p): p is ProfessionalWithCoords => p != null)
+  }, [filteredProfessionals])
 
   return (
     <main className="min-h-screen relative">
@@ -131,9 +203,18 @@ function SearchResultsPageContent() {
       <div className="absolute inset-0 pointer-events-none">
         <WavyBackground className="absolute inset-0" />
       </div>
-      <div className="relative z-10 min-h-screen">
+      <div className="relative z-10 min-h-screen flex flex-col">
         <Navbar sticky={false} />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-16">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+          {/* Columna izquierda: lista (40% desktop, scroll independiente) */}
+          <div
+            className={cn(
+              "w-full lg:w-[40%] flex-shrink-0 overflow-y-auto",
+              "lg:border-r lg:border-border/40",
+              mobileMapView && "hidden lg:block"
+            )}
+          >
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8">
         {/* Search Bar with Tags */}
         <div className="mb-8 space-y-4">
           <div className="bg-card rounded-2xl border border-teal-200/30 dark:border-teal-800/30 p-6 sm:p-8 shadow-sm">
@@ -144,6 +225,14 @@ function SearchResultsPageContent() {
               </h2>
             </div>
             <div className="mb-4">
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={language === "es" ? "Buscar por nombre, especialidad o ciudad..." : "Search by name, specialty or city..."}
+                className="w-full px-4 py-3 rounded-xl bg-accent/20 border border-teal-200/30 dark:border-teal-800/30 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 mb-3"
+                aria-label={language === "es" ? "Término de búsqueda" : "Search term"}
+              />
               <InputWithTags
                 placeholder={language === "es" ? "Buscar por especialidad..." : "Search by specialty..."}
                 predefinedTags={predefinedSpecialties}
@@ -210,11 +299,12 @@ function SearchResultsPageContent() {
                     <label className="text-sm font-semibold text-foreground">
                       {language === "es" ? "Especialidad" : "Specialty"}
                     </label>
-                    <Select>
+                    <Select value={selectedSpecialtyFilter} onValueChange={setSelectedSpecialtyFilter}>
                       <SelectTrigger className="w-full rounded-xl bg-accent/20 border-none">
                         <SelectValue placeholder={language === "es" ? "Todas las especialidades" : "All Specialties"} />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="all">{language === "es" ? "Todas las especialidades" : "All Specialties"}</SelectItem>
                         <SelectItem value="psychology">{language === "es" ? "Psicología" : "Psychology"}</SelectItem>
                         <SelectItem value="cardiology">{language === "es" ? "Cardiología" : "Cardiology"}</SelectItem>
                         <SelectItem value="dermatology">{language === "es" ? "Dermatología" : "Dermatology"}</SelectItem>
@@ -274,6 +364,8 @@ function SearchResultsPageContent() {
                     className="w-full text-primary text-sm font-medium"
                     onClick={() => {
                       setSelectedSpecialties([])
+                      setSearchTerm("")
+                      setSelectedSpecialtyFilter("all")
                       setFiltersOpen(false)
                     }}
                   >
@@ -283,6 +375,7 @@ function SearchResultsPageContent() {
               )}
             </div>
           </aside>
+          </div>
 
           {/* Search Results */}
           <section className="flex-1 space-y-6 min-w-0">
@@ -330,6 +423,12 @@ function SearchResultsPageContent() {
               </div>
             </div>
 
+            {error && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                {error}
+              </div>
+            )}
+
             <div className={cn(
               view === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "flex flex-col gap-6"
             )}>
@@ -340,17 +439,10 @@ function SearchResultsPageContent() {
                     {language === "es" ? "Cargando profesionales..." : "Loading professionals..."}
                   </p>
                 </div>
-              ) : error ? (
-                <div className="col-span-full text-center py-12">
-                  <p className="text-lg font-semibold text-destructive mb-2">
-                    {language === "es" ? "Error al cargar profesionales" : "Error loading professionals"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{error}</p>
-                </div>
               ) : filteredProfessionals.length === 0 ? (
                 <div className="col-span-full text-center py-12">
                   <p className="text-lg font-semibold text-foreground mb-2">
-                    {language === "es" ? "No se encontraron profesionales" : "No professionals found"}
+                    {language === "es" ? "No encontramos profesionales con esos criterios" : "We didn't find any professionals matching those criteria"}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {language === "es" 
@@ -387,8 +479,58 @@ function SearchResultsPageContent() {
             </div>
           </section>
         </div>
+          </div>
+
+          {/* Columna derecha: mapa sticky (60% desktop) */}
+          <div
+            className={cn(
+              "w-full flex-1 min-h-[360px] lg:min-h-0 lg:w-[60%] lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-4rem)]",
+              !mobileMapView && "hidden lg:block"
+            )}
+          >
+            <div className="h-full w-full p-2 lg:p-4">
+              <Map
+                professionals={professionalsWithCoords}
+                onAgendar={(prof) => {
+                  setSelectedProfessional(prof)
+                  setBookingOpen(true)
+                }}
+                isSpanish={language === "es"}
+                className="h-full min-h-[340px] lg:min-h-0"
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Botón flotante móvil: alternar Ver Mapa / Ver Lista */}
+        <Button
+          onClick={() => setMobileMapView((v) => !v)}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 lg:hidden rounded-full px-6 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
+          aria-label={mobileMapView ? (language === "es" ? "Ver lista" : "View list") : (language === "es" ? "Ver mapa" : "View map")}
+        >
+          {mobileMapView ? (
+            <>
+              <List className="h-4 w-4 mr-2" />
+              {language === "es" ? "Ver Lista" : "View List"}
+            </>
+          ) : (
+            <>
+              <MapPin className="h-4 w-4 mr-2" />
+              {language === "es" ? "Ver Mapa" : "View Map"}
+            </>
+          )}
+        </Button>
       </div>
+
+      <BookingModal
+        isOpen={bookingOpen}
+        onClose={() => { setBookingOpen(false); setSelectedProfessional(null) }}
+        professionalId={selectedProfessional?.id}
+        professionalName={selectedProfessional?.name}
+        stellarWallet={selectedProfessional?.stellarWallet ?? null}
+        offersInPerson={selectedProfessional?.consultationTypes?.includes("in-person") ?? true}
+        isSpanish={language === "es"}
+      />
     </main>
   )
 }

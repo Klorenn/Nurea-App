@@ -34,11 +34,10 @@ export async function GET(request: Request) {
     const { data: reviews, error } = await query.limit(professionalId ? 50 : 10)
 
     if (error) {
-      console.error("Error fetching reviews:", error)
-      return NextResponse.json(
-        { error: "Error al obtener reseñas" },
-        { status: 500 }
-      )
+      // Para la landing / perfiles, las reseñas son opcionales:
+      // si hay cualquier error (tabla faltante, RLS, etc.), devolvemos lista vacía.
+      console.warn("Error fetching public reviews, returning empty list instead:", error)
+      return NextResponse.json({ reviews: [] })
     }
 
     // Format reviews for display
@@ -61,10 +60,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ reviews: formattedReviews })
   } catch (error) {
-    console.error("Error in public reviews API:", error)
-    return NextResponse.json(
-      { error: "Error al procesar la solicitud" },
-      { status: 500 }
-    )
+    // Cualquier fallo inesperado también devuelve lista vacía para no romper la landing.
+    console.error("Error in public reviews API, returning empty list:", error)
+    return NextResponse.json({ reviews: [] })
   }
 }

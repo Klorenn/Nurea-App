@@ -16,7 +16,7 @@ export function StackedCircularFooter() {
     { title: language === "es" ? "Buscar Profesionales" : "Find Professionals", href: "/search" },
     { title: language === "es" ? "Agendar Cita" : "Book Appointment", href: "/dashboard/appointments" },
     { title: language === "es" ? "Cómo Funciona" : "How It Works", href: "#how-it-works" },
-    { title: language === "es" ? "Únete a NUREA" : "Join NUREA", href: "/signup" },
+    { title: language === "es" ? "Únete a NUREA" : "Join NUREA", href: "/login" },
     { title: language === "es" ? "Planes de Precios" : "Pricing Plans", href: "#pricing" },
     { title: language === "es" ? "Política de Privacidad" : "Privacy Policy", href: "/legal/privacy" },
     { title: language === "es" ? "Términos de Servicio" : "Terms of Service", href: "/legal/terms" },
@@ -36,12 +36,12 @@ export function StackedCircularFooter() {
           <div className="mb-8 rounded-full bg-primary/10 p-8">
             <Heart className="w-6 h-6 text-primary" />
           </div>
-          <nav className="mb-8 flex flex-wrap justify-center gap-6">
+          <nav className="mb-8 flex flex-wrap justify-center gap-6" aria-label={language === "es" ? "Enlaces del sitio" : "Site links"}>
             {footerLinks.map((link, index) => (
               <Link
                 key={`${link.href}-${link.title}-${index}`}
                 href={link.href}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                className="text-sm text-muted-foreground hover:text-primary focus-visible:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-sm active:opacity-80 transition-colors"
               >
                 {link.title}
               </Link>
@@ -76,7 +76,7 @@ export function StackedCircularFooter() {
                   className="rounded-full border-teal-200/30 dark:border-teal-800/30 focus:border-teal-400 dark:focus:border-teal-500"
                 />
               </div>
-              <Button type="submit" className="rounded-full bg-primary hover:bg-primary/90">
+              <Button type="submit" className="rounded-full bg-primary hover:bg-primary/90 hover:shadow-md active:opacity-90 focus-visible:ring-2 focus-visible:ring-primary/40" aria-label={language === "es" ? "Suscribirse al boletín" : "Subscribe to newsletter"}>
                 {language === "es" ? "Suscribirse" : "Subscribe"}
               </Button>
             </form>

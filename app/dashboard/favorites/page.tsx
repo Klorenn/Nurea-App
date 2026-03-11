@@ -5,12 +5,19 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Star, Heart, MapPin, Video, Phone, ArrowRight, Search, Loader2 } from "lucide-react"
+import { Star, Heart, MapPin, Video, Phone, Search, Loader2 } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
+
+/** Mock favoritos para mostrar grid cuando la API no devuelve datos (temporal). */
+const MOCK_FAVORITES: any[] = [
+  { id: "mock-1", professionalId: "mock-1", name: "Dra. Elena Vargas", specialty: "Cardiología", rating: 4.9, reviews: 124, location: "Santiago", price: 45000, image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop", consultationTypes: ["Online", "In-person"] },
+  { id: "mock-2", professionalId: "mock-2", name: "Dr. Carlos Méndez", specialty: "Psicología", rating: 4.8, reviews: 89, location: "Santiago", price: 35000, image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop", consultationTypes: ["Online"] },
+  { id: "mock-3", professionalId: "mock-3", name: "Dra. Ana Torres", specialty: "Dermatología", rating: 4.7, reviews: 56, location: "Valparaíso", price: 55000, image: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&h=400&fit=crop", consultationTypes: ["In-person"] },
+]
 
 export default function FavoritesPage() {
   const { language } = useLanguage()
@@ -19,6 +26,8 @@ export default function FavoritesPage() {
   const [favorites, setFavorites] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const displayList = favorites.length > 0 ? favorites : MOCK_FAVORITES
+  const isMockData = favorites.length === 0 && !loading && !error
 
   useEffect(() => {
     const loadFavorites = async () => {
@@ -103,9 +112,15 @@ export default function FavoritesPage() {
               </Button>
             </CardContent>
           </Card>
-        ) : favorites.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            {favorites.map((favorite) => (
+        ) : displayList.length > 0 ? (
+          <div className="space-y-4">
+            {isMockData && (
+              <p className="text-sm text-muted-foreground text-center py-2 rounded-xl bg-muted/50">
+                {language === "es" ? "Mostrando datos de ejemplo. Guarda profesionales desde la búsqueda para ver tus favoritos aquí." : "Showing sample data. Save professionals from search to see your favorites here."}
+              </p>
+            )}
+            <div className="grid gap-6 md:grid-cols-2">
+            {displayList.map((favorite) => (
               <Card key={favorite.id} className="border-border/40 hover:shadow-lg transition-all group">
                 <CardContent className="p-6">
                   <div className="flex gap-4">
@@ -124,15 +139,17 @@ export default function FavoritesPage() {
                             </h3>
                             <p className="text-sm text-muted-foreground">{favorite.specialty}</p>
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="rounded-full h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                            onClick={() => handleRemoveFavorite(favorite.professionalId)}
-                            aria-label={language === "es" ? `Eliminar ${favorite.name} de favoritos` : `Remove ${favorite.name} from favorites`}
-                          >
-                            <Heart className="h-4 w-4 fill-current" aria-hidden="true" />
-                          </Button>
+                          {!isMockData && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="rounded-full h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                              onClick={() => handleRemoveFavorite(favorite.professionalId)}
+                              aria-label={language === "es" ? `Eliminar ${favorite.name} de favoritos` : `Remove ${favorite.name} from favorites`}
+                            >
+                              <Heart className="h-4 w-4 fill-current" aria-hidden="true" />
+                            </Button>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                           <div className="flex items-center gap-1">
@@ -183,7 +200,7 @@ export default function FavoritesPage() {
                           </Link>
                         </Button>
                         <Button variant="outline" className="rounded-xl" asChild>
-                          <Link href={`/search?professional=${favorite.professionalId}`}>
+                          <Link href={isMockData ? "/search" : `/search?professional=${favorite.professionalId}`}>
                             {t.dashboard.bookNew}
                           </Link>
                         </Button>
@@ -193,6 +210,7 @@ export default function FavoritesPage() {
                 </CardContent>
               </Card>
             ))}
+            </div>
           </div>
         ) : (
           <Card className="border-border/40">

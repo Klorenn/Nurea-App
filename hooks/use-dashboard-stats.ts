@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from './use-auth'
 import { createClient } from '@/lib/supabase/client'
+import { isPaymentsEnabled } from '@/lib/utils/feature-flags'
 
 export interface DashboardStats {
   todayAppointments: number
@@ -32,8 +33,19 @@ export function useDashboardStats() {
 
     try {
       const today = new Date().toISOString().split('T')[0]
-      
-      // Load all stats in parallel for better performance
+      const paymentsEnabled = isPaymentsEnabled()
+
+      // Load all stats in parallel for mejor rendimiento.
+      // Si pagos están deshabilitados o la tabla no existe en este proyecto,
+      // evitamos llamar a la tabla `payments` para no generar 404 en Supabase.
+      const paymentsPromise = paymentsEnabled
+        ? supabase
+            .from('payments')
+            .select('id', { count: 'exact', head: true })
+            .eq('patient_id', user.id)
+            .eq('status', 'pending')
+        : Promise.resolve({ count: 0 } as { count: number })
+
       const [todayResponse, upcomingResponse, messagesResponse, paymentsResponse] = await Promise.all([
         supabase
           .from('appointments')
@@ -52,11 +64,7 @@ export function useDashboardStats() {
           .select('id', { count: 'exact', head: true })
           .eq('receiver_id', user.id)
           .eq('read', false),
-        supabase
-          .from('payments')
-          .select('id', { count: 'exact', head: true })
-          .eq('patient_id', user.id)
-          .eq('status', 'pending')
+        paymentsPromise,
       ])
 
       setStats({

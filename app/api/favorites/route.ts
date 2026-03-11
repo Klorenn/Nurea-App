@@ -48,6 +48,16 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false })
 
     if (favoritesError) {
+      // Si la tabla no existe o no hay permisos, no romper el dashboard:
+      // devolver simplemente una lista vacía.
+      if (favoritesError.code === '42P01' || favoritesError.code === '42501') {
+        console.warn('Favorites table missing or RLS blocked. Returning empty list.')
+        return NextResponse.json({
+          success: true,
+          favorites: [],
+          count: 0,
+        })
+      }
       console.error('Error fetching favorites:', favoritesError)
       return NextResponse.json(
         { 

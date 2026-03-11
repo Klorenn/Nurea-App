@@ -8,7 +8,7 @@ import { Shield, Users, UserCheck, MessageSquare, CreditCard, Calendar, Trending
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
-import { motion } from "framer-motion"
+import { motion, type Variants } from "framer-motion"
 
 export default function AdminPage() {
   const { language } = useLanguage()
@@ -114,19 +114,23 @@ export default function AdminPage() {
     },
   ]
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: "spring", stiffness: 100, damping: 15 } as any,
+    },
   }
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
         staggerChildren: 0.05,
         delayChildren: 0.1,
-      },
+      } as any,
     },
   }
 

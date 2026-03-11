@@ -2,20 +2,20 @@
 
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { SmokeyBackground, LoginForm } from "@/components/smokey-login"
 import ThemeSwitch from "@/components/ui/theme-switch"
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
+import { SmokeyBackground, LoginForm } from "@/components/ui/login-form"
 
 export default function LoginPage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-      <SmokeyBackground backdropBlurAmount="md" color="#14B8A6" />
-      
+    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-slate-200 dark:bg-[#0EA5E9]">
+      <SmokeyBackground backdropBlurAmount="lg" color="#0EA5E9" />
+
       <div className="absolute top-4 left-4 right-4 sm:top-8 sm:left-8 sm:right-8 z-50 flex items-center justify-between pointer-events-none">
         <Link
           href="/"
@@ -29,7 +29,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="relative z-10 w-full flex items-center justify-center">
+      <div className="relative z-10 w-full flex items-center justify-center px-4">
         <LoginForm />
       </div>
     </main>

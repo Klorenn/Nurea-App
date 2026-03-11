@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { calculateResponseTime } from '@/lib/utils/calculate-response-time'
 
 /**
@@ -7,11 +7,11 @@ import { calculateResponseTime } from '@/lib/utils/calculate-response-time'
  * Calcula el tiempo de respuesta promedio de un profesional
  */
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: professionalId } = params
+    const { id: professionalId } = await context.params
     const { searchParams } = new URL(request.url)
     const patientId = searchParams.get('patientId') || undefined
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { LAUNCH_TARGET_DATE, getTimeLeftUntil } from "@/lib/countdown"
 
 export function WaitlistExperience(): React.ReactElement {
   const { language } = useLanguage()
@@ -13,68 +13,64 @@ export function WaitlistExperience(): React.ReactElement {
   const [email, setEmail] = useState("")
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [waitlistCount, setWaitlistCount] = useState(0)
   
-  // 8 meses en cuenta regresiva
-  const targetDate = new Date()
-  targetDate.setMonth(targetDate.getMonth() + 8)
-  
-  const [timeLeft, setTimeLeft] = useState({
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  const isEmailValid = isValidEmail(email)
+
+  const [timeLeft, setTimeLeft] = useState(() => ({
     days: 0,
     hours: 0,
     minutes: 0,
     seconds: 0,
-  })
+  }))
 
-  // Calcular tiempo inicial
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime()
-      const target = targetDate.getTime()
-      const difference = target - now
-
-      if (difference > 0) {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24))
-        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
-        const seconds = Math.floor((difference % (1000 * 60)) / 1000)
-
-        setTimeLeft({ days, hours, minutes, seconds })
-      } else {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+    const fetchCount = async () => {
+      try {
+        const res = await fetch("/api/waitlist/count")
+        const data = await res.json()
+        setWaitlistCount(data.count ?? 0)
+      } catch {
+        // silenciar
       }
     }
+    fetchCount()
+    const interval = setInterval(fetchCount, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
-    calculateTimeLeft()
-    const timer = setInterval(calculateTimeLeft, 1000)
-
+  useEffect(() => {
+    const tick = () => setTimeLeft(getTimeLeftUntil(LAUNCH_TARGET_DATE))
+    tick()
+    const timer = setInterval(tick, 1000)
     return () => clearInterval(timer)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !email.includes('@')) return
+    if (!isEmailValid) return
 
     setIsLoading(true)
     try {
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       })
+      const data = await res.json()
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setIsSubmitted(true)
-      } else {
-        console.error('Error:', data.error)
-        alert(isSpanish ? 'Error al agregar tu email. Intenta nuevamente.' : 'Error adding your email. Please try again.')
+      if (!res.ok) {
+        const msg = data.message ?? data.error ?? (isSpanish ? "Error al agregar tu email." : "Error adding your email.")
+        throw new Error(msg)
       }
-    } catch (error) {
-      console.error('Error:', error)
-      alert(isSpanish ? 'Error al agregar tu email. Intenta nuevamente.' : 'Error adding your email. Please try again.')
+
+      setIsSubmitted(true)
+      setEmail("")
+      if (typeof data.count === "number") setWaitlistCount(data.count)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (isSpanish ? "Error al agregar tu email." : "Error adding your email.")
+      alert(msg)
     } finally {
       setIsLoading(false)
     }
@@ -133,7 +129,7 @@ export function WaitlistExperience(): React.ReactElement {
                         />
                         <Button
                           type="submit"
-                          disabled={isLoading}
+                          disabled={isLoading || !isEmailValid}
                           className="h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-primary/25 disabled:opacity-50 text-sm"
                         >
                           {isLoading
@@ -156,7 +152,9 @@ export function WaitlistExperience(): React.ReactElement {
                         </div>
                       </div>
                       <span className="text-muted-foreground text-xs">
-                        {isSpanish ? "~2k+ personas ya se unieron" : "~2k+ people already joined"}
+                        {isSpanish
+                          ? `${waitlistCount.toLocaleString()} persona${waitlistCount !== 1 ? "s" : ""} ya se ${waitlistCount !== 1 ? "unieron" : "unió"}`
+                          : `${waitlistCount.toLocaleString()} ${waitlistCount === 1 ? "person has" : "people have"} already joined`}
                       </span>
                     </div>
 

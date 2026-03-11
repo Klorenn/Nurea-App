@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import React, { useRef, useState, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
@@ -25,46 +24,11 @@ interface TermsDialogProps {
 export function TermsDialog({ children, onAccept, onOpenChange }: TermsDialogProps) {
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const [hasReadToBottom, setHasReadToBottom] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const dialogContentRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    if (!isOpen) return
-    
-    let cleanup: (() => void) | undefined
-    
-    // Wait for ScrollArea to render
-    const timeoutId = setTimeout(() => {
-      const dialogContent = dialogContentRef.current
-      if (!dialogContent) return
-
-      const viewport = dialogContent.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement
-      if (!viewport) return
-
-      const handleScroll = () => {
-        const scrollPercentage = viewport.scrollTop / (viewport.scrollHeight - viewport.clientHeight)
-        if (scrollPercentage >= 0.99 && !hasReadToBottom) {
-          setHasReadToBottom(true)
-        }
-      }
-
-      viewport.addEventListener('scroll', handleScroll)
-      
-      // Store cleanup function
-      cleanup = () => {
-        viewport.removeEventListener('scroll', handleScroll)
-      }
-    }, 100)
-
-    return () => {
-      clearTimeout(timeoutId)
-      if (cleanup) cleanup()
-    }
-  }, [isOpen, hasReadToBottom])
-
   const handleAccept = () => {
-    if (hasReadToBottom && onAccept) {
+    if (onAccept) {
       onAccept()
     }
     setIsOpen(false)
@@ -76,15 +40,11 @@ export function TermsDialog({ children, onAccept, onOpenChange }: TermsDialogPro
       onOpenChange(open)
     }
     if (!open) {
-      setHasReadToBottom(false)
       // Reset scroll when dialog closes
       setTimeout(() => {
-        const dialogContent = dialogContentRef.current
-        if (dialogContent) {
-          const viewport = dialogContent.querySelector('[data-slot="scroll-area-viewport"]') as HTMLElement
-          if (viewport) {
-            viewport.scrollTop = 0
-          }
+        const viewport = dialogContentRef.current
+        if (viewport) {
+          viewport.scrollTop = 0
         }
       }, 100)
     }
@@ -222,6 +182,7 @@ export function TermsDialog({ children, onAccept, onOpenChange }: TermsDialogPro
 
         <div className="text-center text-xs text-muted-foreground pt-4 border-t border-border/40">
           <p>© 2026 <strong>NUREA</strong>. Todos los derechos reservados.</p>
+          <p className="mt-2 text-primary font-medium">{language === "es" ? "— Fin. Desplázate hasta aquí para poder aceptar." : "— End. Scroll here to accept."}</p>
         </div>
       </div>
     </div>
@@ -260,33 +221,36 @@ export function TermsDialog({ children, onAccept, onOpenChange }: TermsDialogPro
     <>
       {triggerElement}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent ref={dialogContentRef} className="flex flex-col gap-0 p-0 sm:max-h-[min(640px,80vh)] sm:max-w-lg [&>button:last-child]:top-3.5">
+      <DialogContent
+        ref={dialogContentRef}
+        className="flex flex-col gap-0 p-0 sm:max-h-[min(640px,80vh)] sm:max-w-lg [&>button:last-child]:top-3.5"
+      >
         <DialogHeader className="contents space-y-0 text-left">
           <DialogTitle className="border-b border-border px-6 py-4 text-base flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" />
             {language === "es" ? "Términos de Uso" : "Terms of Service"}
           </DialogTitle>
-          <ScrollArea className="max-h-[400px]">
-            <DialogDescription asChild>
-              <div className="px-6 py-4">
-                {termsContent}
-              </div>
-            </DialogDescription>
-          </ScrollArea>
+          <DialogDescription asChild>
+            <div
+              ref={dialogContentRef}
+              className="px-6 py-4 max-h-[min(420px,70vh)] overflow-y-auto"
+            >
+              {termsContent}
+            </div>
+          </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="border-t border-border px-6 py-4 sm:items-center">
-          {!hasReadToBottom && (
-            <span className="grow text-xs text-muted-foreground max-sm:text-center">
-              {language === "es" ? "Lee todos los términos antes de aceptar." : "Read all terms before accepting."}
-            </span>
-          )}
+        <DialogFooter className="border-t border-border px-6 py-4 flex flex-col gap-3 items-stretch">
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" className="w-full">
               {language === "es" ? "Cancelar" : "Cancel"}
             </Button>
           </DialogClose>
           <DialogClose asChild>
-            <Button type="button" disabled={!hasReadToBottom} onClick={handleAccept}>
+            <Button
+              type="button"
+              onClick={handleAccept}
+              className="w-full"
+            >
               {language === "es" ? "Acepto" : "I agree"}
             </Button>
           </DialogClose>

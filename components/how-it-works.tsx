@@ -36,26 +36,28 @@ export function HowItWorks() {
   ]
 
   return (
-    <section className="py-16 md:py-20 px-6 bg-transparent relative">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-16 md:py-20 px-4 sm:px-6 bg-transparent relative" aria-labelledby="how-it-works-heading">
+      <div className="max-w-7xl mx-auto w-full min-w-0">
         <div className="text-center space-y-4 mb-12 md:mb-16">
           <p className="text-secondary font-bold text-sm uppercase tracking-widest">{t.landing.howItWorks.simpleProcess}</p>
-          <h2 
-            className="text-4xl lg:text-6xl text-foreground font-bold tracking-tight"
+          <h2
+            id="how-it-works-heading"
+            className="text-3xl sm:text-4xl lg:text-6xl text-foreground font-bold tracking-tight break-words"
             dangerouslySetInnerHTML={{ __html: t.landing.howItWorks.title }}
           />
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 min-w-0">
           {steps.map((step, idx) => (
-            <div key={idx} className="flex flex-col gap-6">
+            <div key={idx} className="flex flex-col gap-6 min-w-0">
               <div className="relative aspect-[4/3] rounded-3xl overflow-hidden border border-border shadow-md group">
                 <img
                   src={step.img || "/placeholder.svg"}
                   alt={step.title}
                   className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
                 />
-                <div className="absolute inset-0 bg-linear-to-t from-background/80 to-transparent p-6 flex items-end">
+                <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent p-6 flex items-end">
                   <div className="w-12 h-12 rounded-xl bg-white/90 backdrop-blur shadow-lg flex items-center justify-center">
                     <step.icon className="h-6 w-6 text-secondary" />
                   </div>

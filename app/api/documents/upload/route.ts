@@ -140,11 +140,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Sanitizar nombre del archivo antes de subir
-    const { sanitizeText } = await import('@/lib/utils/sanitize')
-    const sanitizedName = sanitizeText(name.trim())
+    // Sanitizar nombre del archivo antes de subir (validación inicial)
+    const { sanitizeText: sanitizeTextInitial } = await import('@/lib/utils/sanitize')
+    const sanitizedInitialName = sanitizeTextInitial(name.trim())
     
-    if (!sanitizedName || sanitizedName.length === 0) {
+    if (!sanitizedInitialName || sanitizedInitialName.length === 0) {
       return NextResponse.json(
         {
           error: 'invalid_name',
@@ -155,12 +155,12 @@ export async function POST(request: Request) {
     }
 
     // Sanitizar nombre de archivo (remover caracteres peligrosos)
-    const sanitizedFileName = sanitizeText(file.name.replace(/[^a-zA-Z0-9.\-_ ]/g, '_')).substring(0, 255)
+    const sanitizedInitialFileName = sanitizeTextInitial(file.name.replace(/[^a-zA-Z0-9.\-_ ]/g, '_')).substring(0, 255)
     
     // Subir archivo a Supabase Storage (bucket privado)
     const fileExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
     const timestamp = Date.now()
-    const fileName = `${user.id}/${timestamp}-${sanitizedFileName}`
+    const fileName = `${user.id}/${timestamp}-${sanitizedInitialFileName}`
     const filePath = `documents/${fileName}`
 
     const { data: uploadData, error: uploadError } = await supabase.storage

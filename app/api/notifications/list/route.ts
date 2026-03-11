@@ -35,6 +35,15 @@ export async function GET(request: Request) {
     const { data: notifications, error } = await query
 
     if (error) {
+      // Si la tabla no existe o no hay permisos, devolver lista vacía para no romper el dashboard.
+      if (error.code === '42P01' || error.code === '42501') {
+        console.warn('Notifications table missing or RLS blocked. Returning empty notifications.')
+        return NextResponse.json({
+          success: true,
+          notifications: [],
+          unreadCount: 0,
+        })
+      }
       console.error('Error fetching notifications:', error)
       return NextResponse.json(
         { 
@@ -53,6 +62,14 @@ export async function GET(request: Request) {
       .eq('read', false)
 
     if (countError) {
+      if (countError.code === '42P01' || countError.code === '42501') {
+        console.warn('Notifications count failed because table is missing or RLS blocked. Returning 0.')
+        return NextResponse.json({
+          success: true,
+          notifications: notifications || [],
+          unreadCount: 0,
+        })
+      }
       console.error('Error counting unread notifications:', countError)
       // No fallar si el conteo falla, retornar 0
     }

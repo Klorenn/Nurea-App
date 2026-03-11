@@ -3,6 +3,7 @@
 import React, { useEffect, useId, useMemo, useRef, useState, useCallback } from "react"
 import { Calendar, MessageCircle, Star, Clock, DollarSign, Users, TrendingUp, Filter, Search, Bell, Settings, Home, ChartBar, Video, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
@@ -500,6 +501,22 @@ export function ProfessionalDashboard({
                       }}
                     >
                       {language === "es" ? "Cancelar" : "Cancel"}
+                    </Button>
+                  </div>
+                )}
+                {appt.type === "online" && appt.status === "confirmed" && (
+                  <div className={cx("mt-4", viewMode === "list" ? "w-full" : "")}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/30"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        window.open(getJitsiMeetingUrl(appt.id), "_blank", "noopener,noreferrer")
+                      }}
+                    >
+                      <Video className="size-4 mr-2" />
+                      {language === "es" ? "Iniciar Videollamada" : "Start video call"}
                     </Button>
                   </div>
                 )}

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { isTestProfessional, NUREA_DOCTOR_ID } from '@/lib/mock-data'
 
 /**
@@ -7,11 +7,11 @@ import { isTestProfessional, NUREA_DOCTOR_ID } from '@/lib/mock-data'
  * Obtiene un profesional por ID (real o de prueba)
  */
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await context.params
     const supabase = await createClient()
 
     // Si es el profesional de prueba, buscar en la base de datos
@@ -80,6 +80,7 @@ export async function GET(
           availableToday: true,
           availableUntil: '7:00 PM',
           patientsServed: 0,
+          stellarWallet: testProfessional.stellar_wallet ?? null,
         }
 
         return NextResponse.json({
@@ -225,6 +226,7 @@ export async function GET(
       availableToday: availableToday,
       availableUntil: availableUntil,
       patientsServed: patientsServed, // Calculado desde appointments completadas
+      stellarWallet: professional.stellar_wallet ?? null,
     }
 
     return NextResponse.json({

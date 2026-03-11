@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { 
-  Settings, 
   Bell, 
   Shield, 
   Globe,
@@ -16,10 +15,13 @@ import {
   Sun,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Wallet,
+  RefreshCw
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTheme } from "next-themes"
+import { connectWallet, StellarWalletError } from "@/lib/services/stellarService"
 
 export default function ProfessionalSettingsPage() {
   const { language } = useLanguage()
@@ -38,6 +40,12 @@ export default function ProfessionalSettingsPage() {
   
   // Privacy settings
   const [profileVisible, setProfileVisible] = useState(true)
+
+  // Stellar wallet (método de cobro)
+  const [stellarWallet, setStellarWallet] = useState<string | null>(null)
+  const [walletLoading, setWalletLoading] = useState(false)
+  const [walletError, setWalletError] = useState<string | null>(null)
+  const [walletSuccess, setWalletSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     loadSettings()
@@ -67,6 +75,9 @@ export default function ProfessionalSettingsPage() {
       if (settings.privacy) {
         setProfileVisible(settings.privacy.profileVisible ?? true)
       }
+
+      // Wallet Stellar para cobros
+      setStellarWallet(data.stellarWallet ?? null)
     } catch (err) {
       console.error("Error loading settings:", err)
       setError(err instanceof Error ? err.message : (isSpanish ? "Error al cargar configuración" : "Error loading settings"))
@@ -133,6 +144,40 @@ export default function ProfessionalSettingsPage() {
     setTimeout(() => {
       saveSettings()
     }, 500)
+  }
+
+  /** Conectar Freighter y guardar la clave pública en Supabase (professionals.stellar_wallet). */
+  const handleConnectWallet = async () => {
+    setWalletLoading(true)
+    setWalletError(null)
+    setWalletSuccess(null)
+    try {
+      const publicKey = await connectWallet()
+      const res = await fetch("/api/professional/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stellar_wallet: publicKey }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || "Error al guardar la wallet.")
+      setStellarWallet(publicKey)
+      setWalletSuccess(isSpanish ? "Wallet guardada correctamente" : "Wallet saved successfully")
+      setTimeout(() => setWalletSuccess(null), 4000)
+    } catch (err) {
+      if (err instanceof StellarWalletError) {
+        setWalletError(err.message)
+      } else {
+        setWalletError(err instanceof Error ? err.message : (isSpanish ? "Error al conectar la wallet" : "Error connecting wallet"))
+      }
+    } finally {
+      setWalletLoading(false)
+    }
+  }
+
+  /** Mostrar clave pública truncada (ej. GABC...WXYZ). */
+  const truncateWallet = (key: string) => {
+    if (key.length <= 12) return key
+    return `${key.slice(0, 4)}...${key.slice(-4)}`
   }
 
   if (loading) {
@@ -236,6 +281,71 @@ export default function ProfessionalSettingsPage() {
                   disabled={saving}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Método de Cobro (Stellar) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="h-5 w-5" />
+                {isSpanish ? "Método de Cobro (Stellar)" : "Payment Method (Stellar)"}
+              </CardTitle>
+              <CardDescription>
+                {isSpanish
+                  ? "Conecta tu wallet de Stellar para recibir los pagos de las consultas a través del depósito en garantía (escrow) de Nurea."
+                  : "Connect your Stellar wallet to receive payments from consultations via Nurea's escrow."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {walletSuccess && (
+                <div className="bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 rounded-lg p-3 flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  <p>{walletSuccess}</p>
+                </div>
+              )}
+              {walletError && (
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-3 flex items-center gap-2 text-sm">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <p>{walletError}</p>
+                </div>
+              )}
+              {stellarWallet ? (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex-1 rounded-lg bg-muted/50 px-4 py-3 font-mono text-sm break-all">
+                    {truncateWallet(stellarWallet)}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleConnectWallet}
+                    disabled={walletLoading}
+                    className="shrink-0"
+                  >
+                    {walletLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        {isSpanish ? "Cambiar Wallet" : "Change Wallet"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleConnectWallet}
+                  disabled={walletLoading}
+                  className="w-full sm:w-auto"
+                >
+                  {walletLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    isSpanish ? "Conectar Wallet para Recibir Pagos" : "Connect Wallet to Receive Payments"
+                  )}
+                </Button>
+              )}
             </CardContent>
           </Card>
 

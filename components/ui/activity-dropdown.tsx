@@ -17,6 +17,9 @@ interface Activity {
   time: string
   href?: string
   type: "message" | "appointment" | "review" | "payment" | "system" | "favorite"
+  titleEn?: string
+  descriptionEn?: string
+  timeEn?: string
 }
 
 interface ActivityDropdownProps {

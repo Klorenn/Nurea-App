@@ -1,256 +1,475 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import * as React from "react"
+import { useState, useEffect, useMemo } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { RouteGuard } from "@/components/auth/route-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Calendar, 
-  Clock, 
-  User, 
-  MapPin, 
-  Video, 
+import {
+  Calendar,
+  Clock,
+  User,
+  MapPin,
+  Video,
   Loader2,
-  CheckCircle2,
-  XCircle,
-  AlertCircle
+  Lock,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { motion } from "framer-motion"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { motion, AnimatePresence } from "framer-motion"
+import { cn } from "@/lib/utils"
+
+const HOUR_START = 8
+const HOUR_END = 20
+const SLOT_MINUTES = 30
+const TOTAL_SLOTS = ((HOUR_END - HOUR_START) * 60) / SLOT_MINUTES
+
+interface ProfessionalAppointment {
+  id: string
+  appointment_date: string
+  appointment_time: string
+  duration_minutes: number
+  status: string
+  payment_status: string
+  type: "online" | "in_person"
+  price?: number
+  address?: string
+  patient?: { first_name?: string; last_name?: string }
+}
+
+interface BlockedSlot {
+  id: string
+  date: string
+  startTime: string
+  endTime: string
+  label?: string
+}
+
+function timeToSlotIndex(time: string): number {
+  const [h, m] = time.split(":").map(Number)
+  return (h - HOUR_START) * 2 + (m === 30 ? 1 : 0)
+}
+
+function slotIndexToTime(index: number): string {
+  const totalMinutes = HOUR_START * 60 + index * SLOT_MINUTES
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  return `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`
+}
 
 export default function ProfessionalSchedulePage() {
   const { language } = useLanguage()
   const isSpanish = language === "es"
-  
+
   const [loading, setLoading] = useState(true)
-  const [appointments, setAppointments] = useState<any[]>([])
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [dateFilter, setDateFilter] = useState<string>("all")
+  const [appointments, setAppointments] = useState<ProfessionalAppointment[]>([])
+  const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([])
+  const [weekStart, setWeekStart] = useState<Date>(() => {
+    const d = new Date()
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    const monday = new Date(d)
+    monday.setDate(diff)
+    return monday
+  })
+  const [showBlockModal, setShowBlockModal] = useState(false)
+  const [blockForm, setBlockForm] = useState({ date: "", startTime: "09:00", endTime: "10:00" })
 
   useEffect(() => {
     loadAppointments()
-  }, [statusFilter, dateFilter])
+  }, [])
 
   const loadAppointments = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (statusFilter !== "all") {
-        params.append("status", statusFilter)
-      }
-      if (dateFilter === "today") {
-        const today = new Date().toISOString().split("T")[0]
-        params.append("dateFrom", today)
-        params.append("dateTo", today)
-      } else if (dateFilter === "week") {
-        const today = new Date()
-        const weekStart = new Date(today)
-        weekStart.setDate(today.getDate() - today.getDay())
-        params.append("dateFrom", weekStart.toISOString().split("T")[0])
-        params.append("dateTo", new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0])
-      } else if (dateFilter === "month") {
-        const today = new Date()
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-        params.append("dateFrom", monthStart.toISOString().split("T")[0])
-        params.append("dateTo", new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split("T")[0])
-      }
-
-      const response = await fetch(`/api/professional/appointments?${params.toString()}`)
+      const response = await fetch("/api/professional/appointments")
       const data = await response.json()
-
-      if (data.success) {
-        setAppointments(data.appointments || [])
+      if (data.success && Array.isArray(data.appointments)) {
+        setAppointments(data.appointments)
+      } else {
+        setAppointments([])
       }
     } catch (error) {
       console.error("Error loading appointments:", error)
+      setAppointments([])
     } finally {
       setLoading(false)
     }
   }
 
-  const formatDate = (dateString: string, timeString: string) => {
-    const date = new Date(`${dateString}T${timeString}`)
-    return date.toLocaleDateString(
-      isSpanish ? "es-ES" : "en-US",
-      { 
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        hour: "2-digit",
-        minute: "2-digit"
-      }
-    )
+  const weekDays = useMemo(() => {
+    const days: Date[] = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart)
+      d.setDate(weekStart.getDate() + i)
+      days.push(d)
+    }
+    return days
+  }, [weekStart])
+
+  const dateStr = (d: Date) => d.toISOString().slice(0, 10)
+
+  const appointmentsByDateAndSlot = useMemo(() => {
+    const map: Record<string, Record<number, ProfessionalAppointment>> = {}
+    appointments
+      .filter((a) => a.status !== "cancelled")
+      .forEach((apt) => {
+        const date = apt.appointment_date
+        if (!map[date]) map[date] = {}
+        const idx = timeToSlotIndex(apt.appointment_time)
+        const durationSlots = Math.max(1, Math.ceil((apt.duration_minutes || 30) / SLOT_MINUTES))
+        for (let s = 0; s < durationSlots; s++) {
+          map[date][idx + s] = apt
+        }
+      })
+    return map
+  }, [appointments])
+
+  const blockedByDateAndSlot = useMemo(() => {
+    const map: Record<string, Set<number>> = {}
+    blockedSlots.forEach((b) => {
+      const startIdx = timeToSlotIndex(b.startTime)
+      const endIdx = timeToSlotIndex(b.endTime)
+      if (!map[b.date]) map[b.date] = new Set()
+      for (let i = startIdx; i < endIdx; i++) map[b.date].add(i)
+    })
+    return map
+  }, [blockedSlots])
+
+  const addBlockedSlot = () => {
+    if (!blockForm.date || !blockForm.startTime || !blockForm.endTime) return
+    setBlockedSlots((prev) => [
+      ...prev,
+      {
+        id: `block-${Date.now()}`,
+        date: blockForm.date,
+        startTime: blockForm.startTime,
+        endTime: blockForm.endTime,
+        label: isSpanish ? "No disponible" : "Unavailable",
+      },
+    ])
+    setShowBlockModal(false)
+    setBlockForm({ date: dateStr(new Date()), startTime: "09:00", endTime: "10:00" })
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat(isSpanish ? "es-CL" : "en-US", {
+  const removeBlockedSlot = (id: string) => {
+    setBlockedSlots((prev) => prev.filter((b) => b.id !== id))
+  }
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat(isSpanish ? "es-CL" : "en-US", {
       style: "currency",
       currency: "CLP",
       minimumFractionDigits: 0,
     }).format(amount)
+
+  const timeLabels = useMemo(() => {
+    const labels: string[] = []
+    for (let i = 0; i <= TOTAL_SLOTS; i++) {
+      labels.push(slotIndexToTime(i))
+    }
+    return labels
+  }, [])
+
+  const goPrevWeek = () => {
+    const d = new Date(weekStart)
+    d.setDate(d.getDate() - 7)
+    setWeekStart(d)
+  }
+  const goNextWeek = () => {
+    const d = new Date(weekStart)
+    d.setDate(d.getDate() + 7)
+    setWeekStart(d)
+  }
+  const goToday = () => {
+    const d = new Date()
+    const day = d.getDay()
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+    setWeekStart(new Date(d.setDate(diff)))
   }
 
-  const getStatusBadge = (status: string, paymentStatus: string) => {
-    if (status === "completed") {
-      return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"><CheckCircle2 className="h-3 w-3 mr-1" /> {isSpanish ? "Completada" : "Completed"}</Badge>
-    }
-    if (status === "cancelled") {
-      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> {isSpanish ? "Cancelada" : "Cancelled"}</Badge>
-    }
-    if (status === "confirmed") {
-      return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"><CheckCircle2 className="h-3 w-3 mr-1" /> {isSpanish ? "Confirmada" : "Confirmed"}</Badge>
-    }
-    return <Badge variant="secondary"><AlertCircle className="h-3 w-3 mr-1" /> {isSpanish ? "Pendiente" : "Pending"}</Badge>
+  const dayAppointments = (dateKey: string) =>
+    appointments.filter((a) => a.appointment_date === dateKey && a.status !== "cancelled")
+
+  if (loading) {
+    return (
+      <RouteGuard requiredRole="professional">
+        <DashboardLayout role="professional">
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </DashboardLayout>
+      </RouteGuard>
+    )
   }
-
-  const groupedAppointments = appointments.reduce((acc, apt) => {
-    const date = apt.appointment_date
-    if (!acc[date]) acc[date] = []
-    acc[date].push(apt)
-    return acc
-  }, {} as Record<string, any[]>)
-
-  const sortedDates = Object.keys(groupedAppointments).sort()
 
   return (
     <RouteGuard requiredRole="professional">
       <DashboardLayout role="professional">
-        <div className="space-y-8">
-          {/* Header */}
+        <div className="space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="space-y-2">
+            <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                {isSpanish ? "Agenda" : "Schedule"}
+                {isSpanish ? "Agenda" : "Agenda"}
               </h1>
               <p className="text-muted-foreground">
-                {isSpanish 
-                  ? "Gestiona tus citas y horarios"
-                  : "Manage your appointments and schedule"}
+                {isSpanish ? "Calendario semanal de citas" : "Weekly appointment calendar"}
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={goPrevWeek} aria-label="Previous week">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={goToday}>
+                {isSpanish ? "Hoy" : "Today"}
+              </Button>
+              <Button variant="outline" size="icon" onClick={goNextWeek} aria-label="Next week">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                className="ml-2"
+                onClick={() => {
+                  setBlockForm((f) => ({ ...f, date: f.date || dateStr(new Date()) }))
+                  setShowBlockModal(true)
+                }}
+              >
+                <Lock className="h-4 w-4 mr-2" />
+                {isSpanish ? "Bloquear Horario" : "Block time"}
+              </Button>
             </div>
           </div>
 
-          {/* Filters */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder={isSpanish ? "Estado" : "Status"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{isSpanish ? "Todos los estados" : "All statuses"}</SelectItem>
-                    <SelectItem value="pending">{isSpanish ? "Pendiente" : "Pending"}</SelectItem>
-                    <SelectItem value="confirmed">{isSpanish ? "Confirmada" : "Confirmed"}</SelectItem>
-                    <SelectItem value="completed">{isSpanish ? "Completada" : "Completed"}</SelectItem>
-                    <SelectItem value="cancelled">{isSpanish ? "Cancelada" : "Cancelled"}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder={isSpanish ? "Fecha" : "Date"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{isSpanish ? "Todas las fechas" : "All dates"}</SelectItem>
-                    <SelectItem value="today">{isSpanish ? "Hoy" : "Today"}</SelectItem>
-                    <SelectItem value="week">{isSpanish ? "Esta semana" : "This week"}</SelectItem>
-                    <SelectItem value="month">{isSpanish ? "Este mes" : "This month"}</SelectItem>
-                  </SelectContent>
-                </Select>
+          {/* Mobile: lista diaria por día */}
+          <div className="block md:hidden space-y-4">
+            <AnimatePresence mode="wait">
+              {weekDays.map((day) => {
+                const dateKey = dateStr(day)
+                const dayApts = dayAppointments(dateKey)
+                const dayBlocks = blockedSlots.filter((b) => b.date === dateKey)
+                return (
+                  <motion.div
+                    key={dateKey}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl border border-border/60 bg-card overflow-hidden"
+                  >
+                    <div className="px-4 py-3 bg-muted/30 border-b border-border/40 font-semibold">
+                      {day.toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </div>
+                    <div className="p-4 space-y-2">
+                      {dayApts.length === 0 && dayBlocks.length === 0 ? (
+                        <p className="text-sm text-muted-foreground py-2">
+                          {isSpanish ? "Sin citas ni bloques" : "No appointments or blocks"}
+                        </p>
+                      ) : (
+                        <>
+                          {dayApts.map((apt) => (
+                            <div
+                              key={apt.id}
+                              className={cn(
+                                "flex items-center justify-between p-3 rounded-lg border",
+                                apt.status === "confirmed"
+                                  ? "bg-primary/10 border-primary/30"
+                                  : "bg-muted/30 border-border/40"
+                              )}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                                  <User className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                  <p className="font-medium">
+                                    {apt.patient?.first_name} {apt.patient?.last_name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {apt.appointment_time} · {apt.duration_minutes} min
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {apt.type === "online" ? (isSpanish ? "Online" : "Online") : isSpanish ? "Presencial" : "In-person"}
+                              </Badge>
+                            </div>
+                          ))}
+                          {dayBlocks.map((b) => (
+                            <div
+                              key={b.id}
+                              className="flex items-center justify-between p-3 rounded-lg border border-amber-500/30 bg-amber-500/10"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Lock className="h-4 w-4 text-amber-600" />
+                                <span className="text-sm font-medium">{b.startTime} – {b.endTime}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => removeBlockedSlot(b.id)}
+                              >
+                                {isSpanish ? "Desbloquear" : "Unblock"}
+                              </Button>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Desktop: grid semanal 08:00–20:00 */}
+          <Card className="hidden md:block overflow-hidden">
+            <CardContent className="p-0">
+              <div
+                className="grid border-b border-border/40"
+                style={{
+                  gridTemplateColumns: `80px repeat(7, minmax(0, 1fr))`,
+                  gridTemplateRows: `auto repeat(${TOTAL_SLOTS}, minmax(20px, 1fr))`,
+                }}
+              >
+                <div className="row-span-1 border-r border-border/40 bg-muted/30 p-2 text-xs font-medium text-muted-foreground" />
+                {weekDays.map((day) => (
+                  <div
+                    key={dateStr(day)}
+                    className="border-r border-border/40 last:border-r-0 bg-muted/20 p-2 text-center text-sm font-medium"
+                  >
+                    {day.toLocaleDateString(isSpanish ? "es-ES" : "en-US", { weekday: "short" })}
+                    <br />
+                    <span className="text-muted-foreground">{day.getDate()}</span>
+                  </div>
+                ))}
+                {timeLabels.slice(0, -1).map((time, rowIdx) => (
+                  <React.Fragment key={rowIdx}>
+                    <div className="border-r border-t border-border/40 bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
+                      {time}
+                    </div>
+                    {weekDays.map((day) => {
+                      const dateKey = dateStr(day)
+                      const isBlocked = blockedByDateAndSlot[dateKey]?.has(rowIdx)
+                      const apt = appointmentsByDateAndSlot[dateKey]?.[rowIdx]
+                      const isFirstSlotOfApt = apt && timeToSlotIndex(apt.appointment_time) === rowIdx
+                      return (
+                        <div
+                          key={`${dateKey}-${rowIdx}`}
+                          className={cn(
+                            "border-r border-t border-border/40 last:border-r-0 min-h-[20px] relative",
+                            isBlocked && "bg-amber-500/20",
+                            apt && isFirstSlotOfApt && "bg-primary/15"
+                          )}
+                        >
+                          {isBlocked && !apt && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Lock className="h-3 w-3 text-amber-600" />
+                            </div>
+                          )}
+                          {apt && isFirstSlotOfApt && (
+                            <div
+                              className="absolute inset-0.5 rounded flex flex-col justify-center px-1.5 overflow-hidden"
+                              style={{
+                                backgroundColor: "hsl(var(--primary) / 0.2)",
+                                borderLeft: "3px solid hsl(var(--primary))",
+                              }}
+                            >
+                              <p className="text-xs font-medium truncate">
+                                {apt.patient?.first_name} {apt.patient?.last_name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {apt.appointment_time} · {apt.type === "online" ? "Online" : isSpanish ? "Presencial" : "In-person"}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </React.Fragment>
+                ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Appointments List */}
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : appointments.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">
-                  {isSpanish 
-                    ? "No tienes citas programadas"
-                    : "You don't have any appointments scheduled"}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {sortedDates.map((date) => (
-                <Card key={date}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      {new Date(date).toLocaleDateString(
-                        isSpanish ? "es-ES" : "en-US",
-                        { weekday: "long", day: "numeric", month: "long", year: "numeric" }
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {groupedAppointments[date].map((appointment) => (
-                        <motion.div
-                          key={appointment.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-border/40 hover:bg-accent/50 transition-colors gap-4"
-                        >
-                          <div className="flex items-start gap-4 flex-1">
-                            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <User className="h-6 w-6 text-primary" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <p className="font-semibold">
-                                  {appointment.patient?.first_name} {appointment.patient?.last_name}
-                                </p>
-                                {getStatusBadge(appointment.status, appointment.payment_status)}
-                              </div>
-                              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Clock className="h-4 w-4" />
-                                  {appointment.appointment_time} ({appointment.duration_minutes} {isSpanish ? "min" : "min"})
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  {appointment.type === "online" ? (
-                                    <Video className="h-4 w-4" />
-                                  ) : (
-                                    <MapPin className="h-4 w-4" />
-                                  )}
-                                  {appointment.type === "online" 
-                                    ? (isSpanish ? "Online" : "Online")
-                                    : (appointment.address || isSpanish ? "Presencial" : "In-person")}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-primary mb-1">
-                              {formatCurrency(parseFloat(appointment.price?.toString() || "0"))}
-                            </p>
-                            <Badge 
-                              variant={appointment.payment_status === "paid" ? "default" : "secondary"}
-                              className="text-xs"
-                            >
-                              {appointment.payment_status === "paid" 
-                                ? (isSpanish ? "Pagado" : "Paid")
-                                : (isSpanish ? "Pendiente" : "Pending")}
-                            </Badge>
-                          </div>
-                        </motion.div>
-                      ))}
+          {/* Modal Bloquear Horario */}
+          {showBlockModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-card rounded-xl border shadow-lg max-w-md w-full p-6 space-y-4"
+              >
+                <h3 className="text-lg font-semibold">
+                  {isSpanish ? "Bloquear horario" : "Block time"}
+                </h3>
+                <div className="grid gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">{isSpanish ? "Fecha" : "Date"}</label>
+                    <input
+                      type="date"
+                      value={blockForm.date || dateStr(new Date())}
+                      onChange={(e) => setBlockForm((f) => ({ ...f, date: e.target.value }))}
+                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{isSpanish ? "Inicio" : "Start"}</label>
+                      <select
+                        value={blockForm.startTime}
+                        onChange={(e) => setBlockForm((f) => ({ ...f, startTime: e.target.value }))}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        {Array.from({ length: 25 }, (_, i) => {
+                          const h = HOUR_START + Math.floor(i / 2)
+                          const m = i % 2 === 0 ? "00" : "30"
+                          const t = `${String(h).padStart(2, "0")}:${m}`
+                          if (h > HOUR_END) return null
+                          return (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          )
+                        })}
+                      </select>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">{isSpanish ? "Fin" : "End"}</label>
+                      <select
+                        value={blockForm.endTime}
+                        onChange={(e) => setBlockForm((f) => ({ ...f, endTime: e.target.value }))}
+                        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        {Array.from({ length: 25 }, (_, i) => {
+                          const h = HOUR_START + Math.floor(i / 2)
+                          const m = i % 2 === 0 ? "00" : "30"
+                          const t = `${String(h).padStart(2, "0")}:${m}`
+                          if (h > HOUR_END) return null
+                          return (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button variant="outline" onClick={() => setShowBlockModal(false)}>
+                    {isSpanish ? "Cancelar" : "Cancel"}
+                  </Button>
+                  <Button onClick={addBlockedSlot}>
+                    {isSpanish ? "Bloquear" : "Block"}
+                  </Button>
+                </div>
+              </motion.div>
             </div>
           )}
         </div>
@@ -258,4 +477,3 @@ export default function ProfessionalSchedulePage() {
     </RouteGuard>
   )
 }
-

@@ -3,14 +3,14 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { SmokeyBackground } from "@/components/smokey-login"
+import { SmokeyBackground } from "@/components/ui/login-form"
 import ThemeSwitch from "@/components/ui/theme-switch"
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
 import { User, Stethoscope, ArrowRight, Heart, Shield } from "lucide-react"
-import { motion } from "framer-motion"
+import { motion, type Variants } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 export default function AuthPage() {
@@ -49,29 +49,29 @@ export default function AuthPage() {
     return null
   }
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
         delayChildren: 0.2,
-      },
+      } as any,
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
       y: 0,
-      transition: { type: "spring", stiffness: 100, damping: 15 }
+      transition: { type: "spring", stiffness: 100, damping: 15 } as any,
     },
   }
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-      <SmokeyBackground backdropBlurAmount="md" color="#14B8A6" />
+    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-slate-200 dark:bg-[#0EA5E9]">
+      <SmokeyBackground color="#0EA5E9" />
       
       {/* Header */}
       <div className="absolute top-4 left-4 right-4 sm:top-8 sm:left-8 sm:right-8 z-50 flex items-center justify-between pointer-events-none">
@@ -110,8 +110,8 @@ export default function AuthPage() {
             className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
           >
             {isSpanish 
-              ? "Selecciona tu tipo de cuenta para comenzar"
-              : "Select your account type to get started"}
+              ? "Selecciona tu tipo de cuenta"
+              : "Choose your account type"}
           </motion.p>
         </div>
 
@@ -158,7 +158,6 @@ export default function AuthPage() {
                   </div>
 
                   <div className="flex items-center gap-2 text-primary font-semibold group-hover:gap-3 transition-all">
-                    <span>{isSpanish ? "Comenzar" : "Get Started"}</span>
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
@@ -207,7 +206,6 @@ export default function AuthPage() {
                   </div>
 
                   <div className="flex items-center gap-2 text-primary font-semibold group-hover:gap-3 transition-all">
-                    <span>{isSpanish ? "Comenzar" : "Get Started"}</span>
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
@@ -228,21 +226,6 @@ export default function AuthPage() {
           </p>
         </motion.div>
 
-        {/* Login Link */}
-        <motion.div 
-          variants={itemVariants}
-          className="mt-6 text-center"
-        >
-          <p className="text-sm text-muted-foreground">
-            {isSpanish ? "¿Ya tienes una cuenta?" : "Already have an account?"}{" "}
-            <Link 
-              href="/login" 
-              className="text-primary hover:underline font-semibold"
-            >
-              {isSpanish ? "Inicia sesión" : "Sign in"}
-            </Link>
-          </p>
-        </motion.div>
       </motion.div>
     </main>
   )

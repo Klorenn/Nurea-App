@@ -200,9 +200,13 @@ export async function GET(request: Request) {
       .maybeSingle()
 
     if (testProfData) {
+      const testProfileRecord = Array.isArray(testProfData.profile)
+        ? testProfData.profile[0]
+        : testProfData.profile
+
       testProfessional = {
         id: testProfData.id,
-        name: `Dr. ${testProfData.profile?.first_name || 'Nurea'} ${testProfData.profile?.last_name || 'Doctor'}`.trim(),
+        name: `Dr. ${testProfileRecord?.first_name || 'Nurea'} ${testProfileRecord?.last_name || 'Doctor'}`.trim(),
         specialty: testProfData.specialty || 'Médico General',
         specialtyEn: testProfData.specialty || 'General Medicine',
         location: testProfData.location || 'Santiago, Chile',
@@ -210,7 +214,7 @@ export async function GET(request: Request) {
         patientsServed: 0,
         price: testProfData.consultation_price || 35000,
         languages: ['ES', 'EN'],
-        image: testProfData.profile?.avatar_url || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&auto=format',
+        image: testProfileRecord?.avatar_url || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&auto=format',
         verified: testProfData.verified || true,
         isOnline: true,
         availableToday: true,

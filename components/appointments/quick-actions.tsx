@@ -17,6 +17,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { Input } from "@/components/ui/input"
 import { sanitizeMessage } from "@/lib/utils/sanitize"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { toast } from "sonner"
 
 interface QuickActionsProps {
   appointmentId: string
@@ -126,9 +127,23 @@ export function QuickActions({
     setError(null)
     setSuccess(null)
     try {
-      // Sanitizar motivo de cancelación
       const sanitizedReason = cancelReason ? sanitizeMessage(cancelReason) : null
 
+      // 1) Primero intentar reembolso en el Smart Contract (backend con llave admin; el paciente no firma)
+      const refundRes = await fetch("/api/escrow/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointment_id: appointmentId }),
+      })
+      const refundData = await refundRes.json()
+
+      if (!refundRes.ok) {
+        toast.error(isSpanish ? "No se pudo procesar el reembolso" : "Could not process refund")
+        setError(refundData.message || (isSpanish ? "No se pudo procesar el reembolso" : "Could not process refund"))
+        return
+      }
+
+      // 2) Solo si el reembolso fue exitoso (o skipped por no tener escrow), cancelar en Supabase
       const response = await fetch("/api/appointments/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -370,13 +385,13 @@ export function QuickActions({
               disabled={loading}
             >
               {loading 
-                ? (isSpanish ? "Cancelando..." : "Cancelling...")
+                ? (isSpanish ? "Procesando reembolso..." : "Processing refund...")
                 : (isSpanish ? "Confirmar Cancelación" : "Confirm Cancellation")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </TooltipProvider>
   )
 }
 

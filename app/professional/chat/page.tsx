@@ -26,7 +26,7 @@ function ChatContent() {
   const supabase = createClient()
   
   // Get presence status for all contacts
-  const { getPresenceStatus } = usePresence()
+  const { getPresenceStatus } = usePresence(contacts.map((contact) => contact.id))
 
   const loadContacts = useCallback(async () => {
     if (!user) return

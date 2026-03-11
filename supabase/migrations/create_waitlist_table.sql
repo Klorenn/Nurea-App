@@ -1,3 +1,5 @@
+-- Waitlist: tabla y políticas para lista de espera.
+-- Aplicar desde Supabase SQL Editor. Si hay error RLS, ejecutar antes uno de los *FIX*WAITLIST*.sql de esta carpeta.
 -- Crear tabla waitlist
 CREATE TABLE IF NOT EXISTS public.waitlist (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

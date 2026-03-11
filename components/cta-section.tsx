@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/language-context"
 import { motion } from "framer-motion"
-import { createClient } from "@/lib/supabase/client"
+import { LAUNCH_TARGET_DATE, getTimeLeftUntil } from "@/lib/countdown"
 
 export function CtaSection() {
   const { language } = useLanguage()
@@ -15,66 +15,37 @@ export function CtaSection() {
   const [isLoading, setIsLoading] = useState(false)
   const [waitlistCount, setWaitlistCount] = useState(0)
   
-  // Validar email
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
-  }
-  
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const isEmailValid = isValidEmail(email)
   
-  // Cuenta regresiva de 218 días desde hoy
-  const targetDate = new Date()
-  targetDate.setDate(targetDate.getDate() + 218)
-  
-  const [timeLeft, setTimeLeft] = useState({
+  const [timeLeft, setTimeLeft] = useState(() => ({
     days: 0,
     hours: 0,
     minutes: 0,
     seconds: 0,
-  })
+  }))
 
-  // Obtener conteo de waitlist
+  // Conteo de waitlist al montar y cada 30 s
   useEffect(() => {
     const fetchWaitlistCount = async () => {
       try {
-        const response = await fetch('/api/waitlist/count')
-        const data = await response.json()
-        setWaitlistCount(data.count || 0)
-      } catch (error) {
-        console.error('Error obteniendo conteo de waitlist:', error)
+        const res = await fetch("/api/waitlist/count")
+        const data = await res.json()
+        setWaitlistCount(data.count ?? 0)
+      } catch {
+        // silenciar en cliente
       }
     }
-
     fetchWaitlistCount()
-    // Actualizar el conteo cada 30 segundos
     const interval = setInterval(fetchWaitlistCount, 30000)
-
     return () => clearInterval(interval)
   }, [])
 
-  // Calcular tiempo restante
+  // Cuenta regresiva: se actualiza cada segundo hasta el 10 dic 2027
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime()
-      const target = targetDate.getTime()
-      const difference = target - now
-
-      if (difference > 0) {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24))
-        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
-        const seconds = Math.floor((difference % (1000 * 60)) / 1000)
-
-        setTimeLeft({ days, hours, minutes, seconds })
-      } else {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 })
-      }
-    }
-
-    calculateTimeLeft()
-    const timer = setInterval(calculateTimeLeft, 1000)
-
+    const tick = () => setTimeLeft(getTimeLeftUntil(LAUNCH_TARGET_DATE))
+    tick()
+    const timer = setInterval(tick, 1000)
     return () => clearInterval(timer)
   }, [])
 
@@ -84,44 +55,24 @@ export function CtaSection() {
 
     setIsLoading(true)
     try {
-      // Usar el cliente del navegador directamente (más simple y directo)
-      const supabase = createClient()
-      const { data: insertData, error: insertError } = await supabase
-        .from('waitlist')
-        .insert({
-          email: email.trim().toLowerCase(),
-        })
-        .select()
-        .single()
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      const data = await res.json()
 
-      if (insertError) {
-        // Si es error de duplicado, considerar éxito
-        if (insertError.code === '23505') {
-          setIsSubmitted(true)
-          // Obtener conteo actualizado
-          const { count } = await supabase
-            .from('waitlist')
-            .select('*', { count: 'exact', head: true })
-          setWaitlistCount(count || 0)
-          return
-        }
-
-        // Cualquier otro error
-        console.error('Error insertando:', insertError)
-        throw new Error(insertError.message || 'Error al agregar email')
+      if (!res.ok) {
+        const msg = data.message ?? data.error ?? (isSpanish ? "Error al agregar tu email. Intenta nuevamente." : "Error adding your email. Please try again.")
+        throw new Error(msg)
       }
 
-      // Éxito
       setIsSubmitted(true)
-      // Obtener conteo actualizado
-      const { count } = await supabase
-        .from('waitlist')
-        .select('*', { count: 'exact', head: true })
-      setWaitlistCount(count || 0)
-    } catch (error: any) {
-      console.error('Error:', error)
-      const errorMessage = error.message || (isSpanish ? 'Error al agregar tu email. Intenta nuevamente.' : 'Error adding your email. Please try again.')
-      alert(errorMessage)
+      setEmail("")
+      if (typeof data.count === "number") setWaitlistCount(data.count)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (isSpanish ? "Error al agregar tu email." : "Error adding your email.")
+      alert(msg)
     } finally {
       setIsLoading(false)
     }
@@ -153,22 +104,24 @@ export function CtaSection() {
 
           {/* Form Section */}
           {!isSubmitted ? (
-            <form onSubmit={handleSubmit} className="mb-6">
-              <div className="flex gap-2">
+            <form onSubmit={handleSubmit} className="mb-6" aria-label={isSpanish ? "Formulario lista de espera" : "Waitlist form"}>
+              <div className="flex flex-col sm:flex-row gap-2 min-w-0">
                 <Input
                   type="email"
                   placeholder={isSpanish ? "tu@email.com" : "your@email.com"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="flex-1 h-11 rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
+                  aria-label={isSpanish ? "Correo electrónico" : "Email address"}
+                  className="flex-1 min-w-0 h-11 rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-sm"
                 />
                 <Button
                   type="submit"
                   disabled={isLoading || !isEmailValid}
-                  className={`h-11 px-5 sm:px-6 rounded-lg text-sm text-white whitespace-nowrap transition-all duration-300 ${
+                  aria-label={isSpanish ? "Unirse a la lista de espera" : "Join the waitlist"}
+                  className={`h-11 px-5 sm:px-6 rounded-lg text-sm text-white whitespace-nowrap transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 active:opacity-90 ${
                     isEmailValid
-                      ? "bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 shadow-lg shadow-green-500/30"
+                      ? "bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 shadow-lg shadow-green-500/30 focus-visible:ring-green-400"
                       : "bg-gray-700 hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 opacity-60 cursor-not-allowed"
                   }`}
                 >

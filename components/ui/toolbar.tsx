@@ -13,7 +13,7 @@ import { useTranslations } from "@/lib/i18n"
 import { LanguageSelector } from "@/components/ui/language-selector"
 
 const transition = {
-  type: "spring",
+  type: "spring" as const,
   bounce: 0.1,
   duration: 0.25,
 }

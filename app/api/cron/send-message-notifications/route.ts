@@ -98,9 +98,9 @@ export async function GET(request: Request) {
     // Procesar cada notificación
     for (const notification of notifications) {
       try {
-        const receiver = notification.receiver
-        const sender = notification.sender
-        const message = notification.message
+        const receiver = notification.receiver as any
+        const sender = notification.sender as any
+        const message = notification.message as any
 
         if (!receiver?.email || !sender || !message) {
           // Marcar como enviada aunque falle (evitar reintentos infinitos)

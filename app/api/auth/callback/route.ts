@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       // Check if this is a new user (first time login with Google)
       let { data: profile } = await supabase
         .from('profiles')
-        .select('date_of_birth, email_verified')
+        .select('date_of_birth, email_verified, first_name, last_name, avatar_url')
         .eq('id', data.user.id)
         .single()
 
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
           // Fetch the newly created profile
           const { data: newProfile } = await supabase
             .from('profiles')
-            .select('date_of_birth, email_verified')
+            .select('date_of_birth, email_verified, first_name, last_name, avatar_url')
             .eq('id', data.user.id)
             .single()
           profile = newProfile

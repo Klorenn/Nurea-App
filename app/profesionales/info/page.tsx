@@ -4,7 +4,7 @@ import { Navbar } from "@/components/navbar"
 import { StackedCircularFooter } from "@/components/ui/stacked-circular-footer"
 import { PaperShaderBackground } from "@/components/ui/background-paper-shaders"
 import { useLanguage } from "@/contexts/language-context"
-import { motion } from "framer-motion"
+import { motion, type Variants } from "framer-motion"
 import { 
   Shield, 
   FileCheck, 
@@ -27,22 +27,22 @@ export default function ProfesionalesInfoPage() {
   const { language } = useLanguage()
   const isSpanish = language === "es"
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-      },
+      } as any,
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
       y: 0,
-      transition: { type: "spring", stiffness: 100, damping: 15 }
+      transition: { type: "spring", stiffness: 100, damping: 15 } as any,
     },
   }
 

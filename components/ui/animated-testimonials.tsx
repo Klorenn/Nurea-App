@@ -4,6 +4,7 @@ import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import { useEffect, useState } from "react"
+import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
 
 type Testimonial = {
@@ -22,6 +23,7 @@ export const AnimatedTestimonials = ({
   autoplay?: boolean
   className?: string
 }) => {
+  const { language } = useLanguage()
   const [active, setActive] = useState(0)
 
   const handleNext = () => {
@@ -153,18 +155,22 @@ export const AnimatedTestimonials = ({
               ))}
             </motion.p>
           </motion.div>
-          <div className="flex gap-4 pt-12 md:pt-0">
+          <div className="flex gap-4 pt-12 md:pt-0" role="group" aria-label={language === "es" ? "Navegar testimonios" : "Navigate testimonials"}>
             <button
+              type="button"
               onClick={handlePrev}
-              className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center group/button transition-colors"
+              className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:opacity-90 flex items-center justify-center group/button transition-colors outline-none"
+              aria-label={language === "es" ? "Testimonio anterior" : "Previous testimonial"}
             >
-              <IconArrowLeft className="h-5 w-5 text-primary group-hover/button:rotate-12 transition-transform duration-300" />
+              <IconArrowLeft className="h-5 w-5 text-primary group-hover/button:rotate-12 transition-transform duration-300" aria-hidden="true" />
             </button>
             <button
+              type="button"
               onClick={handleNext}
-              className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center group/button transition-colors"
+              className="h-10 w-10 rounded-full bg-primary/10 hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:opacity-90 flex items-center justify-center group/button transition-colors outline-none"
+              aria-label={language === "es" ? "Siguiente testimonio" : "Next testimonial"}
             >
-              <IconArrowRight className="h-5 w-5 text-primary group-hover/button:-rotate-12 transition-transform duration-300" />
+              <IconArrowRight className="h-5 w-5 text-primary group-hover/button:-rotate-12 transition-transform duration-300" aria-hidden="true" />
             </button>
           </div>
         </div>

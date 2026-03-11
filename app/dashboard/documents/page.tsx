@@ -138,12 +138,22 @@ export default function DocumentsPage() {
                   : "Everything is protected and only you and your authorized professionals have access"}
               </p>
             </div>
-            <Button 
-              className="rounded-xl font-bold"
-              onClick={() => setUploadDialogOpen(true)}
-            >
-              <Upload className="mr-2 h-4 w-4" /> {t.documents.upload}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                className="rounded-xl font-bold"
+                onClick={() => setUploadDialogOpen(true)}
+              >
+                <Upload className="mr-2 h-4 w-4" /> {t.documents.upload}
+              </Button>
+              <Button 
+                variant="outline"
+                className="rounded-xl font-bold"
+                onClick={() => setUploadDialogOpen(true)}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {isSpanish ? "Subir Examen" : "Upload Lab/Test"}
+              </Button>
+            </div>
           </div>
         </div>
 

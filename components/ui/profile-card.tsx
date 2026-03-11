@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { Star, Bookmark, Briefcase, Clock, DollarSign, MapPin, Video, Home, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { VerifiedBadge } from './verified-badge'
@@ -75,7 +75,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   const { language } = useLanguage()
   const isSpanish = language === "es"
 
-  const cardVariants = {
+  const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
@@ -84,11 +84,11 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
         duration: 0.4,
         ease: 'easeOut',
         staggerChildren: 0.1,
-      },
+      } as any,
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0 },
   }
@@ -235,22 +235,25 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           )}
 
           {/* Action Button */}
-          <motion.button
-            variants={itemVariants}
-            onClick={onGetInTouch || (() => window.location.href = `/professionals/${id}`)}
-            className="mt-6 w-full rounded-full bg-primary py-3 text-center font-semibold text-primary-foreground transition-transform active:scale-95 hover:bg-primary/90"
-            asChild={!onGetInTouch}
-          >
+          <motion.div variants={itemVariants} className="mt-6">
             {onGetInTouch ? (
-              <button onClick={onGetInTouch}>
+              <Button
+                onClick={onGetInTouch}
+                className="w-full rounded-full bg-primary py-3 text-center font-semibold text-primary-foreground transition-transform active:scale-95 hover:bg-primary/90"
+              >
                 {isSpanish ? "Contactar" : "Get in touch"}
-              </button>
+              </Button>
             ) : (
-              <Link href={`/professionals/${id}`}>
-                {isSpanish ? "Ver Perfil" : "View Profile"}
-              </Link>
+              <Button
+                asChild
+                className="w-full rounded-full bg-primary py-3 text-center font-semibold text-primary-foreground transition-transform active:scale-95 hover:bg-primary/90"
+              >
+                <Link href={`/professionals/${id}`}>
+                  {isSpanish ? "Ver Perfil" : "View Profile"}
+                </Link>
+              </Button>
             )}
-          </motion.button>
+          </motion.div>
         </div>
       </div>
     </motion.div>

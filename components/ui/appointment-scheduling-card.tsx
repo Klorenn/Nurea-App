@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, useReducedMotion, AnimatePresence } from "framer-motion"
+import { motion, useReducedMotion, AnimatePresence, type Variants, type Transition } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 import { ChevronLeft, ChevronRight, Calendar, Clock, MapPin, Video, Home, Star, CheckCircle2, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -13,6 +13,7 @@ import { formatShortDate, parseShortDate } from "@/lib/utils/date-helpers"
 interface TimeSlot {
   time: string
   available: boolean
+  type?: "online" | "in-person"
 }
 
 interface DaySchedule {
@@ -269,7 +270,7 @@ export function AppointmentSchedulingCard({
     onWeekChange?.(direction)
   }
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -280,29 +281,33 @@ export function AppointmentSchedulingCard({
     },
   }
 
-  const itemVariants = {
+  const itemSpringTransition: Transition = {
+    type: "spring",
+    stiffness: 400,
+    damping: 28,
+  }
+
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 10 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 28,
-      },
+      transition: itemSpringTransition,
     },
   }
 
-  const timeSlotVariants = {
+  const timeSlotSpringTransition: Transition = {
+    type: "spring",
+    stiffness: 400,
+    damping: 25,
+  }
+
+  const timeSlotVariants: Variants = {
     hidden: { opacity: 0, scale: 0.9 },
     visible: {
       opacity: 1,
       scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 25,
-      },
+      transition: timeSlotSpringTransition,
     },
   }
 

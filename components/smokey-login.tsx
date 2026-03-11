@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { User, Lock, ArrowRight, AlertCircle, Loader2, Stethoscope, CheckCircle2 } from "lucide-react"
+import { User, Lock, ArrowRight, AlertCircle, Loader2, Stethoscope, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { AnimatedInput } from "@/components/ui/animated-input"
+import { createClient } from "@/lib/supabase/client"
+import { getHumanErrorMessage } from "@/lib/auth/utils"
 import { useTheme } from "next-themes"
 import { TermsDialog } from "@/components/ui/terms-dialog"
 import { PrivacyDialog } from "@/components/ui/privacy-dialog"
@@ -92,7 +94,7 @@ export function SmokeyBackground({
   backdropBlurAmount = "sm",
   color = "#14B8A6", // Teal/Aqua green color
   className = "",
-}: SmokeyBackgroundProps): JSX.Element {
+}: SmokeyBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [isHovering, setIsHovering] = useState(false)
@@ -242,6 +244,14 @@ export function SmokeyBackground({
   )
 }
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+function isValidEmail(value: string): boolean {
+  return emailRegex.test(value.trim())
+}
+function isValidPassword(value: string): boolean {
+  return value.length >= 8
+}
+
 /**
  * A glassmorphism-style login form component with animated labels and Google login.
  */
@@ -253,39 +263,75 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+
+  const handleEmailBlur = () => {
+    if (!email.trim()) {
+      setEmailError(null)
+      return
+    }
+    setEmailError(isValidEmail(email) ? null : (language === "es" ? "Introduce un email válido" : "Enter a valid email address"))
+  }
+
+  const handlePasswordBlur = () => {
+    if (!password) {
+      setPasswordError(null)
+      return
+    }
+    setPasswordError(isValidPassword(password) ? null : (language === "es" ? "La contraseña debe tener al menos 8 caracteres" : "Password must be at least 8 characters"))
+  }
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError(null)
+    const emailValid = isValidEmail(email)
+    const passwordValid = isValidPassword(password)
+    setEmailError(emailValid ? null : (language === "es" ? "Introduce un email válido" : "Enter a valid email address"))
+    setPasswordError(passwordValid ? null : (language === "es" ? "La contraseña debe tener al menos 8 caracteres" : "Password must be at least 8 characters"))
+    if (!emailValid || !passwordValid) return
 
+    setLoading(true)
     try {
-      const response = await fetch("/api/auth/signin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      })
+      const supabase = createClient()
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        // Usar mensaje humano si está disponible
-        const errorMessage = data.message || data.error || "No pudimos iniciar sesión"
-        throw new Error(errorMessage)
-      }
-
-      // Verificar si requiere verificación de email
-      if (data.requiresVerification) {
-        router.push("/verify-email")
+      if (authError) {
+        const message = getHumanErrorMessage(authError.message, language === "es" ? "es" : "en")
+        setError(message)
+        setLoading(false)
         return
       }
 
-      // Redirigir según el rol y estado del perfil
-      const redirectPath = data.redirectPath || "/dashboard"
+      if (data.user && !data.user.email_confirmed_at) {
+        setError(getHumanErrorMessage("Email not confirmed", language === "es" ? "es" : "en"))
+        setLoading(false)
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, date_of_birth")
+        .eq("id", data.user.id)
+        .single()
+
+      const role = profile?.role || "patient"
+      const profileComplete = !!profile?.date_of_birth
+      let redirectPath = "/dashboard"
+      if (role === "professional") {
+        redirectPath = profileComplete ? "/professional/dashboard" : "/complete-profile"
+      } else if (role === "admin") {
+        redirectPath = "/admin"
+      } else {
+        redirectPath = profileComplete ? "/dashboard" : "/complete-profile"
+      }
+
       router.push(redirectPath)
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const message = err instanceof Error ? err.message : (language === "es" ? "Error al iniciar sesión" : "Error signing in")
+      setError(getHumanErrorMessage(message, language === "es" ? "es" : "en") || message)
     } finally {
       setLoading(false)
     }
@@ -326,10 +372,19 @@ export function LoginForm() {
             label={t.auth.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onBlur={handleEmailBlur}
             disabled={loading}
             required
             icon={User}
+            autoComplete="email"
+            aria-invalid={!!emailError}
+            aria-describedby={emailError ? "email-error" : undefined}
           />
+          {emailError && (
+            <p id="email-error" className="text-xs text-red-500 dark:text-red-400 px-1" role="alert">
+              {emailError}
+            </p>
+          )}
           <p className="text-[10px] text-muted-foreground px-1">
             {language === "es" 
               ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas."
@@ -337,18 +392,41 @@ export function LoginForm() {
           </p>
         </div>
 
-        {/* Password Input with Animated Label */}
+        {/* Password Input with Animated Label + visibility toggle */}
         <div className="space-y-1">
-          <AnimatedInput
-            type="password"
-            id="floating_password"
-            label={t.auth.password}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            required
-            icon={Lock}
-          />
+          <div className="relative">
+            <AnimatedInput
+              type={showPassword ? "text" : "password"}
+              id="floating_password"
+              label={t.auth.password}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={handlePasswordBlur}
+              disabled={loading}
+              required
+              icon={Lock}
+              autoComplete="current-password"
+              aria-invalid={!!passwordError}
+              aria-describedby={passwordError ? "password-error" : undefined}
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((p) => !p)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-teal-500 rounded p-1"
+              tabIndex={0}
+              aria-label={showPassword 
+                ? (language === "es" ? "Ocultar contraseña" : "Hide password") 
+                : (language === "es" ? "Mostrar contraseña" : "Show password")}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          {passwordError && (
+            <p id="password-error" className="text-xs text-red-500 dark:text-red-400 px-1" role="alert">
+              {passwordError}
+            </p>
+          )}
           <p className="text-[10px] text-muted-foreground px-1">
             {language === "es" 
               ? "Una contraseña fuerte protege tu información de salud."
@@ -422,10 +500,7 @@ export function LoginForm() {
       </form>
 
       <p className="text-center text-xs text-gray-600 dark:text-gray-300">
-        {t.auth.noAccount}{" "}
-        <a href="/signup" className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition">
-          {t.auth.signUp}
-        </a>
+        {t.auth.noAccount}
       </p>
 
       <div className="text-center text-[10px] leading-relaxed text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
@@ -450,6 +525,31 @@ export function LoginForm() {
   )
 }
 
+/** Especialidades para el select de profesionales (valor guardado igual en ES/EN). */
+const SPECIALTY_OPTIONS = [
+  "Medicina General",
+  "Psicología Clínica",
+  "Nutrición y Dietética",
+  "Kinesiología y Rehabilitación",
+  "Dermatología",
+  "Cardiología",
+  "Pediatría",
+  "Ginecología y Obstetricia",
+  "Traumatología",
+  "Medicina Interna",
+  "Otra",
+]
+
+function isAtLeast18(dateStr: string): boolean {
+  if (!dateStr) return false
+  const birth = new Date(dateStr)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age >= 18
+}
+
 /**
  * A glassmorphism-style signup form component with animated labels and Google signup.
  */
@@ -461,53 +561,130 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
   const [role, setRole] = useState<"patient" | "professional" | null>(initialRole || null)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState("")
+  const [dateOfBirthError, setDateOfBirthError] = useState<string | null>(null)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [specialty, setSpecialty] = useState("")
+  const [registrationNumber, setRegistrationNumber] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
 
+  const finalRole = initialRole || role
+  const isProfessional = finalRole === "professional"
+
+  const validateDateOfBirth = (value: string): boolean => {
+    if (!value) {
+      setDateOfBirthError(null)
+      return false
+    }
+    const valid = isAtLeast18(value)
+    setDateOfBirthError(valid ? null : t.auth.ageError)
+    return valid
+  }
+
+  const handleDateOfBirthBlur = () => {
+    validateDateOfBirth(dateOfBirth)
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Si hay initialRole, usar ese. Si no, usar el rol seleccionado
-    const finalRole = initialRole || role
     if (!finalRole) {
       setError(isSpanish ? "Por favor, selecciona un tipo de cuenta" : "Please select an account type")
       return
     }
 
+    if (!dateOfBirth.trim()) {
+      setDateOfBirthError(isSpanish ? "La fecha de nacimiento es obligatoria" : "Date of birth is required")
+      setError(null)
+      return
+    }
+    if (!validateDateOfBirth(dateOfBirth)) {
+      setError(null)
+      return
+    }
+    if (isProfessional) {
+      if (!specialty.trim()) {
+        setError(isSpanish ? "Selecciona tu especialidad principal" : "Please select your main specialty")
+        return
+      }
+      if (!registrationNumber.trim()) {
+        setError(isSpanish ? "El número de registro médico o RUT es obligatorio" : "Medical registration number or ID is required")
+        return
+      }
+    }
+
     setLoading(true)
     setError(null)
+    setDateOfBirthError(null)
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          firstName,
-          lastName,
-          role: finalRole,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        // Usar mensaje humano si está disponible
-        const errorMessage = data.message || data.error || (language === "es" ? "No pudimos crear tu cuenta" : "Failed to create account")
-        throw new Error(errorMessage)
+      const supabase = createClient()
+      const optionsData: Record<string, unknown> = {
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        role: finalRole,
+        date_of_birth: dateOfBirth,
+      }
+      if (isProfessional) {
+        optionsData.specialty = specialty.trim()
+        optionsData.registration_number = registrationNumber.trim()
       }
 
-      // Wait a moment for the session to be established
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Force a page reload to ensure session is established
-      window.location.href = "/complete-profile"
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: optionsData,
+          emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/verify-email`,
+        },
+      })
+
+      if (authError) {
+        const message = getHumanErrorMessage(authError.message, language === "es" ? "es" : "en")
+        setError(message)
+        setLoading(false)
+        return
+      }
+
+      if (!authData.user) {
+        setError(isSpanish ? "No se pudo crear la cuenta" : "Failed to create account")
+        setLoading(false)
+        return
+      }
+
+      if (authData.session) {
+        const res = await fetch("/api/auth/create-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            role: finalRole,
+            dateOfBirth: dateOfBirth,
+            ...(isProfessional && {
+              specialty: specialty.trim(),
+              registrationNumber: registrationNumber.trim(),
+            }),
+          }),
+        })
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}))
+          setError(json.message || (isSpanish ? "Error al crear el perfil" : "Error creating profile"))
+          setLoading(false)
+          return
+        }
+        router.push("/complete-profile")
+        router.refresh()
+      } else {
+        router.push("/verify-email")
+        router.refresh()
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const msg = err instanceof Error ? err.message : (isSpanish ? "Error al registrarse" : "An error occurred")
+      setError(getHumanErrorMessage(msg, language === "es" ? "es" : "en") || msg)
     } finally {
       setLoading(false)
     }
@@ -524,10 +701,10 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
   }
 
   return (
-    <div className="w-full max-w-sm p-6 space-y-5 bg-white/95 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-200/80 dark:border-teal-500/30 shadow-2xl relative z-20">
+    <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-8 flex flex-col gap-5 bg-white/95 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-200/80 dark:border-teal-500/30 shadow-lg sm:shadow-xl relative z-20">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t.auth.joinNurea}</h2>
-        <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{t.auth.startJourney}</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-normal">{t.auth.joinNurea}</h2>
+        <p className="mt-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed tracking-normal">{t.auth.startJourney}</p>
       </div>
 
       {error && (
@@ -539,68 +716,69 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
         </div>
       )}
 
-      {/* Solo mostrar selector de rol si no hay initialRole */}
-      {!initialRole && (
-        <div className="space-y-3">
-          <label className="text-center block text-xs font-semibold text-gray-700 dark:text-teal-300">
-            {t.auth.selectAccountType}
-          </label>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setRole("patient")
-              }}
+      <div className="flex flex-col gap-5">
+        <label className="text-center block text-sm font-semibold text-gray-700 dark:text-teal-300 tracking-normal" style={{ letterSpacing: "normal" }}>
+          {t.auth.selectAccountType}
+        </label>
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setRole("patient")
+            }}
+            className={cn(
+              "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
+              role === "patient"
+                ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
+                : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
+            )}
+            aria-pressed={role === "patient"}
+            aria-label={t.auth.imPatient}
+          >
+            <div
               className={cn(
-                "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
-                role === "patient"
-                  ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
-                  : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
+                "p-1.5 rounded-lg",
+                role === "patient" 
+                  ? "bg-teal-500 text-white" 
+                  : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
               )}
             >
-              <div
-                className={cn(
-                  "p-1.5 rounded-lg",
-                  role === "patient" 
-                    ? "bg-teal-500 text-white" 
-                    : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
-                )}
-              >
-                <User className="h-4 w-4" />
-              </div>
-              <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imPatient}</span>
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                setRole("professional")
-              }}
+              <User className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imPatient}</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setRole("professional")
+            }}
+            className={cn(
+              "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
+              role === "professional"
+                ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
+                : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
+            )}
+            aria-pressed={role === "professional"}
+            aria-label={t.auth.imProfessionalHealth}
+          >
+            <div
               className={cn(
-                "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
-                role === "professional"
-                  ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
-                  : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
+                "p-1.5 rounded-lg",
+                role === "professional" 
+                  ? "bg-teal-500 text-white" 
+                  : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
               )}
             >
-              <div
-                className={cn(
-                  "p-1.5 rounded-lg",
-                  role === "professional" 
-                    ? "bg-teal-500 text-white" 
-                    : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
-                )}
-              >
-                <Stethoscope className="h-4 w-4" />
-              </div>
-              <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imProfessional}</span>
-            </button>
-          </div>
+              <Stethoscope className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imProfessionalHealth}</span>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Mostrar badge del rol si hay initialRole */}
       {initialRole && (
@@ -624,10 +802,10 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
       )}
 
       {(role || initialRole) && (
-        <form onSubmit={handleSignUp} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="grid grid-cols-2 gap-3">
-            {/* First Name Input */}
-            <div className="space-y-1">
+        <form onSubmit={handleSignUp} className="flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ gap: "20px" }}>
+          {/* Inputs: gap vertical 20px, labels letter-spacing normal */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5" style={{ gap: "20px" }}>
+            <div className="flex flex-col gap-2">
               <AnimatedInput
                 type="text"
                 id="floating_firstname"
@@ -636,14 +814,12 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                 onChange={(e) => setFirstName(e.target.value)}
                 disabled={loading}
                 required
+                autoComplete="given-name"
+                variant="stacked"
               />
-              <p className="text-[9px] text-muted-foreground px-1">
-                {language === "es" ? "Tu nombre" : "Your name"}
-              </p>
+              <p className="text-[9px] text-muted-foreground px-0 tracking-normal">{language === "es" ? "Tu nombre" : "Your name"}</p>
             </div>
-
-            {/* Last Name Input */}
-            <div className="space-y-1">
+            <div className="flex flex-col gap-2">
               <AnimatedInput
                 type="text"
                 id="floating_lastname"
@@ -652,15 +828,90 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                 onChange={(e) => setLastName(e.target.value)}
                 disabled={loading}
                 required
+                autoComplete="family-name"
+                variant="stacked"
               />
-              <p className="text-[9px] text-muted-foreground px-1">
-                {language === "es" ? "Tu apellido" : "Your last name"}
-              </p>
+              <p className="text-[9px] text-muted-foreground px-0 tracking-normal">{language === "es" ? "Tu apellido" : "Your last name"}</p>
             </div>
           </div>
 
-          {/* Email Input */}
-          <div className="space-y-1">
+          {/* Fecha de nacimiento - label letter-spacing normal */}
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="floating_dob"
+              className="text-sm font-medium text-slate-700 dark:text-slate-200 tracking-normal"
+              style={{ letterSpacing: "normal" }}
+            >
+              {t.auth.dateOfBirth}
+            </label>
+            <input
+              type="date"
+              id="floating_dob"
+              value={dateOfBirth}
+              onChange={(e) => {
+                setDateOfBirth(e.target.value)
+                if (dateOfBirthError) validateDateOfBirth(e.target.value)
+              }}
+              onBlur={handleDateOfBirthBlur}
+              disabled={loading}
+              required
+              aria-invalid={!!dateOfBirthError}
+              aria-describedby={dateOfBirthError ? "dob-error" : undefined}
+              className="w-full rounded-lg border-2 border-teal-300/50 dark:border-teal-400/50 bg-white dark:bg-gray-900 py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-white focus:border-teal-500 dark:focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
+            />
+            {dateOfBirthError && (
+              <p id="dob-error" className="text-xs text-red-500 dark:text-red-400 px-0" role="alert">
+                {dateOfBirthError}
+              </p>
+            )}
+            <p className="text-[9px] text-muted-foreground px-0">
+              {isSpanish ? "Debes ser mayor de 18 años" : "You must be at least 18 years old"}
+            </p>
+          </div>
+
+          {/* Datos profesionales: más padding y separación clara */}
+          {isProfessional && (
+            <div className="flex flex-col gap-4 rounded-xl border border-teal-200/60 dark:border-teal-500/30 bg-teal-50/50 dark:bg-teal-500/10 p-5 mt-1">
+              <p className="text-sm font-semibold text-gray-800 dark:text-teal-200 tracking-normal" style={{ letterSpacing: "normal" }}>
+                {isSpanish ? "Datos profesionales" : "Professional details"}
+              </p>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="signup_specialty" className="text-sm font-medium text-slate-700 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
+                  {t.auth.mainSpecialty} *
+                </label>
+                <select
+                  id="signup_specialty"
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  disabled={loading}
+                  required={isProfessional}
+                  className="w-full rounded-lg border-2 border-teal-300/50 dark:border-teal-400/50 bg-white dark:bg-gray-900 py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-white focus:border-teal-500 dark:focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
+                  aria-required={isProfessional}
+                >
+                  <option value="">{isSpanish ? "Selecciona una especialidad" : "Select a specialty"}</option>
+                  {SPECIALTY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <AnimatedInput
+                  type="text"
+                  id="floating_registration"
+                  label={t.auth.registrationNumberRut}
+                  value={registrationNumber}
+                  onChange={(e) => setRegistrationNumber(e.target.value)}
+                  disabled={loading}
+                  required={isProfessional}
+                  autoComplete="off"
+                  variant="stacked"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Email */}
+          <div className="flex flex-col gap-2">
             <AnimatedInput
               type="email"
               id="floating_email_signup"
@@ -669,17 +920,17 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
               required
-              icon={User}
+              variant="stacked"
             />
-            <p className="text-[10px] text-muted-foreground px-1">
+            <p className="text-[10px] text-muted-foreground px-0">
               {language === "es" 
                 ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas y mantener tu información segura."
                 : "Your email is your identity on NUREA. We use it to confirm your appointments and keep your information secure."}
             </p>
           </div>
 
-          {/* Password Input */}
-          <div className="space-y-1">
+          {/* Contraseña */}
+          <div className="flex flex-col gap-2">
             <AnimatedInput
               type="password"
               id="floating_password_signup"
@@ -689,9 +940,9 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               disabled={loading}
               required
               minLength={6}
-              icon={Lock}
+              variant="stacked"
             />
-            <p className="text-[10px] text-muted-foreground px-1">
+            <p className="text-[10px] text-muted-foreground px-0">
               {language === "es" 
                 ? "Una contraseña fuerte protege tu información de salud. Solo tú y tus profesionales autorizados pueden acceder."
                 : "A strong password protects your health information. Only you and your authorized professionals can access it."}
@@ -730,7 +981,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
 
           <button
             type="submit"
-            disabled={loading || !role || !acceptedTerms || !acceptedPrivacy}
+            disabled={loading || !finalRole || !acceptedTerms || !acceptedPrivacy}
             className="group w-full flex items-center justify-center py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 disabled:cursor-not-allowed rounded-lg text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 relative z-10"
           >
             {loading ? (
