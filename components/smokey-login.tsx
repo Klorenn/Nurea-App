@@ -348,10 +348,10 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm p-8 space-y-6 bg-white/95 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-200/80 dark:border-teal-500/30 shadow-2xl">
+    <div className="w-full max-w-sm p-8 space-y-6 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-2xl">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t.auth.welcomeBack}</h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{t.auth.securePortal}</p>
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{t.auth.welcomeBack}</h2>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{t.auth.securePortal}</p>
       </div>
 
       {error && (
@@ -363,9 +363,9 @@ export function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleEmailSignIn} className="space-y-8">
+      <form onSubmit={handleEmailSignIn} className="space-y-6">
         {/* Email Input with Animated Label */}
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <AnimatedInput
             type="email"
             id="floating_email"
@@ -385,7 +385,7 @@ export function LoginForm() {
               {emailError}
             </p>
           )}
-          <p className="text-[10px] text-muted-foreground px-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0">
             {language === "es" 
               ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas."
               : "Your email is your identity on NUREA. We use it to confirm your appointments."}
@@ -393,7 +393,7 @@ export function LoginForm() {
         </div>
 
         {/* Password Input with Animated Label + visibility toggle */}
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="relative">
             <AnimatedInput
               type={showPassword ? "text" : "password"}
@@ -427,7 +427,7 @@ export function LoginForm() {
               {passwordError}
             </p>
           )}
-          <p className="text-[10px] text-muted-foreground px-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0">
             {language === "es" 
               ? "Una contraseña fuerte protege tu información de salud."
               : "A strong password protects your health information."}
@@ -463,8 +463,8 @@ export function LoginForm() {
 
         {/* Divider */}
         <div className="relative flex py-3 items-center">
-          <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-          <span className="flex-shrink mx-4 text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider">
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+          <span className="flex-shrink mx-4 text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">
             {t.auth.orContinue}
           </span>
           <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
@@ -475,7 +475,7 @@ export function LoginForm() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="group w-full flex items-center justify-center py-3 px-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-300"
+          className="group w-full flex items-center justify-center py-3 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 transition-all duration-300"
         >
           <svg className="w-5 h-5 mr-3" viewBox="0 0 48 48">
             <path
@@ -499,11 +499,11 @@ export function LoginForm() {
         </button>
       </form>
 
-      <p className="text-center text-xs text-gray-600 dark:text-gray-300">
+      <p className="text-center text-xs text-slate-600 dark:text-slate-300">
         {t.auth.noAccount}
       </p>
 
-      <div className="text-center text-[10px] leading-relaxed text-gray-500 dark:text-gray-400 pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
+      <div className="text-center text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 pt-3 border-t border-slate-200/50 dark:border-slate-700/50">
         <p className="flex flex-wrap items-center justify-center gap-1">
           <span>{t.auth.bySigningIn}</span>
           <Link 
@@ -701,10 +701,10 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
   }
 
   return (
-    <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-8 flex flex-col gap-5 bg-white/95 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-200/80 dark:border-teal-500/30 shadow-lg sm:shadow-xl relative z-20">
+    <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-8 flex flex-col gap-5 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-gray-200/90 dark:border-slate-700/80 shadow-2xl shadow-slate-300/40 dark:shadow-black/40 relative z-20">
       <div className="text-center">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-normal">{t.auth.joinNurea}</h2>
-        <p className="mt-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed tracking-normal">{t.auth.startJourney}</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-normal">{t.auth.joinNurea}</h2>
+        <p className="mt-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed tracking-normal">{t.auth.startJourney}</p>
       </div>
 
       {error && (
@@ -716,11 +716,11 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
         </div>
       )}
 
-      <div className="flex flex-col gap-5">
-        <label className="text-center block text-sm font-semibold text-gray-700 dark:text-teal-300 tracking-normal" style={{ letterSpacing: "normal" }}>
+      <div className="flex flex-col gap-3">
+        <label className="text-center block text-xs font-medium text-slate-500 dark:text-slate-400 tracking-normal" style={{ letterSpacing: "normal" }}>
           {t.auth.selectAccountType}
         </label>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={(e) => {
@@ -729,25 +729,16 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               setRole("patient")
             }}
             className={cn(
-              "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
+              "flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border transition-all relative z-10 text-sm font-medium",
               role === "patient"
-                ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
-                : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
+                ? "border-teal-500 bg-teal-500 text-white dark:bg-teal-500 dark:text-white"
+                : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500",
             )}
             aria-pressed={role === "patient"}
             aria-label={t.auth.imPatient}
           >
-            <div
-              className={cn(
-                "p-1.5 rounded-lg",
-                role === "patient" 
-                  ? "bg-teal-500 text-white" 
-                  : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
-              )}
-            >
-              <User className="h-4 w-4" />
-            </div>
-            <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imPatient}</span>
+            <User className="h-4 w-4 shrink-0" />
+            <span className="leading-tight">{t.auth.imPatient}</span>
           </button>
           <button
             type="button"
@@ -757,55 +748,39 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               setRole("professional")
             }}
             className={cn(
-              "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all relative z-10",
+              "flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border transition-all relative z-10 text-sm font-medium",
               role === "professional"
-                ? "border-teal-500 bg-teal-50 dark:bg-teal-500/20"
-                : "border-teal-200 dark:border-teal-300/30 bg-gray-50 dark:bg-white/5 hover:border-teal-300 dark:hover:border-teal-300/50",
+                ? "border-teal-500 bg-teal-500 text-white dark:bg-teal-500 dark:text-white"
+                : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500",
             )}
             aria-pressed={role === "professional"}
             aria-label={t.auth.imProfessionalHealth}
           >
-            <div
-              className={cn(
-                "p-1.5 rounded-lg",
-                role === "professional" 
-                  ? "bg-teal-500 text-white" 
-                  : "bg-teal-100 dark:bg-white/10 text-teal-600 dark:text-teal-300",
-              )}
-            >
-              <Stethoscope className="h-4 w-4" />
-            </div>
-            <span className="text-xs font-bold text-gray-900 dark:text-white leading-tight">{t.auth.imProfessionalHealth}</span>
+            <Stethoscope className="h-4 w-4 shrink-0" />
+            <span className="leading-tight">{t.auth.imProfessionalHealth}</span>
           </button>
         </div>
       </div>
 
-      {/* Mostrar badge del rol si hay initialRole */}
+      {/* Indicador sutil del rol cuando viene por URL */}
       {initialRole && (
-        <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-teal-50 dark:bg-teal-500/20 border border-teal-200 dark:border-teal-500/30">
-          {initialRole === "patient" ? (
-            <>
-              <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-              <span className="text-sm font-semibold text-teal-700 dark:text-teal-300">
-                {isSpanish ? "Registrándote como Paciente" : "Registering as Patient"}
-              </span>
-            </>
-          ) : (
-            <>
-              <Stethoscope className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-              <span className="text-sm font-semibold text-teal-700 dark:text-teal-300">
-                {isSpanish ? "Registrándote como Profesional" : "Registering as Professional"}
-              </span>
-            </>
-          )}
-        </div>
+        <p className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+          {initialRole === "patient"
+            ? (isSpanish ? "Registrándote como Paciente" : "Registering as Patient")
+            : (isSpanish ? "Registrándote como Profesional" : "Registering as Professional")}
+        </p>
       )}
 
       {(role || initialRole) && (
-        <form onSubmit={handleSignUp} className="flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ gap: "20px" }}>
-          {/* Inputs: gap vertical 20px, labels letter-spacing normal */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5" style={{ gap: "20px" }}>
-            <div className="flex flex-col gap-2">
+        <form onSubmit={handleSignUp} className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Área con scroll limitado y degradados de desvanecimiento */}
+          <div className="relative max-h-[60vh] overflow-y-auto scrollbar-form pr-1 -mr-1">
+            <div className="absolute top-0 left-0 right-2 h-6 bg-gradient-to-b from-white dark:from-slate-900 to-transparent pointer-events-none z-10" aria-hidden />
+            <div className="absolute bottom-0 left-0 right-2 h-6 bg-gradient-to-t from-white dark:from-slate-900 to-transparent pointer-events-none z-10" aria-hidden />
+            <div className="flex flex-col gap-4 py-0.5">
+          {/* Inputs: compact spacing, labels letter-spacing normal */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
               <AnimatedInput
                 type="text"
                 id="floating_firstname"
@@ -817,9 +792,9 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                 autoComplete="given-name"
                 variant="stacked"
               />
-              <p className="text-[9px] text-muted-foreground px-0 tracking-normal">{language === "es" ? "Tu nombre" : "Your name"}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0 tracking-normal">{language === "es" ? "Tu nombre" : "Your name"}</p>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <AnimatedInput
                 type="text"
                 id="floating_lastname"
@@ -831,12 +806,12 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                 autoComplete="family-name"
                 variant="stacked"
               />
-              <p className="text-[9px] text-muted-foreground px-0 tracking-normal">{language === "es" ? "Tu apellido" : "Your last name"}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0 tracking-normal">{language === "es" ? "Tu apellido" : "Your last name"}</p>
             </div>
           </div>
 
-          {/* Fecha de nacimiento - label letter-spacing normal */}
-          <div className="flex flex-col gap-2">
+          {/* Fecha de nacimiento */}
+          <div className="flex flex-col gap-1.5">
             <label
               htmlFor="floating_dob"
               className="text-sm font-medium text-slate-700 dark:text-slate-200 tracking-normal"
@@ -857,25 +832,25 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               required
               aria-invalid={!!dateOfBirthError}
               aria-describedby={dateOfBirthError ? "dob-error" : undefined}
-              className="w-full rounded-lg border-2 border-teal-300/50 dark:border-teal-400/50 bg-white dark:bg-gray-900 py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-white focus:border-teal-500 dark:focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
+              className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
             />
             {dateOfBirthError && (
               <p id="dob-error" className="text-xs text-red-500 dark:text-red-400 px-0" role="alert">
                 {dateOfBirthError}
               </p>
             )}
-            <p className="text-[9px] text-muted-foreground px-0">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0">
               {isSpanish ? "Debes ser mayor de 18 años" : "You must be at least 18 years old"}
             </p>
           </div>
 
-          {/* Datos profesionales: más padding y separación clara */}
+          {/* Datos profesionales: separador sutil y título, sin recuadro */}
           {isProfessional && (
-            <div className="flex flex-col gap-4 rounded-xl border border-teal-200/60 dark:border-teal-500/30 bg-teal-50/50 dark:bg-teal-500/10 p-5 mt-1">
-              <p className="text-sm font-semibold text-gray-800 dark:text-teal-200 tracking-normal" style={{ letterSpacing: "normal" }}>
+            <div className="flex flex-col gap-3 pt-5 mt-1 border-t border-slate-100 dark:border-slate-700/50">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
                 {isSpanish ? "Datos profesionales" : "Professional details"}
               </p>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 <label htmlFor="signup_specialty" className="text-sm font-medium text-slate-700 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
                   {t.auth.mainSpecialty} *
                 </label>
@@ -885,7 +860,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                   onChange={(e) => setSpecialty(e.target.value)}
                   disabled={loading}
                   required={isProfessional}
-                  className="w-full rounded-lg border-2 border-teal-300/50 dark:border-teal-400/50 bg-white dark:bg-gray-900 py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-white focus:border-teal-500 dark:focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
                   aria-required={isProfessional}
                 >
                   <option value="">{isSpanish ? "Selecciona una especialidad" : "Select a specialty"}</option>
@@ -894,7 +869,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 <AnimatedInput
                   type="text"
                   id="floating_registration"
@@ -911,7 +886,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
           )}
 
           {/* Email */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <AnimatedInput
               type="email"
               id="floating_email_signup"
@@ -922,7 +897,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               required
               variant="stacked"
             />
-            <p className="text-[10px] text-muted-foreground px-0">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0">
               {language === "es" 
                 ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas y mantener tu información segura."
                 : "Your email is your identity on NUREA. We use it to confirm your appointments and keep your information secure."}
@@ -930,7 +905,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
           </div>
 
           {/* Contraseña */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <AnimatedInput
               type="password"
               id="floating_password_signup"
@@ -942,7 +917,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               minLength={6}
               variant="stacked"
             />
-            <p className="text-[10px] text-muted-foreground px-0">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0">
               {language === "es" 
                 ? "Una contraseña fuerte protege tu información de salud. Solo tú y tus profesionales autorizados pueden acceder."
                 : "A strong password protects your health information. Only you and your authorized professionals can access it."}
@@ -954,9 +929,9 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               "h-3.5 w-3.5 shrink-0 mt-0.5 transition-colors",
               acceptedTerms && acceptedPrivacy 
                 ? "text-teal-500 dark:text-teal-400" 
-                : "text-gray-400 dark:text-gray-600"
+                : "text-slate-400 dark:text-slate-600"
             )} />
-            <p className="text-[10px] leading-relaxed text-gray-600 dark:text-gray-300">
+            <p className="text-[10px] leading-relaxed text-slate-600 dark:text-slate-300">
               {t.auth.agreeTerms}{" "}
               <TermsDialog onAccept={() => setAcceptedTerms(true)}>
                 <button 
@@ -982,7 +957,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
           <button
             type="submit"
             disabled={loading || !finalRole || !acceptedTerms || !acceptedPrivacy}
-            className="group w-full flex items-center justify-center py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 disabled:cursor-not-allowed rounded-lg text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 relative z-10"
+            className="group w-full flex items-center justify-center py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 disabled:cursor-not-allowed rounded-xl text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 relative z-10"
           >
             {loading ? (
               <>
@@ -996,14 +971,16 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
               </>
             )}
           </button>
+            </div>
+          </div>
 
           {/* Divider */}
           <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
-            <span className="flex-shrink mx-3 text-gray-500 dark:text-gray-400 text-[10px] font-medium uppercase tracking-wider">
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+            <span className="flex-shrink mx-3 text-slate-500 dark:text-slate-400 text-[10px] font-medium uppercase tracking-wider">
               {t.auth.orContinue}
             </span>
-            <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+            <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
           </div>
 
           {/* Google Signup Button */}
@@ -1011,7 +988,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
             type="button"
             onClick={handleGoogleSignUp}
             disabled={loading}
-            className="group w-full flex items-center justify-center py-2.5 px-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-all duration-300 relative z-10"
+            className="group w-full flex items-center justify-center py-2.5 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 transition-all duration-300 relative z-10"
           >
             <svg className="w-4 h-4 mr-2.5" viewBox="0 0 48 48">
               <path
@@ -1036,7 +1013,7 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
         </form>
       )}
 
-      <p className="text-center text-xs text-gray-600 dark:text-gray-300">
+      <p className="text-center text-xs text-slate-600 dark:text-slate-300">
         {t.auth.alreadyAccount}{" "}
         <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition">
           {t.auth.logIn}

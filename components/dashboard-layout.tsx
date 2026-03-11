@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
+import Image from "next/image"
 import { Calendar, CreditCard, Heart, LayoutDashboard, MessageSquare, Settings, User, LogOut, Bell, Star, HelpCircle, Users, FileText, DollarSign, Headphones, BarChart3, Globe } from "lucide-react"
 import {
   Sidebar,
@@ -64,9 +65,13 @@ export function DashboardLayout({
         <Sidebar collapsible="icon" className="border-r border-border bg-card">
           <SidebarHeader className="h-16 flex items-center gap-3 px-6 border-b border-border/40">
             <div className="flex items-center gap-2 overflow-hidden flex-1">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-                <span className="text-white font-bold text-lg leading-none">N</span>
-              </div>
+              <Image
+                src="/logo.png"
+                alt="NUREA"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-lg object-contain shrink-0"
+              />
               <span className="font-bold text-xl text-primary dark:text-teal-400 group-data-[collapsible=icon]:hidden transition-all duration-300">
                 NUREA<span className="text-xs text-muted-foreground ml-1">.app</span>
               </span>

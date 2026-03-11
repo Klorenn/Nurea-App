@@ -22,11 +22,6 @@ type DashboardMode = "patient" | "professional"
 const ESCROW_TOOLTIP_COPY =
   "Depósito en garantía: Tu pago se guarda en una bóveda segura (Smart Contract) y solo se transfiere al especialista cuando la consulta finaliza con éxito. Si se cancela, se te devuelve automáticamente."
 
-const PATIENT_APPOINTMENTS = [
-  { doctor: "Dra. Sofía Reyes", specialty: "Cardiología", time: "14:30", initials: "SR" },
-  { doctor: "Dr. Andrés Muñoz", specialty: "Psicología", time: "16:00", initials: "AM" },
-]
-
 const PROFESSIONAL_SCHEDULE = [
   { time: "09:00", patient: "María González", type: "Telemedicina" as const, escrow: true },
   { time: "10:30", patient: "Carlos López", type: "Presencial" as const, escrow: true },
@@ -62,20 +57,22 @@ export function NureaDashboardPreview() {
       <div className="mx-auto flex max-w-5xl flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
               Vista previa del panel
             </p>
-            <h2 className="mt-2 text-2xl font-semibold text-foreground">
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
               Un panel diseñado para cada tipo de usuario
             </h2>
           </div>
-          <div className="inline-flex rounded-full bg-card/60 p-1 text-xs shadow-sm">
+          <div className="relative z-50 inline-flex rounded-full bg-white dark:bg-slate-900/80 p-1 text-xs shadow-md border border-slate-200 dark:border-slate-600/60">
             <button
               type="button"
               onClick={() => setMode("patient")}
               className={cn(
-                "rounded-full px-3 py-1.5 transition-colors",
-                isPatient ? "bg-foreground text-background" : "text-muted-foreground",
+                "rounded-full px-4 py-2 transition-all duration-200",
+                isPatient
+                  ? "bg-[#009485] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white",
               )}
             >
               Pacientes
@@ -84,8 +81,10 @@ export function NureaDashboardPreview() {
               type="button"
               onClick={() => setMode("professional")}
               className={cn(
-                "rounded-full px-3 py-1.5 transition-colors",
-                !isPatient ? "bg-foreground text-background" : "text-muted-foreground",
+                "rounded-full px-4 py-2 transition-all duration-200",
+                !isPatient
+                  ? "bg-[#009485] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white",
               )}
             >
               Profesionales
@@ -98,35 +97,35 @@ export function NureaDashboardPreview() {
           className="sticky top-28"
           style={{ transform: `perspective(1200px) rotateX(${tilt}deg)` }}
         >
-          <div className="mx-auto max-w-5xl rounded-3xl border border-white/20 dark:border-border/60 bg-card/80 dark:bg-card/95 shadow-xl shadow-black/10 dark:shadow-black/5 backdrop-blur-xl">
+          <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200/80 dark:border-slate-600/40 bg-white dark:bg-slate-900/50 shadow-2xl shadow-slate-400/20 dark:shadow-black/20 backdrop-blur-xl">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-white/20 dark:border-border/60 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/50 px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-sm font-semibold text-white">
                   N
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-sm font-semibold tracking-tight text-slate-950 dark:text-white">
                     NUREA {isPatient ? "Paciente" : "Profesional"}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-slate-600 dark:text-slate-500">
                     {isPatient ? "Tu panel de salud" : "Tu práctica en un solo lugar"}
                   </span>
                 </div>
               </div>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400">
                 Vista previa del panel
               </Badge>
             </div>
 
             {/* Metric cards */}
-            <div className="grid gap-4 border-b border-white/20 dark:border-border/60 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 border-b border-slate-100 dark:border-slate-700/50 px-4 py-4 sm:grid-cols-2 lg:grid-cols-4">
               {isPatient ? (
                 <>
                   <MetricCard
                     icon={Calendar}
                     iconBg="bg-teal-100 dark:bg-teal-500/20"
-                    iconColor="text-teal-600 dark:text-teal-400"
+                    iconColor="text-teal-500"
                     label="Próximas citas"
                     value="2"
                     helper="Esta semana"
@@ -134,8 +133,8 @@ export function NureaDashboardPreview() {
                   />
                   <MetricCard
                     icon={MessageSquare}
-                    iconBg="bg-blue-100 dark:bg-blue-500/20"
-                    iconColor="text-blue-600 dark:text-blue-400"
+                    iconBg="bg-teal-100 dark:bg-teal-500/20"
+                    iconColor="text-teal-500"
                     label="Mensajes nuevos"
                     value="3"
                     helper="En tu bandeja"
@@ -143,16 +142,16 @@ export function NureaDashboardPreview() {
                   />
                   <MetricCard
                     icon={Stethoscope}
-                    iconBg="bg-violet-100 dark:bg-violet-500/20"
-                    iconColor="text-violet-600 dark:text-violet-400"
+                    iconBg="bg-teal-100 dark:bg-teal-500/20"
+                    iconColor="text-teal-500"
                     label="Profesionales favoritos"
                     value="5"
                     helper="Siempre a un clic"
                   />
                   <MetricCard
                     icon={Lock}
-                    iconBg="bg-emerald-100 dark:bg-emerald-500/25"
-                    iconColor="text-emerald-600 dark:text-emerald-400"
+                    iconBg="bg-teal-100 dark:bg-teal-500/20"
+                    iconColor="text-teal-500"
                     label="Pagos asegurados"
                     value="Escrow"
                     helper="Fondos protegidos hasta tu cita"
@@ -165,7 +164,7 @@ export function NureaDashboardPreview() {
                   <MetricCard
                     icon={Calendar}
                     iconBg="bg-teal-100 dark:bg-teal-500/20"
-                    iconColor="text-teal-600 dark:text-teal-400"
+                    iconColor="text-teal-500"
                     label="Citas de hoy"
                     value="7"
                     helper="Agenda organizada"
@@ -173,8 +172,8 @@ export function NureaDashboardPreview() {
                   />
                   <MetricCard
                     icon={Users}
-                    iconBg="bg-blue-100 dark:bg-blue-500/20"
-                    iconColor="text-blue-600 dark:text-blue-400"
+                    iconBg="bg-teal-100 dark:bg-teal-500/20"
+                    iconColor="text-teal-500"
                     label="Pacientes activos"
                     value="124"
                     helper="Con seguimiento"
@@ -182,16 +181,16 @@ export function NureaDashboardPreview() {
                   />
                   <MetricCard
                     icon={MessageSquare}
-                    iconBg="bg-violet-100 dark:bg-violet-500/20"
-                    iconColor="text-violet-600 dark:text-violet-400"
+                    iconBg="bg-teal-100 dark:bg-teal-500/20"
+                    iconColor="text-teal-500"
                     label="Mensajes por responder"
                     value="4"
                     helper="Mantén el contacto"
                   />
                   <MetricCard
                     icon={Activity}
-                    iconBg="bg-amber-100 dark:bg-amber-500/20"
-                    iconColor="text-amber-600 dark:text-amber-400"
+                    iconBg="bg-teal-100 dark:bg-teal-500/20"
+                    iconColor="text-teal-500"
                     label="Ingresos del mes"
                     value="$1.560"
                     helper="Pagos completados vía escrow"
@@ -201,79 +200,77 @@ export function NureaDashboardPreview() {
               )}
             </div>
 
-            {/* Content area: Citas de Hoy (Patient) or Agenda de la Mañana (Professional) */}
+            {/* Content area: Citas para Hoy (Patient) or Agenda de la Mañana (Professional) */}
             <div className="px-4 py-5">
               {isPatient ? (
                 <>
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">Citas de Hoy</h3>
-                      <p className="text-xs text-muted-foreground">
+                      <h3 className="text-sm font-semibold tracking-tight text-slate-950 dark:text-white">
+                        Citas para Hoy
+                      </h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-500">
                         Tus próximas consultas programadas
                       </p>
                     </div>
-                    <span className="rounded-full bg-muted/80 px-3 py-1 text-[11px] text-muted-foreground">
+                    <span className="rounded-full bg-slate-100 dark:bg-slate-700/50 px-3 py-1 text-[11px] text-slate-500 dark:text-slate-400">
                       Vista de ejemplo
                     </span>
                   </div>
-                  <div className="space-y-3">
-                    {PATIENT_APPOINTMENTS.map((apt, i) => (
-                      <div
-                        key={i}
-                        className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-border/50 bg-muted/30 dark:bg-muted/20 p-4 shadow-sm"
-                      >
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          <div className="h-12 w-12 shrink-0 rounded-full bg-teal-100 dark:bg-teal-500/20 flex items-center justify-center text-teal-700 dark:text-teal-300 font-semibold text-sm">
-                            {apt.initials}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-foreground truncate">{apt.doctor}</p>
-                            <p className="text-xs text-muted-foreground">{apt.specialty}</p>
-                            <p className="text-sm font-medium text-foreground mt-0.5">{apt.time}</p>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          className="w-full sm:w-auto shrink-0 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-medium"
-                        >
-                          <Video className="h-4 w-4 mr-2" />
-                          Unirse a Videollamada
-                        </Button>
+                  <div className="rounded-2xl border border-slate-100 dark:border-slate-700/50 bg-white dark:bg-slate-800/30 shadow-sm overflow-hidden">
+                    <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-500/20">
+                        <Video className="h-7 w-7 text-teal-500" aria-hidden />
                       </div>
-                    ))}
+                      <p className="text-sm font-medium text-slate-950 dark:text-white mb-1">
+                        No tienes citas agendadas aún
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 max-w-[220px]">
+                        Agenda una consulta online cuando lo necesites
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full border-slate-200 dark:border-slate-600 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-500/10 hover:border-teal-200 dark:hover:border-teal-500/30 font-medium"
+                      >
+                        Agendar cita online
+                      </Button>
+                    </div>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">Agenda de la Mañana</h3>
-                      <p className="text-xs text-muted-foreground">
+                      <h3 className="text-sm font-semibold tracking-tight text-slate-950 dark:text-white">
+                        Agenda de la Mañana
+                      </h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-500">
                         Próximas consultas y estado de pago
                       </p>
                     </div>
-                    <span className="rounded-full bg-muted/80 px-3 py-1 text-[11px] text-muted-foreground">
+                    <span className="rounded-full bg-slate-100 dark:bg-slate-700/50 px-3 py-1 text-[11px] text-slate-500 dark:text-slate-400">
                       Vista de ejemplo
                     </span>
                   </div>
                   <div className="relative">
                     {/* Timeline line */}
-                    <div className="absolute left-[43px] top-2 bottom-2 w-px bg-border/60" />
+                    <div className="absolute left-[43px] top-2 bottom-2 w-px bg-slate-200 dark:bg-slate-600/60" />
                     <ul className="space-y-0">
                       {PROFESSIONAL_SCHEDULE.map((item, i) => (
                         <li key={i} className="relative flex gap-4 py-3 first:pt-0">
-                          <div className="w-14 shrink-0 text-xs font-semibold text-muted-foreground tabular-nums pt-0.5">
+                          <div className="w-14 shrink-0 text-xs font-semibold text-slate-600 dark:text-slate-500 tabular-nums pt-0.5">
                             {item.time}
                           </div>
-                          <div className="flex-1 min-w-0 rounded-lg border border-border/50 bg-muted/30 dark:bg-muted/20 px-4 py-3 shadow-sm">
+                          <div className="flex-1 min-w-0 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-white dark:bg-slate-800/30 px-4 py-3 shadow-sm">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                              <p className="font-medium text-foreground">{item.patient}</p>
+                              <p className="font-medium text-slate-950 dark:text-white">{item.patient}</p>
                               <Badge
                                 variant="outline"
                                 className={cn(
                                   "text-[11px] font-medium",
                                   item.type === "Telemedicina"
-                                    ? "border-teal-500/50 bg-teal-500/10 text-teal-700 dark:text-teal-300"
+                                    ? "border-teal-500/50 bg-teal-500/10 text-teal-600 dark:text-teal-400"
                                     : "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300",
                                 )}
                               >
@@ -281,7 +278,7 @@ export function NureaDashboardPreview() {
                               </Badge>
                             </div>
                             {item.escrow && (
-                              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-teal-600 dark:text-teal-400">
                                 <Lock className="h-3.5 w-3.5" />
                                 Escrow bloqueado
                               </div>
@@ -325,9 +322,9 @@ function MetricCard({
   tooltipText,
 }: MetricCardProps) {
   return (
-    <Card className="border border-white/20 dark:border-border/40 bg-card/50 dark:bg-card shadow-sm hover:shadow-md transition-shadow">
+    <Card className="border border-slate-100 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 shadow-sm hover:shadow-md transition-shadow rounded-xl">
       <CardHeader className="pb-1 pt-4 px-4">
-        <CardTitle className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+        <CardTitle className="flex items-center justify-between gap-2 text-xs font-medium text-slate-600 dark:text-slate-500">
           <span className="flex items-center gap-2">
             <span
               className={cn(
@@ -351,7 +348,7 @@ function MetricCard({
       <CardContent className="pt-0 pb-4 px-4">
         {tooltipText ? (
           <div className="group relative flex items-center cursor-help w-fit">
-            <span className="text-xl font-bold text-foreground">{value}</span>
+            <span className="text-xl font-bold tracking-tight text-slate-950 dark:text-white">{value}</span>
             <Info className="ml-1.5 h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
             <div
               className="pointer-events-none absolute bottom-full left-0 mb-2 w-64 rounded-md bg-slate-800 p-3 text-xs text-white shadow-lg opacity-0 invisible transition-all duration-200 group-hover:opacity-100 group-hover:visible z-50"
@@ -361,9 +358,9 @@ function MetricCard({
             </div>
           </div>
         ) : (
-          <p className="text-xl font-bold text-foreground">{value}</p>
+          <p className="text-xl font-bold tracking-tight text-slate-950 dark:text-white">{value}</p>
         )}
-        <p className="mt-0.5 text-xs text-muted-foreground">{helper}</p>
+        <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-500">{helper}</p>
       </CardContent>
     </Card>
   )

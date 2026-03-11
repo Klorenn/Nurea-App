@@ -5,7 +5,7 @@ import { motion, type Variants, type Transition } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 const inputBaseClass =
-  "w-full rounded-lg border-2 border-teal-300/50 dark:border-teal-400/50 bg-white dark:bg-gray-900 py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-white placeholder:text-muted-foreground focus:border-teal-500 dark:focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
+  "w-full h-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
 
 interface AnimatedInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -57,10 +57,10 @@ export const AnimatedInput = ({
 
   if (variant === "stacked") {
     return (
-      <div className={cn("flex flex-col gap-2", className)}>
+      <div className={cn("flex flex-col gap-1.5", className)}>
         <label
           htmlFor={id}
-          className="text-sm font-medium text-slate-700 dark:text-slate-200 tracking-normal"
+          className="text-sm font-medium text-slate-700 dark:text-slate-300 tracking-normal"
         >
           {label}
         </label>
@@ -78,9 +78,9 @@ export const AnimatedInput = ({
   }
 
   return (
-    <div className={cn("relative z-0 min-h-[3.25rem]", className)}>
+    <div className={cn("relative z-0 h-10", className)}>
       <motion.div
-        className="absolute top-1/2 -translate-y-1/2 left-0 pointer-events-none flex items-center gap-2 z-10 text-slate-600 dark:text-slate-100 tracking-normal"
+        className="absolute top-1/2 -translate-y-1/2 left-0 pointer-events-none flex items-center gap-2 z-10 text-slate-700 dark:text-slate-300 tracking-normal"
         variants={containerVariants}
         initial="initial"
         animate={showLabel ? "animate" : "initial"}
@@ -113,7 +113,7 @@ export const AnimatedInput = ({
         value={value}
         {...props}
         autoComplete={props.type === "password" ? (id?.includes("signup") ? "new-password" : "current-password") : props.autoComplete}
-        className="outline-none border-b-2 border-teal-300/50 dark:border-teal-400/50 py-2.5 px-0 pr-8 w-full text-base font-medium text-slate-900 dark:text-white bg-transparent placeholder-transparent focus:border-teal-500 dark:focus:border-teal-400 transition-colors disabled:opacity-50 relative z-0 password-input-fix"
+        className="outline-none h-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-2 pl-3 pr-8 w-full text-sm text-slate-900 dark:text-slate-50 placeholder-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50 relative z-0 password-input-fix"
       />
     </div>
   )

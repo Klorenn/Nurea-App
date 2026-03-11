@@ -181,4 +181,26 @@
   .animate-gentle-rotate {
     animation: gentle-rotate 4s ease-in-out infinite;
   }
+
+  /* Scrollbar ultra delgada y minimalista para formularios (ej. registro) */
+  .scrollbar-form {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(204 251 241) transparent; /* teal-200 */
+  }
+  .scrollbar-form::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-form::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-form::-webkit-scrollbar-thumb {
+    background: rgb(204 251 241);
+    border-radius: 3px;
+  }
+  .dark .scrollbar-form {
+    scrollbar-color: rgb(45 212 191 / 0.4) transparent;
+  }
+  .dark .scrollbar-form::-webkit-scrollbar-thumb {
+    background: rgb(45 212 191 / 0.4);
+  }
 }

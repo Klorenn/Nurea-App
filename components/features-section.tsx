@@ -1,10 +1,34 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Heart, ShieldCheck, Zap, Users } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import Image from "next/image"
+
+// Fetch logic outside component so it's never a dependency and can't cause effect re-runs
+async function fetchProfessionalData(signal: AbortSignal): Promise<{
+  count: number
+  professionals: string[]
+}> {
+  const timestamp = new Date().getTime()
+  const response = await fetch(`/api/professionals/count?t=${timestamp}`, {
+    method: "GET",
+    cache: "no-store",
+    headers: { "Cache-Control": "no-cache" },
+    signal,
+  })
+  if (!response.ok) {
+    throw new Error(`API returned ${response.status}: ${response.statusText}`)
+  }
+  const data = await response.json()
+  const count = data.count !== undefined ? Number(data.count) : 0
+  const professionals =
+    Array.isArray(data.professionals) && data.professionals.length > 0
+      ? data.professionals
+      : []
+  return { count, professionals }
+}
 
 export function FeaturesSection() {
   const { language } = useLanguage()
@@ -13,74 +37,40 @@ export function FeaturesSection() {
   const [professionalAvatars, setProfessionalAvatars] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const didRunRef = useRef(false)
 
   useEffect(() => {
-    // Load real professional count and avatars
-    const loadData = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        // Add cache-busting timestamp to ensure fresh data
-        const timestamp = new Date().getTime()
-        const response = await fetch(`/api/professionals/count?t=${timestamp}`, {
-          method: 'GET',
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        })
-        
-        console.log('FeaturesSection: Fetching professional count, status:', response.status)
-        
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}: ${response.statusText}`)
-        }
-        
-        const data = await response.json()
-        console.log('FeaturesSection: Received data:', {
-          count: data.count,
-          avatarsCount: data.professionals?.length || 0,
-          timestamp: data.timestamp
-        })
-        
-        if (data.count !== undefined) {
-          setProfessionalCount(data.count)
-          console.log('FeaturesSection: Set professional count to:', data.count)
-        } else {
-          console.warn('FeaturesSection: No count in response, setting to 0')
-          setProfessionalCount(0)
-        }
-        
-        // Use avatars from the count endpoint if available
-        if (data.professionals && Array.isArray(data.professionals) && data.professionals.length > 0) {
-          setProfessionalAvatars(data.professionals)
-          console.log('FeaturesSection: Set avatars:', data.professionals)
-        } else {
-          console.log('FeaturesSection: No avatars in response, using defaults')
-          setProfessionalAvatars([])
-        }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        console.error('FeaturesSection: Error loading professional data:', err)
-        
-        // Check if it's a network error (server not running)
-        const isNetworkError = err instanceof TypeError && err.message.includes('fetch')
-        if (isNetworkError) {
-          console.warn('FeaturesSection: Server appears to be unavailable, showing fallback message')
-          setError('server_unavailable')
-        } else {
-          setError(errorMessage)
-        }
-        
-        // Set defaults on error - never show hardcoded 2,500+
-        setProfessionalCount(null) // null means "show generic message"
+    // Run exactly once on mount: guard against Strict Mode double-mount
+    if (didRunRef.current) return
+    didRunRef.current = true
+
+    const controller = new AbortController()
+    const signal = controller.signal
+
+    setLoading(true)
+    setError(null)
+
+    fetchProfessionalData(signal)
+      .then(({ count, professionals }) => {
+        if (signal.aborted) return
+        setProfessionalCount(count)
+        setProfessionalAvatars(professionals)
+      })
+      .catch((err) => {
+        if (signal.aborted) return
+        const errorMessage = err instanceof Error ? err.message : "Unknown error"
+        const isNetworkError =
+          err instanceof TypeError && err.message.includes("fetch")
+        setError(isNetworkError ? "server_unavailable" : errorMessage)
+        setProfessionalCount(null)
         setProfessionalAvatars([])
-      } finally {
-        setLoading(false)
-        console.log('FeaturesSection: Loading complete, count:', professionalCount)
-      }
-    }
-    loadData()
+      })
+      .finally(() => {
+        if (!signal.aborted) setLoading(false)
+      })
+
+    return () => controller.abort()
+    // Intentionally empty: run only on mount
   }, [])
 
   const benefits = [

@@ -19,7 +19,8 @@ const vertexSmokeySource = `
   }
 `
 
-// Fragment shader: fondo gris y celeste, animación solo por tiempo (sin cursor)
+// Fragment shader: movimiento turbulento / remolino (animación por tiempo).
+// Estructura conservada para niebla dinámica; colores inyectados vía u_color y u_gray (paleta pálida).
 const fragmentSmokeySource = `
 precision mediump float;
 
@@ -30,17 +31,15 @@ uniform vec3 u_gray;
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2 centeredUV = (2.0 * fragCoord - iResolution.xy) / min(iResolution.x, iResolution.y);
-    float time = iTime * 0.5;
+    float time = iTime * 0.6;
 
     vec2 distortion = centeredUV;
     for (float i = 1.0; i < 8.0; i++) {
-        distortion.x += 0.5 / i * cos(i * 2.0 * distortion.y + time);
-        distortion.y += 0.5 / i * cos(i * 2.0 * distortion.x + time);
+        distortion.x += 0.6 / i * cos(i * 2.0 * distortion.y + time);
+        distortion.y += 0.6 / i * cos(i * 2.0 * distortion.x + time * 1.1);
     }
-
     float wave = abs(sin(distortion.x + distortion.y + time));
-    float t = smoothstep(0.15, 0.82, wave);
-
+    float t = smoothstep(0.08, 0.92, wave);
     vec3 color = mix(u_gray, u_color, t);
     fragColor = vec4(color, 1.0);
 }
@@ -49,6 +48,129 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 `
+
+/**
+ * Fondo animado turbulento para auth (login/registro).
+ * WebGL con paleta de contraste: light = teal-200 / cyan-100 / blanco; dark = slate-950 + destellos teal-600.
+ * El movimiento turbulento es claramente visible en ambos temas. Capa -z-10, tarjeta con shadow-2xl.
+ */
+export function AuthPageBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === "dark"
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    // Fallback para modo oscuro si resolvedTheme aún no está (hidratación): leer clase en document
+    const dark =
+      resolvedTheme === "dark" ||
+      (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
+
+    const gl = canvas.getContext("webgl")
+    if (!gl) return
+
+    const compileShader = (type: number, source: string): WebGLShader | null => {
+      const shader = gl.createShader(type)
+      if (!shader) return null
+      gl.shaderSource(shader, source)
+      gl.compileShader(shader)
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error("Shader compilation error:", gl.getShaderInfoLog(shader))
+        gl.deleteShader(shader)
+        return null
+      }
+      return shader
+    }
+
+    const vertexShader = compileShader(gl.VERTEX_SHADER, vertexSmokeySource)
+    const fragmentShader = compileShader(gl.FRAGMENT_SHADER, fragmentSmokeySource)
+    if (!vertexShader || !fragmentShader) return
+
+    const program = gl.createProgram()
+    if (!program) return
+    gl.attachShader(program, vertexShader)
+    gl.attachShader(program, fragmentShader)
+    gl.linkProgram(program)
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      console.error("Program linking error:", gl.getProgramInfoLog(program))
+      return
+    }
+
+    gl.useProgram(program)
+
+    const positionBuffer = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
+      gl.STATIC_DRAW,
+    )
+
+    const positionLocation = gl.getAttribLocation(program, "a_position")
+    gl.enableVertexAttribArray(positionLocation)
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
+
+    const iResolutionLocation = gl.getUniformLocation(program, "iResolution")
+    const iTimeLocation = gl.getUniformLocation(program, "iTime")
+    const uColorLocation = gl.getUniformLocation(program, "u_color")
+    const uGrayLocation = gl.getUniformLocation(program, "u_gray")
+
+    let startTime = Date.now()
+
+    // Paleta con cuerpo: contraste para que el movimiento turbulento se vea claro y premium.
+    // Light: teal-200, cyan-100. Dark: slate-950 base, fluido teal-600 para movimiento claramente visible.
+    if (dark) {
+      gl.uniform3f(uGrayLocation, 0.008, 0.024, 0.09)   // slate-950 – base muy oscura
+      gl.uniform3f(uColorLocation, 0.11, 0.49, 0.47)   // teal-600 – destellos vibrantes visibles
+    } else {
+      gl.uniform3f(uColorLocation, 0.6, 0.965, 0.894)  // teal-200 – olas/humo claramente visibles
+      gl.uniform3f(uGrayLocation, 0.812, 0.98, 1.0)   // cyan-100 – base clara con cuerpo
+    }
+
+    let animationFrameId: number | null = null
+
+    const render = () => {
+      const width = canvas.clientWidth
+      const height = canvas.clientHeight
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width
+        canvas.height = height
+        gl.viewport(0, 0, width, height)
+      }
+      const currentTime = (Date.now() - startTime) / 1000
+      gl.uniform2f(iResolutionLocation, width, height)
+      gl.uniform1f(iTimeLocation, currentTime)
+      gl.drawArrays(gl.TRIANGLES, 0, 6)
+      animationFrameId = requestAnimationFrame(render)
+    }
+
+    render()
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId)
+    }
+  }, [isDark])
+
+  return (
+    <div
+      className="absolute inset-0 -z-10 min-h-screen w-full overflow-hidden pointer-events-none bg-transparent dark:bg-slate-950"
+      aria-hidden
+    >
+      <canvas ref={canvasRef} className="w-full h-full min-h-screen will-change-transform" />
+      {/* Overlay mínimo: no lavar el fluido; solo un leve degradado de borde para anclar la tarjeta */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: isDark
+            ? "linear-gradient(180deg, rgba(2,6,23,0.12) 0%, transparent 50%, rgba(2,6,23,0.08) 100%)"
+            : "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 40%, rgba(204,251,241,0.06) 100%)",
+        }}
+      />
+    </div>
+  )
+}
 
 interface SmokeyBackgroundProps {
   color?: string
@@ -239,26 +361,27 @@ export function LoginForm() {
   }
 
   const cardClass = isDark
-    ? "w-full max-w-sm p-8 space-y-6 bg-gray-900 backdrop-blur-xl rounded-2xl border border-gray-700 shadow-2xl"
-    : "w-full max-w-sm p-8 space-y-6 bg-white/96 backdrop-blur-xl rounded-2xl border border-gray-200 shadow-2xl"
-  const titleClass = isDark ? "text-3xl font-bold text-white" : "text-3xl font-bold text-gray-900"
-  const subtitleClass = isDark ? "mt-2 text-sm text-gray-300" : "mt-2 text-sm text-gray-600"
+    ? "w-full max-w-sm p-10 space-y-5 bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-slate-200/80 shadow-2xl shadow-slate-900/20"
+    : "w-full max-w-sm p-10 space-y-5 bg-white rounded-3xl border border-slate-200/90 shadow-2xl shadow-slate-400/15"
+  const titleClass = isDark
+    ? "text-3xl font-bold text-white tracking-tight"
+    : "text-3xl font-bold text-slate-900 tracking-tight"
+  const subtitleClass = isDark ? "mt-2 text-sm text-slate-400" : "mt-2 text-sm text-slate-600"
   const inputClass = isDark
-    ? "peer block w-full border-0 border-b-2 border-gray-600 bg-transparent py-2.5 px-0 text-sm text-white focus:border-sky-400 focus:outline-none focus:ring-0"
-    : "peer block w-full border-0 border-b-2 border-gray-300 bg-transparent py-2.5 px-0 text-sm text-gray-900 focus:border-sky-500 focus:outline-none focus:ring-0"
+    ? "peer block w-full h-10 rounded-lg border border-slate-200 bg-slate-900/40 backdrop-blur py-2 px-3 text-sm text-white placeholder-transparent placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors"
+    : "peer block w-full h-10 rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm text-slate-900 placeholder-transparent placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors"
   const labelClass = isDark
-    ? "absolute top-3 -z-10 origin-[0] -translate-y-6 scale-75 transform text-sm text-gray-400 transition-all peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:left-0 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-sky-400"
-    : "absolute top-3 -z-10 origin-[0] -translate-y-6 scale-75 transform text-sm text-gray-600 transition-all peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:left-0 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-sky-600"
-  const linkClass = isDark ? "text-xs text-sky-400 hover:text-sky-300" : "text-xs text-sky-600 hover:text-sky-800"
-  const btnPrimaryClass = isDark
-    ? "group flex w-full items-center justify-center rounded-lg bg-sky-500 py-3 px-4 font-semibold text-white transition-all duration-300 hover:bg-sky-400 disabled:bg-sky-500/50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-gray-900"
-    : "group flex w-full items-center justify-center rounded-lg bg-sky-500 py-3 px-4 font-semibold text-white transition-all duration-300 hover:bg-sky-600 disabled:bg-sky-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-gray-50"
+    ? "absolute left-3 top-1/2 -translate-y-1/2 -z-10 origin-left transform text-xs font-medium text-slate-400 transition-all duration-200 pointer-events-none peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-teal-400 peer-[&:not(:placeholder-shown)]:-translate-y-5 peer-[&:not(:placeholder-shown)]:scale-75"
+    : "absolute left-3 top-1/2 -translate-y-1/2 -z-10 origin-left transform text-xs font-medium text-slate-600 transition-all duration-200 pointer-events-none peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-teal-600 peer-[&:not(:placeholder-shown)]:-translate-y-5 peer-[&:not(:placeholder-shown)]:scale-75"
+  const linkClass = "text-sm font-semibold text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 transition"
+  const btnPrimaryClass =
+    "group flex w-full items-center justify-center rounded-lg bg-[#009485] py-3 px-4 font-semibold text-white shadow-lg shadow-teal-500/20 transition-all duration-300 hover:bg-[#007a6e] hover:shadow-teal-500/25 disabled:bg-[#009485]/50 disabled:shadow-none disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
   const btnGoogleClass = isDark
-    ? "flex w-full items-center justify-center rounded-lg bg-gray-800 py-2.5 px-4 text-sm font-semibold text-white transition-all duration-300 hover:bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-70"
-    : "flex w-full items-center justify-center rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-gray-700 transition-all duration-300 hover:bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-gray-50 disabled:opacity-70"
-  const dividerClass = isDark ? "text-xs text-gray-400" : "text-xs text-gray-400"
-  const footerClass = isDark ? "text-[10px] text-gray-400" : "text-[10px] text-gray-500"
-  const footerLinkClass = isDark ? "font-semibold text-sky-400 hover:text-sky-300 underline" : "font-semibold text-sky-600 hover:text-sky-800 underline"
+    ? "flex w-full items-center justify-center rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-slate-800 border border-slate-200 transition-all duration-300 hover:bg-slate-50 hover:shadow-md border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:ring-offset-2 dark:focus:ring-offset-slate-900 disabled:opacity-70"
+    : "flex w-full items-center justify-center rounded-lg bg-white py-2.5 px-4 text-sm font-semibold text-slate-700 border border-slate-200 transition-all duration-300 hover:bg-slate-50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-70"
+  const dividerClass = isDark ? "text-xs text-slate-400" : "text-xs text-slate-500"
+  const footerClass = isDark ? "text-[10px] text-slate-400" : "text-[10px] text-slate-500"
+  const footerLinkClass = "font-semibold text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 underline"
 
   return (
     <div className={cardClass}>
@@ -278,8 +401,8 @@ export function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="relative z-0">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="relative z-0 space-y-0.5">
           <input
             type="email"
             id="floating_email"
@@ -295,7 +418,7 @@ export function LoginForm() {
           </label>
         </div>
 
-        <div className="relative z-0">
+        <div className="relative z-0 space-y-0.5">
           <input
             type="password"
             id="floating_password"
@@ -336,11 +459,11 @@ export function LoginForm() {
         </button>
 
         <div className="relative flex items-center py-2">
-          <div className={isDark ? "flex-grow border-t border-gray-600" : "flex-grow border-t border-gray-200"} />
+          <div className={isDark ? "flex-grow border-t border-slate-600" : "flex-grow border-t border-slate-200"} />
           <span className={`mx-4 flex-shrink ${dividerClass}`}>
             {language === "es" ? "O CONTINÚA CON" : "OR CONTINUE WITH"}
           </span>
-          <div className={isDark ? "flex-grow border-t border-gray-600" : "flex-grow border-t border-gray-200"} />
+          <div className={isDark ? "flex-grow border-t border-slate-600" : "flex-grow border-t border-slate-200"} />
         </div>
 
         <button

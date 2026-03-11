@@ -23,6 +23,7 @@ export default function VerifyEmailPage() {
       const response = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       })
 
       const data = await response.json()
@@ -63,8 +64,18 @@ export default function VerifyEmailPage() {
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-              <div className="flex-1">
+              <div className="flex-1 space-y-2">
                 <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
+                {(error.includes("sesión") || error.includes("sesi")) && (
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    {language === "es"
+                      ? "Inicia sesión con tu correo y contraseña y vuelve a esta página para reenviar el email."
+                      : "Log in with your email and password, then return here to resend the email."}{" "}
+                    <Link href="/login" className="underline font-medium">
+                      {language === "es" ? "Ir al login" : "Go to login"}
+                    </Link>
+                  </p>
+                )}
               </div>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
@@ -44,11 +45,19 @@ export function Navbar({ sticky = true }: NavbarProps) {
         <div className="flex items-center justify-between h-16">
           <Link
             href="/"
-            className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-sm"
+            className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-sm"
             aria-label="NUREA - Inicio"
           >
+            <Image
+              src="/logo.png"
+              alt="NUREA"
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-lg object-contain"
+              priority
+            />
             <h2 className="font-sans text-2xl font-semibold text-primary">NUREA</h2>
-            <span className="ml-2 text-xs text-muted-foreground">.app</span>
+            <span className="ml-0.5 text-xs text-muted-foreground">.app</span>
           </Link>
 
           {/* Desktop nav */}

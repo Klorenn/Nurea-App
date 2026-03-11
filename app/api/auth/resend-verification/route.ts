@@ -1,64 +1,55 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-export async function POST(request: Request) {
+/**
+ * POST /api/auth/resend-verification
+ * Reenv?a el email de verificaci?n al usuario en sesi?n.
+ * El correo lo env?a Supabase (configura SMTP con Resend en el dashboard para mejor entrega).
+ */
+export async function POST() {
   try {
-    const { email } = await request.json()
-
-    if (!email) {
-      return NextResponse.json(
-        { 
-          error: 'email_required',
-          message: 'Por favor, ingresa tu email.'
-        },
-        { status: 400 }
-      )
-    }
-
     const supabase = await createClient()
-
-    // Verificar si el usuario existe
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
-    // Si no hay sesión, intentar obtener el usuario por email
     if (userError || !user) {
-      // No podemos verificar el email sin sesión, pero podemos intentar
-      // En producción, esto debería requerir autenticación
       return NextResponse.json(
-        { 
+        {
           error: 'not_authenticated',
-          message: 'Por favor, inicia sesión para reenviar el email de verificación.'
+          message: 'Inicia sesi?n para reenviar el email de verificaci?n.',
         },
         { status: 401 }
       )
     }
 
-    // Verificar si el email ya está verificado
     if (user.email_confirmed_at) {
       return NextResponse.json(
-        { 
+        {
           error: 'already_verified',
-          message: 'Tu email ya está verificado. Puedes iniciar sesión normalmente.'
+          message: 'Tu email ya est? verificado. Puedes iniciar sesi?n normalmente.',
         },
         { status: 400 }
       )
     }
 
-    // Reenviar email de verificación
+    const redirectUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+        ? `${process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL}`}`
+        : 'http://localhost:3000'
+
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: user.email!,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/verify-email`,
+        emailRedirectTo: `${redirectUrl}/verify-email`,
       },
     })
 
     if (error) {
-      console.error('Resend verification error:', error)
+      console.error('[resend-verification] Supabase resend error:', error)
       return NextResponse.json(
-        { 
+        {
           error: 'send_failed',
-          message: 'No pudimos enviar el email. Por favor, intenta nuevamente en unos momentos.'
+          message: 'No pudimos enviar el email. Configura SMTP en Supabase (p. ej. Resend) o int?ntalo m?s tarde.',
         },
         { status: 500 }
       )
@@ -66,17 +57,16 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Te hemos enviado un nuevo email de verificación. Revisa tu bandeja de entrada (y spam).'
+      message: 'Te hemos enviado un nuevo email de verificaci?n. Revisa tu bandeja de entrada (y spam).',
     })
   } catch (error) {
-    console.error('Resend verification error:', error)
+    console.error('[resend-verification]', error)
     return NextResponse.json(
-      { 
+      {
         error: 'server_error',
-        message: 'Algo salió mal. Por favor, intenta nuevamente en unos momentos.'
+        message: 'Algo sali? mal. Por favor, int?ntalo de nuevo en unos momentos.',
       },
       { status: 500 }
     )
   }
 }
-
