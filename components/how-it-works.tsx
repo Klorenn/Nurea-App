@@ -1,75 +1,133 @@
 "use client"
 
-import { Search, CalendarDays, MessageSquare, Star } from "lucide-react"
+import { Search, CalendarCheck, Video } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { useTranslations } from "@/lib/i18n"
+import { motion } from "framer-motion"
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+}
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15 }
+  }
+}
+
+type Step = {
+  icon: typeof Search
+  step: string
+  title: string
+  description: string
+}
 
 export function HowItWorks() {
   const { language } = useLanguage()
-  const t = useTranslations(language)
+  const isEs = language === "es"
 
-  const steps = [
+  const steps: Step[] = [
     {
       icon: Search,
-      title: t.landing.howItWorks.step1,
-      description: t.landing.howItWorks.step1Desc,
-      img: "/search-professionals.jpg",
+      step: isEs ? "Paso 1" : "Step 1",
+      title: isEs ? "Busca tu especialista" : "Find your specialist",
+      description: isEs 
+        ? "Elige entre cientos de profesionales de salud verificados. Filtra por especialidad, ubicación y disponibilidad."
+        : "Choose from hundreds of verified health professionals. Filter by specialty, location, and availability.",
     },
     {
-      icon: CalendarDays,
-      title: t.landing.howItWorks.step2,
-      description: t.landing.howItWorks.step2Desc,
-      img: "/booking-calendar.jpg",
+      icon: CalendarCheck,
+      step: isEs ? "Paso 2" : "Step 2",
+      title: isEs ? "Agenda tu cita" : "Book your appointment",
+      description: isEs 
+        ? "Selecciona el día y hora que mejor te acomode. Recibirás confirmación inmediata por correo."
+        : "Select the day and time that works best for you. You'll receive instant confirmation by email.",
     },
     {
-      icon: MessageSquare,
-      title: t.landing.howItWorks.step3,
-      description: t.landing.howItWorks.step3Desc,
-      img: "/secure-chat.jpg",
-    },
-    {
-      icon: Star,
-      title: t.landing.howItWorks.step4,
-      description: t.landing.howItWorks.step4Desc,
-      img: "/professional-rating.jpg",
+      icon: Video,
+      step: isEs ? "Paso 3" : "Step 3",
+      title: isEs ? "Asiste a tu consulta" : "Attend your consultation",
+      description: isEs 
+        ? "Conéctate desde cualquier lugar o asiste presencialmente. Tu salud, a tu manera."
+        : "Connect from anywhere or attend in person. Your health, your way.",
     },
   ]
 
   return (
-    <section className="py-16 md:py-20 px-4 sm:px-6 bg-transparent relative" aria-labelledby="how-it-works-heading">
-      <div className="max-w-7xl mx-auto w-full min-w-0">
-        <div className="text-center space-y-4 mb-12 md:mb-16">
-          <p className="text-secondary font-bold text-sm uppercase tracking-widest">{t.landing.howItWorks.simpleProcess}</p>
+    <section 
+      id="how-it-works"
+      className="py-20 md:py-28 px-4 sm:px-6 relative overflow-hidden bg-transparent" 
+      aria-labelledby="how-it-works-heading"
+    >
+      
+      <div className="max-w-6xl mx-auto w-full relative z-10">
+        {/* Header */}
+        <motion.div 
+          className="text-center space-y-4 mb-16"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={fadeInUp}
+        >
           <h2
             id="how-it-works-heading"
-            className="text-3xl sm:text-4xl lg:text-6xl text-foreground font-bold tracking-tight break-words"
-            dangerouslySetInnerHTML={{ __html: t.landing.howItWorks.title }}
-          />
-        </div>
+            className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-gray-900"
+          >
+            {isEs ? "Cómo funciona" : "How it works"}
+          </h2>
+          <p className="text-gray-800/70 text-lg max-w-2xl mx-auto">
+            {isEs 
+              ? "Agendar tu cita médica nunca fue tan fácil. Solo 3 pasos."
+              : "Booking your medical appointment has never been easier. Just 3 steps."
+            }
+          </p>
+        </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 min-w-0">
+        {/* Steps */}
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={staggerContainer}
+        >
           {steps.map((step, idx) => (
-            <div key={idx} className="flex flex-col gap-6 min-w-0">
-              <div className="relative aspect-[4/3] rounded-3xl overflow-hidden border border-border shadow-md group">
-                <img
-                  src={step.img || "/placeholder.svg"}
-                  alt={step.title}
-                  className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent p-6 flex items-end">
-                  <div className="w-12 h-12 rounded-xl bg-white/90 backdrop-blur shadow-lg flex items-center justify-center">
-                    <step.icon className="h-6 w-6 text-secondary" />
-                  </div>
+            <motion.div 
+              key={idx} 
+              className="relative text-center"
+              variants={fadeInUp}
+            >
+              {/* Connector line (only between cards on desktop) */}
+              {idx < steps.length - 1 && (
+                <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-0.5 bg-white/30" />
+              )}
+              
+              <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg shadow-black/5 border border-white/50">
+                {/* Step number */}
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-teal-600 text-white text-sm font-semibold px-4 py-1 rounded-full">
+                  {step.step}
                 </div>
+
+                {/* Icon */}
+                <div className="w-16 h-16 rounded-2xl bg-teal-100 text-teal-600 flex items-center justify-center mx-auto mb-6 mt-2">
+                  <step.icon className="h-8 w-8" />
+                </div>
+
+                {/* Title */}
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {step.title}
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 leading-relaxed">
+                  {step.description}
+                </p>
               </div>
-              <div className="space-y-3 px-2">
-                <h3 className="text-2xl font-bold text-foreground">{step.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{step.description}</p>
-              </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

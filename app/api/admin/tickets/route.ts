@@ -1,6 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+function isConnectionError(error: unknown): boolean {
+  if (!error) return false
+  const err = error as any
+  const message = (err?.message ?? err?.toString?.() ?? '') as string
+  const code = (err?.code ?? err?.status ?? '') as string
+
+  const normalized = `${message} ${code}`.toLowerCase()
+
+  return (
+    normalized.includes('connecttimeouterror') ||
+    normalized.includes('timeout') ||
+    normalized.includes('timed out') ||
+    normalized.includes('etimedout') ||
+    normalized.includes('network error') ||
+    normalized.includes('failed to fetch') ||
+    normalized.includes('fetch failed') ||
+    normalized.includes('getaddrinfo') ||
+    normalized.includes('enotfound')
+  )
+}
+
 /**
  * GET /api/admin/tickets
  * Obtiene todos los tickets de soporte (solo admin)
@@ -82,6 +103,18 @@ export async function GET(request: Request) {
 
     if (ticketsError) {
       console.error('Error fetching tickets:', ticketsError)
+
+      if (isConnectionError(ticketsError)) {
+        return NextResponse.json(
+          {
+            error: 'connection_error',
+            message:
+              'Error de conexión con el servidor de salud. Por favor, intenta de nuevo en unos segundos.',
+          },
+          { status: 503 }
+        )
+      }
+
       return NextResponse.json(
         { 
           error: 'fetch_failed',
@@ -98,6 +131,18 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Get tickets error:', error)
+
+    if (isConnectionError(error)) {
+      return NextResponse.json(
+        {
+          error: 'connection_error',
+          message:
+            'Error de conexión con el servidor de salud. Por favor, intenta de nuevo en unos segundos.',
+        },
+        { status: 503 }
+      )
+    }
+
     return NextResponse.json(
       { 
         error: 'server_error',
@@ -188,6 +233,18 @@ export async function PUT(request: Request) {
 
     if (updateError) {
       console.error('Error updating ticket:', updateError)
+
+      if (isConnectionError(updateError)) {
+        return NextResponse.json(
+          {
+            error: 'connection_error',
+            message:
+              'Error de conexión con el servidor de salud. Por favor, intenta de nuevo en unos segundos.',
+          },
+          { status: 503 }
+        )
+      }
+
       return NextResponse.json(
         { 
           error: 'update_failed',
@@ -197,12 +254,97 @@ export async function PUT(request: Request) {
       )
     }
 
+    if (
+      process.env.RESEND_API_KEY &&
+      (action === 'respond' || (action === 'update' && response)) &&
+      ticket &&
+      response
+    ) {
+      try {
+        const { createAdminClient } = await import('@/lib/supabase/admin')
+        const admin = createAdminClient()
+        const { data: authUser, error: authError } = await admin.auth.admin.getUserById(ticket.user_id)
+
+        if (authError) {
+          console.error('Error fetching auth user for ticket reply:', authError)
+
+          if (isConnectionError(authError)) {
+            return NextResponse.json(
+              {
+                error: 'connection_error',
+                message:
+                  'Error de conexión con el servidor de salud. Por favor, intenta de nuevo en unos segundos.',
+              },
+              { status: 503 }
+            )
+          }
+        }
+
+        const userEmail = authUser?.user?.email
+        if (userEmail) {
+          const { data: userProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, role')
+            .eq('id', ticket.user_id)
+            .single()
+
+          if (profileError) {
+            console.error('Error fetching user profile for ticket reply:', profileError)
+
+            if (isConnectionError(profileError)) {
+              return NextResponse.json(
+                {
+                  error: 'connection_error',
+                  message:
+                    'Error de conexión con el servidor de salud. Por favor, intenta de nuevo en unos segundos.',
+                },
+                { status: 503 }
+              )
+            }
+          }
+
+          const userName = userProfile
+            ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || 'Usuario'
+            : 'Usuario'
+          const supportUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+            ? `${process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL}`}`
+            : 'http://localhost:3000'
+          const supportLink = userProfile?.role === 'professional'
+            ? `${supportUrl}/professional/support`
+            : `${supportUrl}/dashboard/support`
+          const { sendSupportTicketReply } = await import('@/lib/email-service')
+          await sendSupportTicketReply({
+            to: userEmail,
+            userName,
+            ticketSubject: ticket.subject,
+            adminResponse: response,
+            supportLink,
+            ticketId: `${ticket.id}-${Date.now()}`,
+          })
+        }
+      } catch (emailErr) {
+        console.error('[admin/tickets] Reply email error:', emailErr)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       ticket: ticket
     })
   } catch (error) {
     console.error('Update ticket error:', error)
+
+    if (isConnectionError(error)) {
+      return NextResponse.json(
+        {
+          error: 'connection_error',
+          message:
+            'Error de conexión con el servidor de salud. Por favor, intenta de nuevo en unos segundos.',
+        },
+        { status: 503 }
+      )
+    }
+
     return NextResponse.json(
       { 
         error: 'server_error',

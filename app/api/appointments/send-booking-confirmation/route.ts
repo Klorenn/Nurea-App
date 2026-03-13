@@ -1,12 +1,15 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import { Resend } from "resend"
 import React from "react"
 import { BookingConfirmation } from "@/components/emails/BookingConfirmation"
 import { BookingConfirmationProfessional } from "@/components/emails/BookingConfirmationProfessional"
 import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
+import { getResend, sendBatchWithRetry, buildIdempotencyKey } from "@/lib/resend"
 
-const FROM = process.env.EMAIL_FROM || "NUREA <onboarding@resend.dev>"
+const FROM = process.env.SECURITY_EMAIL_FROM
+if (!FROM) {
+  throw new Error("SECURITY_EMAIL_FROM no está configurado en las variables de entorno.")
+}
 
 /**
  * POST /api/appointments/send-booking-confirmation
@@ -83,64 +86,66 @@ export async function POST(request: Request) {
     })
     const time = String(appointment.appointment_time).slice(0, 5)
 
-    const apiKey = process.env.RESEND_API_KEY
-    if (!apiKey) {
+    if (!process.env.RESEND_API_KEY) {
       console.error("[send-booking-confirmation] RESEND_API_KEY no configurada. Correos no enviados.")
       return NextResponse.json({ success: true, sent: false, reason: "email_not_configured" })
     }
 
-    const resend = new Resend(apiKey)
+    const resend = getResend()
     const meetingLink = appointment.type === "online" ? getJitsiMeetingUrl(appointmentId) : null
+
+    const batch: Parameters<typeof resend.batch.send>[0] = []
+    if (patientProfile?.email) {
+      batch.push({
+        from: FROM,
+        to: [patientProfile.email],
+        subject: `Tu cita con ${doctorName} está confirmada — Nurea`,
+        react: React.createElement(BookingConfirmation, {
+          patientName,
+          doctorName,
+          date,
+          time,
+          meetingLink,
+        }),
+      })
+    }
+    if (professionalProfile?.email) {
+      batch.push({
+        from: FROM,
+        to: [professionalProfile.email],
+        subject: `Nueva cita agendada: ${patientName} — Nurea`,
+        react: React.createElement(BookingConfirmationProfessional, {
+          professionalName,
+          patientName,
+          date,
+          time,
+          isOnline: appointment.type === "online",
+        }),
+      })
+    }
 
     let patientSent = false
     let professionalSent = false
 
-    try {
-      if (patientProfile?.email) {
-        const { data, error } = await resend.emails.send({
-          from: FROM,
-          to: [patientProfile.email],
-          subject: `Tu cita con ${doctorName} está confirmada — Nurea`,
-          react: React.createElement(BookingConfirmation, {
-            patientName,
-            doctorName,
-            date,
-            time,
-            meetingLink,
-          }),
-        })
+    if (batch.length > 0) {
+      try {
+        const { data, error } = await sendBatchWithRetry(
+          resend,
+          batch,
+          buildIdempotencyKey("batch-booking-confirmation", appointmentId)
+        )
         if (error) {
-          console.error("[send-booking-confirmation] Error email paciente:", error)
-        } else {
-          patientSent = true
+          console.error("[send-booking-confirmation] Batch error:", error)
+        } else if (data?.data) {
+          const results = data.data as { id?: string }[]
+          const patientIndex = patientProfile?.email ? 0 : -1
+          const professionalIndex = professionalProfile?.email ? (patientProfile?.email ? 1 : 0) : -1
+          patientSent = patientIndex >= 0 && !!results[patientIndex]?.id
+          professionalSent = professionalIndex >= 0 && !!results[professionalIndex]?.id
         }
+      } catch (e) {
+        console.error("[send-booking-confirmation] Exception:", e)
       }
-    } catch (e) {
-      console.error("[send-booking-confirmation] Excepción enviando email al paciente:", e)
-    }
-
-    try {
-      if (professionalProfile?.email) {
-        const { error } = await resend.emails.send({
-          from: FROM,
-          to: [professionalProfile.email],
-          subject: `Nueva cita agendada: ${patientName} — Nurea`,
-          react: React.createElement(BookingConfirmationProfessional, {
-            professionalName,
-            patientName,
-            date,
-            time,
-            isOnline: appointment.type === "online",
-          }),
-        })
-        if (error) {
-          console.error("[send-booking-confirmation] Error email profesional:", error)
-        } else {
-          professionalSent = true
-        }
-      }
-    } catch (e) {
-      console.error("[send-booking-confirmation] Excepción enviando email al profesional:", e)
     }
 
     return NextResponse.json({

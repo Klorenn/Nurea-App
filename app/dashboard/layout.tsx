@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Dashboard",
+  title: "Dashboard | NUREA",
   description: "Manage your appointments, messages, payments, and healthcare journey",
   robots: {
     index: false,
@@ -9,10 +9,10 @@ export const metadata: Metadata = {
   },
 }
 
-export default function DashboardLayout({
+export default function DashboardRootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return <>{children}</>
 }

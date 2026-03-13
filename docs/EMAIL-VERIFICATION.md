@@ -1,39 +1,46 @@
 # Correo de verificación (Resend + Supabase)
 
-Para que los usuarios reciban el email de verificación al registrarse (y al usar "Reenviar email" en `/verify-email`), Supabase debe enviar los correos a través de un SMTP configurado. Resend es la opción recomendada.
+## Cómo funciona ahora
+
+- **Al registrarse**: Supabase envía el primer email de confirmación (usa SMTP si lo configuras en el dashboard).
+- **"Reenviar email de verificación"** (página `/verify-email`): la app envía el correo **directamente con Resend** desde `notificaciones@nurea.app` usando la plantilla React Email, si tienes configurados `RESEND_API_KEY` y `SUPABASE_SERVICE_ROLE_KEY`. Si falta alguno, se usa el método de Supabase (`auth.resend()`), que depende de tener SMTP configurado en Supabase.
+
+Para que **lleguen los correos** al hacer clic en "Reenviar", configura lo siguiente.
 
 ## 1. Resend
 
-1. Crea cuenta en [resend.com](https://resend.com).
-2. Crea una **API Key** en [resend.com/api-keys](https://resend.com/api-keys).
-3. Verifica tu **dominio** en [resend.com/domains](https://resend.com/domains) (para producción; en desarrollo puedes usar el dominio de prueba de Resend).
-4. En tu proyecto, añade en `.env.local`:
-   - `RESEND_API_KEY=re_...` (para envíos desde la app, p. ej. confirmación de citas).
-   - `EMAIL_FROM=NUREA <noreply@tudominio.com>` (dominio verificado en Resend).
+1. Cuenta en [resend.com](https://resend.com).
+2. **API Key** en [resend.com/api-keys](https://resend.com/api-keys).
+3. **Dominio verificado** en [resend.com/domains](https://resend.com/domains). Para el remitente oficial de seguridad usa `notificaciones@nurea.app` (dominio `nurea.app` verificado).
 
-## 2. SMTP en Supabase (emails de auth)
+## 2. Variables de entorno
 
-Los emails de **confirmación de cuenta** y **reenviar verificación** los envía Supabase. Para que salgan por Resend:
+En `.env.local` (y en Vercel/producción):
 
-1. En [Supabase Dashboard](https://supabase.com/dashboard) → tu proyecto → **Authentication** → **Email Templates** (o **SMTP Settings** según la versión).
-2. Activa **Custom SMTP** y usa:
+| Variable | Uso |
+|----------|-----|
+| `RESEND_API_KEY` | Envío con Resend (verificación, recuperación, etc.). |
+| `SUPABASE_SERVICE_ROLE_KEY` | Necesario para generar el enlace de verificación y enviarlo por Resend (solo backend). |
+| `SECURITY_EMAIL_FROM` | **Obligatorio.** Remitente verificado en Resend (ej. `NUREA <notificaciones@nurea.app>`). El dominio debe estar verificado en el dashboard de Resend. |
+| `NEXT_PUBLIC_SITE_URL` | Origen de la app (p. ej. `https://nurea.app`) para que el enlace de verificación apunte al callback correcto. |
 
-   | Campo     | Valor              |
-   |----------|---------------------|
-   | Host     | `smtp.resend.com`   |
-   | Port     | `465`               |
-   | User     | `resend`            |
-   | Password | Tu **Resend API Key** |
+Sin `SUPABASE_SERVICE_ROLE_KEY` o sin `RESEND_API_KEY`, el reenvío usa `supabase.auth.resend()` y depende del SMTP de Supabase (ver siguiente sección).
 
-3. Configura el remitente (Sender email) con un email de tu dominio verificado en Resend (p. ej. `noreply@tudominio.com`).
-4. Guarda los cambios.
+## 3. SMTP en Supabase (opcional)
+
+Si quieres que **el primer email** (justo después del registro) también salga por Resend y no depender del envío por defecto de Supabase:
+
+1. [Supabase Dashboard](https://supabase.com/dashboard) → tu proyecto → **Authentication** → **SMTP Settings**.
+2. Activa **Custom SMTP**:
+   - Host: `smtp.resend.com`
+   - Port: `465`
+   - User: `resend`
+   - Password: tu **Resend API Key**
+3. Sender email: un email de tu dominio verificado en Resend (p. ej. `notificaciones@nurea.app`).
 
 Referencia: [Resend – Send with Supabase SMTP](https://resend.com/docs/send-with-supabase-smtp).
 
-## 3. Comportamiento en la app
+## 4. Resumen
 
-- **Registro**: al hacer `signUp`, Supabase envía el email de confirmación usando el SMTP configurado (Resend).
-- **Página “Verifica tu email”** (`/verify-email`): el botón "Reenviar email de verificación" llama a `POST /api/auth/resend-verification`. Ese endpoint usa la sesión actual y pide a Supabase que reenvíe el correo (también vía Resend si el SMTP está configurado).
-- **Tras hacer clic en el enlace**: el usuario llega a tu sitio (p. ej. `/verify-email` con tokens en la URL); Supabase confirma el email y la sesión queda verificada.
-
-Si no configuras SMTP en Supabase, los correos de auth pueden no llegarse a enviar o tener límites muy bajos; con Resend SMTP funcionan la verificación inicial y el reenvío.
+- Para que **"Reenviar email de verificación"** envíe con Resend y llegue el correo: `RESEND_API_KEY` + `SUPABASE_SERVICE_ROLE_KEY` + `SECURITY_EMAIL_FROM` con dominio verificado en Resend.
+- Textos y encoding de los mensajes de error de la API están en UTF-8 (sin `?` en lugar de tildes).

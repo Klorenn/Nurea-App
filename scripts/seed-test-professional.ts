@@ -1,3 +1,11 @@
+import dotenv from "dotenv"
+dotenv.config({ path: ".env.local" })
+
+console.log(
+  "Claves SUPABASE detectadas (seed-test-professional):",
+  Object.keys(process.env).filter((k) => k.toUpperCase().includes("SUPABASE"))
+)
+
 /**
  * Script para seedear el profesional de prueba "Nurea-Doctor" en la base de datos
  * 

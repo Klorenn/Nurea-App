@@ -1,21 +1,31 @@
 import { NextResponse } from "next/server"
-import { getResend, DEFAULT_FROM } from "@/lib/resend"
+import { getResend, sendSingleWithRetry, buildIdempotencyKey } from "@/lib/resend"
+
+const FROM = process.env.SECURITY_EMAIL_FROM
+if (!FROM) {
+  throw new Error("SECURITY_EMAIL_FROM no está configurado en las variables de entorno.")
+}
 
 /**
  * POST /api/email/test
- * Sends a test "Hello World" email to pautelluscoop@gmail.com.
- * Use this to verify Resend is configured (RESEND_API_KEY in .env.local).
+ * Envía un email de prueba a pautelluscoop@gmail.com.
+ * Con SECURITY_EMAIL_FROM (dominio verificado) Resend permite enviar a cualquier correo.
+ * Idempotency: test-email/<timestamp>.
  */
 export async function POST() {
   try {
     const resend = getResend()
 
-    const { data, error } = await resend.emails.send({
-      from: DEFAULT_FROM,
-      to: "pautelluscoop@gmail.com",
-      subject: "Hello World",
-      html: "<p>Congrats on sending your <strong>first email</strong>!</p>",
-    })
+    const { data, error } = await sendSingleWithRetry(
+      resend,
+      {
+        from: FROM,
+        to: ["pautelluscoop@gmail.com"],
+        subject: "Hello World",
+        html: "<p>Congrats on sending your <strong>first email</strong>!</p>",
+      },
+      buildIdempotencyKey("test-email", String(Date.now()))
+    )
 
     if (error) {
       console.error("[email/test] Resend error:", error)

@@ -147,6 +147,26 @@ export async function POST(request: Request) {
     }
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+    ? `${process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL}`}`
+    : 'http://localhost:3000'
+  const dashboardPath = role === 'professional' ? '/professional/dashboard' : '/dashboard'
+  const dashboardLink = `${siteUrl}${dashboardPath}`
+
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const { sendWelcome } = await import('@/lib/email-service')
+      await sendWelcome({
+        to: data.user.email!,
+        userName: firstName,
+        role: role as 'patient' | 'professional',
+        dashboardLink,
+      })
+    } catch (welcomeErr) {
+      console.error('[signup] Welcome email error:', welcomeErr)
+    }
+  }
+
   return NextResponse.json({ 
     user: data.user,
     message: 'Please check your email to verify your account'

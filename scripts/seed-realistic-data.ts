@@ -1,3 +1,11 @@
+import dotenv from "dotenv"
+dotenv.config({ path: ".env.local" })
+
+console.log(
+  "Claves SUPABASE detectadas (seed-realistic-data):",
+  Object.keys(process.env).filter((k) => k.toUpperCase().includes("SUPABASE"))
+)
+
 /**
  * Script de seed con datos realistas para Supabase
  * 

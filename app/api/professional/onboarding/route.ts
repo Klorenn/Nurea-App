@@ -192,6 +192,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const {
       specialty,
+      specialtyId, // Nuevo: ID de especialidad del sistema de taxonomía
       bio,
       bioExtended,
       services,
@@ -215,7 +216,26 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     }
 
-    if (specialty !== undefined) professionalUpdate.specialty = specialty
+    // Si se proporciona specialtyId, usarlo y obtener el nombre de la especialidad
+    if (specialtyId !== undefined) {
+      professionalUpdate.specialty_id = specialtyId
+      
+      // Obtener el nombre de la especialidad para mantener compatibilidad
+      if (specialtyId) {
+        const { data: specialtyData } = await supabase
+          .from('specialties')
+          .select('name_es')
+          .eq('id', specialtyId)
+          .single()
+        
+        if (specialtyData) {
+          professionalUpdate.specialty = specialtyData.name_es
+        }
+      }
+    } else if (specialty !== undefined) {
+      // Fallback: usar specialty texto si no hay specialtyId
+      professionalUpdate.specialty = specialty
+    }
     if (bio !== undefined) professionalUpdate.bio = bio
     if (bioExtended !== undefined) professionalUpdate.bio_extended = bioExtended
     if (services !== undefined) professionalUpdate.services = services

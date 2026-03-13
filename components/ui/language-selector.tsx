@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { ChevronDown, Check } from "lucide-react"
+import { Globe, Check } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
 const languages = [
-  { code: "es", label: "Español", flag: "🇪🇸" },
-  { code: "en", label: "English", flag: "🇺🇸" },
+  { code: "es", label: "Español", short: "ES" },
+  { code: "en", label: "English", short: "EN" },
 ]
 
 interface LanguageSelectorProps {
@@ -33,31 +33,26 @@ export const LanguageSelector = ({ compact = false }: LanguageSelectorProps) => 
 
   return (
     <div className="relative inline-block z-50" ref={dropdownRef}>
-      {/* Trigger Button */}
+      {/* Ultra-minimal trigger */}
       <button
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium",
-          compact 
-            ? "bg-transparent border-border/40 hover:bg-accent/50" 
-            : "bg-white/90 dark:bg-neutral-900/95 backdrop-blur-md shadow-lg border-2 border-gray-300 dark:border-neutral-600",
-          "text-foreground",
-          "hover:bg-accent/50 dark:hover:bg-accent/20 transition-all",
+          "flex items-center justify-center rounded-full transition-all",
+          "h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent/50",
           "z-50 pointer-events-auto cursor-pointer"
         )}
+        aria-label={`Language: ${selected.label}`}
       >
-        <span className="text-base">{selected.flag}</span>
-        {!compact && <span className="hidden sm:inline text-xs">{selected.label}</span>}
-        <ChevronDown className="h-3 w-3" />
+        <Globe className="h-4 w-4" />
       </button>
 
       {/* Dropdown Menu */}
       {open && (
         <div
           className={cn(
-            "absolute right-0 mt-2 w-48 rounded-xl overflow-hidden z-50",
-            "bg-white/90 dark:bg-neutral-900/95 backdrop-blur-xl",
-            "shadow-lg border border-gray-200 dark:border-neutral-700",
+            "absolute right-0 mt-2 w-36 rounded-xl overflow-hidden z-50",
+            "bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl",
+            "shadow-xl border border-gray-200/50 dark:border-neutral-700/50",
             "animate-in fade-in slide-in-from-top-2 duration-200"
           )}
         >
@@ -69,16 +64,16 @@ export const LanguageSelector = ({ compact = false }: LanguageSelectorProps) => 
                 setOpen(false)
               }}
               className={cn(
-                "flex items-center gap-2 w-full px-3 py-2 text-sm text-left transition-colors",
+                "flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-left transition-colors",
                 selected.code === lang.code
-                  ? "font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/20"
-                  : "text-gray-800 dark:text-neutral-200 hover:bg-gray-100 dark:hover:bg-neutral-800"
+                  ? "font-medium text-teal-600 dark:text-teal-400 bg-teal-50/80 dark:bg-teal-950/30"
+                  : "text-gray-700 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-800/50"
               )}
             >
-              <span>{lang.flag}</span>
+              <span className="text-xs font-semibold text-muted-foreground w-5">{lang.short}</span>
               <span className="flex-1">{lang.label}</span>
               {selected.code === lang.code && (
-                <Check className="h-4 w-4 text-teal-500 dark:text-teal-400" />
+                <Check className="h-3.5 w-3.5 text-teal-500 dark:text-teal-400" />
               )}
             </button>
           ))}

@@ -1,62 +1,45 @@
-import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
-import { getHumanErrorMessage } from '@/lib/auth/utils'
+import { NextResponse } from "next/server"
+import { requestPasswordReset } from "@/actions/auth"
 
+/**
+ * POST /api/auth/forgot-password
+ * Delega en la Server Action que usa supabase.auth.resetPasswordForEmail(email)
+ * con redirectTo a /auth/update-password.
+ */
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const email = typeof body?.email === "string" ? body.email.trim() : ""
 
     if (!email) {
       return NextResponse.json(
-        { 
-          error: 'email_required',
-          message: 'Por favor, ingresa tu email para recuperar tu contraseña.'
+        {
+          error: "email_required",
+          message: "Por favor, ingresa tu email para recuperar tu contraseña.",
         },
         { status: 400 }
       )
     }
 
-    // Validar formato de email básico
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    const result = await requestPasswordReset(email)
+
+    if (!result.success) {
       return NextResponse.json(
-        { 
-          error: 'invalid_email',
-          message: 'Por favor, ingresa un email válido. Lo necesitamos para enviarte el enlace de recuperación.'
-        },
+        { error: "validation_error", message: result.error },
         { status: 400 }
       )
-    }
-
-    const supabase = await createClient()
-
-    // Enviar email de recuperación de contraseña
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/reset-password`,
-    })
-
-    if (error) {
-      // No revelar si el email existe o no por seguridad
-      // Siempre retornar éxito para evitar enumeración de emails
-      console.error('Password reset error:', error)
-      
-      // Pero aún así retornar éxito para no revelar información
-      return NextResponse.json({
-        success: true,
-        message: 'Si ese email está registrado, recibirás un enlace para recuperar tu contraseña.'
-      })
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Si ese email está registrado, recibirás un enlace para recuperar tu contraseña. Revisa tu bandeja de entrada (y spam).'
+      message: result.message ?? "Si ese email está registrado, recibirás un enlace. Revisa tu bandeja de entrada (y spam).",
     })
   } catch (error) {
-    console.error('Forgot password error:', error)
+    console.error("[forgot-password]", error)
     return NextResponse.json(
-      { 
-        error: 'server_error',
-        message: 'Algo salió mal. Por favor, intenta nuevamente en unos momentos.'
+      {
+        error: "server_error",
+        message: "Algo salió mal. Por favor, intenta nuevamente en unos momentos.",
       },
       { status: 500 }
     )

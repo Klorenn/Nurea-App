@@ -4,6 +4,7 @@ import { Geist, Lora } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { LanguageProvider } from "@/contexts/language-context"
 import { ThemeProvider } from "@/components/theme-provider"
+import { QueryProvider } from "@/providers/query-provider"
 import { Toaster } from "sonner"
 import "./globals.css"
 
@@ -166,11 +167,13 @@ export default function RootLayout({
       </head>
       <body className={`font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
-          <LanguageProvider>
-            {children}
-            <Toaster position="top-right" richColors closeButton />
-            <Analytics />
-          </LanguageProvider>
+          <QueryProvider>
+            <LanguageProvider>
+              {children}
+              <Toaster position="top-right" richColors closeButton />
+              <Analytics />
+            </LanguageProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

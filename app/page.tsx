@@ -1,4 +1,4 @@
-import { Navbar } from "@/components/navbar"
+import { NureaHeader } from "@/components/ui/nurea-header"
 import { HeroSection } from "@/components/hero-section"
 import { FeaturesSection } from "@/components/features-section"
 import { HowItWorks } from "@/components/how-it-works"
@@ -14,8 +14,8 @@ export default function Home() {
   return (
     <main className="min-h-screen relative" id="main-content">
       <PaperShaderBackground />
-      <div className="relative z-10">
-        <Navbar />
+      <div className="relative z-10" suppressHydrationWarning>
+        <NureaHeader />
         <HeroSection />
         <NureaDashboardPreview />
         <FeaturesSection />

@@ -213,6 +213,35 @@ export async function POST(request: Request) {
       )
     }
 
+    if (process.env.RESEND_API_KEY && user.email) {
+      try {
+        const { sendSupportTicketCreated } = await import('@/lib/email-service')
+        const { data: nameProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, role')
+          .eq('id', user.id)
+          .single()
+        const userName = nameProfile
+          ? `${nameProfile.first_name || ''} ${nameProfile.last_name || ''}`.trim() || 'Usuario'
+          : 'Usuario'
+        const supportUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+          ? `${process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL}`}`
+          : 'http://localhost:3000'
+        const supportLink = nameProfile?.role === 'professional'
+          ? `${supportUrl}/professional/support`
+          : `${supportUrl}/dashboard/support`
+        await sendSupportTicketCreated({
+          to: user.email,
+          userName,
+          ticketSubject: sanitizedSubject,
+          supportLink,
+          ticketId: ticket.id,
+        })
+      } catch (emailErr) {
+        console.error('[support/tickets] Confirmation email error:', emailErr)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       ticket: ticket,

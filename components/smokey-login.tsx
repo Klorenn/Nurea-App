@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { User, Lock, ArrowRight, AlertCircle, Loader2, Stethoscope, CheckCircle2, Eye, EyeOff } from "lucide-react"
+import { User, Lock, ArrowRight, AlertCircle, Loader2, Stethoscope, CheckCircle2, Eye, EyeOff, KeyRound } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -10,6 +10,7 @@ import Link from "next/link"
 import { AnimatedInput } from "@/components/ui/animated-input"
 import { createClient } from "@/lib/supabase/client"
 import { getHumanErrorMessage } from "@/lib/auth/utils"
+import { signUp } from "@/actions/auth"
 import { useTheme } from "next-themes"
 import { TermsDialog } from "@/components/ui/terms-dialog"
 import { PrivacyDialog } from "@/components/ui/privacy-dialog"
@@ -266,6 +267,11 @@ export function LoginForm() {
   const [emailError, setEmailError] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [showReset, setShowReset] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetMessage, setResetMessage] = useState<string | null>(null)
+  const [resetError, setResetError] = useState<string | null>(null)
 
   const handleEmailBlur = () => {
     if (!email.trim()) {
@@ -347,6 +353,65 @@ export function LoginForm() {
     }
   }
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResetError(null)
+    setResetMessage(null)
+
+    const value = (resetEmail || email).trim()
+    if (!value) {
+      setResetError(
+        language === "es"
+          ? "Ingresa tu email para recuperar tu contraseña."
+          : "Enter your email to reset your password."
+      )
+      return
+    }
+    if (!isValidEmail(value)) {
+      setResetError(
+        language === "es" ? "Introduce un email válido." : "Enter a valid email address."
+      )
+      return
+    }
+
+    setResetLoading(true)
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: value }),
+      })
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const message =
+          typeof data?.message === "string"
+            ? data.message
+            : language === "es"
+            ? "No pudimos enviar el enlace. Inténtalo de nuevo en unos momentos."
+            : "We couldn't send the link. Please try again in a moment."
+        setResetError(message)
+        return
+      }
+
+      const message =
+        typeof data?.message === "string"
+          ? data.message
+          : language === "es"
+          ? "Si el correo está registrado, recibirás un enlace en unos instantes."
+          : "If the email is registered, you'll receive a link shortly."
+      setResetMessage(message)
+    } catch {
+      setResetError(
+        language === "es"
+          ? "Parece haber un problema de conexión. Inténtalo de nuevo en unos segundos."
+          : "There seems to be a connection issue. Please try again in a few seconds."
+      )
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
   return (
     <div className="w-full max-w-sm p-8 space-y-6 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-2xl">
       <div className="text-center">
@@ -356,9 +421,9 @@ export function LoginForm() {
 
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-300 shrink-0 mt-0.5" />
+          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-700 dark:text-red-200">{error}</p>
+            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{error}</p>
           </div>
         </div>
       )}
@@ -435,12 +500,18 @@ export function LoginForm() {
         </div>
 
         <div className="flex items-center justify-between">
-          <a
-            href="/forgot-password"
-            className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition"
+          <button
+            type="button"
+            onClick={() => {
+              setShowReset((prev) => !prev)
+              setResetEmail(email.trim())
+              setResetError(null)
+              setResetMessage(null)
+            }}
+            className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition underline-offset-2 hover:underline"
           >
             {t.auth.forgotPassword}
-          </a>
+          </button>
         </div>
 
         <button
@@ -498,6 +569,80 @@ export function LoginForm() {
           <span className="text-sm">{language === "es" ? "Continuar con Google" : "Sign in with Google"}</span>
         </button>
       </form>
+
+      {showReset && (
+        <div className="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-4 space-y-3 text-left">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">
+              <KeyRound className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {language === "es" ? "Recuperar contraseña" : "Reset password"}
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                {language === "es"
+                  ? "Ingresa tu email para recibir un enlace seguro."
+                  : "Enter your email to receive a secure link."}
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handlePasswordReset} className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                {language === "es" ? "Dirección de email" : "Email address"}
+              </label>
+              <input
+                type="email"
+                className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/60"
+                placeholder="nombre@ejemplo.com"
+                value={resetEmail || email}
+                onChange={(e) => setResetEmail(e.target.value)}
+                disabled={resetLoading}
+              />
+            </div>
+
+            {resetError && (
+              <p className="text-xs text-red-600 dark:text-red-400">{resetError}</p>
+            )}
+            {resetMessage && (
+              <p className="text-xs text-teal-700 dark:text-teal-300 flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {resetMessage}
+              </p>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReset(false)
+                  setResetError(null)
+                  setResetMessage(null)
+                }}
+                className="text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 underline-offset-2 hover:underline"
+              >
+                {language === "es" ? "Cancelar" : "Cancel"}
+              </button>
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="inline-flex items-center justify-center rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold px-3 py-1.5 shadow-sm disabled:bg-teal-700/60 disabled:cursor-not-allowed"
+              >
+                {resetLoading ? (
+                  <>
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                    {language === "es" ? "Enviando..." : "Sending..."}
+                  </>
+                ) : (
+                  <>{language === "es" ? "Enviar enlace de recuperación" : "Send reset link"}</>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <p className="text-center text-xs text-slate-600 dark:text-slate-300">
         {t.auth.noAccount}
@@ -571,6 +716,8 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
   const [error, setError] = useState<string | null>(null)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
+  const [registrationSuccess, setRegistrationSuccess] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState("")
 
   const finalRole = initialRole || role
   const isProfessional = finalRole === "professional"
@@ -621,66 +768,21 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
     setDateOfBirthError(null)
 
     try {
-      const supabase = createClient()
-      const optionsData: Record<string, unknown> = {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        role: finalRole,
-        date_of_birth: dateOfBirth,
-      }
-      if (isProfessional) {
-        optionsData.specialty = specialty.trim()
-        optionsData.registration_number = registrationNumber.trim()
-      }
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const result = await signUp({
         email: email.trim(),
         password,
-        options: {
-          data: optionsData,
-          emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/verify-email`,
-        },
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        dateOfBirth,
+        role: finalRole,
+        specialty: isProfessional ? specialty : undefined,
+        registrationNumber: isProfessional ? registrationNumber.trim() : undefined,
       })
-
-      if (authError) {
-        const message = getHumanErrorMessage(authError.message, language === "es" ? "es" : "en")
-        setError(message)
-        setLoading(false)
-        return
-      }
-
-      if (!authData.user) {
-        setError(isSpanish ? "No se pudo crear la cuenta" : "Failed to create account")
-        setLoading(false)
-        return
-      }
-
-      if (authData.session) {
-        const res = await fetch("/api/auth/create-profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            role: finalRole,
-            dateOfBirth: dateOfBirth,
-            ...(isProfessional && {
-              specialty: specialty.trim(),
-              registrationNumber: registrationNumber.trim(),
-            }),
-          }),
-        })
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}))
-          setError(json.message || (isSpanish ? "Error al crear el perfil" : "Error creating profile"))
-          setLoading(false)
-          return
-        }
-        router.push("/complete-profile")
-        router.refresh()
+      if (result.success) {
+        setRegisteredEmail(email.trim())
+        setRegistrationSuccess(true)
       } else {
-        router.push("/verify-email")
-        router.refresh()
+        setError(result.error ?? (isSpanish ? "No se pudo crear la cuenta" : "Failed to create account"))
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : (isSpanish ? "Error al registrarse" : "An error occurred")
@@ -700,6 +802,49 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
     }
   }
 
+  if (registrationSuccess) {
+    return (
+      <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-8 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-gray-200/90 dark:border-slate-700/80 shadow-2xl shadow-slate-300/40 dark:shadow-black/40 relative z-20">
+        <div className="space-y-6 text-center">
+          <div className="mx-auto w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-500/20 flex items-center justify-center">
+            <CheckCircle2 className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-normal">
+              {isSpanish ? "¡Cuenta creada!" : "Account created!"}
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400">
+              {isSpanish ? "Hemos enviado un enlace de verificación a:" : "We've sent a verification link to:"}
+            </p>
+            <p className="font-semibold text-teal-600 dark:text-teal-400 flex items-center justify-center gap-2">
+              <User className="w-4 h-4" />
+              {registeredEmail}
+            </p>
+          </div>
+          <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-4 text-left space-y-3">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              <strong>{isSpanish ? "Siguiente paso:" : "Next step:"}</strong>{" "}
+              {isSpanish
+                ? "Abre tu correo y haz clic en el enlace para activar tu cuenta."
+                : "Open your email and click the link to activate your account."}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isSpanish
+                ? "Si no lo encuentras, revisa tu carpeta de spam o correo no deseado."
+                : "If you can't find it, check your spam or junk folder."}
+            </p>
+          </div>
+          <Link
+            href="/login"
+            className="inline-block text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline"
+          >
+            {isSpanish ? "Ir a iniciar sesión" : "Go to login"}
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-8 flex flex-col gap-5 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-gray-200/90 dark:border-slate-700/80 shadow-2xl shadow-slate-300/40 dark:shadow-black/40 relative z-20">
       <div className="text-center">
@@ -709,9 +854,53 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
 
       {error && (
         <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-300 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-red-200">{error}</p>
+          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-1">
+            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{error}</p>
+            {error.includes("ya está registrado") && (
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                {isSpanish ? (
+                  <>
+                    <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                      Iniciar sesión
+                    </Link>
+                    {" — o "}
+                    <Link
+                      href={email ? `/verify-email?email=${encodeURIComponent(email.trim())}` : "/verify-email"}
+                      className="font-semibold text-teal-600 dark:text-teal-400 hover:underline"
+                    >
+                      solicita reenviar el correo de verificación
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                      Log in
+                    </Link>
+                    {" — or "}
+                    <Link
+                      href={email ? `/verify-email?email=${encodeURIComponent(email.trim())}` : "/verify-email"}
+                      className="font-semibold text-teal-600 dark:text-teal-400 hover:underline"
+                    >
+                      request a new verification email
+                    </Link>
+                    .
+                  </>
+                )}
+              </p>
+            )}
+            {error.includes("No pudimos enviar el correo") && (
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                {isSpanish
+                  ? "Comprueba tu conexión e inténtalo de nuevo. Si el problema continúa, usa «Iniciar sesión» y solicita reenviar el correo."
+                  : "Check your connection and try again. If it continues, use Log in and request a new verification email."}
+                {" "}
+                <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                  {isSpanish ? "Iniciar sesión" : "Log in"}
+                </Link>
+              </p>
+            )}
           </div>
         </div>
       )}

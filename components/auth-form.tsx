@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { getHumanErrorMessage } from "@/lib/auth/utils"
+import { signUp } from "@/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { User, Stethoscope, Loader2, AlertCircle } from "lucide-react"
+import { User, Stethoscope, Loader2, AlertCircle, Mail, CheckCircle2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const SPECIALTY_OPTIONS = [
@@ -63,6 +64,8 @@ export function AuthForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [registrationSuccess, setRegistrationSuccess] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState("")
 
   const isRegister = mode === "register"
   const isProfessional = role === "professional"
@@ -131,54 +134,21 @@ export function AuthForm() {
     if (!validateRegister()) return
     setLoading(true)
     try {
-      const supabase = createClient()
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const result = await signUp({
         email: email.trim(),
         password,
-        options: {
-          data: {
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
-            role,
-            date_of_birth: dateOfBirth,
-            ...(isProfessional && { specialty: specialty.trim(), registration_number: registrationNumber.trim() }),
-          },
-          emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/verify-email`,
-        },
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        dateOfBirth,
+        role,
+        specialty: isProfessional ? specialty : undefined,
+        registrationNumber: isProfessional ? registrationNumber.trim() : undefined,
       })
-      if (authError) {
-        setError(getHumanErrorMessage(authError.message, "es"))
-        setLoading(false)
-        return
-      }
-      if (!authData.user) {
-        setError("No se pudo crear la cuenta.")
-        setLoading(false)
-        return
-      }
-      if (authData.session) {
-        const res = await fetch("/api/auth/create-profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            role,
-            dateOfBirth,
-            ...(isProfessional && { specialty: specialty.trim(), registrationNumber: registrationNumber.trim() }),
-          }),
-        })
-        if (!res.ok) {
-          const json = await res.json().catch(() => ({}))
-          setError(json.message || "Error al crear el perfil.")
-          setLoading(false)
-          return
-        }
-        router.push("/complete-profile")
-        router.refresh()
+      if (result.success) {
+        setRegisteredEmail(email.trim())
+        setRegistrationSuccess(true)
       } else {
-        router.push("/verify-email")
-        router.refresh()
+        setError(result.error ?? "No se pudo crear la cuenta.")
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrarse")
@@ -190,6 +160,50 @@ export function AuthForm() {
   const labelClass = "text-sm font-medium text-slate-700 dark:text-slate-200 tracking-normal"
   const inputClass =
     "w-full rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors disabled:opacity-50 h-11 px-4"
+
+  if (registrationSuccess) {
+    return (
+      <div className="w-full max-w-md sm:max-w-lg mx-auto p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200/80 dark:border-slate-700/80">
+        <div className="space-y-6 text-center">
+          <div className="mx-auto w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-500/20 flex items-center justify-center">
+            <CheckCircle2 className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+              ¡Cuenta creada!
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Hemos enviado un enlace de verificación a:
+            </p>
+            <p className="font-semibold text-teal-600 dark:text-teal-400 flex items-center justify-center gap-2">
+              <Mail className="w-4 h-4" />
+              {registeredEmail}
+            </p>
+          </div>
+          <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-4 text-left space-y-3">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              <strong>Siguiente paso:</strong> Abre tu correo y haz clic en el enlace para activar tu cuenta.
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Si no lo encuentras, revisa tu carpeta de spam o correo no deseado.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setRegistrationSuccess(false)
+              setMode("login")
+              setEmail(registeredEmail)
+              setPassword("")
+            }}
+            className="text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline"
+          >
+            Volver a iniciar sesión
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full max-w-md sm:max-w-lg mx-auto p-6 sm:p-8 bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200/80 dark:border-slate-700/80">
