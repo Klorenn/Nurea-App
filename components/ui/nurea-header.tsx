@@ -245,7 +245,7 @@ export function NureaHeader() {
 									{language === 'es' ? 'Para Pacientes' : 'For Patients'}
 								</NavigationMenuTrigger>
 								<NavigationMenuContent>
-									<ul className="w-80 rounded-xl p-2 bg-white dark:bg-slate-950">
+									<ul className="w-80 p-2">
 										{navContent.patientLinks.map((item) => (
 											<li key={item.href}>
 												<DropdownItem item={item} />
@@ -269,7 +269,7 @@ export function NureaHeader() {
 									{language === 'es' ? 'Para Profesionales' : 'For Professionals'}
 								</NavigationMenuTrigger>
 								<NavigationMenuContent>
-									<ul className="w-80 rounded-xl p-2 bg-white dark:bg-slate-950">
+									<ul className="w-80 p-2">
 										{navContent.professionalLinks.map((item) => (
 											<li key={item.href}>
 												<DropdownItem item={item} />
