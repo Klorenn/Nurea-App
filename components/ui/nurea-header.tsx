@@ -245,21 +245,21 @@ export function NureaHeader() {
 									{language === 'es' ? 'Para Pacientes' : 'For Patients'}
 								</NavigationMenuTrigger>
 								<NavigationMenuContent>
-									<div className="w-80 rounded-xl p-2 bg-white dark:bg-slate-950">
-										<div className="space-y-1">
-											{navContent.patientLinks.map((item) => (
-												<DropdownItem key={item.href} item={item} />
-											))}
-										</div>
-										<div className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2">
+									<ul className="w-80 rounded-xl p-2 bg-white dark:bg-slate-950">
+										{navContent.patientLinks.map((item) => (
+											<li key={item.href}>
+												<DropdownItem item={item} />
+											</li>
+										))}
+										<li className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2">
 											<p className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
 												{language === 'es' ? '¿Primera vez?' : 'First time?'}{' '}
 												<Link href="/login" className="font-medium text-primary hover:underline">
 													{language === 'es' ? 'Crea tu cuenta gratis' : 'Create free account'}
 												</Link>
 											</p>
-										</div>
-									</div>
+										</li>
+									</ul>
 								</NavigationMenuContent>
 							</NavigationMenuItem>
 
@@ -269,21 +269,21 @@ export function NureaHeader() {
 									{language === 'es' ? 'Para Profesionales' : 'For Professionals'}
 								</NavigationMenuTrigger>
 								<NavigationMenuContent>
-									<div className="w-80 rounded-xl p-2 bg-white dark:bg-slate-950">
-										<div className="space-y-1">
-											{navContent.professionalLinks.map((item) => (
-												<DropdownItem key={item.href} item={item} />
-											))}
-										</div>
-										<div className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2">
+									<ul className="w-80 rounded-xl p-2 bg-white dark:bg-slate-950">
+										{navContent.professionalLinks.map((item) => (
+											<li key={item.href}>
+												<DropdownItem item={item} />
+											</li>
+										))}
+										<li className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2">
 											<p className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
 												{language === 'es' ? '¿Eres profesional de salud?' : 'Healthcare professional?'}{' '}
 												<Link href="/auth/register?role=professional&step=verification" className="font-medium text-primary hover:underline">
 													{language === 'es' ? 'Únete a NUREA' : 'Join NUREA'}
 												</Link>
 											</p>
-										</div>
-									</div>
+										</li>
+									</ul>
 								</NavigationMenuContent>
 							</NavigationMenuItem>
 
