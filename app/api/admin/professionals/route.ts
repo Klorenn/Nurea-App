@@ -134,7 +134,7 @@ export async function PUT(request: Request) {
       )
     }
 
-    const { professionalId, verified } = await request.json()
+    const { professionalId, verified, rejectionReason } = await request.json()
 
     if (!professionalId || typeof verified !== 'boolean') {
       return NextResponse.json(
@@ -146,10 +146,18 @@ export async function PUT(request: Request) {
       )
     }
 
+    // Preparar datos de actualización
+    const updateData: Record<string, any> = { 
+      verified,
+      verified_at: verified ? new Date().toISOString() : null,
+      verified_by: verified ? user.id : null,
+      rejection_reason: !verified && rejectionReason ? rejectionReason : null
+    }
+
     // Actualizar verificación
     const { data: updatedProfessional, error: updateError } = await supabase
       .from('professionals')
-      .update({ verified })
+      .update(updateData)
       .eq('id', professionalId)
       .select()
       .single()

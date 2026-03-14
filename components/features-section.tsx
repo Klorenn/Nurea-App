@@ -93,10 +93,10 @@ export function FeaturesSection() {
       color: "bg-accent/40 text-accent-foreground",
     },
     {
-      icon: Users,
-      title: t.landing.features.patientFirst,
-      description: t.landing.features.patientFirstDesc,
-      color: "bg-muted text-muted-foreground",
+      icon: ShieldCheck,
+      title: t.landing.features.secureBooking,
+      description: t.landing.features.secureBookingDesc,
+      color: "bg-teal-500/10 text-teal-500",
     },
   ]
 

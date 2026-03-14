@@ -120,12 +120,12 @@ export function PatientsInfo() {
                       </div>
                       <div>
                         <h4 className="font-semibold text-foreground mb-1">
-                          {isSpanish ? "Pago Seguro" : "Secure Payment"}
+                          {isSpanish ? "Reserva Segura y Transparente" : "Secure & Transparent Booking"}
                         </h4>
                         <p className="text-sm text-muted-foreground">
                           {isSpanish 
-                            ? "Realiza el pago antes de la cita. NUREA actúa como intermediario tecnológico, no como prestador de servicios médicos."
-                            : "Make payment before the appointment. NUREA acts as a technology intermediary, not as a medical service provider."}
+                            ? "Tu pago se procesa de forma segura al agendar. Cancelaciones con 48+ horas de anticipación tienen devolución garantizada."
+                            : "Your payment is processed securely when booking. Cancellations 48+ hours in advance are eligible for a full refund."}
                         </p>
                       </div>
                     </div>

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, CreditCard, CheckCircle2, AlertCircle, Lock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { CancellationPolicyCheckbox, CancellationPolicyModal } from "@/components/checkout"
 
 type PaymentStatus = "pending" | "processing" | "success" | "failed"
 
@@ -18,6 +19,8 @@ export default function PaymentPage() {
   const [cardName, setCardName] = useState("")
   const [expiry, setExpiry] = useState("")
   const [cvv, setCvv] = useState("")
+  const [acceptedPolicy, setAcceptedPolicy] = useState(false)
+  const [showPolicyModal, setShowPolicyModal] = useState(false)
 
   const handlePayment = () => {
     setStatus("processing")
@@ -230,12 +233,18 @@ export default function PaymentPage() {
                   </Badge>
                 </div>
 
+                <CancellationPolicyCheckbox
+                  checked={acceptedPolicy}
+                  onCheckedChange={setAcceptedPolicy}
+                  onPolicyClick={() => setShowPolicyModal(true)}
+                />
+
                 <Button
                   onClick={handlePayment}
-                  disabled={status === "processing" || !cardNumber || !cardName || !expiry || !cvv}
+                  disabled={status === "processing" || !cardNumber || !cardName || !expiry || !cvv || !acceptedPolicy}
                   className={cn(
                     "w-full h-14 rounded-xl font-bold text-lg shadow-lg shadow-primary/20",
-                    status === "processing" && "opacity-50 cursor-not-allowed"
+                    (status === "processing" || !acceptedPolicy) && "opacity-50 cursor-not-allowed"
                   )}
                 >
                   {status === "processing" ? (
@@ -250,8 +259,13 @@ export default function PaymentPage() {
                 </Button>
 
                 <p className="text-xs text-center text-muted-foreground">
-                  By completing payment, you agree to our Terms of Service and Cancellation Policy
+                  By completing payment, you agree to our Terms of Service
                 </p>
+
+                <CancellationPolicyModal
+                  open={showPolicyModal}
+                  onOpenChange={setShowPolicyModal}
+                />
               </CardContent>
             </Card>
           </div>

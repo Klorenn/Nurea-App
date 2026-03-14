@@ -453,6 +453,8 @@ export const translations = {
         instantBookingDesc: "Disponibilidad en tiempo real te permite reservar tu consulta en segundos, sin filas de espera.",
         patientFirst: "Paciente Primero",
         patientFirstDesc: "Una plataforma diseñada para tu comodidad, desde gestión de perfil hasta chat seguro con expertos.",
+        secureBooking: "Reserva Segura y Transparente",
+        secureBookingDesc: "Tu pago se procesa mediante una plataforma segura al momento de agendar. Para proteger el tiempo de nuestros especialistas, las cancelaciones o reagendamientos cuentan con devolución garantizada si se realizan con al menos 48 horas de anticipación.",
       },
       howItWorks: {
         simpleProcess: "Proceso Simple",
@@ -939,6 +941,8 @@ export const translations = {
         instantBookingDesc: "Real-time availability allows you to book your consultation in seconds, no waiting lines.",
         patientFirst: "Patient First",
         patientFirstDesc: "A platform designed for your comfort, from profile management to secure chat with experts.",
+        secureBooking: "Secure & Transparent Booking",
+        secureBookingDesc: "Your payment is processed through a secure platform when scheduling. To protect our specialists' time, cancellations or rescheduling are eligible for a full refund if made at least 48 hours in advance.",
       },
       howItWorks: {
         simpleProcess: "Simple Process",

@@ -697,13 +697,15 @@ function isAtLeast18(dateStr: string): boolean {
 
 /**
  * A glassmorphism-style signup form component with animated labels and Google signup.
+ * Dynamic form based on selected role (Patient vs Professional).
  */
 export function SignupForm({ initialRole }: { initialRole?: "patient" | "professional" }) {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const isSpanish = language === "es"
-  const router = useRouter()
-  const [role, setRole] = useState<"patient" | "professional" | null>(initialRole || null)
+  
+  // 1. Estado del rol - default a 'patient' si no hay initialRole
+  const [role, setRole] = useState<"patient" | "professional">(initialRole || "patient")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [dateOfBirth, setDateOfBirth] = useState("")
@@ -714,18 +716,26 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
   const [registrationNumber, setRegistrationNumber] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
   const [registrationSuccess, setRegistrationSuccess] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState("")
 
-  const finalRole = initialRole || role
-  const isProfessional = finalRole === "professional"
+  const isProfessional = role === "professional"
+
+  // Handler para cambiar rol - limpia errores previos
+  const handleRoleChange = (newRole: "patient" | "professional") => {
+    setRole(newRole)
+    setError(null)
+    setFieldErrors({})
+    setDateOfBirthError(null)
+  }
 
   const validateDateOfBirth = (value: string): boolean => {
     if (!value) {
       setDateOfBirthError(null)
-      return false
+      return true // Opcional para pacientes
     }
     const valid = isAtLeast18(value)
     setDateOfBirthError(valid ? null : t.auth.ageError)
@@ -733,38 +743,56 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
   }
 
   const handleDateOfBirthBlur = () => {
-    validateDateOfBirth(dateOfBirth)
+    if (dateOfBirth) {
+      validateDateOfBirth(dateOfBirth)
+    }
   }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!finalRole) {
-      setError(isSpanish ? "Por favor, selecciona un tipo de cuenta" : "Please select an account type")
+    const errors: Record<string, string> = {}
+
+    // Validación de campos base (siempre obligatorios)
+    if (!firstName.trim()) {
+      errors.firstName = isSpanish ? "El nombre es obligatorio" : "First name is required"
+    }
+    if (!lastName.trim()) {
+      errors.lastName = isSpanish ? "El apellido es obligatorio" : "Last name is required"
+    }
+    if (!email.trim()) {
+      errors.email = isSpanish ? "El correo es obligatorio" : "Email is required"
+    }
+    if (!password || password.length < 6) {
+      errors.password = isSpanish ? "Mínimo 6 caracteres" : "Minimum 6 characters"
+    }
+
+    // Validación condicional según rol
+    if (isProfessional) {
+      // Profesionales: Especialidad y RUT obligatorios
+      if (!specialty.trim()) {
+        errors.specialty = isSpanish ? "Selecciona tu especialidad" : "Select your specialty"
+      }
+      if (!registrationNumber.trim()) {
+        errors.registrationNumber = isSpanish ? "El RUT o registro médico es obligatorio" : "Medical ID is required"
+      }
+    }
+
+    // Validación de fecha de nacimiento si se proporciona
+    if (dateOfBirth && !isAtLeast18(dateOfBirth)) {
+      setDateOfBirthError(t.auth.ageError)
+      setFieldErrors(errors)
       return
     }
 
-    if (!dateOfBirth.trim()) {
-      setDateOfBirthError(isSpanish ? "La fecha de nacimiento es obligatoria" : "Date of birth is required")
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
       setError(null)
       return
-    }
-    if (!validateDateOfBirth(dateOfBirth)) {
-      setError(null)
-      return
-    }
-    if (isProfessional) {
-      if (!specialty.trim()) {
-        setError(isSpanish ? "Selecciona tu especialidad principal" : "Please select your main specialty")
-        return
-      }
-      if (!registrationNumber.trim()) {
-        setError(isSpanish ? "El número de registro médico o RUT es obligatorio" : "Medical registration number or ID is required")
-        return
-      }
     }
 
     setLoading(true)
     setError(null)
+    setFieldErrors({})
     setDateOfBirthError(null)
 
     try {
@@ -773,8 +801,8 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
         password,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        dateOfBirth,
-        role: finalRole,
+        dateOfBirth: dateOfBirth || undefined,
+        role,
         specialty: isProfessional ? specialty : undefined,
         registrationNumber: isProfessional ? registrationNumber.trim() : undefined,
       })
@@ -846,10 +874,10 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
   }
 
   return (
-    <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-8 flex flex-col gap-5 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-gray-200/90 dark:border-slate-700/80 shadow-2xl shadow-slate-300/40 dark:shadow-black/40 relative z-20">
+    <div className="w-full max-w-sm sm:max-w-md p-5 sm:p-6 flex flex-col gap-4 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-gray-200/90 dark:border-slate-700/80 shadow-2xl shadow-slate-300/40 dark:shadow-black/40 relative z-20">
       <div className="text-center">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-normal">{t.auth.joinNurea}</h2>
-        <p className="mt-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed tracking-normal">{t.auth.startJourney}</p>
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-normal">{t.auth.joinNurea}</h2>
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed tracking-normal">{t.auth.startJourney}</p>
       </div>
 
       {error && (
@@ -905,28 +933,29 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        <label className="text-center block text-xs font-medium text-slate-500 dark:text-slate-400 tracking-normal" style={{ letterSpacing: "normal" }}>
+      {/* 2. Selector de Rol - Pills/Segmented Control */}
+      <div className="flex flex-col gap-2">
+        <label className="text-center block text-[11px] font-medium text-slate-600 dark:text-slate-400 tracking-normal" style={{ letterSpacing: "normal" }}>
           {t.auth.selectAccountType}
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              setRole("patient")
+              handleRoleChange("patient")
             }}
             className={cn(
-              "flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border transition-all relative z-10 text-sm font-medium",
+              "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg transition-all duration-200 text-xs font-semibold",
               role === "patient"
-                ? "border-teal-500 bg-teal-500 text-white dark:bg-teal-500 dark:text-white"
-                : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500",
+                ? "bg-teal-600 text-white shadow-md"
+                : "bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
             )}
             aria-pressed={role === "patient"}
             aria-label={t.auth.imPatient}
           >
-            <User className="h-4 w-4 shrink-0" />
+            <User className="h-3.5 w-3.5 shrink-0" />
             <span className="leading-tight">{t.auth.imPatient}</span>
           </button>
           <button
@@ -934,239 +963,261 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              setRole("professional")
+              handleRoleChange("professional")
             }}
             className={cn(
-              "flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border transition-all relative z-10 text-sm font-medium",
+              "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg transition-all duration-200 text-xs font-semibold",
               role === "professional"
-                ? "border-teal-500 bg-teal-500 text-white dark:bg-teal-500 dark:text-white"
-                : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500",
+                ? "bg-teal-600 text-white shadow-md"
+                : "bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
             )}
             aria-pressed={role === "professional"}
             aria-label={t.auth.imProfessionalHealth}
           >
-            <Stethoscope className="h-4 w-4 shrink-0" />
+            <Stethoscope className="h-3.5 w-3.5 shrink-0" />
             <span className="leading-tight">{t.auth.imProfessionalHealth}</span>
           </button>
         </div>
       </div>
 
-      {/* Indicador sutil del rol cuando viene por URL */}
-      {initialRole && (
-        <p className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
-          {initialRole === "patient"
-            ? (isSpanish ? "Registrándote como Paciente" : "Registering as Patient")
-            : (isSpanish ? "Registrándote como Profesional" : "Registering as Professional")}
-        </p>
-      )}
-
-      {(role || initialRole) && (
-        <form onSubmit={handleSignUp} className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Área con scroll limitado y degradados de desvanecimiento */}
-          <div className="relative max-h-[60vh] overflow-y-auto scrollbar-form pr-1 -mr-1">
-            <div className="absolute top-0 left-0 right-2 h-6 bg-gradient-to-b from-white dark:from-slate-900 to-transparent pointer-events-none z-10" aria-hidden />
-            <div className="absolute bottom-0 left-0 right-2 h-6 bg-gradient-to-t from-white dark:from-slate-900 to-transparent pointer-events-none z-10" aria-hidden />
-            <div className="flex flex-col gap-4 py-0.5">
-          {/* Inputs: compact spacing, labels letter-spacing normal */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <AnimatedInput
-                type="text"
-                id="floating_firstname"
-                label={t.auth.firstName}
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                disabled={loading}
-                required
-                autoComplete="given-name"
-                variant="stacked"
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0 tracking-normal">{language === "es" ? "Tu nombre" : "Your name"}</p>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <AnimatedInput
-                type="text"
-                id="floating_lastname"
-                label={t.auth.lastName}
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                disabled={loading}
-                required
-                autoComplete="family-name"
-                variant="stacked"
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0 tracking-normal">{language === "es" ? "Tu apellido" : "Your last name"}</p>
-            </div>
-          </div>
-
-          {/* Fecha de nacimiento */}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="floating_dob"
-              className="text-sm font-medium text-slate-700 dark:text-slate-200 tracking-normal"
-              style={{ letterSpacing: "normal" }}
-            >
-              {t.auth.dateOfBirth}
-            </label>
-            <input
-              type="date"
-              id="floating_dob"
-              value={dateOfBirth}
-              onChange={(e) => {
-                setDateOfBirth(e.target.value)
-                if (dateOfBirthError) validateDateOfBirth(e.target.value)
-              }}
-              onBlur={handleDateOfBirthBlur}
-              disabled={loading}
-              required
-              aria-invalid={!!dateOfBirthError}
-              aria-describedby={dateOfBirthError ? "dob-error" : undefined}
-              className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
-            />
-            {dateOfBirthError && (
-              <p id="dob-error" className="text-xs text-red-500 dark:text-red-400 px-0" role="alert">
-                {dateOfBirthError}
-              </p>
-            )}
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0">
-              {isSpanish ? "Debes ser mayor de 18 años" : "You must be at least 18 years old"}
-            </p>
-          </div>
-
-          {/* Datos profesionales: separador sutil y título, sin recuadro */}
-          {isProfessional && (
-            <div className="flex flex-col gap-3 pt-5 mt-1 border-t border-slate-100 dark:border-slate-700/50">
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
-                {isSpanish ? "Datos profesionales" : "Professional details"}
-              </p>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="signup_specialty" className="text-sm font-medium text-slate-700 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
-                  {t.auth.mainSpecialty} *
-                </label>
-                <select
-                  id="signup_specialty"
-                  value={specialty}
-                  onChange={(e) => setSpecialty(e.target.value)}
-                  disabled={loading}
-                  required={isProfessional}
-                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
-                  aria-required={isProfessional}
-                >
-                  <option value="">{isSpanish ? "Selecciona una especialidad" : "Select a specialty"}</option>
-                  {SPECIALTY_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
+      <form onSubmit={handleSignUp} className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {/* Área con scroll limitado y degradados de desvanecimiento */}
+        <div className="relative max-h-[55vh] overflow-y-auto scrollbar-form pr-1 -mr-1">
+          <div className="absolute top-0 left-0 right-2 h-4 bg-gradient-to-b from-white dark:from-slate-900 to-transparent pointer-events-none z-10" aria-hidden />
+          <div className="absolute bottom-0 left-0 right-2 h-4 bg-gradient-to-t from-white dark:from-slate-900 to-transparent pointer-events-none z-10" aria-hidden />
+          <div className="flex flex-col gap-3 py-0.5">
+            {/* 3. Campos base - Siempre visibles: Nombre, Apellido */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
                 <AnimatedInput
                   type="text"
-                  id="floating_registration"
-                  label={t.auth.registrationNumberRut}
-                  value={registrationNumber}
-                  onChange={(e) => setRegistrationNumber(e.target.value)}
+                  id="floating_firstname"
+                  label={t.auth.firstName}
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   disabled={loading}
-                  required={isProfessional}
-                  autoComplete="off"
+                  required
+                  autoComplete="given-name"
                   variant="stacked"
+                  aria-invalid={!!fieldErrors.firstName}
                 />
+                {fieldErrors.firstName ? (
+                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.firstName}</p>
+                ) : (
+                  <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0 tracking-normal">{language === "es" ? "Tu nombre" : "Your name"}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <AnimatedInput
+                  type="text"
+                  id="floating_lastname"
+                  label={t.auth.lastName}
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={loading}
+                  required
+                  autoComplete="family-name"
+                  variant="stacked"
+                  aria-invalid={!!fieldErrors.lastName}
+                />
+                {fieldErrors.lastName ? (
+                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.lastName}</p>
+                ) : (
+                  <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0 tracking-normal">{language === "es" ? "Tu apellido" : "Your last name"}</p>
+                )}
               </div>
             </div>
-          )}
 
-          {/* Email */}
-          <div className="flex flex-col gap-1.5">
-            <AnimatedInput
-              type="email"
-              id="floating_email_signup"
-              label={t.auth.email}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              required
-              variant="stacked"
-            />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0">
-              {language === "es" 
-                ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas y mantener tu información segura."
-                : "Your email is your identity on NUREA. We use it to confirm your appointments and keep your information secure."}
-            </p>
-          </div>
-
-          {/* Contraseña */}
-          <div className="flex flex-col gap-1.5">
-            <AnimatedInput
-              type="password"
-              id="floating_password_signup"
-              label={t.auth.password}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              required
-              minLength={6}
-              variant="stacked"
-            />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 px-0">
-              {language === "es" 
-                ? "Una contraseña fuerte protege tu información de salud. Solo tú y tus profesionales autorizados pueden acceder."
-                : "A strong password protects your health information. Only you and your authorized professionals can access it."}
-            </p>
-          </div>
-
-          <div className="flex items-start gap-2 pt-1">
-            <CheckCircle2 className={cn(
-              "h-3.5 w-3.5 shrink-0 mt-0.5 transition-colors",
-              acceptedTerms && acceptedPrivacy 
-                ? "text-teal-500 dark:text-teal-400" 
-                : "text-slate-400 dark:text-slate-600"
-            )} />
-            <p className="text-[10px] leading-relaxed text-slate-600 dark:text-slate-300">
-              {t.auth.agreeTerms}{" "}
-              <TermsDialog onAccept={() => setAcceptedTerms(true)}>
-                <button 
-                  type="button"
-                  className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline relative z-10 cursor-pointer"
-                >
-                  {t.auth.termsOfService}
-                </button>
-              </TermsDialog>{" "}
-              {t.auth.and}{" "}
-              <PrivacyDialog onAccept={() => setAcceptedPrivacy(true)}>
-                <button 
-                  type="button"
-                  className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline relative z-10 cursor-pointer"
-                >
-                  {t.auth.privacyPolicy}
-                </button>
-              </PrivacyDialog>
-              .
-            </p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || !finalRole || !acceptedTerms || !acceptedPrivacy}
-            className="group w-full flex items-center justify-center py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 disabled:cursor-not-allowed rounded-xl text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 relative z-10"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span className="text-sm">{language === "es" ? "Creando cuenta..." : "Creating account..."}</span>
-              </>
-            ) : (
-              <>
-                <span>{t.auth.createAccount}</span>
-                <ArrowRight className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-              </>
-            )}
-          </button>
+            {/* Campos base - Email */}
+            <div className="flex flex-col gap-1">
+              <AnimatedInput
+                type="email"
+                id="floating_email_signup"
+                label={t.auth.email}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                required
+                variant="stacked"
+                aria-invalid={!!fieldErrors.email}
+              />
+              {fieldErrors.email ? (
+                <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.email}</p>
+              ) : (
+                <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0">
+                  {language === "es" 
+                    ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas."
+                    : "Your email is your identity on NUREA. We use it to confirm your appointments."}
+                </p>
+              )}
             </div>
+
+            {/* Campos base - Contraseña */}
+            <div className="flex flex-col gap-1">
+              <AnimatedInput
+                type="password"
+                id="floating_password_signup"
+                label={t.auth.password}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                required
+                minLength={6}
+                variant="stacked"
+                aria-invalid={!!fieldErrors.password}
+              />
+              {fieldErrors.password ? (
+                <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.password}</p>
+              ) : (
+                <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0">
+                  {language === "es" 
+                    ? "Una contraseña fuerte protege tu información de salud."
+                    : "A strong password protects your health information."}
+                </p>
+              )}
+            </div>
+
+            {/* Campos condicionales para PROFESIONAL con animación */}
+            {isProfessional && (
+              <div className="flex flex-col gap-3 pt-4 mt-1 border-t border-slate-200 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
+                  {isSpanish ? "Datos profesionales" : "Professional details"}
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="signup_specialty" className="text-xs font-medium text-slate-700 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
+                    {t.auth.mainSpecialty} *
+                  </label>
+                  <select
+                    id="signup_specialty"
+                    value={specialty}
+                    onChange={(e) => setSpecialty(e.target.value)}
+                    disabled={loading}
+                    required={isProfessional}
+                    className={cn(
+                      "w-full h-10 rounded-xl border bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50",
+                      fieldErrors.specialty ? "border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-600"
+                    )}
+                    aria-required={isProfessional}
+                    aria-invalid={!!fieldErrors.specialty}
+                  >
+                    <option value="">{isSpanish ? "Selecciona una especialidad" : "Select a specialty"}</option>
+                    {SPECIALTY_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                  {fieldErrors.specialty && (
+                    <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.specialty}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <AnimatedInput
+                    type="text"
+                    id="floating_registration"
+                    label={t.auth.registrationNumberRut}
+                    value={registrationNumber}
+                    onChange={(e) => setRegistrationNumber(e.target.value)}
+                    disabled={loading}
+                    required={isProfessional}
+                    autoComplete="off"
+                    variant="stacked"
+                    aria-invalid={!!fieldErrors.registrationNumber}
+                  />
+                  {fieldErrors.registrationNumber && (
+                    <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.registrationNumber}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Campo condicional para PACIENTE - Fecha de nacimiento (opcional) con animación */}
+            {!isProfessional && (
+              <div className="flex flex-col gap-1 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <label
+                  htmlFor="floating_dob"
+                  className="text-xs font-medium text-slate-700 dark:text-slate-200 tracking-normal"
+                  style={{ letterSpacing: "normal" }}
+                >
+                  {t.auth.dateOfBirth} <span className="text-slate-400 dark:text-slate-500 font-normal">({isSpanish ? "opcional" : "optional"})</span>
+                </label>
+                <input
+                  type="date"
+                  id="floating_dob"
+                  value={dateOfBirth}
+                  onChange={(e) => {
+                    setDateOfBirth(e.target.value)
+                    if (dateOfBirthError) validateDateOfBirth(e.target.value)
+                  }}
+                  onBlur={handleDateOfBirthBlur}
+                  disabled={loading}
+                  aria-invalid={!!dateOfBirthError}
+                  aria-describedby={dateOfBirthError ? "dob-error" : undefined}
+                  className="w-full h-9 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 py-1.5 px-3 text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
+                />
+                {dateOfBirthError && (
+                  <p id="dob-error" className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">
+                    {dateOfBirthError}
+                  </p>
+                )}
+                <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0">
+                  {isSpanish ? "Si la proporcionas, debes ser mayor de 18 años" : "If provided, you must be at least 18 years old"}
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-start gap-2 pt-0.5">
+              <CheckCircle2 className={cn(
+                "h-3 w-3 shrink-0 mt-0.5 transition-colors",
+                acceptedTerms && acceptedPrivacy 
+                  ? "text-teal-500 dark:text-teal-400" 
+                  : "text-slate-400 dark:text-slate-600"
+              )} />
+              <p className="text-[9px] leading-relaxed text-slate-700 dark:text-slate-300">
+                {t.auth.agreeTerms}{" "}
+                <TermsDialog onAccept={() => setAcceptedTerms(true)}>
+                  <button 
+                    type="button"
+                    className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline relative z-10 cursor-pointer"
+                  >
+                    {t.auth.termsOfService}
+                  </button>
+                </TermsDialog>{" "}
+                {t.auth.and}{" "}
+                <PrivacyDialog onAccept={() => setAcceptedPrivacy(true)}>
+                  <button 
+                    type="button"
+                    className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline relative z-10 cursor-pointer"
+                  >
+                    {t.auth.privacyPolicy}
+                  </button>
+                </PrivacyDialog>
+                .
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !acceptedTerms || !acceptedPrivacy}
+              className="group w-full flex items-center justify-center py-2 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 disabled:cursor-not-allowed rounded-lg text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 relative z-10"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span className="text-xs">{language === "es" ? "Creando cuenta..." : "Creating account..."}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm">{t.auth.createAccount}</span>
+                  <ArrowRight className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
           </div>
+        </div>
 
           {/* Divider */}
-          <div className="relative flex py-2 items-center">
+          <div className="relative flex py-1.5 items-center">
             <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-            <span className="flex-shrink mx-3 text-slate-500 dark:text-slate-400 text-[10px] font-medium uppercase tracking-wider">
+            <span className="flex-shrink mx-3 text-slate-600 dark:text-slate-400 text-[9px] font-medium uppercase tracking-wider">
               {t.auth.orContinue}
             </span>
             <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
@@ -1177,9 +1228,9 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
             type="button"
             onClick={handleGoogleSignUp}
             disabled={loading}
-            className="group w-full flex items-center justify-center py-2.5 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-semibold shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 transition-all duration-300 relative z-10"
+            className="group w-full flex items-center justify-center py-2 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 transition-all duration-300 relative z-10"
           >
-            <svg className="w-4 h-4 mr-2.5" viewBox="0 0 48 48">
+            <svg className="w-4 h-4 mr-2" viewBox="0 0 48 48">
               <path
                 fill="#FFC107"
                 d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.802 8.841C34.553 4.806 29.613 2.5 24 2.5C11.983 2.5 2.5 11.983 2.5 24s9.483 21.5 21.5 21.5S45.5 36.017 45.5 24c0-1.538-.135-3.022-.389-4.417z"
@@ -1197,12 +1248,11 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
                 d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l5.839 5.841C44.196 35.123 45.5 29.837 45.5 24c0-1.538-.135-3.022-.389-4.417z"
               ></path>
             </svg>
-            <span className="text-sm">{language === "es" ? "Continuar con Google" : "Sign up with Google"}</span>
+            <span className="text-xs">{language === "es" ? "Continuar con Google" : "Sign up with Google"}</span>
           </button>
         </form>
-      )}
 
-      <p className="text-center text-xs text-slate-600 dark:text-slate-300">
+      <p className="text-center text-[11px] text-slate-700 dark:text-slate-300">
         {t.auth.alreadyAccount}{" "}
         <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition">
           {t.auth.logIn}

@@ -1,71 +1,46 @@
-import { createClient } from "@/lib/supabase/server"
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
-export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get("code")
-  const next = request.nextUrl.searchParams.get("next")
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
 
-  // Si no hay código, redirigir a página de error
+  // Si no hay código, algo salió mal con el link, enviamos a login con error
   if (!code) {
-    console.error("[auth/callback] No code provided in callback URL")
-    return NextResponse.redirect(new URL("/auth/auth-code-error", request.url))
+    return NextResponse.redirect(`${origin}/login?error=Invalid_Verification_Link`)
   }
 
-  // Crear cliente de Supabase y hacer el intercambio
   const supabase = await createClient()
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-  // Si hay error en el intercambio, redirigir a página de error
-  if (error) {
-    console.error("[auth/callback] exchangeCodeForSession error:", error.message)
-    return NextResponse.redirect(
-      new URL("/login?error=Invalid+Link", request.url)
-    )
-  }
+  try {
+    // 1. Intercambiar el código por una sesión válida (esto activa la cuenta)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-  // Si no hay usuario en la sesión, redirigir a página de error
-  if (!data.user) {
-    console.error("[auth/callback] No user returned after code exchange")
-    return NextResponse.redirect(new URL("/auth/auth-code-error", request.url))
-  }
+    if (error) throw error
 
-  const user = data.user
-  const userRole = user.user_metadata?.role as string | undefined
+    // 2. Obtener los datos del usuario para saber su rol
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  // Determinar ruta de destino según el rol
-  let targetPath: string
+    const role = user?.user_metadata?.role || 'patient' // Fallback a paciente por seguridad
 
-  switch (userRole) {
-    case "professional": {
-      // Verificar si el profesional necesita completar onboarding
-      const { data: professional } = await supabase
-        .from("professionals")
-        .select("specialty, bio")
-        .eq("id", user.id)
-        .maybeSingle()
+    // 3. Enrutamiento inteligente según el rol
+    let redirectTo = '/dashboard'
 
-      const needsOnboarding = !professional?.specialty || !professional?.bio
-      targetPath = needsOnboarding
-        ? "/dashboard/professional/onboarding"
-        : "/dashboard/professional"
-      break
+    if (role === 'professional') {
+      redirectTo = '/dashboard/professional'
+    } else if (role === 'patient') {
+      redirectTo = '/dashboard/patient'
+    } else if (role === 'admin') {
+      redirectTo = '/admin'
     }
 
-    case "admin":
-      targetPath = "/admin"
-      break
-
-    case "patient":
-      targetPath = "/dashboard/patient"
-      break
-
-    default:
-      // Si hay un parámetro "next", usarlo; sino, dashboard por defecto
-      targetPath = next || "/dashboard"
-      break
+    // 4. Redirección ABSOLUTA (Crucial para que Next.js no falle)
+    return NextResponse.redirect(`${origin}${redirectTo}`)
+  } catch (error) {
+    console.error('Error en auth callback:', error)
+    // Redirigir a una página de error amigable
+    return NextResponse.redirect(`${origin}/login?error=Verification_Failed`)
   }
-
-  // Redirección absoluta usando el constructor de URL
-  return NextResponse.redirect(new URL(targetPath, request.url))
 }

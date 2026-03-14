@@ -15,6 +15,7 @@ import {
   AlertCircle,
   User,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -29,6 +30,8 @@ import {
 import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
+import { VerificationPendingBanner, VerifiedBadge } from "@/components/verified-badge"
+import { createClient } from "@/lib/supabase/client"
 
 type AppointmentStatus = "confirmed" | "pending" | "completed" | "cancelled"
 type PaymentStatus = "pending" | "paid" | "escrow"
@@ -121,6 +124,43 @@ export default function ProfessionalDashboard() {
   const isSpanish = language === "es"
   const today = new Date().toISOString().split("T")[0]
 
+  // Estado de verificación del profesional
+  const [isVerified, setIsVerified] = useState<boolean | null>(null)
+  const [verificationLoading, setVerificationLoading] = useState(true)
+
+  // Cargar estado de verificación desde la base de datos
+  useEffect(() => {
+    const loadVerificationStatus = async () => {
+      if (!user?.id) {
+        setVerificationLoading(false)
+        return
+      }
+
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from("professionals")
+          .select("verified")
+          .eq("id", user.id)
+          .maybeSingle()
+
+        if (error) {
+          console.error("Error loading verification status:", error)
+          setIsVerified(false)
+        } else {
+          setIsVerified(data?.verified ?? false)
+        }
+      } catch (err) {
+        console.error("Error loading verification status:", err)
+        setIsVerified(false)
+      } finally {
+        setVerificationLoading(false)
+      }
+    }
+
+    loadVerificationStatus()
+  }, [user?.id])
+
   const todayAppointments = useMemo(
     () => mockAppointments.filter((a) => a.date === today && a.status !== "cancelled"),
     []
@@ -143,6 +183,15 @@ export default function ProfessionalDashboard() {
     .reduce((sum, a) => sum + a.price, 0)
 
   const newPatients = 4
+
+  // Mostrar loading mientras se verifica el estado
+  if (verificationLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   const getStatusBadge = (status: AppointmentStatus) => {
     const config = {
@@ -202,68 +251,85 @@ export default function ProfessionalDashboard() {
       {/* Welcome Section */}
       <motion.div variants={itemVariants}>
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {isSpanish ? "Buenos días" : "Good morning"},{" "}
-            <span className="text-[#0f766e]">
-              Dr. {user?.user_metadata?.first_name || "Profesional"}
-            </span>
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {isSpanish ? "Buenos días" : "Good morning"},{" "}
+              <span className="text-[#0f766e]">
+                Dr. {user?.user_metadata?.first_name || "Profesional"}
+              </span>
+            </h1>
+            {isVerified && <VerifiedBadge variant="default" isSpanish={isSpanish} />}
+          </div>
           <p className="text-muted-foreground text-sm">
-            {isSpanish
-              ? `Tienes ${todayAppointments.length} citas programadas para hoy`
-              : `You have ${todayAppointments.length} appointments scheduled for today`}
+            {isVerified
+              ? (isSpanish
+                  ? `Tienes ${todayAppointments.length} citas programadas para hoy`
+                  : `You have ${todayAppointments.length} appointments scheduled for today`)
+              : (isSpanish
+                  ? "Tu cuenta está pendiente de verificación"
+                  : "Your account is pending verification")}
           </p>
         </div>
       </motion.div>
 
-      {/* Next Appointment Widget */}
-      {nextAppointment && (
+      {/* Banner de Verificación Pendiente */}
+      {!isVerified && (
         <motion.div variants={itemVariants}>
-          <Card className="border-[#0f766e]/20 bg-gradient-to-br from-[#0f766e]/5 via-background to-background overflow-hidden">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#0f766e]/10 flex items-center justify-center shrink-0">
-                    <Video className="h-6 w-6 text-[#0f766e]" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-[#0f766e] uppercase tracking-wider">
-                      {isSpanish ? "Próxima Cita" : "Next Appointment"}
-                    </p>
-                    <h3 className="text-lg font-semibold">
-                      {nextAppointment.patientName}
-                    </h3>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        {formatTime(nextAppointment.time)}
-                      </span>
-                      <Badge variant="outline" className="text-xs font-normal">
-                        {nextAppointment.type === "online"
-                          ? isSpanish
-                            ? "Teleconsulta"
-                            : "Teleconsultation"
-                          : isSpanish
-                          ? "Presencial"
-                          : "In-person"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  className="bg-[#0f766e] hover:bg-[#0f766e]/90 text-white rounded-xl shadow-lg shadow-[#0f766e]/20 h-11 px-5"
-                  asChild
-                >
-                  <Link href={`/consulta/${nextAppointment.id}`}>
-                    <Video className="h-4 w-4 mr-2" />
-                    {isSpanish ? "Iniciar Teleconsulta" : "Start Teleconsultation"}
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <VerificationPendingBanner isSpanish={isSpanish} />
         </motion.div>
       )}
+
+      {/* Contenido visible SOLO si está verificado */}
+      {isVerified && (
+        <>
+          {/* Next Appointment Widget */}
+          {nextAppointment && (
+            <motion.div variants={itemVariants}>
+              <Card className="border-[#0f766e]/20 bg-gradient-to-br from-[#0f766e]/5 via-background to-background overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-[#0f766e]/10 flex items-center justify-center shrink-0">
+                        <Video className="h-6 w-6 text-[#0f766e]" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-[#0f766e] uppercase tracking-wider">
+                          {isSpanish ? "Próxima Cita" : "Next Appointment"}
+                        </p>
+                        <h3 className="text-lg font-semibold">
+                          {nextAppointment.patientName}
+                        </h3>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5" />
+                            {formatTime(nextAppointment.time)}
+                          </span>
+                          <Badge variant="outline" className="text-xs font-normal">
+                            {nextAppointment.type === "online"
+                              ? isSpanish
+                                ? "Teleconsulta"
+                                : "Teleconsultation"
+                              : isSpanish
+                              ? "Presencial"
+                              : "In-person"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      className="bg-[#0f766e] hover:bg-[#0f766e]/90 text-white rounded-xl shadow-lg shadow-[#0f766e]/20 h-11 px-5"
+                      asChild
+                    >
+                      <Link href={`/consulta/${nextAppointment.id}`}>
+                        <Video className="h-4 w-4 mr-2" />
+                        {isSpanish ? "Iniciar Teleconsulta" : "Start Teleconsultation"}
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
       {/* Quick Metrics */}
       <motion.div variants={itemVariants}>
@@ -440,6 +506,8 @@ export default function ProfessionalDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+        </>
+      )}
     </motion.div>
   )
 }

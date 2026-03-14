@@ -19,7 +19,9 @@ export async function GET(request: Request) {
     const availableToday = searchParams.get('available_today') === 'true'
     const priceMin = searchParams.get('price_min') ? Number(searchParams.get('price_min')) : null
     const priceMax = searchParams.get('price_max') ? Number(searchParams.get('price_max')) : null
-    const verifiedOnly = searchParams.get('verified') === 'true'
+    // REGLA DE NEGOCIO CRÍTICA: Solo mostrar profesionales verificados a pacientes
+    // Siempre true para garantizar seguridad - los no verificados no aparecen en búsqueda
+    const verifiedOnly = true
     const language = searchParams.get('language') || null
     const location = searchParams.get('location') || null
     const search = searchParams.get('search') || null
@@ -216,10 +218,9 @@ async function fallbackSearch(
       )
     `, { count: 'exact' })
 
-  // Aplicar filtros
-  if (verifiedOnly) {
-    query = query.eq('verified', true)
-  }
+  // REGLA DE NEGOCIO CRÍTICA: Solo profesionales verificados en búsqueda pública
+  // Siempre filtrar por verified = true para garantizar seguridad de pacientes
+  query = query.eq('verified', true)
 
   if (specialtySlug) {
     query = query.eq('specialties.slug', specialtySlug)

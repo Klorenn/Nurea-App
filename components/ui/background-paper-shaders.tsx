@@ -17,55 +17,35 @@ export function PaperShaderBackground() {
     return null
   }
 
-  // Colores para modo claro: teal más suave y fluido
-  const lightColors = ["#a7f3d0", "#6ee7b7", "#34d399", "#10b981", "#5eead4"]
-  const lightBackground = "#5eead4"
+  // Colores para modo claro: verde agua más visible
+  const lightColors = ["#B2DFDB", "#80CBC4", "#4DD0E1", "#14B8A6"]
+  const lightBackground = "#E0F2F1"
 
-  // Colores para modo oscuro: teal oscuro con más profundidad
-  const darkColors = ["#021a19", "#042f2e", "#134e4a", "#0f766e", "#0d9488"]
-  const darkBackground = "#021a19"
+  // Colores para modo oscuro: verde agua y gris oscuro
+  const darkColors = ["#030712", "#111827", "#1F2937", "#14B8A6"]
+  const darkBackground = "#000000"
 
   const colors = isDark ? darkColors : lightColors
   const backgroundColor = isDark ? darkBackground : lightBackground
 
   return (
     <div 
-      className="fixed inset-0 w-full h-full -z-10 overflow-hidden transition-colors duration-500"
+      className="fixed inset-0 w-full h-full -z-10 overflow-hidden"
       style={{ backgroundColor }}
     >
       <MeshGradient
         className="w-full h-full absolute inset-0"
         colors={colors}
-        speed={0.4}
+        speed={0.8}
       />
 
-      {/* Soft ambient lighting for depth - slower and smoother */}
+      {/* Lighting overlay effects - optimized for performance */}
       <div className="absolute inset-0 pointer-events-none">
         <div
-          className={`absolute top-1/4 left-1/3 w-[500px] h-[500px] ${
-            isDark ? "bg-teal-700/10" : "bg-white/15"
-          } rounded-full blur-[100px]`}
-          style={{ 
-            animation: "pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite"
-          }}
-        />
-        <div
-          className={`absolute bottom-1/4 right-1/3 w-[400px] h-[400px] ${
-            isDark ? "bg-teal-600/10" : "bg-teal-200/20"
-          } rounded-full blur-[80px]`}
-          style={{ 
-            animation: "pulse 10s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-            animationDelay: "2s"
-          }}
-        />
-        <div
-          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] ${
-            isDark ? "bg-teal-800/8" : "bg-white/10"
-          } rounded-full blur-[120px]`}
-          style={{ 
-            animation: "pulse 12s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-            animationDelay: "4s"
-          }}
+          className={`absolute top-1/4 left-1/3 w-32 h-32 ${
+            isDark ? "bg-teal-900/10" : "bg-teal-300/30"
+          } rounded-full blur-3xl animate-pulse`}
+          style={{ animationDuration: "4s" }}
         />
       </div>
     </div>

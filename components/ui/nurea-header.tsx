@@ -116,16 +116,16 @@ const DropdownItem = memo(function DropdownItem({
 			<Link
 				href={item.href}
 				onClick={onClose}
-				className="group flex items-start gap-3 rounded-lg p-3 transition-all hover:bg-slate-800/50 focus:bg-slate-800/50 focus:outline-none"
+				className="group flex items-start gap-3 rounded-lg p-3 transition-all hover:bg-slate-100 focus:bg-slate-100 focus:outline-none dark:hover:bg-slate-800/50 dark:focus:bg-slate-800/50"
 			>
-				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-800/80 text-primary transition-colors group-hover:border-primary/50 group-hover:bg-slate-700">
+				<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-primary transition-colors group-hover:border-primary/50 group-hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800/80 dark:group-hover:bg-slate-700">
 					<Icon className="h-5 w-5" />
 				</div>
 				<div className="space-y-1">
-					<p className="text-sm font-semibold leading-none text-white">
+					<p className="text-sm font-semibold leading-none text-slate-900 dark:text-white">
 						{item.title}
 					</p>
-					<p className="text-xs leading-snug text-slate-300">
+					<p className="text-xs leading-snug text-slate-600 dark:text-slate-300">
 						{item.description}
 					</p>
 				</div>
@@ -146,14 +146,14 @@ const MobileMenuItem = memo(function MobileMenuItem({
 		<Link
 			href={item.href}
 			onClick={onClose}
-			className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-800/50 active:bg-slate-800/70"
+			className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-slate-100 active:bg-slate-200 dark:hover:bg-slate-800/50 dark:active:bg-slate-800/70"
 		>
-			<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-800/80 text-primary">
+			<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-primary dark:border-slate-700 dark:bg-slate-800/80">
 				<Icon className="h-4 w-4" />
 			</div>
 			<div>
-				<p className="text-sm font-medium text-white">{item.title}</p>
-				<p className="text-xs text-slate-300 line-clamp-1">{item.description}</p>
+				<p className="text-sm font-medium text-slate-900 dark:text-white">{item.title}</p>
+				<p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-1">{item.description}</p>
 			</div>
 		</Link>
 	);
@@ -185,6 +185,7 @@ function useScrolled(threshold = 10) {
 
 export function NureaHeader() {
 	const [mobileOpen, setMobileOpen] = useState(false);
+	const [mounted, setMounted] = useState(false);
 	const scrolled = useScrolled(10);
 	const { language } = useLanguage();
 	const t = useTranslations(language);
@@ -193,6 +194,10 @@ export function NureaHeader() {
 	const navContent = useMemo(() => getNavContent(language), [language]);
 	const closeMobile = useCallback(() => setMobileOpen(false), []);
 	const toggleMobile = useCallback(() => setMobileOpen(prev => !prev), []);
+
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
 	useEffect(() => {
 		if (mobileOpen) {
@@ -240,16 +245,14 @@ export function NureaHeader() {
 									{language === 'es' ? 'Para Pacientes' : 'For Patients'}
 								</NavigationMenuTrigger>
 								<NavigationMenuContent>
-									{/* Invisible bridge to prevent hover gap */}
-									<div className="absolute -top-3 left-0 right-0 h-4" />
-									<div className="w-80 rounded-xl border border-slate-800 bg-slate-900/98 p-2 shadow-2xl backdrop-blur-xl">
+									<div className="w-80 rounded-xl p-2 bg-white dark:bg-slate-950">
 										<div className="space-y-1">
 											{navContent.patientLinks.map((item) => (
 												<DropdownItem key={item.href} item={item} />
 											))}
 										</div>
-										<div className="mt-2 border-t border-slate-800 pt-2">
-											<p className="px-3 py-2 text-xs text-slate-300">
+										<div className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2">
+											<p className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
 												{language === 'es' ? '¿Primera vez?' : 'First time?'}{' '}
 												<Link href="/login" className="font-medium text-primary hover:underline">
 													{language === 'es' ? 'Crea tu cuenta gratis' : 'Create free account'}
@@ -266,16 +269,14 @@ export function NureaHeader() {
 									{language === 'es' ? 'Para Profesionales' : 'For Professionals'}
 								</NavigationMenuTrigger>
 								<NavigationMenuContent>
-									{/* Invisible bridge to prevent hover gap */}
-									<div className="absolute -top-3 left-0 right-0 h-4" />
-									<div className="w-80 rounded-xl border border-slate-800 bg-slate-900/98 p-2 shadow-2xl backdrop-blur-xl">
+									<div className="w-80 rounded-xl p-2 bg-white dark:bg-slate-950">
 										<div className="space-y-1">
 											{navContent.professionalLinks.map((item) => (
 												<DropdownItem key={item.href} item={item} />
 											))}
 										</div>
-										<div className="mt-2 border-t border-slate-800 pt-2">
-											<p className="px-3 py-2 text-xs text-slate-300">
+										<div className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2">
+											<p className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
 												{language === 'es' ? '¿Eres profesional de salud?' : 'Healthcare professional?'}{' '}
 												<Link href="/auth/register?role=professional&step=verification" className="font-medium text-primary hover:underline">
 													{language === 'es' ? 'Únete a NUREA' : 'Join NUREA'}
@@ -354,7 +355,7 @@ export function NureaHeader() {
 			</nav>
 
 			{/* Mobile Menu */}
-			{mobileOpen && typeof window !== 'undefined' && createPortal(
+			{mounted && mobileOpen && createPortal(
 				<div className="fixed inset-0 top-16 z-40 bg-background/95 backdrop-blur-lg lg:hidden">
 					<div className="flex h-full flex-col overflow-y-auto p-4">
 						<div className="flex-1 space-y-6">
