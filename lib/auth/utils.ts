@@ -39,12 +39,18 @@ export function canAccessRoute(userRole: UserRole, route: string): boolean {
     return true
   }
 
-  // Rutas de paciente - SOLO patient o admin
-  if (route.startsWith('/dashboard')) {
+  // Dashboard: /dashboard/patient/* → patient o admin; /dashboard/professional/* → professional o admin
+  if (route.startsWith('/dashboard/professional')) {
+    return userRole === 'professional' || userRole === 'admin'
+  }
+  if (route.startsWith('/dashboard/patient') || route === '/dashboard') {
     return userRole === 'patient' || userRole === 'admin'
   }
+  if (route.startsWith('/dashboard')) {
+    return true
+  }
 
-  // Rutas de profesional - SOLO professional o admin
+  // Rutas de profesional (legacy) - SOLO professional o admin
   if (route.startsWith('/professional')) {
     return userRole === 'professional' || userRole === 'admin'
   }

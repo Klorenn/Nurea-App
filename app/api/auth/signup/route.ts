@@ -39,6 +39,8 @@ export async function POST(request: Request) {
   const supabase = await createClient()
 
   // Sign up the user
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -48,7 +50,8 @@ export async function POST(request: Request) {
         last_name: lastName,
         role: role, // 'patient' or 'professional'
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/verify-email`,
+      // IMPORTANTE: Debe apuntar a /auth/callback para el intercambio de código PKCE
+      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   })
 
@@ -147,9 +150,6 @@ export async function POST(request: Request) {
     }
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-    ? `${process.env.NEXT_PUBLIC_SITE_URL || `https://${process.env.VERCEL_URL}`}`
-    : 'http://localhost:3000'
   const dashboardPath = role === 'professional' ? '/professional/dashboard' : '/dashboard'
   const dashboardLink = `${siteUrl}${dashboardPath}`
 

@@ -1,9 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { MeshGradient } from "@paper-design/shaders-react"
 import { useTheme } from "next-themes"
 
+/**
+ * Fondo tipo “mesh” en CSS puro (sin WebGL/eval) para cumplir CSP estricta.
+ * Sustituye a @paper-design/shaders-react que usa eval() y es bloqueado por CSP.
+ */
 export function PaperShaderBackground() {
   const [mounted, setMounted] = useState(false)
   const { resolvedTheme } = useTheme()
@@ -17,29 +20,29 @@ export function PaperShaderBackground() {
     return null
   }
 
-  // Colores para modo claro: verde agua más visible
-  const lightColors = ["#B2DFDB", "#80CBC4", "#4DD0E1", "#14B8A6"]
-  const lightBackground = "#E0F2F1"
+  // Gradientes radiales con los mismos tonos teal/agua, sin eval
+  const lightGradient =
+    "radial-gradient(ellipse 80% 70% at 20% 30%, #B2DFDB 0%, transparent 50%), " +
+    "radial-gradient(ellipse 60% 60% at 80% 20%, #80CBC4 0%, transparent 45%), " +
+    "radial-gradient(ellipse 70% 80% at 50% 80%, #4DD0E1 0%, transparent 50%), " +
+    "radial-gradient(ellipse 50% 50% at 70% 60%, #14B8A6 0%, transparent 40%)"
+  const darkGradient =
+    "radial-gradient(ellipse 80% 70% at 20% 30%, #1F2937 0%, transparent 50%), " +
+    "radial-gradient(ellipse 60% 60% at 80% 20%, #111827 0%, transparent 45%), " +
+    "radial-gradient(ellipse 70% 80% at 50% 80%, #14B8A6 0%, transparent 35%), " +
+    "radial-gradient(ellipse 50% 50% at 70% 60%, #030712 0%, transparent 40%)"
 
-  // Colores para modo oscuro: verde agua y gris oscuro
-  const darkColors = ["#030712", "#111827", "#1F2937", "#14B8A6"]
-  const darkBackground = "#000000"
-
-  const colors = isDark ? darkColors : lightColors
-  const backgroundColor = isDark ? darkBackground : lightBackground
+  const backgroundColor = isDark ? "#000000" : "#E0F2F1"
+  const gradient = isDark ? darkGradient : lightGradient
 
   return (
-    <div 
+    <div
       className="fixed inset-0 w-full h-full -z-10 overflow-hidden"
-      style={{ backgroundColor }}
+      style={{
+        backgroundColor,
+        backgroundImage: gradient,
+      }}
     >
-      <MeshGradient
-        className="w-full h-full absolute inset-0"
-        colors={colors}
-        speed={0.8}
-      />
-
-      {/* Lighting overlay effects - optimized for performance */}
       <div className="absolute inset-0 pointer-events-none">
         <div
           className={`absolute top-1/4 left-1/3 w-32 h-32 ${

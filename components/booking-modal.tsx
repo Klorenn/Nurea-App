@@ -1,45 +1,79 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Badge } from "@/components/ui/badge"
-import { Video, Home, ChevronRight, Clock, CreditCard, CheckCircle2, Loader2, AlertTriangle } from "lucide-react"
+import { 
+  Video, 
+  Home, 
+  ChevronRight, 
+  Clock, 
+  CreditCard, 
+  CheckCircle2, 
+  Loader2, 
+  AlertTriangle,
+  CalendarDays,
+  Sparkles,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { NoPhysicalConsultationDisplay } from "@/components/no-physical-consultation-display"
 import { createClient } from "@/lib/supabase/client"
-import { depositEscrowForBooking } from "@/lib/services/sorobanEscrowService"
+import { toast } from "sonner"
 
-// Genera bloques de 09:00 a 18:00 cada 30 min; excluye unos cuantos al azar como ocupados
-function buildTimeSlots(): { time: string; available: boolean }[] {
-  const slots: { time: string; available: boolean }[] = []
-  for (let h = 9; h <= 18; h++) {
-    for (const m of [0, 30]) {
-      if (h === 18 && m === 30) break
-      slots.push({
-        time: `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`,
-        available: true,
-      })
-    }
+interface TimeSlot {
+  time: string
+  available: boolean
+  displayTime: string
+}
+
+interface DayAvailability {
+  online?: { available: boolean; hours: string | null }
+  "in-person"?: { available: boolean; hours: string | null }
+  slotDuration?: number
+}
+
+const DAYS_MAP: Record<number, string> = {
+  0: "sunday",
+  1: "monday",
+  2: "tuesday",
+  3: "wednesday",
+  4: "thursday",
+  5: "friday",
+  6: "saturday",
+}
+
+function generateTimeSlots(
+  startTime: string,
+  endTime: string,
+  duration: number
+): string[] {
+  const slots: string[] = []
+  const [startHour, startMin] = startTime.split(":").map(Number)
+  const [endHour, endMin] = endTime.split(":").map(Number)
+
+  let currentMinutes = startHour * 60 + startMin
+  const endMinutes = endHour * 60 + endMin
+
+  while (currentMinutes + duration <= endMinutes) {
+    const hours = Math.floor(currentMinutes / 60)
+    const minutes = currentMinutes % 60
+    slots.push(
+      `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+    )
+    currentMinutes += duration
   }
-  const indices = [2, 5, 8, 12]
-  indices.forEach((i) => {
-    if (slots[i]) slots[i] = { ...slots[i], available: false }
-  })
+
   return slots
 }
 
-const TIME_SLOTS = buildTimeSlots()
-
-function isPastOrWeekend(date: Date): boolean {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const day = d.getDay()
-  return d < today || day === 0 || day === 6
+function formatTimeDisplay(time: string): string {
+  const [hours, minutes] = time.split(":").map(Number)
+  const period = hours >= 12 ? "PM" : "AM"
+  const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+  return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
 }
 
 export function BookingModal({
@@ -55,13 +89,13 @@ export function BookingModal({
   onClose: () => void
   professionalId?: string
   professionalName?: string
-  /** Wallet Stellar del profesional para recibir el pago del escrow. Si no tiene, no se puede reservar con pago. */
   stellarWallet?: string | null
-  /** Si false, el especialista no atiende presencialmente; en Step 1 se muestra NoPhysicalConsultationDisplay y el CTA lleva a paso 2 con online. */
   offersInPerson?: boolean
   isSpanish?: boolean
 }) {
   const router = useRouter()
+  const supabase = createClient()
+  
   const [step, setStep] = useState(1)
   const [type, setType] = useState<"online" | "in-person" | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
@@ -71,8 +105,139 @@ export function BookingModal({
   const [createdRef, setCreatedRef] = useState<string | null>(null)
   const [confirmedAt, setConfirmedAt] = useState<{ date: string; time: string } | null>(null)
 
-  const canBookWithPayment = Boolean(stellarWallet)
+  // Availability state
+  const [availability, setAvailability] = useState<Record<string, DayAvailability>>({})
+  const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set())
 
+  // Always allow booking with Stripe payments
+  const canBookWithPayment = true
+
+  // Load professional availability
+  useEffect(() => {
+    const loadAvailability = async () => {
+      if (!professionalId || !isOpen) return
+
+      setLoadingAvailability(true)
+      try {
+        const { data: professional, error } = await supabase
+          .from("professionals")
+          .select("availability, online_price, in_person_price, consultation_price")
+          .eq("id", professionalId)
+          .single()
+
+        if (!error && professional?.availability) {
+          setAvailability(professional.availability as Record<string, DayAvailability>)
+        }
+      } catch (error) {
+        console.error("Error loading availability:", error)
+      } finally {
+        setLoadingAvailability(false)
+      }
+    }
+
+    loadAvailability()
+  }, [professionalId, isOpen, supabase])
+
+  // Generate slots when date is selected
+  const loadSlotsForDate = useCallback(async (date: Date) => {
+    if (!professionalId || !type) return
+
+    setLoadingSlots(true)
+    setTimeSlots([])
+    setSelectedTime(null)
+
+    try {
+      const dayOfWeek = DAYS_MAP[date.getDay()]
+      const dayAvailability = availability[dayOfWeek]
+
+      if (!dayAvailability) {
+        setTimeSlots([])
+        return
+      }
+
+      // Get the hours for the selected consultation type
+      const typeAvailability = type === "online" 
+        ? dayAvailability.online 
+        : dayAvailability["in-person"]
+
+      if (!typeAvailability?.available || !typeAvailability.hours) {
+        setTimeSlots([])
+        return
+      }
+
+      // Parse hours
+      const [startTime, endTime] = typeAvailability.hours.split(" - ")
+      const duration = dayAvailability.slotDuration || 60
+
+      // Generate all possible slots
+      const allSlots = generateTimeSlots(startTime, endTime, duration)
+
+      // Get existing appointments for this date
+      const dateStr = date.toISOString().split("T")[0]
+      const { data: existingAppointments } = await supabase
+        .from("appointments")
+        .select("appointment_time")
+        .eq("professional_id", professionalId)
+        .eq("appointment_date", dateStr)
+        .in("status", ["pending", "confirmed"])
+
+      const bookedTimes = new Set(
+        existingAppointments?.map((apt) => 
+          apt.appointment_time.substring(0, 5)
+        ) || []
+      )
+      setBookedSlots(bookedTimes)
+
+      // Mark slots as available or booked
+      const slotsWithAvailability: TimeSlot[] = allSlots.map((time) => ({
+        time,
+        available: !bookedTimes.has(time),
+        displayTime: formatTimeDisplay(time),
+      }))
+
+      setTimeSlots(slotsWithAvailability)
+    } catch (error) {
+      console.error("Error loading slots:", error)
+    } finally {
+      setLoadingSlots(false)
+    }
+  }, [professionalId, type, availability, supabase])
+
+  // Reload slots when date changes
+  useEffect(() => {
+    if (selectedDate && type) {
+      loadSlotsForDate(selectedDate)
+    }
+  }, [selectedDate, type, loadSlotsForDate])
+
+  // Check if a date is available
+  const isDateDisabled = useCallback((date: Date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    // Past dates
+    if (date < today) return true
+
+    // Check if the day has availability for the selected type
+    const dayOfWeek = DAYS_MAP[date.getDay()]
+    const dayAvailability = availability[dayOfWeek]
+
+    if (!dayAvailability) return true
+
+    if (type === "online") {
+      return !dayAvailability.online?.available
+    } else if (type === "in-person") {
+      return !dayAvailability["in-person"]?.available
+    }
+
+    // If no type selected yet, check if any availability exists
+    return !(dayAvailability.online?.available || dayAvailability["in-person"]?.available)
+  }, [availability, type])
+
+  // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setStep(1)
@@ -82,18 +247,24 @@ export function BookingModal({
       setSubmitError(null)
       setCreatedRef(null)
       setConfirmedAt(null)
+      setTimeSlots([])
       return
     }
+
+    // Check user auth
     const checkUser = async () => {
-      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         onClose()
-        router.push("/login?message=" + encodeURIComponent("Debes iniciar sesión para agendar."))
+        router.push("/login?message=" + encodeURIComponent(
+          isSpanish 
+            ? "Debes iniciar sesión para agendar."
+            : "You must log in to book."
+        ))
       }
     }
     checkUser()
-  }, [isOpen, router, onClose])
+  }, [isOpen, router, onClose, supabase, isSpanish])
 
   const nextStep = () => setStep(step + 1)
   const prevStep = () => setStep(step - 1)
@@ -102,86 +273,80 @@ export function BookingModal({
 
   const handleCompleteBooking = async () => {
     if (!professionalId || !type || !selectedDate || !selectedTime) {
-      setSubmitError("Faltan datos para confirmar la cita.")
+      setSubmitError(isSpanish 
+        ? "Faltan datos para confirmar la cita."
+        : "Missing data to confirm appointment.")
       return
     }
-    const supabase = createClient()
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       onClose()
-      router.push("/login?message=" + encodeURIComponent("Debes iniciar sesión para agendar."))
+      router.push("/login?message=" + encodeURIComponent(
+        isSpanish 
+          ? "Debes iniciar sesión para agendar."
+          : "You must log in to book."
+      ))
       return
     }
-    if (!canBookWithPayment) {
-      setSubmitError("Este profesional aún no acepta pagos por Nurea.")
-      return
-    }
+
     setIsLoading(true)
     setSubmitError(null)
+
     const appointmentDate = selectedDate.toISOString().slice(0, 10)
     const appointmentTime = selectedTime.length === 5 ? `${selectedTime}:00` : selectedTime
-    const appointmentId = crypto.randomUUID()
-    const consultationAmount = "45" // Monto de consulta (ej. 45 USDC; ajustar según token/decimals)
 
     try {
-      // 1) Depósito en escrow: conectar Freighter del paciente e invocar deposit en el contrato Soroban.
-      const { txHash } = await depositEscrowForBooking({
-        appointmentId,
-        doctorWallet: stellarWallet!,
-        amount: consultationAmount,
-      })
-
-      // 2) Solo si la transacción en blockchain fue exitosa, guardar la cita en Supabase.
-      // Usamos el mismo appointmentId que se usó en el contrato de escrow para poder invocar release después.
-      const { data: appointment, error } = await supabase
-        .from("appointments")
-        .insert({
-          id: appointmentId,
-          patient_id: user.id,
-          professional_id: professionalId,
-          appointment_date: appointmentDate,
-          appointment_time: appointmentTime,
-          duration_minutes: 60,
-          type,
-          status: "confirmed",
-          is_online: type === "online",
-          payment_status: "escrow_locked",
-          price: 45000,
-        })
-        .select("id")
-        .single()
-
-      if (error) throw error
-      setCreatedRef(appointment?.id ? `#${String(appointment.id).slice(0, 8).toUpperCase()}` : "")
-      setConfirmedAt({
-        date: selectedDate.toLocaleDateString("es-CL", { day: "numeric", month: "short", year: "numeric" }),
-        time: selectedTime,
-      })
-      setStep(4)
-      // Notificar por correo al paciente y al profesional (no bloqueante; si falla, la cita ya está guardada)
-      fetch("/api/appointments/send-booking-confirmation", {
+      // Create Stripe Checkout Session
+      const response = await fetch("/api/appointments/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appointmentId: appointment.id }),
-      }).catch(() => {})
+        body: JSON.stringify({
+          professionalId,
+          appointmentDate,
+          appointmentTime,
+          type,
+          duration: 60,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || "Error al procesar el pago")
+      }
+
+      if (data.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url
+      } else {
+        throw new Error("No se recibió URL de pago")
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "No se pudo completar la reserva. Intenta de nuevo."
+      const message = err instanceof Error 
+        ? err.message 
+        : (isSpanish 
+            ? "No se pudo completar la reserva. Intenta de nuevo."
+            : "Could not complete the booking. Please try again.")
       setSubmitError(message)
-    } finally {
       setIsLoading(false)
     }
   }
+
+  const availableSlotsCount = timeSlots.filter(s => s.available).length
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl">
         <div className="flex flex-col h-[600px]">
           {/* Header Progress */}
-          <div className="bg-primary/5 p-8 border-b border-primary/10">
+          <div className="bg-gradient-to-r from-teal-600/10 to-emerald-600/10 p-6 sm:p-8 border-b border-teal-500/10">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-primary">Book Consultation</h2>
-              <Badge variant="outline" className="rounded-full border-primary/20 text-primary bg-white">
-                Step {step} of 4
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                {isSpanish ? "Agendar Consulta" : "Book Consultation"}
+              </h2>
+              <Badge variant="outline" className="rounded-full border-teal-500/30 text-teal-700 dark:text-teal-300 bg-white/80 dark:bg-slate-900/80">
+                {isSpanish ? `Paso ${step} de 4` : `Step ${step} of 4`}
               </Badge>
             </div>
             <div className="flex gap-2">
@@ -190,24 +355,27 @@ export function BookingModal({
                   key={s}
                   className={cn(
                     "h-1.5 flex-1 rounded-full transition-all duration-500",
-                    step >= s ? "bg-primary" : "bg-primary/10",
+                    step >= s ? "bg-teal-600" : "bg-teal-600/20",
                   )}
                 />
               ))}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-8">
+          <div className="flex-1 overflow-y-auto p-6 sm:p-8">
+            {/* Step 1: Consultation Type */}
             {step === 1 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {offersInPerson ? (
                   <>
                     <div className="space-y-2">
-                      <h3 className="text-xl font-bold">
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                         {isSpanish ? "Elige tipo de consulta" : "Select Consultation Mode"}
                       </h3>
-                      <p className="text-muted-foreground">
-                        {isSpanish ? "¿Cómo te gustaría reunirte con el especialista?" : "How would you like to meet with the specialist?"}
+                      <p className="text-slate-500 dark:text-slate-400">
+                        {isSpanish 
+                          ? "¿Cómo te gustaría reunirte con el especialista?" 
+                          : "How would you like to meet with the specialist?"}
                       </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
@@ -217,18 +385,21 @@ export function BookingModal({
                           nextStep()
                         }}
                         className={cn(
-                          "flex flex-col items-center gap-4 p-8 rounded-[2rem] border-2 transition-all group",
-                          type === "online"
-                            ? "border-primary bg-primary/5"
-                            : "border-border/40 hover:border-primary/40 hover:bg-accent/20",
+                          "flex flex-col items-center gap-4 p-8 rounded-2xl border-2 transition-all group",
+                          "border-slate-200 dark:border-slate-700",
+                          "hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-950/30",
                         )}
                       >
-                        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 rounded-2xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform">
                           <Video className="h-8 w-8" />
                         </div>
                         <div className="text-center">
-                          <p className="font-bold text-lg">{isSpanish ? "Consulta online" : "Online Session"}</p>
-                          <p className="text-xs text-muted-foreground mt-1">Via NUREA Secure Video</p>
+                          <p className="font-bold text-lg text-slate-900 dark:text-white">
+                            {isSpanish ? "Consulta Online" : "Online Session"}
+                          </p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            {isSpanish ? "Videollamada segura" : "Secure video call"}
+                          </p>
                         </div>
                       </button>
                       <button
@@ -237,18 +408,21 @@ export function BookingModal({
                           nextStep()
                         }}
                         className={cn(
-                          "flex flex-col items-center gap-4 p-8 rounded-[2rem] border-2 transition-all group",
-                          type === "in-person"
-                            ? "border-secondary bg-secondary/5"
-                            : "border-border/40 hover:border-secondary/40 hover:bg-accent/20",
+                          "flex flex-col items-center gap-4 p-8 rounded-2xl border-2 transition-all group",
+                          "border-slate-200 dark:border-slate-700",
+                          "hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/30",
                         )}
                       >
-                        <div className="w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
                           <Home className="h-8 w-8" />
                         </div>
                         <div className="text-center">
-                          <p className="font-bold text-lg">{isSpanish ? "Presencial" : "In-person Visit"}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{isSpanish ? "En consultorio" : "Visit at clinic location"}</p>
+                          <p className="font-bold text-lg text-slate-900 dark:text-white">
+                            {isSpanish ? "Presencial" : "In-person Visit"}
+                          </p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                            {isSpanish ? "En consultorio" : "At clinic location"}
+                          </p>
                         </div>
                       </button>
                     </div>
@@ -267,132 +441,244 @@ export function BookingModal({
               </div>
             )}
 
+            {/* Step 2: Date & Time Selection */}
             {step === 2 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="space-y-2">
-                  <h3 className="text-xl font-bold">Select Date & Time</h3>
-                  <p className="text-muted-foreground">Choose your preferred availability.</p>
-                </div>
-                <div className="flex flex-col md:flex-row gap-8 pt-4">
-                  <div className="border border-border/40 rounded-2xl p-2 bg-white">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      disabled={isPastOrWeekend}
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="flex-1 space-y-4">
-                    <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <Clock className="h-4 w-4" /> Available Slots
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {TIME_SLOTS.map((slot) => (
-                        <Button
-                          key={slot.time}
-                          variant={selectedTime === slot.time ? "default" : "outline"}
-                          className={cn(
-                            "rounded-xl h-11 bg-transparent",
-                            selectedTime === slot.time && "bg-primary text-primary-foreground"
-                          )}
-                          onClick={() => slot.available && setSelectedTime(slot.time)}
-                          disabled={!slot.available}
-                        >
-                          {slot.time}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                {!canBookWithPayment && (
-                  <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-700 dark:text-amber-400">
-                    <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-                    <p className="text-sm">
-                      Este profesional aún no acepta pagos por Nurea. Configura su wallet Stellar en Configuración para habilitar la reserva con depósito en garantía.
-                    </p>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold">Payment Method</h3>
-                  <p className="text-muted-foreground">Secure your appointment with a deposit.</p>
-                </div>
-                <div className="grid gap-4 pt-4">
-                  <Button
-                    variant="outline"
-                    className="h-20 justify-between px-6 rounded-2xl border-2 hover:border-primary transition-all bg-transparent group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-accent/30 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
-                        <CreditCard className="h-6 w-6" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-bold">Credit / Debit Card</p>
-                        <p className="text-xs text-muted-foreground">Pay securely via Webpay</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-20 justify-between px-6 rounded-2xl border-2 hover:border-primary transition-all bg-transparent group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-accent/30 flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
-                        <Home className="h-6 w-6" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-bold">Bank Transfer</p>
-                        <p className="text-xs text-muted-foreground">Manual transfer confirmation</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </Button>
-                </div>
-                <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Consultation Fee</span>
-                    <span className="font-bold">$45,000 CLP</span>
-                  </div>
-                </div>
-                {submitError && (
-                  <p className="text-sm text-destructive font-medium">{submitError}</p>
-                )}
-              </div>
-            )}
-
-            {step === 4 && (
-              <div className="flex flex-col items-center justify-center text-center space-y-6 py-12 animate-in zoom-in-95 duration-500">
-                <div className="w-24 h-24 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                  <CheckCircle2 className="h-16 w-16" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-3xl font-bold">Appointment Confirmed!</h3>
-                  <p className="text-muted-foreground max-w-sm">
-                    Your session with <strong>{professionalName}</strong> is scheduled for {confirmedAt?.date ?? ""} at {confirmedAt?.time ?? ""}.
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {isSpanish ? "Selecciona Fecha y Hora" : "Select Date & Time"}
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    {isSpanish 
+                      ? "Elige el momento que mejor te convenga."
+                      : "Choose the time that works best for you."}
                   </p>
                 </div>
-                <div className="bg-accent/20 p-6 rounded-[2rem] w-full max-w-md space-y-4 border border-border/40">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Mode</span>
-                    <span className="font-bold">{type === "online" ? "Online Video" : "In-person"}</span>
+
+                <div className="flex flex-col lg:flex-row gap-6 pt-4">
+                  {/* Calendar */}
+                  <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-2 bg-white dark:bg-slate-900">
+                    {loadingAvailability ? (
+                      <div className="h-[300px] flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
+                      </div>
+                    ) : (
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        disabled={isDateDisabled}
+                        className="rounded-lg"
+                      />
+                    )}
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Reference</span>
-                    <span className="font-bold">{createdRef || "—"}</span>
+
+                  {/* Time Slots */}
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                        <Clock className="h-4 w-4" /> 
+                        {isSpanish ? "Horarios Disponibles" : "Available Slots"}
+                      </p>
+                      {selectedDate && !loadingSlots && (
+                        <Badge variant="outline" className="text-xs">
+                          {availableSlotsCount} {isSpanish ? "disponibles" : "available"}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {!selectedDate ? (
+                      <div className="h-[200px] flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 space-y-2">
+                        <CalendarDays className="h-10 w-10" />
+                        <p className="text-sm text-center">
+                          {isSpanish 
+                            ? "Selecciona una fecha para ver los horarios"
+                            : "Select a date to see available times"}
+                        </p>
+                      </div>
+                    ) : loadingSlots ? (
+                      <div className="h-[200px] flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
+                      </div>
+                    ) : timeSlots.length === 0 ? (
+                      <div className="h-[200px] flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 space-y-2">
+                        <AlertTriangle className="h-10 w-10" />
+                        <p className="text-sm text-center">
+                          {isSpanish 
+                            ? "No hay horarios disponibles para este día"
+                            : "No available slots for this day"}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[280px] overflow-y-auto pr-2">
+                        {timeSlots.map((slot) => (
+                          <Button
+                            key={slot.time}
+                            variant={selectedTime === slot.time ? "default" : "outline"}
+                            size="sm"
+                            className={cn(
+                              "h-11 rounded-xl transition-all",
+                              selectedTime === slot.time 
+                                ? "bg-teal-600 hover:bg-teal-700 text-white border-teal-600" 
+                                : "bg-white dark:bg-slate-900 hover:border-teal-500",
+                              !slot.available && "opacity-40 line-through pointer-events-none"
+                            )}
+                            onClick={() => slot.available && setSelectedTime(slot.time)}
+                            disabled={!slot.available}
+                          >
+                            {slot.displayTime}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Step 3: Payment */}
+            {step === 3 && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {isSpanish ? "Confirmar y Pagar" : "Confirm & Pay"}
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    {isSpanish 
+                      ? "Serás redirigido a Stripe para completar el pago de forma segura."
+                      : "You'll be redirected to Stripe to complete the payment securely."}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 pt-4">
+                  <div className="h-20 flex items-center gap-4 px-6 rounded-2xl border-2 border-teal-500/30 bg-teal-50/50 dark:bg-teal-950/30">
+                    <div className="w-12 h-12 rounded-xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-600">
+                      <CreditCard className="h-6 w-6" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        {isSpanish ? "Pago con Stripe" : "Pay with Stripe"}
+                      </p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {isSpanish ? "Tarjeta de crédito, débito o Google Pay" : "Credit card, debit or Google Pay"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Summary */}
+                <div className="bg-teal-50 dark:bg-teal-950/30 p-5 rounded-xl border border-teal-200 dark:border-teal-800 space-y-3">
+                  <p className="text-sm font-semibold text-teal-800 dark:text-teal-200">
+                    {isSpanish ? "Resumen de tu cita" : "Appointment Summary"}
+                  </p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-teal-700 dark:text-teal-300">
+                        {isSpanish ? "Fecha" : "Date"}
+                      </span>
+                      <span className="font-medium text-teal-900 dark:text-teal-100">
+                        {selectedDate?.toLocaleDateString(isSpanish ? "es-CL" : "en-US", { 
+                          weekday: "short",
+                          day: "numeric", 
+                          month: "short" 
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-teal-700 dark:text-teal-300">
+                        {isSpanish ? "Hora" : "Time"}
+                      </span>
+                      <span className="font-medium text-teal-900 dark:text-teal-100">
+                        {selectedTime && formatTimeDisplay(selectedTime)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-teal-700 dark:text-teal-300">
+                        {isSpanish ? "Modalidad" : "Type"}
+                      </span>
+                      <span className="font-medium text-teal-900 dark:text-teal-100">
+                        {type === "online" 
+                          ? (isSpanish ? "Online" : "Online") 
+                          : (isSpanish ? "Presencial" : "In-person")}
+                      </span>
+                    </div>
+                    <div className="border-t border-teal-200 dark:border-teal-700 pt-2 mt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-teal-800 dark:text-teal-200">
+                          {isSpanish ? "Total" : "Total"}
+                        </span>
+                        <span className="text-xl font-bold text-teal-900 dark:text-teal-100">
+                          $45,000 CLP
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {submitError && (
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                    {submitError}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Step 4: Confirmation */}
+            {step === 4 && (
+              <div className="flex flex-col items-center justify-center text-center space-y-6 py-8 animate-in zoom-in-95 duration-500">
+                <div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                  <CheckCircle2 className="h-14 w-14 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
+                    {isSpanish ? "¡Cita Confirmada!" : "Appointment Confirmed!"}
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-sm">
+                    {isSpanish 
+                      ? `Tu cita con ${professionalName} está agendada para el ${confirmedAt?.date} a las ${confirmedAt?.time}.`
+                      : `Your session with ${professionalName} is scheduled for ${confirmedAt?.date} at ${confirmedAt?.time}.`}
+                  </p>
+                </div>
+                <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl w-full max-w-md space-y-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500 dark:text-slate-400">
+                      {isSpanish ? "Modalidad" : "Mode"}
+                    </span>
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {type === "online" 
+                        ? (isSpanish ? "Videollamada" : "Video Call") 
+                        : (isSpanish ? "Presencial" : "In-person")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500 dark:text-slate-400">
+                      {isSpanish ? "Referencia" : "Reference"}
+                    </span>
+                    <span className="font-mono font-semibold text-slate-900 dark:text-white">
+                      {createdRef || "—"}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {isSpanish 
+                    ? "Recibirás un correo con los detalles y recordatorios."
+                    : "You'll receive an email with details and reminders."}
+                </p>
                 <div className="flex gap-4 w-full pt-4">
-                  <Button variant="outline" className="flex-1 rounded-xl bg-transparent" onClick={onClose}>
-                    Close
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 rounded-xl bg-transparent" 
+                    onClick={onClose}
+                  >
+                    {isSpanish ? "Cerrar" : "Close"}
                   </Button>
-                  <Button className="flex-1 rounded-xl" asChild>
-                    <a href="/dashboard/appointments">Go to Dashboard</a>
+                  <Button 
+                    className="flex-1 rounded-xl bg-teal-600 hover:bg-teal-700" 
+                    asChild
+                  >
+                    <a href="/dashboard/appointments">
+                      {isSpanish ? "Ver Mis Citas" : "View My Appointments"}
+                    </a>
                   </Button>
                 </div>
               </div>
@@ -401,21 +687,34 @@ export function BookingModal({
 
           {/* Footer Controls */}
           {step < 4 && (
-            <div className="p-8 border-t border-border/40 flex justify-between bg-white">
-              <Button variant="ghost" onClick={prevStep} disabled={step === 1 || isLoading} className="rounded-xl font-bold">
-                Back
+            <div className="p-6 sm:p-8 border-t border-slate-200 dark:border-slate-800 flex justify-between bg-white dark:bg-slate-950">
+              <Button 
+                variant="ghost" 
+                onClick={prevStep} 
+                disabled={step === 1 || isLoading} 
+                className="rounded-xl font-medium"
+              >
+                {isSpanish ? "Atrás" : "Back"}
               </Button>
               <Button
                 onClick={step === 3 ? handleCompleteBooking : nextStep}
-                disabled={(step === 1 && !type) || (step === 2 && !canConfirmStep2) || (step === 3 && !canBookWithPayment) || isLoading}
-                className="px-10 rounded-xl font-bold"
+                disabled={
+                  (step === 1 && !type) || 
+                  (step === 2 && !canConfirmStep2) || 
+                  (step === 3 && !canBookWithPayment) || 
+                  isLoading
+                }
+                className={cn(
+                  "px-8 rounded-xl font-semibold",
+                  "bg-teal-600 hover:bg-teal-700"
+                )}
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : step === 3 ? (
-                  "Complete Booking"
+                  isSpanish ? "Confirmar y Pagar" : "Confirm & Pay"
                 ) : (
-                  "Next"
+                  isSpanish ? "Siguiente" : "Next"
                 )}
               </Button>
             </div>

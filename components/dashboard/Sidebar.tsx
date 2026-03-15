@@ -61,9 +61,21 @@ const professionalNavigation: NavGroup[] = [
     items: [
       {
         icon: BarChart3,
-        label: "Resumen de Citas",
-        labelEn: "Appointments Overview",
+        label: "Resumen",
+        labelEn: "Overview",
         href: "/dashboard/professional",
+      },
+      {
+        icon: Calendar,
+        label: "Mi Agenda",
+        labelEn: "My Schedule",
+        href: "/dashboard/professional/appointments",
+      },
+      {
+        icon: ClipboardList,
+        label: "Disponibilidad",
+        labelEn: "Availability",
+        href: "/dashboard/professional/availability",
       },
       {
         icon: Users,
@@ -119,21 +131,27 @@ const patientNavigation: NavGroup[] = [
     items: [
       {
         icon: Calendar,
+        label: "Mi Dashboard",
+        labelEn: "My Dashboard",
+        href: "/dashboard/patient",
+      },
+      {
+        icon: Calendar,
         label: "Mis Citas",
         labelEn: "My Appointments",
-        href: "/dashboard/patient",
+        href: "/dashboard/appointments",
       },
       {
         icon: Search,
         label: "Buscar Especialista",
         labelEn: "Find Specialist",
-        href: "/search",
+        href: "/explore",
       },
       {
         icon: Heart,
         label: "Favoritos",
         labelEn: "Favorites",
-        href: "/dashboard/patient/favorites",
+        href: "/dashboard/favorites",
       },
     ],
   },
@@ -142,22 +160,10 @@ const patientNavigation: NavGroup[] = [
     titleEn: "Medical History",
     items: [
       {
-        icon: ClipboardList,
-        label: "Consultas Pasadas",
-        labelEn: "Past Consultations",
-        href: "/dashboard/patient/history",
-      },
-      {
-        icon: PillIcon,
-        label: "Mis Recetas",
-        labelEn: "My Prescriptions",
-        href: "/dashboard/patient/prescriptions",
-      },
-      {
-        icon: FlaskConical,
-        label: "Resultados de Lab",
-        labelEn: "Lab Results",
-        href: "/dashboard/patient/lab-results",
+        icon: FileText,
+        label: "Documentos",
+        labelEn: "Documents",
+        href: "/dashboard/documents",
       },
     ],
   },
@@ -166,10 +172,10 @@ const patientNavigation: NavGroup[] = [
     titleEn: "Payments",
     items: [
       {
-        icon: Wallet,
-        label: "Métodos de Pago",
-        labelEn: "Payment Methods",
-        href: "/dashboard/patient/payments",
+        icon: CreditCard,
+        label: "Pagos",
+        labelEn: "Payments",
+        href: "/dashboard/payments",
       },
     ],
   },

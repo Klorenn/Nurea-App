@@ -1,18 +1,17 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCheck, GraduationCap } from "lucide-react"
+import { CheckCheck, GraduationCap, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { SubscriptionSuccessDialog } from "@/components/subscription-success-dialog"
-import { WelcomeDialog } from "@/components/welcome-dialog"
+import { useAuth } from "@/hooks/use-auth"
 import { motion, useInView } from "framer-motion"
 import { cn } from "@/lib/utils"
 
-// Asegura espacios entre palabras (por si la traducción viene pegada)
 function ensureSpaces(str: string): string {
   if (!str || str.includes(" ")) return str
   return str.replace(/([a-záéíóúñ])([A-ZÁÉÍÓÚÑ])/g, "$1 $2").replace(/([0-9])([A-Za-zÁÉÍÓÚáéíóú])/g, "$1 $2")
@@ -44,7 +43,6 @@ const VerticalCutReveal = ({ children, className }: { children: string; classNam
   )
 }
 
-// Componente simplificado para TimelineContent
 const TimelineContent = ({
   as: Component = "div",
   animationNum,
@@ -54,13 +52,13 @@ const TimelineContent = ({
   className,
   ...props
 }: {
-  as?: any
+  as?: React.ElementType
   animationNum: number
   timelineRef: React.RefObject<HTMLDivElement | null>
-  customVariants?: any
+  customVariants?: Record<string, unknown>
   children: React.ReactNode
   className?: string
-  [key: string]: any
+  [key: string]: unknown
 }) => {
   const isInView = useInView(timelineRef || { current: null }, { once: true, margin: "-100px" })
   const variants = customVariants || {
@@ -69,10 +67,7 @@ const TimelineContent = ({
   }
 
   return (
-    <Component
-      className={className}
-      {...props}
-    >
+    <Component className={className} {...props}>
       <motion.div
         initial="hidden"
         animate={isInView ? "visible" : "hidden"}
@@ -85,12 +80,10 @@ const TimelineContent = ({
   )
 }
 
-// Componente para animar números (alternativa a NumberFlow)
 const AnimatedNumber = ({ value, className }: { value: number; className?: string }) => {
   const [displayValue, setDisplayValue] = useState(0)
 
   useEffect(() => {
-    // Iniciar animación automáticamente al montar
     const duration = 1000
     const steps = 30
     const increment = value / steps
@@ -195,16 +188,35 @@ const PricingSwitch = ({
   )
 }
 
+interface PlanConfig {
+  id: string
+  stripePriceIdMonthly: string
+  stripePriceIdYearly: string
+}
+
+const STRIPE_PLANS: Record<string, PlanConfig> = {
+  professional: {
+    id: "professional",
+    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY || "",
+    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY || "",
+  },
+  recentGraduate: {
+    id: "starter",
+    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY || "",
+    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY || "",
+  },
+}
+
 export function Pricing() {
   const { language } = useLanguage()
   const t = useTranslations(language || "es")
-  const [showWelcomeDialog, setShowWelcomeDialog] = useState(false)
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<{ name: string; price: string } | null>(null)
+  const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
+  
   const [isYearly, setIsYearly] = useState(false)
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
   const pricingRef = useRef<HTMLDivElement>(null)
 
-  // Precios en CLP
   const monthlyPrices = {
     professional: 25000,
     recentGraduate: 15000,
@@ -216,15 +228,11 @@ export function Pricing() {
     return Math.round(yearlyWithoutDiscount - discount)
   }
 
-  const calculateSavingsPercentage = (monthlyPrice: number, discountPercent: number = 38) => {
-    return discountPercent
-  }
-
-  // Calcular porcentaje de ahorro promedio (38% para plan profesional)
-  const averageSavingsPercentage = calculateSavingsPercentage(monthlyPrices.professional, 38)
+  const averageSavingsPercentage = 38
 
   const plans = [
     {
+      key: "professional",
       name: t.landing.pricing.professional,
       monthlyPrice: monthlyPrices.professional,
       yearlyPrice: calculateYearlyPrice(monthlyPrices.professional, 38),
@@ -240,9 +248,9 @@ export function Pricing() {
       ],
       popular: true,
       buttonText: t.landing.pricing.getStarted,
-      buttonVariant: "default" as const,
     },
     {
+      key: "recentGraduate",
       name: t.landing.pricing.recentGraduate,
       monthlyPrice: monthlyPrices.recentGraduate,
       yearlyPrice: calculateYearlyPrice(monthlyPrices.recentGraduate, 38),
@@ -258,12 +266,66 @@ export function Pricing() {
         t.landing.pricing.analyticsDashboard,
       ],
       buttonText: t.landing.pricing.applyForDiscount,
-      buttonVariant: "outline" as const,
     },
   ]
 
   const togglePricingPeriod = (value: string) => {
     setIsYearly(Number.parseInt(value) === 1)
+  }
+
+  const handleSelectPlan = async (planKey: string) => {
+    if (authLoading) return
+
+    if (!user) {
+      router.push(`/auth/register?role=professional&redirect=/precios`)
+      return
+    }
+
+    const stripeConfig = STRIPE_PLANS[planKey]
+    if (!stripeConfig) {
+      console.error("Plan configuration not found:", planKey)
+      return
+    }
+
+    const priceId = isYearly ? stripeConfig.stripePriceIdYearly : stripeConfig.stripePriceIdMonthly
+
+    if (!priceId) {
+      router.push("/precios")
+      return
+    }
+
+    setLoadingPlan(planKey)
+
+    try {
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ priceId }),
+      })
+
+      const data = await response.json()
+
+      if (data.error) {
+        console.error("Checkout error:", data.error)
+        alert(language === "es" 
+          ? `Error: ${data.error}` 
+          : `Error: ${data.error}`)
+        return
+      }
+
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (error) {
+      console.error("Error initiating checkout:", error)
+      alert(language === "es" 
+        ? "Error al procesar. Por favor intenta de nuevo." 
+        : "Processing error. Please try again.")
+    } finally {
+      setLoadingPlan(null)
+    }
   }
 
   const revealVariants = {
@@ -320,10 +382,11 @@ export function Pricing() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-6 w-full min-w-0">
         {plans.map((plan, index) => {
           const currentPrice = isYearly ? plan.yearlyPrice : plan.monthlyPrice
+          const isLoading = loadingPlan === plan.key
 
           return (
             <TimelineContent
-              key={plan.name}
+              key={plan.key}
               as="div"
               animationNum={2 + index}
               timelineRef={pricingRef}
@@ -341,7 +404,7 @@ export function Pricing() {
                 <CardHeader className="text-left pb-4 pt-8 min-w-0">
                   <div className="flex flex-wrap justify-between items-start mb-2 gap-2">
                     <h3 className="text-2xl md:text-2xl xl:text-3xl font-semibold text-slate-950 dark:text-white flex items-center gap-2 break-words">
-                      {plan.name === t.landing.pricing.recentGraduate && (
+                      {plan.key === "recentGraduate" && (
                         <GraduationCap className="h-6 w-6 text-teal-900 dark:text-primary" />
                       )}
                       {plan.name}
@@ -387,19 +450,24 @@ export function Pricing() {
                       "w-full mb-6 p-4 text-lg sm:text-xl rounded-xl font-semibold transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 hover:opacity-95 active:opacity-90",
                       "bg-teal-600 hover:bg-teal-700 dark:bg-gradient-to-t dark:from-primary dark:to-primary/90 shadow-lg shadow-primary/30 border border-teal-600 dark:border-primary/50 text-white hover:shadow-xl hover:shadow-primary/40"
                     )}
-                    onClick={() => {
-                      setSelectedPlan({ name: plan.name, price: `$${currentPrice.toLocaleString("es-CL")}` })
-                      setShowWelcomeDialog(true)
-                    }}
+                    onClick={() => handleSelectPlan(plan.key)}
+                    disabled={loadingPlan !== null}
                     aria-label={plan.buttonText}
                   >
-                    {plan.buttonText}
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        {language === "es" ? "Procesando..." : "Processing..."}
+                      </span>
+                    ) : (
+                      plan.buttonText
+                    )}
                   </Button>
 
                   <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-border/40 flex-1">
-                    <h2 className="text-xl font-semibold uppercase text-slate-900 dark:text-white mb-3">
+                    <h4 className="text-xl font-semibold uppercase text-slate-900 dark:text-white mb-3">
                       {language === "es" ? "Características" : "Features"}
-                    </h2>
+                    </h4>
                     <ul className="space-y-2" role="list">
                       {plan.features.map((feature, featureIndex) => (
                         <li key={featureIndex} className="flex items-start gap-3 min-w-0">
@@ -417,31 +485,6 @@ export function Pricing() {
           )
         })}
       </div>
-
-      {/* Welcome Dialog */}
-      <WelcomeDialog
-        open={showWelcomeDialog}
-        onOpenChange={setShowWelcomeDialog}
-        onContinue={() => {
-          setShowWelcomeDialog(false)
-          setTimeout(() => {
-            setShowSuccessDialog(true)
-          }, 300)
-        }}
-      />
-
-      {/* Success Dialog */}
-      {selectedPlan && (
-        <SubscriptionSuccessDialog
-          open={showSuccessDialog}
-          onOpenChange={setShowSuccessDialog}
-          planName={selectedPlan.name}
-          amount={`${selectedPlan.price} CLP${isYearly ? (language === "es" ? "/año" : "/year") : (language === "es" ? "/mes" : "/month")}`}
-          onContinue={() => {
-            window.location.href = '/professional/dashboard'
-          }}
-        />
-      )}
     </section>
   )
 }

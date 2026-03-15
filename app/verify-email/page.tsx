@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
-import { Mail, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react"
+import { Mail, CheckCircle2, AlertCircle } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { authMessages } from "@/lib/auth/messages"
 
@@ -113,44 +113,6 @@ function VerifyEmailContent() {
               </div>
             </div>
           )}
-
-          <div className="flex justify-center">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle2 className="h-10 w-10 text-primary" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold">
-              {language === "es" ? "Revisa tu bandeja de entrada" : "Check your inbox"}
-            </h3>
-            <p className="text-muted-foreground">
-              {language === "es"
-                ? "Te hemos enviado un enlace de verificación a tu email. Por favor, haz clic en el enlace para verificar tu cuenta y completar tu registro."
-                : "We've sent a verification link to your email address. Please click the link to verify your account and complete your registration."}
-            </p>
-          </div>
-          <div className="pt-4 space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {language === "es" ? "¿No recibiste el email?" : "Didn't receive the email?"}{" "}
-              {language === "es" ? "Revisa tu carpeta de spam o" : "Check your spam folder or"}{" "}
-              <button 
-                onClick={handleResend}
-                disabled={loading}
-                className="text-primary font-bold hover:underline disabled:opacity-50"
-              >
-                {loading 
-                  ? (language === "es" ? "enviando..." : "sending...")
-                  : (language === "es" ? "reenviar email de verificación" : "resend verification email")}
-              </button>
-              .
-            </p>
-            <Button className="w-full h-12 rounded-xl font-bold text-lg" asChild>
-              <Link href="/login">
-                {language === "es" ? "Continuar al Login" : "Continue to Login"}{" "}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </main>

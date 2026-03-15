@@ -54,11 +54,21 @@ export default function DashboardMainLayout({
           .from("profiles")
           .select("id, role, first_name, last_name, avatar_url, email_verified")
           .eq("id", user.id)
-          .single()
+          .maybeSingle()
 
         if (error) {
-          console.error("Error loading profile:", error)
+          const errMsg = error?.message ?? error?.code ?? String(error)
+          if (process.env.NODE_ENV === "development") {
+            console.error("Error loading profile:", errMsg, error)
+          }
           setProfileLoading(false)
+          router.push("/login")
+          return
+        }
+
+        if (!data) {
+          setProfileLoading(false)
+          router.push("/complete-profile")
           return
         }
 
@@ -85,8 +95,13 @@ export default function DashboardMainLayout({
               : "/dashboard/patient"
           )
         }
-      } catch (error) {
-        console.error("Error loading profile:", error)
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
+        if (process.env.NODE_ENV === "development") {
+          console.error("Error loading profile:", errMsg, err)
+        }
+        setProfileLoading(false)
+        router.push("/login")
       } finally {
         setProfileLoading(false)
       }

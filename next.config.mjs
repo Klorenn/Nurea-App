@@ -3,6 +3,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "@radix-ui/react-icons",
+      "@tabler/icons-react",
+    ],
+  },
   async headers() {
     return [
       {
@@ -11,6 +18,7 @@ const nextConfig = {
           {
             key: "Content-Security-Policy",
             value: [
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
               "frame-src 'self' https://meet.jit.si https://*.jit.si",
               "frame-ancestors 'self'",
             ].join("; "),

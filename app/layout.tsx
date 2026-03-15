@@ -1,24 +1,24 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Lora } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import { LanguageProvider } from "@/contexts/language-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/providers/query-provider"
 import { Toaster } from "sonner"
+import { AnalyticsClient } from "@/components/analytics-client"
 import "./globals.css"
 
-const _geist = Geist({ 
+const GeistFont = Geist({
   subsets: ["latin"],
-  display: "swap",
+  display: "optional",
   preload: true,
   variable: "--font-sans",
 })
-const _lora = Lora({
+const LoraFont = Lora({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "600"],
   variable: "--font-serif",
-  display: "swap",
+  display: "optional",
   preload: false,
 })
 
@@ -165,13 +165,13 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${GeistFont.variable} ${LoraFont.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>
             <LanguageProvider>
               {children}
               <Toaster position="top-right" richColors closeButton />
-              <Analytics />
+              <AnalyticsClient />
             </LanguageProvider>
           </QueryProvider>
         </ThemeProvider>

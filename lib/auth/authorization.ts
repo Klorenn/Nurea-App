@@ -273,29 +273,43 @@ export function createErrorResponse(
 }
 
 /**
- * Helper para validar acceso a rutas protegidas
+ * Helper para validar acceso a rutas protegidas.
+ * Redirecciones usan /dashboard/patient y /dashboard/professional (no /dashboard ni /professional/dashboard).
  */
 export function validateRouteAccess(
   pathname: string,
   userRole: UserRole
 ): { allowed: boolean; redirectTo?: string } {
-  // Rutas de paciente
-  if (pathname.startsWith('/dashboard')) {
-    if (userRole !== 'patient' && userRole !== 'admin') {
-      return {
-        allowed: false,
-        redirectTo: userRole === 'professional' ? '/professional/dashboard' : '/login'
-      }
+  // Rutas de dashboard del paciente: /dashboard, /dashboard/patient, /dashboard/appointments, etc.
+  if (pathname.startsWith('/dashboard/patient') || pathname === '/dashboard' || (
+    pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/professional')
+  )) {
+    if (userRole === 'professional') {
+      return { allowed: false, redirectTo: '/dashboard/professional' }
+    }
+    if (userRole === 'admin') {
+      return { allowed: true }
     }
     return { allowed: true }
   }
 
-  // Rutas de profesional
+  // Rutas de dashboard del profesional
+  if (pathname.startsWith('/dashboard/professional')) {
+    if (userRole === 'patient') {
+      return { allowed: false, redirectTo: '/dashboard/patient' }
+    }
+    if (userRole === 'admin') {
+      return { allowed: true }
+    }
+    return { allowed: true }
+  }
+
+  // Rutas legacy /professional/*
   if (pathname.startsWith('/professional')) {
     if (userRole !== 'professional' && userRole !== 'admin') {
       return {
         allowed: false,
-        redirectTo: userRole === 'patient' ? '/dashboard' : '/login'
+        redirectTo: userRole === 'patient' ? '/dashboard/patient' : '/login'
       }
     }
     return { allowed: true }
@@ -306,13 +320,12 @@ export function validateRouteAccess(
     if (userRole !== 'admin') {
       return {
         allowed: false,
-        redirectTo: userRole === 'professional' ? '/professional/dashboard' : '/dashboard'
+        redirectTo: userRole === 'professional' ? '/dashboard/professional' : '/dashboard/patient'
       }
     }
     return { allowed: true }
   }
 
-  // Por defecto, permitir acceso
   return { allowed: true }
 }
 

@@ -47,6 +47,15 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
+  /** Redirige y copia las cookies de Supabase para no perder la sesión al redirigir */
+  const redirectWithCookies = (path: string) => {
+    const url = request.nextUrl.clone()
+    url.pathname = path
+    const res = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value, c))
+    return res
+  }
+
   // Rutas públicas (no requieren autenticación)
   const publicRoutes = [
     '/',
@@ -73,7 +82,9 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(url)
+    const res = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value, c))
+    return res
   }
 
   // Si hay usuario, verificar acceso por rol
@@ -92,30 +103,31 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       url.searchParams.set('error', 'account_blocked')
-      return NextResponse.redirect(url)
+      const res = NextResponse.redirect(url)
+      supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value, c))
+      return res
+    }
+
+    // Redirigir /dashboard exacto al dashboard por rol (evita 404 por ruta ambigua)
+    if (pathname === '/dashboard') {
+      const redirectPath = userRole === 'professional' ? '/dashboard/professional' : userRole === 'admin' ? '/admin' : '/dashboard/patient'
+      return redirectWithCookies(redirectPath)
     }
 
     // Verificar acceso a la ruta con validación estricta
     const routeValidation = validateRouteAccess(pathname, userRole)
     
     if (!routeValidation.allowed) {
-      // Redirigir según el resultado de la validación
-      const redirectPath = routeValidation.redirectTo || 
-        (userRole === 'professional' ? '/professional/dashboard' : '/dashboard')
-      const url = request.nextUrl.clone()
-      url.pathname = redirectPath
-      return NextResponse.redirect(url)
+      const redirectPath = routeValidation.redirectTo ||
+        (userRole === 'professional' ? '/dashboard/professional' : '/dashboard/patient')
+      return redirectWithCookies(redirectPath)
     }
 
-    // Verificación adicional con canAccessRoute (doble validación)
     if (!canAccessRoute(userRole, pathname)) {
-      const redirectPath = userRole === 'professional' ? '/professional/dashboard' : '/dashboard'
-      const url = request.nextUrl.clone()
-      url.pathname = redirectPath
-      return NextResponse.redirect(url)
+      const redirectPath = userRole === 'professional' ? '/dashboard/professional' : '/dashboard/patient'
+      return redirectWithCookies(redirectPath)
     }
 
-    // Si el usuario intenta acceder a /complete-profile pero ya completó su perfil
     if (pathname === '/complete-profile') {
       const { data: profile } = await supabase
         .from('profiles')
@@ -127,10 +139,8 @@ export async function updateSession(request: NextRequest) {
       const profileComplete = !!profile?.date_of_birth && emailVerified
 
       if (profileComplete) {
-        const redirectPath = userRole === 'professional' ? '/professional/dashboard' : '/dashboard'
-        const url = request.nextUrl.clone()
-        url.pathname = redirectPath
-        return NextResponse.redirect(url)
+        const redirectPath = userRole === 'professional' ? '/dashboard/professional' : '/dashboard/patient'
+        return redirectWithCookies(redirectPath)
       }
     }
   }
