@@ -30,6 +30,7 @@ import {
   Sun,
   Heart,
   CreditCard,
+  Shield,
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
@@ -38,13 +39,14 @@ import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 
 interface UserDropdownProps {
-  role?: "patient" | "professional"
+  role?: "patient" | "professional" | "admin"
   user?: {
     name: string
     username?: string
     email?: string
     avatar?: string
     initials: string
+    status?: string
   }
 }
 
@@ -66,9 +68,9 @@ export const UserDropdown = ({
   const displayUser = user ?? {
     name: authUser?.user_metadata?.first_name
       ? `${authUser.user_metadata.first_name} ${authUser.user_metadata.last_name || ""}`.trim()
-      : role === "patient"
-        ? (language === "es" ? "Usuario" : "User")
-        : (language === "es" ? "Profesional" : "Professional"),
+        : role === "admin"
+          ? (language === "es" ? "Administrador" : "Administrator")
+          : (language === "es" ? "Profesional" : "Professional"),
     email: authUser?.email ?? "",
     initials: authUser?.user_metadata?.first_name?.[0]?.toUpperCase() ?? (role === "patient" ? "U" : "P"),
     avatar: authUser?.user_metadata?.avatar_url,
@@ -81,7 +83,7 @@ export const UserDropdown = ({
   const handleAction = (action: string) => {
     switch (action) {
       case "profile":
-        go(role === "patient" ? "/dashboard/profile" : "/dashboard/professional")
+        go(role === "admin" ? "/admin/settings" : role === "patient" ? "/dashboard/profile" : "/dashboard/professional")
         break
       case "appointments":
         go("/dashboard/appointments")
@@ -99,7 +101,7 @@ export const UserDropdown = ({
         go("/dashboard/payments")
         break
       case "settings":
-        go(role === "patient" ? "/dashboard/settings" : "/dashboard/professional/settings")
+        go(role === "admin" ? "/admin/settings" : role === "patient" ? "/dashboard/settings" : "/dashboard/professional/settings")
         break
       case "language":
         setLanguage(language === "es" ? "en" : "es")
@@ -134,7 +136,12 @@ export const UserDropdown = ({
     { icon: MessageSquare, label: language === "es" ? "Mensajes" : "Messages", action: "messages" },
   ]
 
-  const mainLinks = role === "patient" ? patientLinks : professionalLinks
+  const adminLinks = [
+    { icon: Shield, label: language === "es" ? "Panel Admin" : "Admin Panel", action: "profile" },
+    { icon: MessageSquare, label: language === "es" ? "Mensajes" : "Messages", action: "messages" },
+  ]
+
+  const mainLinks = role === "admin" ? adminLinks : (role === "patient" ? patientLinks : professionalLinks)
 
   return (
     <>

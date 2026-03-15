@@ -699,13 +699,14 @@ function isAtLeast18(dateStr: string): boolean {
  * A glassmorphism-style signup form component with animated labels and Google signup.
  * Dynamic form based on selected role (Patient vs Professional).
  */
-export function SignupForm({ initialRole }: { initialRole?: "patient" | "professional" }) {
+export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patient" | "professional", initialPlan?: string | null }) {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const isSpanish = language === "es"
   
   // 1. Estado del rol - default a 'patient' si no hay initialRole
   const [role, setRole] = useState<"patient" | "professional">(initialRole || "patient")
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(initialPlan || null)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [dateOfBirth, setDateOfBirth] = useState("")
@@ -807,6 +808,9 @@ export function SignupForm({ initialRole }: { initialRole?: "patient" | "profess
         registrationNumber: isProfessional ? registrationNumber.trim() : undefined,
       })
       if (result.success) {
+        if (role === "professional" && selectedPlan) {
+          sessionStorage.setItem("pending_plan", selectedPlan)
+        }
         setRegisteredEmail(email.trim())
         setRegistrationSuccess(true)
       } else {

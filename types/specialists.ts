@@ -2,6 +2,7 @@ import type { ConsultationType, Category, Specialty, Profile } from './database'
 
 export interface SpecialistCard {
   id: string
+  slug?: string
   name: string
   specialty: string
   specialtySlug: string

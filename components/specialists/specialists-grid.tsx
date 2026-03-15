@@ -43,7 +43,7 @@ export function SpecialistsGrid({
   }
 
   const handleViewProfile = (specialist: SpecialistCardType) => {
-    router.push(`/professionals/${specialist.id}`)
+    router.push(`/professionals/${specialist.slug || specialist.id}`)
   }
 
   const handleBookAppointment = (specialist: SpecialistCardType) => {

@@ -68,6 +68,26 @@ export default function ProfessionalLayout({
           })
         } else {
           setProfileInfo(data)
+          
+          // AUTO-REDIRECT TO CHECKOUT if a plan was selected during registration
+          const isSubscribed = data.subscription_status === "active" || data.subscription_status === "trialing"
+          if (!isSubscribed) {
+            const pendingPlan = sessionStorage.getItem("pending_plan")
+            if (pendingPlan) {
+              console.log(`🚀 Redirecting to checkout for pending plan: ${pendingPlan}`)
+              const res = await fetch("/api/checkout/subscription", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ planId: pendingPlan, isYearly: false }), // Default to monthly if not specified
+              })
+              const { url } = await res.json()
+              if (url) {
+                sessionStorage.removeItem("pending_plan")
+                window.location.href = url
+                return
+              }
+            }
+          }
         }
       } catch (error) {
         console.error("Error:", error)
@@ -161,7 +181,7 @@ function SubscriptionPaywall({ language }: { language: string }) {
   ]
 
   const handleStartTrial = () => {
-    router.push("/precios")
+    router.push("/pricing")
   }
 
   return (

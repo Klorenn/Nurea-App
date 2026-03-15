@@ -47,46 +47,40 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const menuItems = [
     {
-      label: isSpanish ? "Dashboard General" : "Dashboard",
+      label: isSpanish ? "Resumen Global" : "Global Overview",
       icon: LayoutDashboard,
       href: "/admin",
       description: isSpanish ? "Vista general del sistema" : "System overview"
     },
     {
-      label: isSpanish ? "Profesionales" : "Professionals",
-      icon: Stethoscope,
+      label: isSpanish ? "Gestión de Médicos" : "Manage Doctors",
+      icon: Users,
       href: "/admin/professionals",
       description: isSpanish ? "Gestión y verificación" : "Management & verification",
-      badge: 3
     },
     {
-      label: isSpanish ? "Pacientes" : "Patients",
+      label: isSpanish ? "Gestión de Pacientes" : "Manage Patients",
       icon: Users,
-      href: "/admin/patients",
-      description: isSpanish ? "Lista de pacientes" : "Patient list"
-    },
-    {
-      label: isSpanish ? "Moderación y Alertas" : "Moderation & Alerts",
-      icon: AlertTriangle,
       href: "/admin/users",
       description: isSpanish ? "Gestión de cuentas" : "Account management",
-      badge: 2
     },
-  ]
+    {
+      label: isSpanish ? "Finanzas" : "Finances",
+      icon: CreditCard,
+      href: "/admin/finances",
+      description: isSpanish ? "Dashboard de ingresos y KPIs" : "Revenue dashboard & KPIs"
+    },
+    {
+      label: isSpanish ? "Verificaciones" : "Verifications",
+      icon: UserCheck,
+      href: "/admin/verifications",
+      description: isSpanish ? "Cola de verificación KYP" : "KYP verification queue"
+    },
+  ] as { label: string, icon: any, href: string, description: string, badge?: number }[]
 
   const secondaryMenuItems = [
     {
-      label: isSpanish ? "Soporte" : "Support",
-      icon: MessageSquare,
-      href: "/admin/support",
-    },
-    {
-      label: isSpanish ? "Pagos" : "Payments",
-      icon: CreditCard,
-      href: "/admin/payments",
-    },
-    {
-      label: isSpanish ? "Configuración" : "Settings",
+      label: isSpanish ? "Configuración del Sistema" : "System Settings",
       icon: Settings,
       href: "/admin/settings",
     },

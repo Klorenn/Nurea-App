@@ -1,190 +1,197 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardTitle } from "@/components/ui/card"
-import { Mail, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react"
-import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
+import { Mail, ArrowLeft, CheckCircle2, AlertCircle, Loader2, ArrowRight } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import { useTranslations } from "@/lib/i18n"
 import { authMessages } from "@/lib/auth/messages"
+import { AuthPageBackground } from "@/components/ui/login-form"
+import ThemeSwitch from "@/components/ui/theme-switch"
+import { LanguageSelector } from "@/components/ui/language-selector"
 
 export default function ForgotPasswordPage() {
   const { language } = useLanguage()
+  const t = useTranslations(language)
   const messages = authMessages[language]
+  const router = useRouter()
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const isDark = mounted && resolvedTheme === "dark"
+  
   const [email, setEmail] = useState("")
   const [emailSent, setEmailSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (emailSent) {
-    return (
-      <main className="min-h-screen flex items-center justify-center p-4 bg-accent/5">
-        <Link
-          href="/login"
-          className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to Login
-        </Link>
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-        <Card className="w-full max-w-md border-border/40 shadow-2xl rounded-[2.5rem] overflow-hidden">
-          <div className="bg-secondary p-8 text-white text-center">
-            <div className="flex justify-center mb-4">
-              <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-                <CheckCircle2 className="h-8 w-8 text-white" />
-              </div>
-            </div>
-            <CardTitle className="text-3xl font-bold tracking-tight">
-              {language === "es" ? "Revisa tu Email" : "Check Your Email"}
-            </CardTitle>
-            <CardDescription className="text-white/80 font-medium mt-2">
-              {messages.passwordResetSent}
-            </CardDescription>
-          </div>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) {
+      setError(language === "es" ? "Por favor, ingresa tu email." : "Please enter your email.")
+      return
+    }
 
-          <CardContent className="p-8 space-y-6 text-center">
-            <p className="text-muted-foreground">
-              {language === "es"
-                ? "Te hemos enviado un enlace seguro a tu email. Revisa tu bandeja de entrada (y spam) y sigue las instrucciones para recuperar tu contraseña."
-                : "We've sent a secure link to your email. Check your inbox (and spam) and follow the instructions to reset your password."}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {language === "es" ? "¿No recibiste el email?" : "Didn't receive the email?"}{" "}
-              {language === "es" ? "Revisa tu carpeta de spam o" : "Check your spam folder or"}{" "}
-              <button 
-                onClick={() => {
-                  setEmailSent(false)
-                  setEmail("")
-                }}
-                className="text-primary font-bold hover:underline"
-              >
-                {language === "es" ? "intenta nuevamente" : "try again"}
-              </button>
-              .
-            </p>
-          </CardContent>
+    setLoading(true)
+    setError(null)
 
-          <CardFooter className="p-8 pt-0 justify-center">
-            <Button variant="outline" className="w-full rounded-xl" asChild>
-              <Link href="/login">Back to Login</Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </main>
-    )
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "No pudimos enviar el email")
+      }
+
+      setEmailSent(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : language === "es" ? "Algo salió mal. Por favor, intenta de nuevo." : "Something went wrong. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
+  const cardClass = isDark
+    ? "w-full max-w-sm p-10 space-y-6 bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-slate-200/80 shadow-2xl shadow-slate-900/20"
+    : "w-full max-w-sm p-10 space-y-6 bg-white rounded-3xl border border-slate-200/90 shadow-2xl shadow-slate-400/15"
+  const titleClass = isDark
+    ? "text-3xl font-bold text-white tracking-tight text-center"
+    : "text-3xl font-bold text-slate-900 tracking-tight text-center"
+  const subtitleClass = isDark ? "mt-2 text-sm text-slate-400 text-center" : "mt-2 text-sm text-slate-600 text-center"
+  const inputClass = isDark
+    ? "peer block w-full h-12 rounded-lg border border-slate-200 bg-slate-900/40 backdrop-blur py-2 px-3 text-sm text-white placeholder-transparent placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors"
+    : "peer block w-full h-12 rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm text-slate-900 placeholder-transparent placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors"
+  const labelClass = isDark
+    ? "absolute left-3 top-1/2 -translate-y-1/2 -z-10 origin-left transform text-xs font-medium text-slate-400 transition-all duration-200 pointer-events-none peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-teal-400 peer-[&:not(:placeholder-shown)]:-translate-y-6 peer-[&:not(:placeholder-shown)]:scale-75"
+    : "absolute left-3 top-1/2 -translate-y-1/2 -z-10 origin-left transform text-xs font-medium text-slate-600 transition-all duration-200 pointer-events-none peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-teal-600 peer-[&:not(:placeholder-shown)]:-translate-y-6 peer-[&:not(:placeholder-shown)]:scale-75"
+  const btnPrimaryClass =
+    "group flex w-full items-center justify-center rounded-xl bg-[#009485] py-3 px-4 font-semibold text-white shadow-lg shadow-teal-500/20 transition-all duration-300 hover:bg-[#007a6e] hover:shadow-teal-500/25 disabled:bg-[#009485]/50 disabled:shadow-none disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
+  const footerLinkClass = "font-semibold text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 transition"
+
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-accent/5">
-      <Link
-        href="/login"
-        className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to Login
-      </Link>
+    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-cyan-50/30 dark:bg-transparent">
+      <AuthPageBackground />
 
-      <Card className="w-full max-w-md border-border/40 shadow-2xl rounded-[2.5rem] overflow-hidden">
-        <div className="bg-primary p-8 text-white text-center">
-          <div className="flex justify-center mb-4">
-            <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
-              <Mail className="h-8 w-8 text-white" />
-            </div>
-          </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">
-            {language === "es" ? "Recuperar Contraseña" : "Reset Password"}
-          </CardTitle>
-          <CardDescription className="text-white/80 font-medium mt-2">
-            {language === "es" 
-              ? "Ingresa tu email para recibir un enlace de recuperación"
-              : "Enter your email to receive a reset link"}
-          </CardDescription>
+      <div className="absolute top-4 left-4 right-4 sm:top-8 sm:left-8 sm:right-8 z-50 flex items-center justify-between pointer-events-none">
+        <Link
+          href="/login"
+          className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all duration-300 backdrop-blur-sm bg-white/90 dark:bg-slate-900/80 px-4 py-2 rounded-xl border border-teal-200/60 dark:border-slate-600/60 h-10 shadow-sm hover:shadow-md pointer-events-auto text-teal-800 dark:text-teal-200 hover:text-teal-900 dark:hover:text-teal-100"
+        >
+          <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">{language === 'es' ? 'Volver al Login' : 'Back to Login'}</span>
+        </Link>
+        <div className="flex items-center gap-3 pointer-events-auto">
+          <LanguageSelector />
+          <ThemeSwitch />
         </div>
+      </div>
 
-        <CardContent className="p-8 space-y-6">
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
+      <div className="relative z-10 w-full flex flex-col items-center justify-center px-4">
+        <div className={cardClass}>
+          {emailSent ? (
+            <div className="space-y-6 text-center animate-in fade-in zoom-in duration-300">
+              <div className="flex justify-center">
+                <div className="bg-teal-100 dark:bg-teal-900/40 p-3 rounded-2xl">
+                  <CheckCircle2 className="h-10 w-10 text-teal-600 dark:text-teal-400" />
+                </div>
               </div>
+              <div>
+                <h2 className={titleClass}>
+                  {language === "es" ? "Revisa tu Email" : "Check Your Email"}
+                </h2>
+                <p className={subtitleClass}>
+                  {messages.passwordResetSent}
+                </p>
+              </div>
+              <p className={isDark ? "text-sm text-slate-400" : "text-sm text-slate-600"}>
+                {language === "es"
+                  ? "Te hemos enviado un enlace seguro para recuperar tu contraseña. Por favor, revisa tu bandeja de entrada y spam."
+                  : "We've sent a secure link to reset your password. Please check your inbox and spam folder."}
+              </p>
+              <button
+                onClick={() => setEmailSent(false)}
+                className={btnPrimaryClass}
+              >
+                {language === "es" ? "Volver a intentar" : "Try again"}
+              </button>
             </div>
+          ) : (
+            <>
+              <div className="text-center">
+                <h1 className={titleClass}>
+                  {language === "es" ? "Recuperar Contraseña" : "Reset Password"}
+                </h1>
+                <p className={subtitleClass}>
+                  {language === "es" 
+                    ? "Ingresa tu email para recibir un enlace de recuperación"
+                    : "Enter your email to receive a reset link"}
+                </p>
+              </div>
+
+              {error && (
+                <div className={isDark ? "bg-red-900/30 border border-red-700 rounded-xl p-3 flex items-start gap-2" : "bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2"}>
+                  <AlertCircle className={`h-4 w-4 mt-0.5 ${isDark ? "text-red-400" : "text-red-500"}`} />
+                  <p className={isDark ? "text-sm text-red-200" : "text-sm text-red-700"}>{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="relative z-0">
+                  <input
+                    type="email"
+                    id="floating_email"
+                    className={inputClass}
+                    placeholder=" "
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <label htmlFor="floating_email" className={labelClass}>
+                    <Mail className="mr-2 -mt-1 inline-block" size={16} />
+                    {language === "es" ? "Email" : "Email Address"}
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={btnPrimaryClass}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      {language === "es" ? "Enviando..." : "Sending..."}
+                    </>
+                  ) : (
+                    <>
+                      {language === "es" ? "Enviar Enlace" : "Send Link"}
+                      <ArrowRight className="ml-2 h-5 w-5 transform transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div className="text-center text-sm pt-2">
+                <p className={isDark ? "text-slate-400" : "text-slate-600"}>
+                  {language === "es" ? "¿Recordaste tu contraseña?" : "Remember your password?"}{" "}
+                  <Link href="/login" className={footerLinkClass}>
+                    {language === "es" ? "Inicia sesión" : "Sign in"}
+                  </Link>
+                </p>
+              </div>
+            </>
           )}
-
-          <div className="space-y-2">
-            <Label htmlFor="email">
-              {language === "es" ? "Dirección de Email" : "Email Address"}
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nombre@ejemplo.com"
-              className="rounded-xl h-12 bg-accent/20 border-none"
-              disabled={loading}
-              required
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {language === "es"
-              ? "Te enviaremos un enlace seguro para recuperar tu contraseña. Este enlace expirará en 1 hora."
-              : "We'll send you a secure link to reset your password. This link will expire in 1 hour."}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {language === "es"
-              ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas y mantener tu información segura."
-              : "Your email is your identity on NUREA. We use it to confirm your appointments and keep your information secure."}
-          </p>
-          <Button
-            className="w-full h-12 rounded-xl font-bold text-lg shadow-lg shadow-primary/20"
-            onClick={async () => {
-              if (!email) {
-                setError(language === "es" ? "Por favor, ingresa tu email." : "Please enter your email.")
-                return
-              }
-
-              setLoading(true)
-              setError(null)
-
-              try {
-                const response = await fetch("/api/auth/forgot-password", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ email }),
-                })
-
-                const data = await response.json()
-
-                if (!response.ok) {
-                  throw new Error(data.message || data.error || "No pudimos enviar el email")
-                }
-
-                setEmailSent(true)
-              } catch (err) {
-                setError(err instanceof Error ? err.message : "Algo salió mal. Por favor, intenta nuevamente.")
-              } finally {
-                setLoading(false)
-              }
-            }}
-            disabled={loading}
-          >
-            {loading 
-              ? (language === "es" ? "Enviando..." : "Sending...")
-              : (language === "es" ? "Enviar Enlace de Recuperación" : "Send Reset Link")}
-          </Button>
-        </CardContent>
-
-        <CardFooter className="p-8 pt-0 justify-center">
-          <p className="text-sm text-muted-foreground">
-            {language === "es" ? "¿Recordaste tu contraseña?" : "Remember your password?"}{" "}
-            <Link href="/login" className="text-primary font-bold hover:underline">
-              {language === "es" ? "Iniciar sesión" : "Sign in"}
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </main>
   )
 }
-

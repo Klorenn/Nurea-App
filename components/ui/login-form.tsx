@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState, type ReactElement } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useTheme } from "next-themes"
 import { TermsDialog } from "@/components/ui/terms-dialog"
 import { PrivacyDialog } from "@/components/ui/privacy-dialog"
-import { User, Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react"
+import { User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/client"
@@ -57,7 +58,9 @@ void main() {
 export function AuthPageBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const { resolvedTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  const isDark = mounted && resolvedTheme === "dark"
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -293,6 +296,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -368,11 +372,9 @@ export function LoginForm() {
     : "text-3xl font-bold text-slate-900 tracking-tight"
   const subtitleClass = isDark ? "mt-2 text-sm text-slate-400" : "mt-2 text-sm text-slate-600"
   const inputClass = isDark
-    ? "peer block w-full h-10 rounded-lg border border-slate-200 bg-slate-900/40 backdrop-blur py-2 px-3 text-sm text-white placeholder-transparent placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors"
-    : "peer block w-full h-10 rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm text-slate-900 placeholder-transparent placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors"
-  const labelClass = isDark
-    ? "absolute left-3 top-1/2 -translate-y-1/2 -z-10 origin-left transform text-xs font-medium text-slate-400 transition-all duration-200 pointer-events-none peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-teal-400 peer-[&:not(:placeholder-shown)]:-translate-y-5 peer-[&:not(:placeholder-shown)]:scale-75"
-    : "absolute left-3 top-1/2 -translate-y-1/2 -z-10 origin-left transform text-xs font-medium text-slate-600 transition-all duration-200 pointer-events-none peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-teal-600 peer-[&:not(:placeholder-shown)]:-translate-y-5 peer-[&:not(:placeholder-shown)]:scale-75"
+    ? "block w-full h-11 rounded-lg border border-slate-600 bg-slate-800/60 backdrop-blur py-2 pl-10 pr-3 text-sm text-white placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors"
+    : "block w-full h-11 rounded-lg border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-colors"
+  const iconClass = "absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none " + (isDark ? "text-slate-400" : "text-slate-400")
   const linkClass = "text-sm font-semibold text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 transition"
   const btnPrimaryClass =
     "group flex w-full items-center justify-center rounded-lg bg-[#009485] py-3 px-4 font-semibold text-white shadow-lg shadow-teal-500/20 transition-all duration-300 hover:bg-[#007a6e] hover:shadow-teal-500/25 disabled:bg-[#009485]/50 disabled:shadow-none disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
@@ -402,42 +404,48 @@ export function LoginForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="relative z-0 space-y-0.5">
+        <div className="relative">
+          <span className={iconClass}>
+            <User size={16} />
+          </span>
           <input
             type="email"
             id="floating_email"
             className={inputClass}
-            placeholder=" "
+            placeholder={language === "es" ? "Email" : "Email Address"}
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <label htmlFor="floating_email" className={labelClass}>
-            <User className="mr-2 -mt-1 inline-block" size={16} />
-            {language === "es" ? "Email" : "Email Address"}
-          </label>
         </div>
 
-        <div className="relative z-0 space-y-0.5">
+        <div className="relative">
+          <span className={iconClass}>
+            <Lock size={16} />
+          </span>
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             id="floating_password"
-            className={inputClass}
-            placeholder=" "
+            className={`${inputClass} pr-10`}
+            placeholder={language === "es" ? "Contraseña" : "Password"}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <label htmlFor="floating_password" className={labelClass}>
-            <Lock className="mr-2 -mt-1 inline-block" size={16} />
-            {language === "es" ? "Contraseña" : "Password"}
-          </label>
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? "text-slate-400 hover:text-teal-400" : "text-slate-400 hover:text-teal-600"} transition-colors focus:outline-none`}
+            title={showPassword ? (language === "es" ? "Ocultar contraseña" : "Hide password") : (language === "es" ? "Mostrar contraseña" : "Show password")}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
         </div>
 
         <div className="flex items-center justify-between">
-          <a href="/forgot-password" className={linkClass}>
+          <Link href="/forgot-password" className={linkClass}>
             {t.auth.forgotPassword}
-          </a>
+          </Link>
         </div>
 
         <button

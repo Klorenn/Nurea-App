@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -8,15 +8,15 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+} from "@/components/ui/sheet"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,12 +50,34 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Filter,
+  Check,
+  MoreVertical,
+  ArrowRight
 } from "lucide-react"
-import { format, startOfMonth, endOfMonth, isSameDay, isToday, addMonths, subMonths, parseISO } from "date-fns"
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  isSameDay, 
+  isToday, 
+  addMonths, 
+  subMonths, 
+  parseISO, 
+  startOfWeek, 
+  endOfWeek, 
+  eachDayOfInterval, 
+  addDays, 
+  addWeeks, 
+  subWeeks,
+  isSameHour,
+  startOfHour
+} from "date-fns"
 import { es, enUS } from "date-fns/locale"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
+import { Separator } from "@/components/ui/separator"
 
 interface Appointment {
   id: string
@@ -78,7 +100,7 @@ interface Appointment {
   }
 }
 
-type ViewMode = "today" | "upcoming" | "calendar"
+type ViewMode = "day" | "week" | "list"
 
 export default function ProfessionalAppointmentsPage() {
   const { language } = useLanguage()
@@ -88,24 +110,29 @@ export default function ProfessionalAppointmentsPage() {
 
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>("today")
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date())
-  const [appointmentDates, setAppointmentDates] = useState<Set<string>>(new Set())
+  const [viewMode, setViewMode] = useState<ViewMode>("week")
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
   
+  // Filters
+  const [filterType, setFilterType] = useState<string>("all")
+  const [filterStatus, setFilterStatus] = useState<string>("all")
+
   // Actions state
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [completeDialog, setCompleteDialog] = useState<Appointment | null>(null)
-  const [cancelDialog, setCancelDialog] = useState<Appointment | null>(null)
-  const [detailsDialog, setDetailsDialog] = useState<Appointment | null>(null)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
 
   const loadAppointments = useCallback(async () => {
-    setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      let query = supabase
+      // For calendar views, we load a broader range (e.g., month around current date)
+      const rangeStart = format(subWeeks(startOfWeek(currentDate), 2), "yyyy-MM-dd")
+      const rangeEnd = format(addWeeks(endOfWeek(currentDate), 2), "yyyy-MM-dd")
+
+      const { data, error } = await supabase
         .from("appointments")
         .select(`
           id,
@@ -128,28 +155,13 @@ export default function ProfessionalAppointmentsPage() {
           )
         `)
         .eq("professional_id", user.id)
+        .gte("appointment_date", rangeStart)
+        .lte("appointment_date", rangeEnd)
         .order("appointment_date", { ascending: true })
         .order("appointment_time", { ascending: true })
 
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const todayStr = format(today, "yyyy-MM-dd")
-
-      if (viewMode === "today") {
-        query = query.eq("appointment_date", todayStr)
-      } else if (viewMode === "upcoming") {
-        query = query.gte("appointment_date", todayStr).in("status", ["pending", "confirmed"])
-      } else if (viewMode === "calendar") {
-        const monthStart = format(startOfMonth(calendarMonth), "yyyy-MM-dd")
-        const monthEnd = format(endOfMonth(calendarMonth), "yyyy-MM-dd")
-        query = query.gte("appointment_date", monthStart).lte("appointment_date", monthEnd)
-      }
-
-      const { data, error } = await query
-
       if (error) {
         console.error("Error loading appointments:", error)
-        toast.error(isSpanish ? "Error al cargar citas" : "Error loading appointments")
         return
       }
 
@@ -159,634 +171,513 @@ export default function ProfessionalAppointmentsPage() {
       })) as Appointment[]
 
       setAppointments(typedData)
-
-      // Get all appointment dates for calendar dots
-      if (viewMode === "calendar") {
-        const dates = new Set(typedData.map((a) => a.appointment_date))
-        setAppointmentDates(dates)
-      }
     } catch (error) {
       console.error("Error:", error)
     } finally {
       setLoading(false)
     }
-  }, [supabase, viewMode, calendarMonth, isSpanish])
+  }, [supabase, currentDate])
 
   useEffect(() => {
     loadAppointments()
-  }, [loadAppointments])
-
-  const handleCompleteAppointment = async () => {
-    if (!completeDialog) return
     
-    setActionLoading(completeDialog.id)
+    // Set up Real-time subscription
+    const channel = supabase
+      .channel('pro_appointments_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments'
+        },
+        (payload) => {
+          console.log('Realtime change:', payload)
+          loadAppointments()
+          toast.info(isSpanish ? "Agenda actualizada" : "Schedule updated")
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadAppointments, supabase, isSpanish])
+
+  // --- Handlers ---
+  const handleComplete = async () => {
+    if (!selectedAppointment) return
+    setActionLoading(selectedAppointment.id)
     try {
       const { error } = await supabase
         .from("appointments")
         .update({ 
           status: "completed",
-          payment_status: "released",
           updated_at: new Date().toISOString()
         })
-        .eq("id", completeDialog.id)
+        .eq("id", selectedAppointment.id)
 
       if (error) throw error
-
-      toast.success(isSpanish ? "Cita marcada como completada" : "Appointment marked as complete")
-      setCompleteDialog(null)
+      toast.success(isSpanish ? "Cita completada" : "Appointment completed")
+      setCompleteDialogOpen(false)
+      setSelectedAppointment(null)
       loadAppointments()
-    } catch (error) {
-      console.error("Error completing appointment:", error)
-      toast.error(isSpanish ? "Error al completar la cita" : "Error completing appointment")
+    } catch (err) {
+      toast.error("Error")
     } finally {
       setActionLoading(null)
     }
   }
 
-  const handleCancelAppointment = async () => {
-    if (!cancelDialog) return
-    
-    setActionLoading(cancelDialog.id)
+  const handleCancel = async () => {
+    if (!selectedAppointment) return
+    setActionLoading(selectedAppointment.id)
     try {
-      // Call cancel API which handles refunds
       const response = await fetch("/api/appointments/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          appointmentId: cancelDialog.id,
+          appointmentId: selectedAppointment.id,
           reason: "Cancelled by professional",
           initiatedBy: "professional"
         }),
       })
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || "Error cancelling appointment")
-      }
-
-      toast.success(
-        isSpanish 
-          ? "Cita cancelada. Se procesará el reembolso al paciente."
-          : "Appointment cancelled. Refund will be processed to patient."
-      )
-      setCancelDialog(null)
+      if (!response.ok) throw new Error("Failed")
+      
+      toast.success(isSpanish ? "Cita cancelada y reembolso procesado" : "Cancelled and refunded")
+      setCancelDialogOpen(false)
+      setSelectedAppointment(null)
       loadAppointments()
-    } catch (error) {
-      console.error("Error cancelling appointment:", error)
-      toast.error(
-        error instanceof Error 
-          ? error.message 
-          : (isSpanish ? "Error al cancelar la cita" : "Error cancelling appointment")
-      )
+    } catch (err) {
+      toast.error("Error")
     } finally {
       setActionLoading(null)
     }
   }
 
-  const openMeeting = (appointment: Appointment) => {
-    const meetingUrl = appointment.meeting_link || getJitsiMeetingUrl(appointment.id)
-    window.open(meetingUrl, "_blank")
+  // --- Helpers ---
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter(apt => {
+      if (filterType !== 'all' && apt.type !== filterType) return false
+      if (filterStatus !== 'all' && apt.status !== filterStatus) return false
+      return true
+    })
+  }, [appointments, filterType, filterStatus])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed': return 'bg-teal-500'
+      case 'pending': return 'bg-amber-500'
+      case 'completed': return 'bg-blue-500'
+      case 'cancelled': return 'bg-red-400'
+      default: return 'bg-slate-400'
+    }
   }
 
-  const getStatusBadge = (status: string) => {
-    const styles = {
-      pending: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-      confirmed: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
-      completed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
-      cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-      no_show: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-    }
+  const hours = Array.from({ length: 15 }, (_, i) => i + 7) // 7 AM to 10 PM
 
-    const labels = {
-      pending: isSpanish ? "Pendiente" : "Pending",
-      confirmed: isSpanish ? "Confirmada" : "Confirmed",
-      completed: isSpanish ? "Completada" : "Completed",
-      cancelled: isSpanish ? "Cancelada" : "Cancelled",
-      no_show: isSpanish ? "No asistió" : "No show",
-    }
+  // --- Views ---
+  const WeekView = () => {
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 })
+    const end = endOfWeek(currentDate, { weekStartsOn: 1 })
+    const days = eachDayOfInterval({ start, end })
 
     return (
-      <Badge className={cn("font-medium", styles[status as keyof typeof styles] || styles.pending)}>
-        {labels[status as keyof typeof labels] || status}
-      </Badge>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div className="grid grid-cols-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+          <div className="p-4 border-r border-slate-100 dark:border-slate-800 text-[10px] font-bold uppercase text-slate-400 flex items-end justify-center">Hora</div>
+          {days.map(day => (
+            <div key={day.toString()} className={cn(
+              "p-4 border-r border-slate-100 dark:border-slate-800 text-center",
+              isToday(day) && "bg-teal-50/30"
+            )}>
+              <span className="block text-[10px] font-bold uppercase text-slate-400 mb-1">{format(day, "EEE", { locale })}</span>
+              <span className={cn(
+                "w-8 h-8 flex items-center justify-center mx-auto rounded-full text-sm font-black",
+                isToday(day) ? "bg-teal-600 text-white" : "text-slate-900 dark:text-white"
+              )}>{format(day, "d")}</span>
+            </div>
+          ))}
+        </div>
+        <div className="relative">
+          {hours.map(hour => (
+            <div key={hour} className="grid grid-cols-8 border-b border-slate-50 dark:border-slate-800/50 group h-24">
+              <div className="p-2 border-r border-slate-100 dark:border-slate-800 text-[11px] font-medium text-slate-500 text-center">
+                {format(new Date().setHours(hour, 0), "HH:mm")}
+              </div>
+              {days.map(day => {
+                const dayStr = format(day, "yyyy-MM-dd")
+                const hourStr = `${hour.toString().padStart(2, '0')}:00`
+                const apts = filteredAppointments.filter(a => a.appointment_date === dayStr && a.appointment_time.startsWith(hour.toString().padStart(2, '0')))
+                
+                return (
+                  <div key={day.toString()} className={cn(
+                    "border-r border-slate-100 dark:border-slate-800 relative group/cell p-0.5",
+                    isToday(day) && "bg-teal-50/10"
+                  )}>
+                    {apts.map(apt => (
+                      <div 
+                        key={apt.id}
+                        onClick={() => setSelectedAppointment(apt)}
+                        className={cn(
+                          "absolute inset-x-1 rounded-lg border-l-4 shadow-sm p-1.5 cursor-pointer hover:scale-[1.02] transition-transform z-10 overflow-hidden",
+                          apt.status === 'confirmed' ? "bg-teal-50 border-teal-500 text-teal-800" :
+                          apt.status === 'pending' ? "bg-amber-50 border-amber-500 text-amber-800" :
+                          apt.status === 'completed' ? "bg-blue-50 border-blue-500 text-blue-800" :
+                          "bg-slate-50 border-slate-500 text-slate-800"
+                        )}
+                        style={{ height: '90%' }}
+                      >
+                        <div className="text-[10px] font-black truncate leading-tight">{apt.patient.first_name} {apt.patient.last_name}</div>
+                        <div className="flex items-center gap-1 opacity-70 mt-0.5">
+                           {apt.type === 'online' ? <Video className="h-2 w-2" /> : <Building2 className="h-2 w-2" />}
+                           <span className="text-[9px] font-bold">{apt.appointment_time.slice(0,5)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
     )
   }
 
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(":").map(Number)
-    const period = hours >= 12 ? "PM" : "AM"
-    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
-    return `${displayHours}:${minutes.toString().padStart(2, "0")} ${period}`
+  const DayView = () => {
+    const dayStr = format(currentDate, "yyyy-MM-dd")
+    const apts = filteredAppointments.filter(a => a.appointment_date === dayStr)
+
+    return (
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <div className="grid grid-cols-[100px_1fr] h-[700px]">
+          <div className="border-r border-slate-100 dark:border-slate-800 flex flex-col pt-4">
+             {hours.map(hour => (
+               <div key={hour} className="h-24 text-center text-[11px] font-bold text-slate-400 group relative">
+                 <span className="sticky top-4">{format(new Date().setHours(hour, 0), "HH:mm")}</span>
+                 <div className="absolute w-full border-b border-slate-100 dark:border-slate-800 top-0 left-0" />
+               </div>
+             ))}
+          </div>
+          <div className="relative p-0 pt-4 flex-1">
+             {apts.length === 0 && (
+               <div className="absolute inset-0 flex flex-col items-center justify-center opacity-30 grayscale">
+                 <CalendarX className="h-16 w-16 mb-4" />
+                 <p className="font-bold">No hay citas para este día</p>
+               </div>
+             )}
+             {apts.map(apt => {
+               const hourStart = parseInt(apt.appointment_time.split(':')[0])
+               const minStart = parseInt(apt.appointment_time.split(':')[1])
+               const top = (hourStart - 7) * 96 + (minStart / 60) * 96
+               const height = (apt.duration_minutes / 60) * 96
+
+               return (
+                 <div 
+                   key={apt.id}
+                   onClick={() => setSelectedAppointment(apt)}
+                   className={cn(
+                     "absolute left-4 right-8 rounded-2xl border flex flex-col p-4 cursor-pointer hover:shadow-lg transition-all z-10 group overflow-hidden",
+                     apt.status === 'confirmed' ? "bg-teal-50/80 border-teal-500/30 text-teal-900" :
+                     apt.status === 'pending' ? "bg-amber-50/80 border-amber-500/30 text-amber-900" :
+                     apt.status === 'completed' ? "bg-blue-50/80 border-blue-500/30 text-blue-900" :
+                     "bg-slate-50/80 border-slate-500/30 text-slate-900"
+                   )}
+                   style={{ top: `${top}px`, height: `${height}px` }}
+                 >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                         <Avatar className="h-10 w-10 border-2 border-white">
+                           <AvatarImage src={apt.patient.avatar_url} />
+                           <AvatarFallback>{apt.patient.first_name[0]}</AvatarFallback>
+                         </Avatar>
+                         <div>
+                            <p className="text-sm font-black">{apt.patient.first_name} {apt.patient.last_name}</p>
+                            <div className="flex items-center gap-2 opacity-60">
+                               <Clock className="h-3 w-3" />
+                               <span className="text-xs font-bold">{apt.appointment_time.slice(0,5)} • {apt.duration_minutes} min</span>
+                            </div>
+                         </div>
+                      </div>
+                      <Badge className={cn("rounded-full uppercase text-[10px] font-black", apt.status === 'confirmed' ? "bg-teal-100 text-teal-700" : "bg-slate-200")}>
+                        {apt.status}
+                      </Badge>
+                    </div>
+                 </div>
+               )
+             })}
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  const todayAppointments = appointments.filter((a) => 
-    isSameDay(parseISO(a.appointment_date), new Date()) && 
-    ["pending", "confirmed"].includes(a.status)
-  )
-
-  const upcomingCount = appointments.filter((a) => 
-    ["pending", "confirmed"].includes(a.status)
-  ).length
-
-  const filteredAppointments = viewMode === "calendar" && selectedDate
-    ? appointments.filter((a) => isSameDay(parseISO(a.appointment_date), selectedDate))
-    : appointments
-
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-8 max-w-[1400px] mx-auto pb-10 px-4 sm:px-0">
+      
+      {/* --- HEADER --- */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-            <CalendarDays className="h-8 w-8 text-teal-600" />
-            {isSpanish ? "Mi Agenda" : "My Schedule"}
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            {isSpanish ? "Gestiona tus citas y consultas" : "Manage your appointments and consultations"}
-          </p>
+           <div className="flex items-center gap-3 mb-2">
+             <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+               <CalendarDays className="h-6 w-6" />
+             </div>
+             <h1 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">Command Center <span className="text-teal-600">Nurea</span></h1>
+           </div>
+           <p className="text-slate-500 font-bold ml-1">{isSpanish ? "Gestiona tu jornada profesional en tiempo real." : "Manage your professional day in real-time."}</p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={loadAppointments} 
-          disabled={loading}
-          className="gap-2"
-        >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-          {isSpanish ? "Actualizar" : "Refresh"}
-        </Button>
+
+        <div className="flex gap-2 flex-wrap">
+           <Card className="flex items-center p-1 rounded-xl bg-slate-100/50 border-slate-200">
+              <Button 
+                variant={viewMode === 'day' ? 'default' : 'ghost'} 
+                size="sm" 
+                onClick={() => setViewMode('day')}
+                className={cn("rounded-lg h-8 px-4 font-bold text-xs", viewMode === 'day' && "bg-white shadow-sm text-teal-600 hover:bg-white")}
+              >Diario</Button>
+              <Button 
+                variant={viewMode === 'week' ? 'default' : 'ghost'} 
+                size="sm" 
+                onClick={() => setViewMode('week')}
+                className={cn("rounded-lg h-8 px-4 font-bold text-xs", viewMode === 'week' && "bg-white shadow-sm text-teal-600 hover:bg-white")}
+              >Semanal</Button>
+           </Card>
+
+           <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-sm px-4">
+              <Button variant="ghost" size="icon" onClick={() => setCurrentDate(subDays(currentDate, viewMode === 'week' ? 7 : 1))} className="h-8 w-8 rounded-lg outline-none"><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="text-xs font-black uppercase tracking-wider mx-2 whitespace-nowrap">
+                {format(currentDate, viewMode === 'week' ? "'Semana de' d MMM" : "d 'de' MMMM", { locale })}
+              </span>
+              <Button variant="ghost" size="icon" onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'week' ? 7 : 1))} className="h-8 w-8 rounded-lg outline-none"><ChevronRight className="h-4 w-4" /></Button>
+           </div>
+
+           <Button 
+             variant="outline" 
+             onClick={loadAppointments} 
+             className="rounded-xl border-slate-200 h-10 hover:bg-teal-50 hover:text-teal-600 transition-colors"
+           >
+             <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
+             Sincronizar
+           </Button>
+        </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-teal-50 to-emerald-50/50 dark:from-teal-950/30 dark:to-emerald-950/20 border-teal-200/50 dark:border-teal-800/30">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-teal-500/20 flex items-center justify-center">
-                <CalendarCheck className="h-6 w-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-teal-700 dark:text-teal-300">
-                  {isSpanish ? "Hoy" : "Today"}
-                </p>
-                <p className="text-3xl font-bold text-teal-900 dark:text-teal-100">
-                  {todayAppointments.length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-blue-950/30 dark:to-indigo-950/20 border-blue-200/50 dark:border-blue-800/30">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  {isSpanish ? "Próximas" : "Upcoming"}
-                </p>
-                <p className="text-3xl font-bold text-blue-900 dark:text-blue-100">
-                  {upcomingCount}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-50 to-green-50/50 dark:from-emerald-950/30 dark:to-green-950/20 border-emerald-200/50 dark:border-emerald-800/30">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                  {isSpanish ? "Ingresos del mes" : "Monthly earnings"}
-                </p>
-                <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">
-                  ${appointments.filter((a) => a.status === "completed").reduce((sum, a) => sum + (a.price || 0), 0).toLocaleString("es-CL")}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* View Tabs */}
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)} className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
-          <TabsTrigger value="today" className="gap-2">
-            <CalendarCheck className="h-4 w-4" />
-            {isSpanish ? "Hoy" : "Today"}
-          </TabsTrigger>
-          <TabsTrigger value="upcoming" className="gap-2">
-            <Clock className="h-4 w-4" />
-            {isSpanish ? "Próximas" : "Upcoming"}
-          </TabsTrigger>
-          <TabsTrigger value="calendar" className="gap-2">
-            <CalendarDays className="h-4 w-4" />
-            {isSpanish ? "Calendario" : "Calendar"}
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Calendar View Controls */}
-        {viewMode === "calendar" && (
-          <div className="flex flex-col lg:flex-row gap-6">
-            <Card className="p-4 w-full lg:w-auto">
-              <div className="flex items-center justify-between mb-4">
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <h3 className="font-semibold text-lg">
-                  {format(calendarMonth, "MMMM yyyy", { locale })}
-                </h3>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </div>
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                month={calendarMonth}
-                onMonthChange={setCalendarMonth}
-                modifiers={{
-                  hasAppointments: (date) => 
-                    appointmentDates.has(format(date, "yyyy-MM-dd")),
-                }}
-                modifiersStyles={{
-                  hasAppointments: {
-                    fontWeight: "bold",
-                    textDecoration: "underline",
-                    textDecorationColor: "#0d9488",
-                  },
-                }}
-                className="rounded-lg"
-              />
-            </Card>
-
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-4">
-                {isToday(selectedDate) 
-                  ? (isSpanish ? "Citas de hoy" : "Today's appointments")
-                  : format(selectedDate, "EEEE, d 'de' MMMM", { locale })}
-              </h3>
-              <AppointmentsList 
-                appointments={filteredAppointments}
-                loading={loading}
-                isSpanish={isSpanish}
-                formatTime={formatTime}
-                getStatusBadge={getStatusBadge}
-                onComplete={setCompleteDialog}
-                onCancel={setCancelDialog}
-                onDetails={setDetailsDialog}
-                onOpenMeeting={openMeeting}
-                actionLoading={actionLoading}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Today & Upcoming Views */}
-        {viewMode !== "calendar" && (
-          <AppointmentsList 
-            appointments={filteredAppointments}
-            loading={loading}
-            isSpanish={isSpanish}
-            formatTime={formatTime}
-            getStatusBadge={getStatusBadge}
-            onComplete={setCompleteDialog}
-            onCancel={setCancelDialog}
-            onDetails={setDetailsDialog}
-            onOpenMeeting={openMeeting}
-            actionLoading={actionLoading}
-          />
-        )}
-      </Tabs>
-
-      {/* Complete Dialog */}
-      <AlertDialog open={!!completeDialog} onOpenChange={() => setCompleteDialog(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              {isSpanish ? "Marcar como Completada" : "Mark as Complete"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {isSpanish 
-                ? "¿Confirmas que la consulta ha sido completada? El pago será liberado a tu cuenta."
-                : "Confirm that the consultation has been completed? Payment will be released to your account."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={!!actionLoading}>
-              {isSpanish ? "Cancelar" : "Cancel"}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCompleteAppointment}
-              disabled={!!actionLoading}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              {actionLoading === completeDialog?.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                isSpanish ? "Confirmar" : "Confirm"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Cancel Dialog */}
-      <AlertDialog open={!!cancelDialog} onOpenChange={() => setCancelDialog(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-              <CalendarX className="h-5 w-5" />
-              {isSpanish ? "Cancelar Cita" : "Cancel Appointment"}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                {isSpanish 
-                  ? "¿Estás seguro de cancelar esta cita? Esta acción no se puede deshacer."
-                  : "Are you sure you want to cancel this appointment? This action cannot be undone."}
-              </p>
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-sm">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>
-                  {isSpanish 
-                    ? "Al cancelar, se procesará un reembolso completo al paciente."
-                    : "By cancelling, a full refund will be processed to the patient."}
-                </span>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={!!actionLoading}>
-              {isSpanish ? "Volver" : "Go back"}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelAppointment}
-              disabled={!!actionLoading}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {actionLoading === cancelDialog?.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                isSpanish ? "Sí, cancelar cita" : "Yes, cancel appointment"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Details Dialog */}
-      <Dialog open={!!detailsDialog} onOpenChange={() => setDetailsDialog(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-teal-600" />
-              {isSpanish ? "Detalles del Paciente" : "Patient Details"}
-            </DialogTitle>
-          </DialogHeader>
-          {detailsDialog && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={detailsDialog.patient?.avatar_url} />
-                  <AvatarFallback className="bg-teal-100 text-teal-700 text-xl">
-                    {detailsDialog.patient?.first_name?.[0]}{detailsDialog.patient?.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {detailsDialog.patient?.first_name} {detailsDialog.patient?.last_name}
-                  </h3>
-                  {getStatusBadge(detailsDialog.status)}
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-                  <Mail className="h-5 w-5" />
-                  <span>{detailsDialog.patient?.email}</span>
-                </div>
-                {detailsDialog.patient?.phone && (
-                  <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-                    <Phone className="h-5 w-5" />
-                    <span>{detailsDialog.patient.phone}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-                  <CalendarDays className="h-5 w-5" />
-                  <span>
-                    {format(parseISO(detailsDialog.appointment_date), "EEEE, d 'de' MMMM yyyy", { locale })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-                  <Clock className="h-5 w-5" />
-                  <span>{formatTime(detailsDialog.appointment_time)} ({detailsDialog.duration_minutes} min)</span>
-                </div>
-                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-                  {detailsDialog.type === "online" ? (
-                    <Video className="h-5 w-5 text-teal-600" />
-                  ) : (
-                    <Building2 className="h-5 w-5 text-amber-600" />
+      {/* --- FILTERS & QUICK STATS --- */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="md:col-span-3 border-transparent bg-slate-100/30 p-4 flex flex-wrap gap-4 items-center rounded-2xl">
+           <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-slate-400" />
+              <span className="text-[10px] font-black uppercase text-slate-400">Filtrar por:</span>
+           </div>
+           <div className="flex gap-2">
+              {['all', 'online', 'in-person'].map(t => (
+                <Badge 
+                  key={t}
+                  onClick={() => setFilterType(t)}
+                  className={cn(
+                    "cursor-pointer uppercase text-[9px] font-black h-7 px-3 rounded-full transition-all border-2",
+                    filterType === t ? "bg-teal-600 text-white border-teal-600" : "bg-white text-slate-500 border-slate-100 hover:border-teal-200"
                   )}
-                  <span>{detailsDialog.type === "online" ? "Telemedicina" : "Presencial"}</span>
-                </div>
-                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-                  <DollarSign className="h-5 w-5 text-emerald-600" />
-                  <span>${(detailsDialog.price || 0).toLocaleString("es-CL")} CLP</span>
-                </div>
-              </div>
-
-              {detailsDialog.type === "online" && detailsDialog.status === "confirmed" && (
-                <Button 
-                  className="w-full gap-2 bg-teal-600 hover:bg-teal-700"
-                  onClick={() => openMeeting(detailsDialog)}
                 >
-                  <Video className="h-4 w-4" />
-                  {isSpanish ? "Iniciar Videollamada" : "Start Video Call"}
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              )}
+                  {t === 'all' ? 'Todos' : t === 'online' ? 'Videollamada' : 'Presencial'}
+                </Badge>
+              ))}
+           </div>
+           <Separator orientation="vertical" className="h-6 mx-2 hidden sm:block" />
+           <div className="flex gap-2">
+              {['all', 'confirmed', 'pending', 'completed'].map(s => (
+                <Badge 
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={cn(
+                    "cursor-pointer uppercase text-[9px] font-black h-7 px-3 rounded-full transition-all border-2",
+                    filterStatus === s ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-500 border-slate-100 hover:border-teal-200"
+                  )}
+                >
+                  {s === 'all' ? 'Todos los estados' : s}
+                </Badge>
+              ))}
+           </div>
+        </Card>
+        
+        <Card className="bg-teal-600 rounded-2xl p-4 text-white shadow-xl shadow-teal-500/20 flex flex-col justify-center">
+           <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase opacity-70">Citas {filterStatus === 'all' ? 'Totales' : filterStatus}</p>
+              <CalendarCheck className="h-4 w-4 opacity-50" />
+           </div>
+           <p className="text-3xl font-black">{filteredAppointments.length}</p>
+        </Card>
+      </div>
+
+      {/* --- MAIN CALENDAR VIEW --- */}
+      {viewMode === 'week' ? <WeekView /> : <DayView />}
+
+
+      {/* --- APPOINTMENT SHEET (COMMAND DRAWER) --- */}
+      <Sheet open={!!selectedAppointment} onOpenChange={(open) => !open && setSelectedAppointment(null)}>
+        <SheetContent className="sm:max-w-md bg-white dark:bg-slate-950 p-0 overflow-hidden rounded-l-[2rem] border-none shadow-2xl">
+          {selectedAppointment && (
+            <div className="flex flex-col h-full">
+               <div className={cn(
+                 "p-8 pt-12 text-white relative",
+                 getStatusColor(selectedAppointment.status)
+               )}>
+                  <div className="absolute top-8 right-8 flex gap-2">
+                     <Badge className="bg-white/20 backdrop-blur-md text-white border-none font-black uppercase text-[10px]">{selectedAppointment.type}</Badge>
+                  </div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <Avatar className="h-20 w-20 border-4 border-white/20 shadow-xl">
+                       <AvatarImage src={selectedAppointment.patient.avatar_url} />
+                       <AvatarFallback className="bg-white text-teal-600 text-2xl font-black">{selectedAppointment.patient.first_name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                       <h2 className="text-2xl font-black tracking-tighter leading-none">{selectedAppointment.patient.first_name}</h2>
+                       <h2 className="text-2xl font-black tracking-tighter leading-none opacity-80">{selectedAppointment.patient.last_name}</h2>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase opacity-60">Horario</p>
+                        <p className="text-sm font-bold">{selectedAppointment.appointment_time.slice(0,5)} • {selectedAppointment.duration_minutes}m</p>
+                     </div>
+                     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase opacity-60">Pago</p>
+                        <p className="text-sm font-bold uppercase">{selectedAppointment.payment_status}</p>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="flex-1 p-8 space-y-8 overflow-y-auto">
+                  <div className="space-y-4">
+                     <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                       <User className="h-3 w-3" /> Contacto del Paciente
+                     </h3>
+                     <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 group">
+                           <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-teal-600 shadow-sm"><Mail className="h-4 w-4" /></div>
+                           <span className="text-sm font-bold text-slate-700 truncate">{selectedAppointment.patient.email}</span>
+                        </div>
+                        {selectedAppointment.patient.phone && (
+                          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 group">
+                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-teal-600 shadow-sm"><Phone className="h-4 w-4" /></div>
+                            <span className="text-sm font-bold text-slate-700">{selectedAppointment.patient.phone}</span>
+                          </div>
+                        )}
+                     </div>
+                  </div>
+
+                  {selectedAppointment.notes && (
+                    <div className="space-y-4">
+                       <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                         <Filter className="h-3 w-3" /> Motivo de Consulta
+                       </h3>
+                       <div className="p-4 rounded-2xl bg-teal-50 shadow-inner italic text-sm text-teal-900 border border-teal-100/50">
+                         "{selectedAppointment.notes}"
+                       </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 pt-6">
+                     {selectedAppointment.status === 'confirmed' && (
+                       <>
+                         <Button 
+                           onClick={() => {
+                             const url = selectedAppointment.meeting_link || getJitsiMeetingUrl(selectedAppointment.id);
+                             window.open(url, '_blank');
+                           }}
+                           className="w-full h-14 rounded-2xl bg-teal-600 hover:bg-teal-700 font-bold shadow-lg shadow-teal-500/20 gap-3"
+                         >
+                           <Video className="h-5 w-5" />
+                           Iniciar Tele-consulta
+                           <ArrowRight className="h-4 w-4 ml-auto" />
+                         </Button>
+                         <Button 
+                           onClick={() => setCompleteDialogOpen(true)}
+                           variant="outline"
+                           className="w-full h-14 rounded-2xl border-slate-200 font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all gap-3"
+                         >
+                           <CheckCircle2 className="h-5 w-5" />
+                           Marcar como Completada
+                         </Button>
+                       </>
+                     )}
+                     
+                     <div className="grid grid-cols-2 gap-3">
+                        <Button 
+                          variant="ghost" 
+                          className="rounded-xl font-bold text-slate-500 h-11"
+                          onClick={() => window.open(`/dashboard/professional/patients/${selectedAppointment.patient.id}`, '_blank')}
+                        >Ficha Clínica</Button>
+                        <Button 
+                          variant="ghost" 
+                          className="rounded-xl font-bold text-red-500 h-11 hover:bg-red-50"
+                          onClick={() => setCancelDialogOpen(true)}
+                          disabled={selectedAppointment.status === 'cancelled' || selectedAppointment.status === 'completed'}
+                        >Cancelar Cita</Button>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Ref: {selectedAppointment.id.slice(0,8)}</span>
+                  <div className="flex gap-2">
+                     <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="h-4 w-4" /></Button>
+                  </div>
+               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailsDialog(null)}>
-              {isSpanish ? "Cerrar" : "Close"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
+        </SheetContent>
+      </Sheet>
 
-function AppointmentsList({
-  appointments,
-  loading,
-  isSpanish,
-  formatTime,
-  getStatusBadge,
-  onComplete,
-  onCancel,
-  onDetails,
-  onOpenMeeting,
-  actionLoading,
-}: {
-  appointments: Appointment[]
-  loading: boolean
-  isSpanish: boolean
-  formatTime: (time: string) => string
-  getStatusBadge: (status: string) => React.ReactNode
-  onComplete: (apt: Appointment) => void
-  onCancel: (apt: Appointment) => void
-  onDetails: (apt: Appointment) => void
-  onOpenMeeting: (apt: Appointment) => void
-  actionLoading: string | null
-}) {
-  const locale = isSpanish ? es : enUS
+      {/* --- DIALOGS --- */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+         <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
+            <AlertDialogHeader>
+               <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-4 mx-auto">
+                  <CalendarX className="h-8 w-8" />
+               </div>
+               <AlertDialogTitle className="text-2xl font-black text-center text-slate-900 leading-tight">¿Deseas cancelar esta consulta?</AlertDialogTitle>
+               <AlertDialogDescription className="text-center text-slate-500 font-medium">
+                  Esta acción no se puede deshacer. Se procesará el reembolso automático vía Stripe según la política de cancelación.
+               </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-8 gap-3 sm:flex-col lg:flex-row">
+               <AlertDialogCancel className="w-full h-12 rounded-xl font-bold border-slate-200">No, mantener cita</AlertDialogCancel>
+               <AlertDialogAction 
+                 onClick={handleCancel}
+                 className="w-full h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/20"
+               >
+                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, cancelar consulta"}
+               </AlertDialogAction>
+            </AlertDialogFooter>
+         </AlertDialogContent>
+      </AlertDialog>
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
+      <AlertDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+         <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
+            <AlertDialogHeader>
+               <div className="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 mb-4 mx-auto">
+                  <CheckCircle2 className="h-8 w-8" />
+               </div>
+               <AlertDialogTitle className="text-2xl font-black text-center text-slate-900 leading-tight">Confirmar Finalización</AlertDialogTitle>
+               <AlertDialogDescription className="text-center text-slate-500 font-medium">
+                  ¿La consulta ha terminado con éxito? Esto liberará el pago y notificará al paciente para calificar tu atención.
+               </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-8 gap-3 sm:flex-col lg:flex-row">
+               <AlertDialogCancel className="w-full h-12 rounded-xl font-bold border-slate-200">Aún no termina</AlertDialogCancel>
+               <AlertDialogAction 
+                 onClick={handleComplete}
+                 className="w-full h-12 rounded-xl font-bold bg-teal-600 hover:bg-teal-700 shadow-lg shadow-teal-500/20"
+               >
+                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y Finalizar"}
+               </AlertDialogAction>
+            </AlertDialogFooter>
+         </AlertDialogContent>
+      </AlertDialog>
 
-  if (appointments.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="p-12 text-center">
-          <CalendarX className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-600 dark:text-slate-400 mb-2">
-            {isSpanish ? "No hay citas programadas" : "No appointments scheduled"}
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-500">
-            {isSpanish 
-              ? "Las citas aparecerán aquí cuando los pacientes las agenden."
-              : "Appointments will appear here when patients book them."}
-          </p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {appointments.map((apt) => (
-        <Card key={apt.id} className="overflow-hidden hover:shadow-md transition-shadow">
-          <CardContent className="p-0">
-            <div className="flex flex-col sm:flex-row">
-              {/* Time indicator */}
-              <div className={cn(
-                "sm:w-24 p-4 flex flex-row sm:flex-col items-center justify-center gap-2 text-center",
-                apt.type === "online" 
-                  ? "bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300"
-                  : "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300"
-              )}>
-                {apt.type === "online" ? (
-                  <Video className="h-5 w-5" />
-                ) : (
-                  <Building2 className="h-5 w-5" />
-                )}
-                <span className="font-bold text-lg">{formatTime(apt.appointment_time)}</span>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                <div 
-                  className="flex items-center gap-3 flex-1 cursor-pointer"
-                  onClick={() => onDetails(apt)}
-                >
-                  <Avatar>
-                    <AvatarImage src={apt.patient?.avatar_url} />
-                    <AvatarFallback className="bg-slate-100 dark:bg-slate-800">
-                      {apt.patient?.first_name?.[0]}{apt.patient?.last_name?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 dark:text-white truncate">
-                      {apt.patient?.first_name} {apt.patient?.last_name}
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {format(parseISO(apt.appointment_date), "EEE, d MMM", { locale })} • {apt.duration_minutes} min
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  {getStatusBadge(apt.status)}
-                  
-                  {apt.status === "confirmed" && (
-                    <Button 
-                      size="sm" 
-                      className="gap-1 bg-teal-600 hover:bg-teal-700 text-white"
-                      asChild
-                    >
-                      <a href={`/dashboard/professional/consultation/${apt.id}`}>
-                        <ClipboardList className="h-3.5 w-3.5" />
-                        {isSpanish ? "Iniciar Consulta" : "Start Consultation"}
-                      </a>
-                    </Button>
-                  )}
-                  
-                  {apt.status === "confirmed" && apt.type === "online" && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="gap-1 text-teal-600 border-teal-200 hover:bg-teal-50"
-                      onClick={() => onOpenMeeting(apt)}
-                    >
-                      <Video className="h-3.5 w-3.5" />
-                      {isSpanish ? "Video" : "Video"}
-                    </Button>
-                  )}
-
-                  {apt.status === "confirmed" && (
-                    <>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                        onClick={() => onCancel(apt)}
-                        disabled={actionLoading === apt.id}
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                        {isSpanish ? "Cancelar" : "Cancel"}
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
     </div>
   )
 }

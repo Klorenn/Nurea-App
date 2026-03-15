@@ -8,7 +8,7 @@ function getStripeClient() {
     throw new Error("STRIPE_SECRET_KEY is not configured")
   }
   return new Stripe(key, {
-    apiVersion: "2024-12-18.acacia",
+    apiVersion: "2024-12-18.acacia" as any,
   })
 }
 
@@ -85,28 +85,30 @@ export async function POST(request: NextRequest) {
           
           const supabaseAdmin = getSupabaseAdmin()
           
-          // Update appointment to confirmed
-          const { data: appointment, error: appointmentError } = await supabaseAdmin
-            .from("appointments")
-            .update({
-              status: "confirmed",
-              payment_status: "paid",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", appointmentId)
-            .eq("status", "pending")
-            .select("id, patient_id, professional_id, appointment_date, appointment_time, type, meeting_link")
-            .single()
+          // 1. Get Commission Rate from platform_settings
+          const commissionRate = 0 // Forced 0% as per new business model
+          const amountTotal = session.amount_total ? session.amount_total / 100 : 0 
+          const paymentIntentId = session.payment_intent as string
 
-          if (appointmentError || !appointment) {
-            console.error("Error confirming appointment:", appointmentError)
+          // 2. Call RPC for atomic update (Security & Robustness)
+          const { error: rpcError } = await supabaseAdmin.rpc("confirm_appointment_payment", {
+            p_appointment_id: appointmentId,
+            p_stripe_session_id: session.id,
+            p_payment_intent_id: paymentIntentId,
+            p_amount_total: amountTotal,
+            p_commission_rate: commissionRate
+          })
+
+          if (rpcError) {
+            console.error(`❌ Error in confirm_appointment_payment RPC:`, rpcError)
+            // Log to a dedicated audit table if necessary
             return NextResponse.json(
-              { error: "Appointment update failed" },
+              { error: "Payment registration in database failed" },
               { status: 500 }
             )
           }
 
-          console.log(`✓ Appointment confirmed: ${appointmentId}`)
+          console.log(`✓ Appointment ${appointmentId} confirmed and transaction records created in escrow.`)
 
           // Send confirmation emails (non-blocking)
           try {
@@ -265,8 +267,8 @@ export async function POST(request: NextRequest) {
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
-        const subscriptionId = invoice.subscription as string
-
+        const subscriptionId = (invoice as any).subscription as string
+        
         if (subscriptionId) {
           const { data: profile } = await getSupabaseAdmin()
             .from("profiles")

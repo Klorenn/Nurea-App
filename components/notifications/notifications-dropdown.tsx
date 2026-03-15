@@ -20,7 +20,7 @@ interface Notification {
 }
 
 interface NotificationsDropdownProps {
-  role?: "patient" | "professional"
+  role?: "patient" | "professional" | "admin"
 }
 
 const getNotificationIcon = (type: string) => {

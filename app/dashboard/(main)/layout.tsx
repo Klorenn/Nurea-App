@@ -78,22 +78,26 @@ export default function DashboardMainLayout({
         const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
         const isPatientRoute = pathname.startsWith("/dashboard/patient")
 
-        if (userRole === "professional" && isPatientRoute) {
+        if (userRole === "admin" && (isProfessionalRoute || isPatientRoute)) {
+          // Allow admin to see these for verification purposes, or redirect to /admin if on /dashboard root
+        } else if (userRole === "professional" && isPatientRoute) {
           router.push("/dashboard/professional")
           return
-        }
-
-        if (userRole === "patient" && isProfessionalRoute) {
+        } else if (userRole === "patient" && isProfessionalRoute) {
           router.push("/dashboard/patient")
           return
         }
 
         if (pathname === "/dashboard") {
-          router.push(
-            userRole === "professional"
-              ? "/dashboard/professional"
-              : "/dashboard/patient"
-          )
+          if (userRole === "admin") {
+            router.push("/admin")
+          } else {
+            router.push(
+              userRole === "professional"
+                ? "/dashboard/professional"
+                : "/dashboard/patient"
+            )
+          }
         }
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)
@@ -154,7 +158,11 @@ export default function DashboardMainLayout({
               <SidebarTrigger className="h-8 w-8" />
               <div className="hidden sm:block h-4 w-px bg-border/40" />
               <h1 className="hidden sm:block text-sm font-medium text-muted-foreground">
-                {role === "professional"
+                {role === "admin"
+                  ? isSpanish
+                    ? "Panel de Administración"
+                    : "Admin Panel"
+                  : role === "professional"
                   ? isSpanish
                     ? "Panel Profesional"
                     : "Professional Dashboard"

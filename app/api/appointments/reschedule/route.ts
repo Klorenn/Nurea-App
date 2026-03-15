@@ -146,9 +146,10 @@ export async function POST(request: Request) {
 
     // Si es online, limpiar el meeting link y room para que se genere uno nuevo
     if (appointment.type === 'online') {
+      // Opcional: Para Jitsi, se podría mantener el mismo enlace (no caduca estrictamente) o generar uno nuevo
+      // Por consistencia temporal, simplemente borramos el viejo para que el GET /meeting regenere:
       updateData.meeting_link = null
       updateData.meeting_room_id = null
-      updateData.meeting_expires_at = null
       updateData.video_platform = null
     }
 

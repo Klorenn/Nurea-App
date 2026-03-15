@@ -77,6 +77,7 @@ export async function GET(request: Request) {
     // Formatear resultados como SpecialistCard
     const specialists: SpecialistCard[] = (searchResults || []).map((prof: any) => ({
       id: prof.id,
+      slug: prof.slug,
       name: `${prof.first_name || ''} ${prof.last_name || ''}`.trim() || 'Profesional',
       specialty: prof.specialty_name || prof.specialty || '',
       specialtySlug: prof.specialty_slug || '',
@@ -182,6 +183,7 @@ async function fallbackSearch(
     .from('professionals')
     .select(`
       id,
+      slug,
       specialty,
       specialty_id,
       bio,
@@ -291,6 +293,7 @@ async function fallbackSearch(
     
     return {
       id: prof.id,
+      slug: prof.slug,
       name: `${prof.profiles?.first_name || ''} ${prof.profiles?.last_name || ''}`.trim() || 'Profesional',
       specialty: lang === 'en' ? (specialty?.name_en || prof.specialty) : (specialty?.name_es || prof.specialty) || '',
       specialtySlug: specialty?.slug || '',

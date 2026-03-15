@@ -4,22 +4,24 @@ import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { motion } from "framer-motion"
 import {
   Calendar,
   CreditCard,
   Search,
   FileText,
+  MessageCircle,
   Settings,
   Users,
-  Wallet,
   Video,
   BarChart3,
   Stethoscope,
   ClipboardList,
-  FlaskConical,
-  PillIcon,
   Heart,
+  Shield,
+  User,
+  UserCheck,
+  LayoutDashboard,
+  HeadphonesIcon,
   type LucideIcon,
 } from "lucide-react"
 import {
@@ -37,7 +39,7 @@ import {
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
-export type UserRole = "patient" | "professional"
+export type UserRole = "patient" | "professional" | "admin"
 
 interface NavItem {
   icon: LucideIcon
@@ -54,6 +56,59 @@ interface NavGroup {
   items: NavItem[]
 }
 
+// ── Admin Navigation ──────────────────────────────────────────────────────────
+const adminNavigation: NavGroup[] = [
+  {
+    title: "Gestión",
+    titleEn: "Management",
+    items: [
+      {
+        icon: LayoutDashboard,
+        label: "Resumen Global",
+        labelEn: "Global Overview",
+        href: "/admin",
+      },
+      {
+        icon: Users,
+        label: "Gestión de Médicos",
+        labelEn: "Manage Doctors",
+        href: "/admin/professionals",
+      },
+      {
+        icon: Users,
+        label: "Gestión de Pacientes",
+        labelEn: "Manage Patients",
+        href: "/admin/users",
+      },
+      {
+        icon: CreditCard,
+        label: "Finanzas",
+        labelEn: "Finances",
+        href: "/admin/finances",
+      },
+      {
+        icon: UserCheck,
+        label: "Verificaciones",
+        labelEn: "Verifications",
+        href: "/admin/verifications",
+      },
+    ],
+  },
+  {
+    title: "Sistema",
+    titleEn: "System",
+    items: [
+      {
+        icon: Settings,
+        label: "Configuración del Sistema",
+        labelEn: "System Settings",
+        href: "/admin/settings",
+      },
+    ],
+  },
+]
+
+// ── Professional Navigation ───────────────────────────────────────────────────
 const professionalNavigation: NavGroup[] = [
   {
     title: "Principal",
@@ -72,41 +127,22 @@ const professionalNavigation: NavGroup[] = [
         href: "/dashboard/professional/appointments",
       },
       {
-        icon: ClipboardList,
-        label: "Disponibilidad",
-        labelEn: "Availability",
-        href: "/dashboard/professional/availability",
-      },
-      {
         icon: Users,
         label: "Mis Pacientes",
         labelEn: "My Patients",
         href: "/dashboard/professional/patients",
       },
       {
-        icon: Video,
-        label: "Teleconsultas",
-        labelEn: "Teleconsultations",
-        href: "/dashboard/professional/teleconsultations",
-        isNew: true,
-      },
-    ],
-  },
-  {
-    title: "Finanzas",
-    titleEn: "Finances",
-    items: [
-      {
-        icon: Wallet,
-        label: "Billetera Stellar",
-        labelEn: "Stellar Wallet",
-        href: "/dashboard/professional/wallet",
+        icon: FileText,
+        label: "Fichas Clínicas",
+        labelEn: "Clinical Records",
+        href: "/dashboard/professional/others",
       },
       {
         icon: CreditCard,
-        label: "Pagos Recibidos",
-        labelEn: "Received Payments",
-        href: "/dashboard/professional/payments",
+        label: "Pagos y Cobros",
+        labelEn: "Finances",
+        href: "/dashboard/professional/payouts",
       },
     ],
   },
@@ -115,8 +151,14 @@ const professionalNavigation: NavGroup[] = [
     titleEn: "Settings",
     items: [
       {
+        icon: User,
+        label: "Mi Perfil",
+        labelEn: "My Profile",
+        href: "/dashboard/professional/profile",
+      },
+      {
         icon: Settings,
-        label: "Configuración de Consultorio",
+        label: "Mi Consultorio",
         labelEn: "Practice Settings",
         href: "/dashboard/professional/settings",
       },
@@ -124,22 +166,17 @@ const professionalNavigation: NavGroup[] = [
   },
 ]
 
+// ── Patient Navigation ────────────────────────────────────────────────────────
 const patientNavigation: NavGroup[] = [
   {
     title: "Principal",
     titleEn: "Main",
     items: [
       {
-        icon: Calendar,
+        icon: LayoutDashboard,
         label: "Mi Dashboard",
         labelEn: "My Dashboard",
         href: "/dashboard/patient",
-      },
-      {
-        icon: Calendar,
-        label: "Mis Citas",
-        labelEn: "My Appointments",
-        href: "/dashboard/appointments",
       },
       {
         icon: Search,
@@ -148,38 +185,26 @@ const patientNavigation: NavGroup[] = [
         href: "/explore",
       },
       {
-        icon: Heart,
-        label: "Favoritos",
-        labelEn: "Favorites",
-        href: "/dashboard/favorites",
+        icon: Calendar,
+        label: "Mis Citas",
+        labelEn: "My Appointments",
+        href: "/dashboard/appointments",
       },
-    ],
-  },
-  {
-    title: "Historial Médico",
-    titleEn: "Medical History",
-    items: [
       {
-        icon: FileText,
-        label: "Documentos",
-        labelEn: "Documents",
+        icon: ClipboardList,
+        label: "Recetas",
+        labelEn: "Prescriptions",
         href: "/dashboard/documents",
       },
     ],
   },
-  {
-    title: "Pagos",
-    titleEn: "Payments",
-    items: [
-      {
-        icon: CreditCard,
-        label: "Pagos",
-        labelEn: "Payments",
-        href: "/dashboard/payments",
-      },
-    ],
-  },
 ]
+
+function getNavigation(role: UserRole): NavGroup[] {
+  if (role === "admin") return adminNavigation
+  if (role === "professional") return professionalNavigation
+  return patientNavigation
+}
 
 interface DashboardSidebarProps {
   role: UserRole
@@ -194,14 +219,21 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const pathname = usePathname()
   const isSpanish = language === "es"
-  const navigation = role === "professional" ? professionalNavigation : patientNavigation
+  const navigation = getNavigation(role)
 
   const isActive = (href: string) => {
-    if (href === "/dashboard/professional" || href === "/dashboard/patient") {
+    // Exact match for root-level dashboard pages
+    if (
+      href === "/dashboard/professional" ||
+      href === "/dashboard/patient" ||
+      href === "/admin"
+    ) {
       return pathname === href
     }
     return pathname.startsWith(href)
   }
+
+  const roleColor = role === "admin" ? "#7c3aed" : "#0f766e"
 
   return (
     <Sidebar
@@ -212,8 +244,11 @@ export function DashboardSidebar({
       )}
     >
       <SidebarHeader className="h-16 flex items-center gap-3 px-4 border-b border-border/30">
-        <Link href="/" className="flex items-center gap-2.5 overflow-hidden flex-1">
-          <div className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-sm">
+        <Link href={role === "admin" ? "/admin" : "/"} className="flex items-center gap-2.5 overflow-hidden flex-1">
+          <div
+            className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0 flex items-center justify-center shadow-sm"
+            style={{ background: `linear-gradient(135deg, ${roleColor}cc, ${roleColor})` }}
+          >
             <Image
               src="/logo.png"
               alt="NUREA"
@@ -222,17 +257,25 @@ export function DashboardSidebar({
               className="h-9 w-9 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
-                target.style.display = 'none'
+                target.style.display = "none"
               }}
             />
             <Stethoscope className="absolute h-5 w-5 text-white opacity-0" />
           </div>
-          <span className="font-semibold text-lg tracking-tight text-foreground group-data-[collapsible=icon]:hidden transition-all duration-300">
-            NUREA
-            <span className="text-[10px] text-muted-foreground font-normal ml-1 align-super">
-              beta
+          <div className="group-data-[collapsible=icon]:hidden transition-all duration-300">
+            <span className="font-semibold text-lg tracking-tight text-foreground">
+              NUREA
+              <span className="text-[10px] text-muted-foreground font-normal ml-1 align-super">
+                beta
+              </span>
             </span>
-          </span>
+            {role === "admin" && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Shield className="h-2.5 w-2.5 text-violet-500" />
+                <span className="text-[10px] text-violet-500 font-medium">Admin</span>
+              </div>
+            )}
+          </div>
         </Link>
       </SidebarHeader>
 
@@ -255,21 +298,29 @@ export function DashboardSidebar({
                         className={cn(
                           "h-10 px-3 mx-0 rounded-xl transition-all duration-200",
                           "hover:bg-accent/60 hover:text-foreground",
-                          active && "bg-[#0f766e]/10 text-[#0f766e] font-medium shadow-sm"
+                          active && role === "admin" && "bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium shadow-sm",
+                          active && role !== "admin" && "bg-[#0f766e]/10 text-[#0f766e] font-medium shadow-sm"
                         )}
                       >
                         <Link href={item.href} className="flex items-center gap-3">
                           <item.icon
                             className={cn(
                               "h-[18px] w-[18px] shrink-0 transition-colors",
-                              active ? "text-[#0f766e]" : "text-muted-foreground"
+                              active && role === "admin"
+                                ? "text-violet-600 dark:text-violet-400"
+                                : active
+                                ? "text-[#0f766e]"
+                                : "text-muted-foreground"
                             )}
                           />
                           <span className="truncate text-[13px]">
                             {isSpanish ? item.label : item.labelEn}
                           </span>
                           {item.isNew && (
-                            <span className="ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#0f766e] text-white">
+                            <span
+                              className="ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white"
+                              style={{ background: roleColor }}
+                            >
                               {isSpanish ? "Nuevo" : "New"}
                             </span>
                           )}
@@ -299,8 +350,9 @@ export function DashboardSidebar({
               {isSpanish ? "¿Necesitas ayuda?" : "Need help?"}
             </p>
             <Link
-              href="/support"
-              className="text-[12px] font-medium text-[#0f766e] hover:underline"
+              href={role === "admin" ? "/admin/support" : "/support"}
+              className="text-[12px] font-medium hover:underline"
+              style={{ color: roleColor }}
             >
               {isSpanish ? "Centro de soporte" : "Support center"} →
             </Link>

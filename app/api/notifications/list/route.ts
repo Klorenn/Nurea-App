@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     if (error) {
       // Si la tabla no existe o no hay permisos, devolver lista vacía para no romper el dashboard.
-      if (error.code === '42P01' || error.code === '42501') {
+      if (error.code === '42P01' || error.code === '42501' || error.code === 'PGRST205') {
         console.warn('Notifications table missing or RLS blocked. Returning empty notifications.')
         return NextResponse.json({
           success: true,
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
       .eq('read', false)
 
     if (countError) {
-      if (countError.code === '42P01' || countError.code === '42501') {
+      if (countError.code === '42P01' || countError.code === '42501' || countError.code === 'PGRST205') {
         console.warn('Notifications count failed because table is missing or RLS blocked. Returning 0.')
         return NextResponse.json({
           success: true,

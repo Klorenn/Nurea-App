@@ -31,11 +31,15 @@ export default function DashboardRedirect() {
           .single()
 
         const role = profile?.role || "patient"
-        router.push(
-          role === "professional"
-            ? "/dashboard/professional"
-            : "/dashboard/patient"
-        )
+        if (role === 'admin') {
+          router.push("/admin")
+        } else {
+          router.push(
+            role === "professional"
+              ? "/dashboard/professional"
+              : "/dashboard/patient"
+          )
+        }
       } catch (error) {
         console.error("Error fetching profile:", error)
         router.push("/dashboard/patient")

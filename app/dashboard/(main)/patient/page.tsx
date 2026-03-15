@@ -91,20 +91,16 @@ interface MedicalRecord {
   diagnosis: string
   diagnosis_code?: string
   professional: {
-    profile: {
-      first_name: string
-      last_name: string
-    }
+    first_name: string
+    last_name: string
   }
 }
 
-interface UserProfile {
+export interface UserProfile {
   id: string
   first_name: string
   last_name: string
-  email: string
   phone?: string
-  emergency_contact?: string
   avatar_url?: string
 }
 
@@ -152,7 +148,6 @@ export default function PatientDashboard() {
   const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
   const [editedPhone, setEditedPhone] = useState("")
-  const [editedEmergencyContact, setEditedEmergencyContact] = useState("")
 
   useEffect(() => {
     const loadData = async () => {
@@ -166,14 +161,13 @@ export default function PatientDashboard() {
         // Load profile (maybeSingle: 0 or 1 row, no throw)
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, first_name, last_name, email, phone, emergency_contact, avatar_url")
+          .select("id, first_name, last_name, phone, avatar_url")
           .eq("id", user.id)
           .maybeSingle()
 
         if (profileData) {
           setProfile(profileData as UserProfile)
           setEditedPhone(profileData.phone || "")
-          setEditedEmergencyContact(profileData.emergency_contact || "")
         }
 
         // Load upcoming appointments
@@ -285,7 +279,6 @@ export default function PatientDashboard() {
         .from("profiles")
         .update({
           phone: editedPhone,
-          emergency_contact: editedEmergencyContact,
         })
         .eq("id", user.id)
 
@@ -294,7 +287,6 @@ export default function PatientDashboard() {
       setProfile((prev) => prev ? {
         ...prev,
         phone: editedPhone,
-        emergency_contact: editedEmergencyContact,
       } : null)
 
       setEditProfileOpen(false)
@@ -774,9 +766,9 @@ export default function PatientDashboard() {
                 </Avatar>
                 <div>
                   <p className="font-semibold text-slate-900 dark:text-white">
-                    {profile?.first_name} {profile?.last_name}
+                    {profile?.first_name || user?.user_metadata?.first_name} {profile?.last_name || user?.user_metadata?.last_name}
                   </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{profile?.email}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{user?.email}</p>
                   {profile?.phone && (
                     <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
                       <Phone className="h-3 w-3" /> {profile.phone}
@@ -815,24 +807,11 @@ export default function PatientDashboard() {
                           value={editedPhone}
                           onChange={(e) => setEditedPhone(e.target.value)}
                           placeholder="+56 9 1234 5678"
-                          className="h-11"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="emergency" className="text-sm font-medium flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-amber-500" />
-                          {isSpanish ? "Contacto de Emergencia" : "Emergency Contact"}
-                        </Label>
-                        <Input
-                          id="emergency"
-                          value={editedEmergencyContact}
-                          onChange={(e) => setEditedEmergencyContact(e.target.value)}
-                          placeholder={isSpanish ? "Nombre y teléfono" : "Name and phone"}
-                          className="h-11"
+                          className="h-11 border-teal-200 dark:border-teal-800 focus-visible:ring-teal-500"
                         />
                       </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="gap-2 sm:gap-0 mt-4">
                       <Button variant="outline" onClick={() => setEditProfileOpen(false)}>
                         {isSpanish ? "Cancelar" : "Cancel"}
                       </Button>

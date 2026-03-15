@@ -25,6 +25,9 @@ export async function POST(request: Request) {
         .eq('read', false)
 
       if (error) {
+        if (error.code === '42P01' || error.code === '42501' || error.code === 'PGRST205') {
+          return NextResponse.json({ success: true })
+        }
         console.error('Error marking all as read:', error)
         return NextResponse.json(
           { error: 'Error al marcar notificaciones' },
@@ -50,6 +53,9 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
 
     if (error) {
+      if (error.code === '42P01' || error.code === '42501' || error.code === 'PGRST205') {
+        return NextResponse.json({ success: true })
+      }
       console.error('Error marking notification as read:', error)
       return NextResponse.json(
         { error: 'Error al marcar notificación' },

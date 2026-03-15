@@ -166,7 +166,10 @@ export function RouteGuard({
     
     if (!roles.includes(userRole)) {
       // Redirigir según el rol del usuario
-      const defaultRedirect = userRole === "professional" ? "/professional/dashboard" : "/dashboard"
+      const defaultRedirect = 
+        userRole === "professional" ? "/professional/dashboard" : 
+        userRole === "admin" ? "/admin" : 
+        "/dashboard"
       router.push(redirectTo || defaultRedirect)
       return null
     }

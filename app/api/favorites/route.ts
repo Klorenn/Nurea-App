@@ -50,7 +50,11 @@ export async function GET(request: Request) {
     if (favoritesError) {
       // Si la tabla no existe o no hay permisos, no romper el dashboard:
       // devolver simplemente una lista vacía.
-      if (favoritesError.code === '42P01' || favoritesError.code === '42501') {
+      if (
+        favoritesError.code === '42P01' || 
+        favoritesError.code === '42501' || 
+        favoritesError.code?.startsWith('PGRST')
+      ) {
         console.warn('Favorites table missing or RLS blocked. Returning empty list.')
         return NextResponse.json({
           success: true,

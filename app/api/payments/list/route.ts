@@ -56,6 +56,19 @@ export async function GET(request: Request) {
     const { data: payments, error: paymentsError } = await query
 
     if (paymentsError) {
+      if (
+        paymentsError.code === '42P01' || 
+        paymentsError.code === '42501' || 
+        paymentsError.code?.startsWith('PGRST')
+      ) {
+        console.warn('Payments table missing or RLS blocked. Returning empty list.', paymentsError)
+        return NextResponse.json({
+          success: true,
+          payments: [],
+          count: 0,
+        })
+      }
+
       console.error('Error fetching payments:', paymentsError)
       return NextResponse.json(
         { 

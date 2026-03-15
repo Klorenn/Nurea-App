@@ -110,15 +110,53 @@ export async function GET(
       .single()
 
     if (professionalError || !professional) {
-      return NextResponse.json(
-        { 
-          error: 'not_found',
-          message: 'Profesional no encontrado.'
-        },
-        { status: 404 }
-      )
+      // If not found by ID, try searching by slug
+      const { data: bySlug, error: slugError } = await supabase
+        .from('professionals')
+        .select(`
+          *,
+          profile:profiles!professionals_id_fkey(
+            id,
+            first_name,
+            last_name,
+            email,
+            avatar_url,
+            phone,
+            date_of_birth
+          )
+        `)
+        .eq('slug', id)
+        .maybeSingle()
+
+      if (!bySlug || slugError) {
+        return NextResponse.json(
+          { 
+            error: 'not_found',
+            message: 'Profesional no encontrado.'
+          },
+          { status: 404 }
+        )
+      }
+      
+      // Use the professional found by slug
+      // We need to re-assign or use a common variable
+      return handleProfessionalResponse(bySlug, supabase, bySlug.id)
     }
 
+    return handleProfessionalResponse(professional, supabase, id)
+  } catch (error) {
+    console.error('Get professional error:', error)
+    return NextResponse.json(
+      { 
+        error: 'server_error',
+        message: 'Algo salió mal. Por favor, intenta nuevamente en unos momentos.'
+      },
+      { status: 500 }
+    )
+  }
+}
+
+async function handleProfessionalResponse(professional: any, supabase: any, id: string) {
     // Calcular rating y reviewsCount desde reviews
     const { data: reviewsData } = await supabase
       .from('reviews')
@@ -153,7 +191,6 @@ export async function GET(
       availableUntil = availability.availableUntil || '6:00 PM'
     } catch (error) {
       console.error('Error calculando disponibilidad:', error)
-      // Mantener valores por defecto
     }
 
     // Cargar documentos públicos del profesional
@@ -181,19 +218,19 @@ export async function GET(
     // Formatear profesional real
     const formattedProfessional = {
       id: professional.id,
+      slug: professional.slug,
       name: `${professional.profile?.first_name || ''} ${professional.profile?.last_name || ''}`.trim() || 'Profesional',
       title: professional.specialty || '',
       specialty: professional.specialty || '',
-      specialtyEn: professional.specialty || '', // TODO: agregar traducción
+      specialtyEn: professional.specialty || '', 
       yearsExperience: professional.years_experience || 0,
       location: professional.location || '',
-      rating: Math.round(averageRating * 10) / 10, // Redondear a 1 decimal
+      rating: Math.round(averageRating * 10) / 10, 
       reviewsCount: reviewsCount,
       price: professional.consultation_price || 0,
       consultationPrice: professional.consultation_price || 0,
       languages: (professional.languages && Array.isArray(professional.languages) && professional.languages.length > 0)
         ? professional.languages.map((lang: string) => {
-            // Mapear códigos a nombres completos
             const langMap: Record<string, string> = {
               'ES': 'Español',
               'EN': 'Inglés',
@@ -203,7 +240,7 @@ export async function GET(
             }
             return langMap[lang] || lang
           })
-        : ['Español'], // Default si no hay idiomas configurados
+        : ['Español'],
       bio: professional.bio || '',
       bioExtended: professional.bio_extended || '',
       services: professional.services || [],
@@ -222,10 +259,10 @@ export async function GET(
       },
       imageUrl: professional.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
       verified: professional.verified || false,
-      isOnline: false, // Presencia en tiempo real se actualiza en el cliente
+      isOnline: false, 
       availableToday: availableToday,
       availableUntil: availableUntil,
-      patientsServed: patientsServed, // Calculado desde appointments completadas
+      patientsServed: patientsServed, 
       stellarWallet: professional.stellar_wallet ?? null,
     }
 
@@ -233,15 +270,5 @@ export async function GET(
       success: true,
       professional: formattedProfessional
     })
-  } catch (error) {
-    console.error('Get professional error:', error)
-    return NextResponse.json(
-      { 
-        error: 'server_error',
-        message: 'Algo salió mal. Por favor, intenta nuevamente en unos momentos.'
-      },
-      { status: 500 }
-    )
-  }
 }
 

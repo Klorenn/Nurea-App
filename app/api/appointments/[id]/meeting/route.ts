@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
-import { createMeetingRoom, calculateMeetingExpiration } from '@/lib/services/daily'
+import { getJitsiMeetingUrl } from '@/lib/utils/jitsi'
 
 /**
  * POST /api/appointments/[id]/meeting
- * Crea un room de Daily.co para una cita online
+ * Genera y almacena el enlace de Jitsi Meet para una cita online
  */
 export async function POST(
   request: NextRequest,
@@ -208,69 +208,32 @@ export async function POST(
       }
     }
 
-    // Crear nuevo room en Daily.co
-    const expirationDate = calculateMeetingExpiration(
-      appointment.appointment_date,
-      appointment.appointment_time,
-      appointment.duration_minutes || 60
-    )
+    // Crear nuevo enlace en Jitsi
+    // Para Jitsi, no hay "expiración" estricta, pero ponemos una fecha de caducidad
+    // de 2 horas después de la cita como límite lógico
+    const expirationDate = appointmentEndTime
+    expirationDate.setHours(expirationDate.getHours() + 1) // +1 hora extra de margen
 
-    const roomName = `nurea-appt-${appointmentId}-${Date.now()}`
-    const { room, error: dailyError } = await createMeetingRoom({
-      name: roomName,
-      privacy: 'private',
-      properties: {
-        max_participants: 2,
-        enable_chat: true,
-        enable_screenshare: true,
-        enable_recording: false,
-        exp: Math.floor(expirationDate.getTime() / 1000), // Unix timestamp
-      },
-    })
+    const jitsiUrl = getJitsiMeetingUrl(appointmentId)
 
-    if (dailyError || !room) {
-      console.error('Error creando room en Daily.co:', dailyError)
-      return NextResponse.json(
-        {
-          error: 'meeting_creation_failed',
-          message:
-            dailyError ||
-            'No pudimos crear el room de video. Por favor, intenta nuevamente.',
-        },
-        { status: 500 }
-      )
-    }
-
-    // Guardar meeting link y room name (Daily.co usa name para operaciones) en la cita
+    // Guardar meeting link en la cita
     const { error: updateError } = await supabase
       .from('appointments')
       .update({
-        meeting_link: room.url,
-        meeting_room_id: room.name || room.id, // Usar name preferentemente para operaciones posteriores
-        video_platform: 'daily',
+        meeting_link: jitsiUrl,
+        meeting_room_id: `nurea-${appointmentId}`, // ID auxiliar
+        video_platform: 'jitsi',
         meeting_expires_at: expirationDate.toISOString(),
       })
       .eq('id', appointmentId)
 
     if (updateError) {
       console.error('Error actualizando cita con meeting link:', updateError)
-      // Intentar eliminar el room creado si falla el update
-      // Daily.co requiere el nombre del room para eliminarlo
-      const { deleteMeetingRoom } = await import('@/lib/services/daily')
-      const roomIdentifier = room.name || room.id // Usar name si existe, sino id como fallback
-      const deleteResult = await deleteMeetingRoom(roomIdentifier)
-      
-      if (!deleteResult.success) {
-        console.error(`Error eliminando room ${roomIdentifier} después de fallo de update:`, deleteResult.error)
-      } else {
-        console.log(`Room ${roomIdentifier} eliminado exitosamente después de fallo de update`)
-      }
-
       return NextResponse.json(
         {
           error: 'update_failed',
           message:
-            'Se creó el room pero no pudimos guardarlo. Por favor, intenta nuevamente.',
+            'Se generó el enlace pero no pudimos guardarlo. Por favor, intenta de nuevo.',
         },
         { status: 500 }
       )
@@ -278,8 +241,8 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      meeting_link: room.url,
-      meeting_room_id: room.name || room.id, // Retornar el identificador usado para almacenar
+      meeting_link: jitsiUrl,
+      meeting_room_id: `nurea-${appointmentId}`,
       expires_at: expirationDate.toISOString(),
       message: 'Meeting link creado exitosamente',
     })
@@ -398,7 +361,7 @@ export async function GET(
       success: true,
       meeting_link: appointment.meeting_link,
       meeting_room_id: appointment.meeting_room_id,
-      video_platform: appointment.video_platform || 'daily',
+      video_platform: appointment.video_platform || 'jitsi',
       expires_at: appointment.meeting_expires_at,
       is_expired: isExpired,
     })

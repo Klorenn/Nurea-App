@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -18,6 +18,7 @@ import {
   MessageSquare,
   ChevronRight,
   X,
+  Loader2,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -27,6 +28,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VerifiedBadge } from "@/components/verified-badge"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/hooks/use-auth"
+import { format, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
+import { ReviewModal } from "@/components/reviews/ReviewModal"
+import { useSearchParams } from "next/navigation"
 
 type AppointmentStatus = "confirmed" | "pending" | "completed" | "cancelled"
 type AppointmentType = "online" | "in_person"
@@ -122,7 +129,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 100, damping: 15 },
+    transition: { type: "spring", stiffness: 100, damping: 15 } as const,
   },
 }
 
@@ -225,13 +232,15 @@ function UpcomingAppointmentCard({
   isSpanish,
   isMain = false,
 }: {
-  appointment: Appointment
+  appointment: any
   isSpanish: boolean
   isMain?: boolean
 }) {
-  const dateText = formatDate(appointment.date, isSpanish)
+  const dateText = formatDate(appointment.appointment_date, isSpanish)
   const isToday = dateText === (isSpanish ? "Hoy" : "Today")
   const isTomorrow = dateText === (isSpanish ? "Mañana" : "Tomorrow")
+
+  const doctor = appointment.professional?.profile || {}
 
   return (
     <motion.div variants={itemVariants}>
@@ -260,7 +269,7 @@ function UpcomingAppointmentCard({
                 </div>
                 <div>
                   <p className="text-lg font-bold text-slate-800 dark:text-slate-100">
-                    {dateText}, {appointment.time} hrs
+                    {dateText}, {appointment.appointment_time.slice(0, 5)} hrs
                   </p>
                   <p className="text-sm text-slate-500">
                     {appointment.type === "online"
@@ -276,12 +285,12 @@ function UpcomingAppointmentCard({
               <Badge
                 className={cn(
                   "text-xs font-semibold px-3 py-1",
-                  appointment.isPaid
+                  appointment.payment_status === 'paid' || appointment.payment_status === 'held_escrow'
                     ? "bg-teal-500/10 text-teal-600 border-teal-500/20"
                     : "bg-amber-500/10 text-amber-600 border-amber-500/20"
                 )}
               >
-                {appointment.isPaid
+                {appointment.payment_status === 'paid' || appointment.payment_status === 'held_escrow'
                   ? isSpanish
                     ? "Confirmada - Pagada"
                     : "Confirmed - Paid"
@@ -296,23 +305,23 @@ function UpcomingAppointmentCard({
           <div className="px-6 py-5">
             <div className="flex items-start gap-4">
               <Avatar className="h-16 w-16 rounded-2xl border-2 border-slate-100 dark:border-slate-700">
-                <AvatarImage src={appointment.doctorAvatar} className="object-cover" />
+                <AvatarImage src={doctor.avatar_url} className="object-cover" />
                 <AvatarFallback className="rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white text-xl font-bold">
-                  {appointment.doctorName.split(" ")[0][0]}
-                  {appointment.doctorName.split(" ")[1]?.[0]}
+                  {doctor.first_name?.[0]}
+                  {doctor.last_name?.[0]}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">
-                    {appointment.doctorName}
+                    Dr. {doctor.first_name} {doctor.last_name}
                   </h3>
-                  {appointment.isVerified && (
+                  {appointment.professional?.verified && (
                     <VerifiedBadge variant="compact" isSpanish={isSpanish} />
                   )}
                 </div>
                 <p className="text-slate-600 dark:text-slate-400">
-                  {appointment.specialty}
+                  {appointment.professional?.specialty}
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge
@@ -352,23 +361,18 @@ function UpcomingAppointmentCard({
           {/* Actions */}
           <div className="px-6 pb-6 space-y-4">
             {/* Main Action Button */}
-            {appointment.type === "online" && (
+            {appointment.type === "online" && appointment.status === 'confirmed' && (
               <div className="space-y-2">
                 <Button
                   size="lg"
                   className="w-full h-14 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-base font-semibold shadow-lg shadow-teal-600/20"
                   asChild
                 >
-                  <Link href={`/consulta/${appointment.id}`}>
+                  <Link href={`/dashboard/patient/consultation/${appointment.id}`}>
                     <Video className="h-5 w-5 mr-2" />
                     {isSpanish ? "Unirse a la Videollamada" : "Join Video Call"}
                   </Link>
                 </Button>
-                <p className="text-center text-xs text-slate-500">
-                  {isSpanish
-                    ? "El enlace se habilitará 10 minutos antes de la consulta"
-                    : "Link will be enabled 10 minutes before the consultation"}
-                </p>
               </div>
             )}
 
@@ -392,16 +396,6 @@ function UpcomingAppointmentCard({
                 {isSpanish ? "Cancelar Cita" : "Cancel"}
               </Button>
             </div>
-
-            {/* Cancellation Policy Notice */}
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50">
-              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                {isSpanish
-                  ? "Recuerda: Cancelaciones con menos de 48 hrs de anticipación no aplican para devolución de la garantía."
-                  : "Remember: Cancellations with less than 48 hours notice are not eligible for deposit refund."}
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -412,16 +406,15 @@ function UpcomingAppointmentCard({
 function PastAppointmentCard({
   appointment,
   isSpanish,
+  onLeaveReview,
 }: {
-  appointment: Appointment
+  appointment: any
   isSpanish: boolean
+  onLeaveReview: (apt: any) => void
 }) {
-  const date = new Date(appointment.date)
-  const formattedDate = date.toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
+  const date = parseISO(appointment.appointment_date)
+  const formattedDate = format(date, "d 'de' MMM, yyyy", { locale: es })
+  const doctor = appointment.professional?.profile || {}
 
   return (
     <motion.div variants={itemVariants}>
@@ -429,39 +422,40 @@ function PastAppointmentCard({
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12 rounded-xl border border-slate-100 dark:border-slate-700">
-              <AvatarImage src={appointment.doctorAvatar} className="object-cover" />
+              <AvatarImage src={doctor.avatar_url} className="object-cover" />
               <AvatarFallback className="rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600">
-                {appointment.doctorName.split(" ")[0][0]}
-                {appointment.doctorName.split(" ")[1]?.[0]}
+                {doctor.first_name?.[0]}
+                {doctor.last_name?.[0]}
               </AvatarFallback>
             </Avatar>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h4 className="font-semibold text-slate-800 dark:text-slate-100 truncate">
-                  {appointment.doctorName}
+                  Dr. {doctor.first_name} {doctor.last_name}
                 </h4>
-                {appointment.isVerified && (
+                {appointment.professional?.verified && (
                   <VerifiedBadge variant="compact" isSpanish={isSpanish} />
                 )}
               </div>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                {appointment.specialty}
+                {appointment.professional?.specialty}
               </p>
               <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
                 <Calendar className="h-3 w-3" />
                 {formattedDate}
                 <span>•</span>
                 <Clock className="h-3 w-3" />
-                {appointment.time}
+                {appointment.appointment_time.slice(0, 5)}
               </div>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {!appointment.hasReview && (
+              {(!appointment.reviews || appointment.reviews.length === 0) && (
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => onLeaveReview(appointment)}
                   className="rounded-lg text-xs border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-700 dark:hover:bg-amber-950/30"
                 >
                   <Star className="h-3 w-3 mr-1" />
@@ -470,10 +464,11 @@ function PastAppointmentCard({
               )}
               <Button
                 size="sm"
-                className="rounded-lg text-xs bg-teal-600 hover:bg-teal-700"
+                variant="ghost"
+                className="rounded-lg text-xs text-teal-600 hover:bg-teal-50"
                 asChild
               >
-                <Link href={`/booking/${appointment.id}`}>
+                <Link href={`/professionals/${appointment.professional_id}`}>
                   <RefreshCcw className="h-3 w-3 mr-1" />
                   {isSpanish ? "Volver a Agendar" : "Book Again"}
                 </Link>
@@ -517,9 +512,9 @@ function CancelledAppointmentCard({
               <h4 className="font-semibold text-slate-600 dark:text-slate-400 truncate">
                 {appointment.doctorName}
               </h4>
-              <p className="text-sm text-slate-400">
+              <Badge variant="secondary" className="text-[10px] p-0 font-bold text-violet-600 uppercase bg-transparent">
                 {appointment.specialty}
-              </p>
+              </Badge>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline" className="text-[10px] text-red-500 border-red-200 dark:border-red-800">
                   <CalendarX className="h-3 w-3 mr-1" />
@@ -557,12 +552,76 @@ export default function PatientAppointmentsPage() {
   const { language } = useLanguage()
   const isSpanish = language === "es"
   const [activeTab, setActiveTab] = useState("upcoming")
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null)
+  
+  const searchParams = useSearchParams()
+  const supabase = createClient()
+  const { user } = useAuth()
 
-  const upcomingAppointments = mockAppointments.filter(
+  const loadAppointments = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          professional_id,
+          professional:professionals(
+            *,
+            profile:profiles(*)
+          ),
+          reviews(*)
+        `)
+        .eq('patient_id', user.id)
+        .order('appointment_date', { ascending: false })
+
+      if (error) throw error
+      setAppointments(data || [])
+    } catch (err) {
+      console.error("Error loading appointments:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadAppointments()
+  }, [])
+
+  // Handle auto-open review from URL
+  useEffect(() => {
+    const reviewId = searchParams.get('review')
+    if (reviewId && appointments.length > 0) {
+      const apt = appointments.find(a => a.id === reviewId)
+      if (apt && (!apt.reviews || apt.reviews.length === 0)) {
+        setSelectedAppointment(apt)
+        setIsReviewModalOpen(true)
+      }
+    }
+  }, [searchParams, appointments])
+
+  const upcomingAppointments = appointments.filter(
     (a) => a.status === "confirmed" || a.status === "pending"
   )
-  const pastAppointments = mockAppointments.filter((a) => a.status === "completed")
-  const cancelledAppointments = mockAppointments.filter((a) => a.status === "cancelled")
+  const pastAppointments = appointments.filter((a) => a.status === "completed")
+  const cancelledAppointments = appointments.filter((a) => a.status === "cancelled")
+
+  const handleLeaveReview = (apt: any) => {
+    setSelectedAppointment(apt)
+    setIsReviewModalOpen(true)
+  }
+
+  if (loading && appointments.length === 0) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+      </div>
+    )
+  }
 
   return (
     <motion.div
@@ -675,6 +734,7 @@ export default function PatientAppointmentsPage() {
                       key={appointment.id}
                       appointment={appointment}
                       isSpanish={isSpanish}
+                      onLeaveReview={handleLeaveReview}
                     />
                   ))}
                 </motion.div>
@@ -710,6 +770,17 @@ export default function PatientAppointmentsPage() {
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      {/* Review Modal */}
+      {selectedAppointment && (
+        <ReviewModal
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          appointmentId={selectedAppointment.id}
+          doctorName={`${selectedAppointment.professional?.profile?.first_name} ${selectedAppointment.professional?.profile?.last_name}`}
+          onSuccess={loadAppointments}
+        />
+      )}
     </motion.div>
   )
 }

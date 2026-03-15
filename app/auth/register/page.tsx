@@ -57,6 +57,8 @@ function RegisterPageContent() {
     return null
   }
 
+  const plan = searchParams.get("plan")
+
   return (
     <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-cyan-50/30 dark:bg-transparent">
       <AuthPageBackground />
@@ -75,7 +77,7 @@ function RegisterPageContent() {
       </div>
 
       <div className="relative z-10 w-full flex items-center justify-center px-4">
-        <SignupForm initialRole={role as "patient" | "professional"} />
+        <SignupForm initialRole={role as "patient" | "professional"} initialPlan={plan} />
       </div>
     </main>
   )

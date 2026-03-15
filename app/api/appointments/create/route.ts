@@ -291,6 +291,9 @@ export async function POST(request: Request) {
       )
     }
 
+    // Formatear fecha y hora para el mensaje y la caducidad
+    const appointmentDateObj = new Date(`${appointmentDate}T${appointmentTime}`)
+
     // Si es cita online, generar meeting link automáticamente
     let meetingLink: string | null = null
     let meetingRoomId: string | null = null
@@ -298,55 +301,32 @@ export async function POST(request: Request) {
 
     if (type === 'online') {
       try {
-        const { createMeetingRoom, calculateMeetingExpiration } = await import('@/lib/services/daily')
+        const { getJitsiMeetingUrl } = await import('@/lib/utils/jitsi')
         
-        const expirationDate = calculateMeetingExpiration(
-          appointmentDate,
-          appointmentTime,
-          duration
-        )
-        
-        const roomName = `nurea-appt-${appointment.id}-${Date.now()}`
-        const { room, error: dailyError } = await createMeetingRoom({
-          name: roomName,
-          privacy: 'private',
-          properties: {
-            max_participants: 2,
-            enable_chat: true,
-            enable_screenshare: true,
-            enable_recording: false,
-            exp: Math.floor(expirationDate.getTime() / 1000), // Unix timestamp
-          },
-        })
+        meetingLink = getJitsiMeetingUrl(appointment.id)
+        meetingRoomId = `nurea-${appointment.id}`
 
-        if (!dailyError && room) {
-          meetingLink = room.url
-          // Daily.co requiere el nombre del room para operaciones posteriores (delete, etc.)
-          meetingRoomId = room.name || room.id
-          meetingExpiresAt = expirationDate
+        // Jitsi no tiene expiración estricta, pero ponemos 2 horas después como referencia
+        const appointmentEndTime = new Date(appointmentDateObj.getTime() + duration * 60 * 1000)
+        appointmentEndTime.setHours(appointmentEndTime.getHours() + 1)
+        meetingExpiresAt = appointmentEndTime
 
-          // Actualizar la cita con el meeting link
-          const { error: updateError } = await supabase
-            .from('appointments')
-            .update({
-              meeting_link: meetingLink,
-              meeting_room_id: meetingRoomId,
-              video_platform: 'daily',
-              meeting_expires_at: meetingExpiresAt.toISOString(),
-            })
-            .eq('id', appointment.id)
+        // Actualizar la cita con el meeting link
+        const { error: updateError } = await supabase
+          .from('appointments')
+          .update({
+            meeting_link: meetingLink,
+            meeting_room_id: meetingRoomId,
+            video_platform: 'jitsi',
+            meeting_expires_at: meetingExpiresAt.toISOString(),
+          })
+          .eq('id', appointment.id)
 
-          if (updateError) {
-            console.error('Error actualizando cita con meeting link:', updateError)
-            // No fallar la creación si el update falla, el meeting link se puede generar después
-          }
-        } else {
-          console.error('Error creando meeting room en Daily.co:', dailyError)
-          // No fallar la creación de la cita si Daily.co falla, se puede generar después
+        if (updateError) {
+          console.error('Error actualizando cita con meeting link:', updateError)
         }
       } catch (meetingError) {
         console.error('Error generando meeting link:', meetingError)
-        // No fallar la creación de la cita si el meeting falla
       }
     }
 
@@ -366,8 +346,6 @@ export async function POST(request: Request) {
     const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Paciente'
     const professionalName = professionalProfile ? `${professionalProfile.first_name || ''} ${professionalProfile.last_name || ''}`.trim() : professional.specialty || 'Profesional'
 
-    // Formatear fecha y hora para el mensaje
-    const appointmentDateObj = new Date(`${appointmentDate}T${appointmentTime}`)
     const formattedDate = appointmentDateObj.toLocaleDateString('es-ES', {
       weekday: 'long',
       year: 'numeric',

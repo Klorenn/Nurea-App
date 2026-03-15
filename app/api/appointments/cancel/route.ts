@@ -150,37 +150,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Si es cita online y tiene meeting room, eliminarlo de Daily.co
-    if (appointment.type === 'online' && appointment.meeting_room_id) {
-      try {
-        // Solo eliminar el room si la cita no ha pasado hace más de 24 horas
-        // (los rooms expiran automáticamente después de 24h de la cita)
-        const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
-        const appointmentEndTime = new Date(appointmentDateTime.getTime() + (appointment.duration_minutes || 60) * 60 * 1000)
-        const now = new Date()
-        const hoursSinceAppointment = (now.getTime() - appointmentEndTime.getTime()) / (1000 * 60 * 60)
-        
-        // Solo intentar eliminar si la cita está en el futuro o pasó recientemente (< 24h)
-        if (hoursSinceAppointment < 24) {
-          const { deleteMeetingRoom } = await import('@/lib/services/daily')
-          // Daily.co requiere el nombre del room. meeting_room_id debería ser el name
-          const deleteResult = await deleteMeetingRoom(appointment.meeting_room_id)
-          
-          if (!deleteResult.success) {
-            console.error(`Error eliminando meeting room ${appointment.meeting_room_id} al cancelar cita ${appointmentId}:`, deleteResult.error)
-            // No fallar la cancelación si el delete del room falla, solo loguearlo
-            // El room expirará automáticamente según su configuración
-          } else {
-            console.log(`Meeting room ${appointment.meeting_room_id} eliminado exitosamente al cancelar cita ${appointmentId}`)
-          }
-        } else {
-          console.log(`Meeting room ${appointment.meeting_room_id} no se elimina porque la cita pasó hace más de 24 horas (probablemente ya expiró)`)
-        }
-      } catch (deleteRoomError) {
-        console.error('Error eliminando meeting room al cancelar cita:', deleteRoomError)
-        // No fallar la cancelación si el delete del room falla
-      }
-    }
+    // Si es cita online y tiene meeting room, no necesitamos hacer nada para Jitsi.
+    // (Jitsi no requiere eliminación de rooms por API).
 
     // Obtener información del paciente y profesional para el email
     const { data: patientProfile } = await supabase
