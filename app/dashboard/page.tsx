@@ -25,24 +25,49 @@ export default function DashboardRootPage() {
 
     const redirectByRole = async () => {
       try {
-        const { data: profile } = await supabase
+        // Fetch profile with direct query to ensure freshest data
+        const { data: profile, error: dbError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
-          .single()
+          .maybeSingle()
 
-        const role = profile?.role || "patient"
-        
+        if (dbError) {
+          console.error("DB Fetch error in redirector:", dbError)
+        }
+
+        const jwtRole = user.user_metadata?.role
+        const role = profile?.role || jwtRole
+
+        console.log("Redirector - Detected Role:", { 
+          fromDB: profile?.role, 
+          fromJWT: jwtRole, 
+          final: role 
+        })
+
         if (role === "admin") {
-          router.push("/admin")
-        } else if (role === "professional") {
+          router.push("/dashboard/admin")
+          return
+        } 
+        
+        if (role === "professional") {
+          router.push("/dashboard/professional")
+          return
+        }
+
+        // Default or explicit patient
+        router.push("/dashboard/patient")
+      } catch (error) {
+        console.error("Redirect error catch:", error)
+        // Final fallback to JWT only
+        const backupRole = user.app_metadata?.role || user.user_metadata?.role
+        if (backupRole === "admin") {
+          router.push("/dashboard/admin")
+        } else if (backupRole === "professional") {
           router.push("/dashboard/professional")
         } else {
           router.push("/dashboard/patient")
         }
-      } catch (error) {
-        console.error("Redirect error:", error)
-        router.push("/dashboard/patient")
       }
     }
 

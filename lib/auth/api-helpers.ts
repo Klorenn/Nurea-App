@@ -12,7 +12,7 @@ import {
   validateUserId,
   createErrorResponse,
   type AuthorizationResult
-} from './authorization'
+} from './auth-logic'
 import type { UserRole } from './utils'
 
 /**

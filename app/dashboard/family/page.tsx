@@ -2,14 +2,34 @@
 
 import { useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Users, UserPlus, Calendar, Trash2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import {
+  Users,
+  UserPlus,
+  Calendar,
+  Trash2,
+  Shield,
+  AlertCircle,
+  CheckCircle2,
+  Upload,
+  X,
+  Info,
+} from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import Link from "next/link"
+import { toast } from "sonner"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 type Dependent = {
   id: string
@@ -17,12 +37,49 @@ type Dependent = {
   lastName: string
   relation: string
   dateOfBirth: string
+  rut: string
+  verified: boolean
+  idDocumentName?: string
 }
 
 const MOCK_DEPENDENTS: Dependent[] = [
-  { id: "1", firstName: "Ana", lastName: "García", relation: "Hija", dateOfBirth: "2015-03-12" },
-  { id: "2", firstName: "Luis", lastName: "García", relation: "Hijo", dateOfBirth: "2018-07-22" },
+  {
+    id: "1",
+    firstName: "Ana",
+    lastName: "García",
+    relation: "Hija",
+    dateOfBirth: "2015-03-12",
+    rut: "22.333.444-5",
+    verified: true,
+    idDocumentName: "carnet_ana.jpg",
+  },
 ]
+
+// --- RUT Validation (Chile) ---
+function formatRut(rut: string): string {
+  const clean = rut.replace(/[^0-9kK]/g, "").toUpperCase()
+  if (clean.length < 2) return clean
+  const body = clean.slice(0, -1)
+  const dv = clean.slice(-1)
+  const formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+  return `${formatted}-${dv}`
+}
+
+function validateRut(rut: string): boolean {
+  const clean = rut.replace(/[^0-9kK]/g, "").toUpperCase()
+  if (clean.length < 2) return false
+  const body = clean.slice(0, -1)
+  const dv = clean.slice(-1)
+  let sum = 0
+  let mult = 2
+  for (let i = body.length - 1; i >= 0; i--) {
+    sum += Number(body[i]) * mult
+    mult = mult === 7 ? 2 : mult + 1
+  }
+  const mod = 11 - (sum % 11)
+  const expected = mod === 11 ? "0" : mod === 10 ? "K" : String(mod)
+  return expected === dv
+}
 
 export default function FamilyPage() {
   const { language } = useLanguage()
@@ -35,11 +92,61 @@ export default function FamilyPage() {
     lastName: "",
     relation: "",
     dateOfBirth: "",
+    rut: "",
   })
+  const [rutError, setRutError] = useState("")
+  const [idFile, setIdFile] = useState<File | null>(null)
+  const [idFileError, setIdFileError] = useState("")
+  const [verifyingId, setVerifyingId] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleRutChange = (value: string) => {
+    const formatted = formatRut(value)
+    setFormData((prev) => ({ ...prev, rut: formatted }))
+    if (formatted.replace(/[^0-9kK]/g, "").length >= 8) {
+      setRutError(validateRut(formatted) ? "" : "RUT inválido. Verifica el número y dígito verificador.")
+    } else {
+      setRutError("")
+    }
+  }
+
+  const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      setIdFileError("El archivo es muy grande. Máximo 10MB.")
+      return
+    }
+    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+    if (!allowed.includes(file.type)) {
+      setIdFileError("Formato no admitido. Sube JPG, PNG o PDF.")
+      return
+    }
+    setIdFileError("")
+    setIdFile(file)
+  }
+
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.firstName.trim() || !formData.lastName.trim()) return
+
+    // Validate RUT
+    if (!formData.rut || !validateRut(formData.rut)) {
+      setRutError("Ingresa un RUT válido para el familiar.")
+      return
+    }
+
+    // Require ID document
+    if (!idFile) {
+      setIdFileError("Debes adjuntar el carnet de identidad o documento de autorización.")
+      return
+    }
+
+    // Simulate verification
+    setVerifyingId(true)
+    await new Promise((res) => setTimeout(res, 1200))
+    setVerifyingId(false)
+
     setDependents((prev) => [
       ...prev,
       {
@@ -48,19 +155,27 @@ export default function FamilyPage() {
         lastName: formData.lastName.trim(),
         relation: formData.relation || (isSpanish ? "Familiar" : "Dependent"),
         dateOfBirth: formData.dateOfBirth,
+        rut: formData.rut,
+        verified: true,
+        idDocumentName: idFile.name,
       },
     ])
-    setFormData({ firstName: "", lastName: "", relation: "", dateOfBirth: "" })
+    setFormData({ firstName: "", lastName: "", relation: "", dateOfBirth: "", rut: "" })
+    setIdFile(null)
+    setRutError("")
+    setIdFileError("")
     setShowForm(false)
+    toast.success(isSpanish ? "Familiar agregado y verificado ✓" : "Family member added and verified ✓")
   }
 
   const handleRemove = (id: string) => {
     setDependents((prev) => prev.filter((d) => d.id !== id))
+    toast.success(isSpanish ? "Familiar eliminado" : "Family member removed")
   }
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "—"
-    return new Date(dateStr).toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
+    return new Date(dateStr).toLocaleDateString(isSpanish ? "es-CL" : "en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -74,6 +189,7 @@ export default function FamilyPage() {
   return (
     <DashboardLayout role="patient">
       <div className="space-y-8">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
@@ -81,81 +197,226 @@ export default function FamilyPage() {
             </h1>
             <p className="text-muted-foreground mt-1">
               {isSpanish
-                ? "Agrega dependientes para agendar citas por ellos"
-                : "Add dependents to book appointments on their behalf"}
+                ? "Agrega dependientes para agendar citas por ellos. Se requiere RUT y documento de identidad."
+                : "Add dependents to book appointments on their behalf. RUT and ID document are required."}
             </p>
           </div>
-          <Button
-            className="rounded-xl font-bold"
-            onClick={() => setShowForm((v) => !v)}
-          >
+          <Button className="rounded-xl font-bold" onClick={() => setShowForm((v) => !v)}>
             <UserPlus className="mr-2 h-4 w-4" />
             {isSpanish ? "Agregar familiar" : "Add family member"}
           </Button>
         </div>
 
+        {/* Security Info Banner */}
+        <Card className="border-teal-200 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Shield className="h-5 w-5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-sm text-teal-900 dark:text-teal-100">
+                  {isSpanish ? "Verificación de identidad requerida" : "Identity verification required"}
+                </p>
+                <p className="text-xs text-teal-800 dark:text-teal-200 mt-1">
+                  {isSpanish
+                    ? "Para proteger la salud de tus familiares, solicitamos el RUT y una copia del carnet de identidad (CI) o certificado de nacimiento al agregar dependientes."
+                    : "To protect your family's health, we require the RUT and a copy of the ID card or birth certificate when adding dependents."}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 text-teal-700 dark:text-teal-300"
+                onClick={() => setInfoOpen(true)}
+              >
+                <Info className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Add Form */}
         {showForm && (
-          <Card className="border-border/40">
+          <Card className="border-border/40 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-primary" />
                 {isSpanish ? "Nuevo familiar" : "New family member"}
               </CardTitle>
+              <CardDescription>
+                {isSpanish
+                  ? "Completa los datos y adjunta el carnet de identidad del menor o familiar."
+                  : "Fill in the details and attach the ID card of the minor or family member."}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleAdd} className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="fam-firstName">{isSpanish ? "Nombre" : "First name"}</Label>
-                  <Input
-                    id="fam-firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder={isSpanish ? "Ej. Ana" : "e.g. Ana"}
-                    className="rounded-xl"
-                  />
+              <form onSubmit={handleAdd} className="space-y-6">
+                {/* Name fields */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="fam-firstName">{isSpanish ? "Nombre *" : "First name *"}</Label>
+                    <Input
+                      id="fam-firstName"
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      placeholder={isSpanish ? "Ej. Ana" : "e.g. Ana"}
+                      className="rounded-xl"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fam-lastName">{isSpanish ? "Apellido *" : "Last name *"}</Label>
+                    <Input
+                      id="fam-lastName"
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      placeholder={isSpanish ? "Ej. García" : "e.g. García"}
+                      className="rounded-xl"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fam-relation">{isSpanish ? "Parentesco *" : "Relationship *"}</Label>
+                    <select
+                      id="fam-relation"
+                      value={formData.relation}
+                      onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
+                      className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                      required
+                    >
+                      <option value="">{isSpanish ? "Seleccionar" : "Select"}</option>
+                      {relationOptions.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fam-dob">{isSpanish ? "Fecha de nacimiento *" : "Date of birth *"}</Label>
+                    <Input
+                      id="fam-dob"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                      className="rounded-xl"
+                      required
+                    />
+                  </div>
                 </div>
+
+                {/* RUT Field */}
                 <div className="space-y-2">
-                  <Label htmlFor="fam-lastName">{isSpanish ? "Apellido" : "Last name"}</Label>
+                  <Label htmlFor="fam-rut" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-teal-600" />
+                    {isSpanish ? "RUT del familiar *" : "Family member RUT *"}
+                  </Label>
                   <Input
-                    id="fam-lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder={isSpanish ? "Ej. García" : "e.g. García"}
-                    className="rounded-xl"
+                    id="fam-rut"
+                    value={formData.rut}
+                    onChange={(e) => handleRutChange(e.target.value)}
+                    placeholder="12.345.678-9"
+                    className={`rounded-xl font-mono ${rutError ? "border-red-400 focus-visible:ring-red-400" : formData.rut && !rutError ? "border-green-400" : ""}`}
+                    maxLength={12}
+                    required
                   />
+                  {rutError ? (
+                    <p className="text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> {rutError}
+                    </p>
+                  ) : formData.rut && formData.rut.replace(/[^0-9kK]/g, "").length >= 8 && !rutError ? (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" /> RUT válido
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {isSpanish ? "Formato: 12.345.678-9" : "Format: 12.345.678-9"}
+                    </p>
+                  )}
                 </div>
+
+                {/* ID Document Upload */}
                 <div className="space-y-2">
-                  <Label htmlFor="fam-relation">{isSpanish ? "Parentesco" : "Relationship"}</Label>
-                  <select
-                    id="fam-relation"
-                    value={formData.relation}
-                    onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
-                    className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                  <Label className="flex items-center gap-2">
+                    <Upload className="h-4 w-4 text-teal-600" />
+                    {isSpanish ? "Carnet de Identidad o Documento de Autorización *" : "ID Card or Authorization Document *"}
+                  </Label>
+                  <div
+                    className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer hover:bg-accent/20 ${
+                      idFile ? "border-green-400 bg-green-50/50 dark:bg-green-950/10" : idFileError ? "border-red-400" : "border-border/60"
+                    }`}
+                    onClick={() => document.getElementById("fam-id-doc")?.click()}
                   >
-                    <option value="">{isSpanish ? "Seleccionar" : "Select"}</option>
-                    {relationOptions.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                    <input
+                      id="fam-id-doc"
+                      type="file"
+                      className="hidden"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      onChange={handleIdFileChange}
+                    />
+                    {idFile ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        <span className="text-sm font-medium text-green-700 dark:text-green-400">{idFile.name}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIdFile(null)
+                            setIdFileError("")
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Upload className="h-8 w-8 text-muted-foreground mx-auto opacity-50" />
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {isSpanish ? "Haz clic para subir el carnet de identidad" : "Click to upload the ID card"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {isSpanish ? "JPG, PNG o PDF · Máx. 10MB" : "JPG, PNG or PDF · Max 10MB"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {idFileError ? (
+                    <p className="text-xs text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" /> {idFileError}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {isSpanish
+                        ? "Sube una foto clara del carnet de identidad (anverso) del menor. Este documento solo es utilizado para verificación y no es compartido."
+                        : "Upload a clear photo of the ID card (front) of the minor. This document is only used for verification and is not shared."}
+                    </p>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fam-dob">{isSpanish ? "Fecha de nacimiento" : "Date of birth"}</Label>
-                  <Input
-                    id="fam-dob"
-                    type="date"
-                    value={formData.dateOfBirth}
-                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="sm:col-span-2 flex gap-2">
-                  <Button type="submit" className="rounded-xl">
-                    {isSpanish ? "Guardar" : "Save"}
+
+                <div className="flex gap-2">
+                  <Button type="submit" className="rounded-xl" disabled={verifyingId}>
+                    {verifyingId ? (
+                      <>
+                        <Shield className="mr-2 h-4 w-4 animate-pulse" />
+                        {isSpanish ? "Verificando..." : "Verifying..."}
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        {isSpanish ? "Agregar y Verificar" : "Add & Verify"}
+                      </>
+                    )}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     className="rounded-xl"
-                    onClick={() => setShowForm(false)}
+                    onClick={() => {
+                      setShowForm(false)
+                      setIdFile(null)
+                      setRutError("")
+                      setIdFileError("")
+                      setFormData({ firstName: "", lastName: "", relation: "", dateOfBirth: "", rut: "" })
+                    }}
                   >
                     {t.dashboard.cancel}
                   </Button>
@@ -165,6 +426,7 @@ export default function FamilyPage() {
           </Card>
         )}
 
+        {/* Dependents List */}
         <Card className="border-border/40">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -185,16 +447,31 @@ export default function FamilyPage() {
                         <Users className="h-6 w-6 text-primary" />
                       </div>
                       <div>
-                        <p className="font-semibold">
-                          {d.firstName} {d.lastName}
-                        </p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">
+                            {d.firstName} {d.lastName}
+                          </p>
+                          {d.verified && (
+                            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-0 text-[10px]">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Verificado
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
                           <span>{d.relation}</span>
                           {d.dateOfBirth && (
                             <>
                               <span>·</span>
                               <Calendar className="h-3.5 w-3.5 inline" />
                               {formatDate(d.dateOfBirth)}
+                            </>
+                          )}
+                          {d.rut && (
+                            <>
+                              <span>·</span>
+                              <Shield className="h-3.5 w-3.5 inline text-teal-600" />
+                              <span className="font-mono text-xs">{d.rut}</span>
                             </>
                           )}
                         </p>
@@ -239,6 +516,43 @@ export default function FamilyPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Info Dialog */}
+      <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-teal-600" />
+              ¿Por qué pedimos el RUT y CI?
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground pt-2">
+                <p>
+                  En NUREA, la identidad de cada paciente es fundamental para garantizar que la atención médica sea
+                  entregada correctamente y proteger su historial clínico.
+                </p>
+                <ul className="space-y-2 list-none">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
+                    <span>El <strong>RUT</strong> permite verificar que el paciente existe y es quien dice ser.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
+                    <span>El <strong>carnet de identidad o certificado de nacimiento</strong> confirma el parentesco con el titular.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
+                    <span>El documento solo se usa para <strong>verificación interna</strong> y no se comparte con ningún tercero.</span>
+                  </li>
+                </ul>
+                <p className="text-xs text-muted-foreground border-t border-border/40 pt-3">
+                  Tus datos están protegidos bajo la Ley 19.628 de Protección de Datos Personales de Chile.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }

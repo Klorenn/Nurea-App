@@ -6,6 +6,8 @@ import { HealthChat } from "@/components/messaging/health-chat"
 import { useAuth } from "@/hooks/use-auth"
 import { usePresence } from "@/hooks/use-presence"
 import { createClient } from "@/lib/supabase/client"
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
 
 interface Contact {
   id: string
@@ -185,10 +187,22 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <div className="fixed inset-0 z-50 bg-background">
-      <Suspense fallback={null}>
-        <ChatContent />
-      </Suspense>
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      {/* Back bar */}
+      <div className="shrink-0 h-14 flex items-center gap-3 px-4 border-b border-border/40 bg-background/95 backdrop-blur-sm">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors px-3 py-1.5 rounded-lg hover:bg-accent/30"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al Dashboard
+        </Link>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <Suspense fallback={null}>
+          <ChatContent />
+        </Suspense>
+      </div>
     </div>
   )
 }

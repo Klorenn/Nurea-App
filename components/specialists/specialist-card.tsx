@@ -110,15 +110,27 @@ export function SpecialistCard({
                 <span className="text-sm">{specialist.specialty}</span>
               </div>
 
-              {/* Rating */}
+              {/* Rating as Emoji */}
               <div className="flex items-center gap-2 mt-2">
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <span className="font-medium text-sm">{specialist.rating.toFixed(1)}</span>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <span className="text-lg leading-none" role="img" aria-label="rating emoji">
+                    {specialist.rating >= 4.5 ? "🤩" : 
+                     specialist.rating >= 3.5 ? "🙂" : 
+                     specialist.rating >= 2.5 ? "😐" : 
+                     specialist.rating >= 1.5 ? "🙁" : "😡"}
+                  </span>
+                  <span className="font-bold text-sm text-slate-700 dark:text-slate-200">{specialist.rating.toFixed(1)}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  ({specialist.reviewCount} {labels.reviews})
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {specialist.reviewCount} {labels.reviews}
                 </span>
+
+                {/* Patient Favorite Badge */}
+                {specialist.rating >= 4.8 && specialist.reviewCount >= 5 && (
+                  <Badge className="bg-teal-500/10 text-teal-600 border-teal-500/20 text-[10px] font-black uppercase tracking-tighter px-2 h-5">
+                    Favorito de los pacientes
+                  </Badge>
+                )}
               </div>
             </div>
           </div>

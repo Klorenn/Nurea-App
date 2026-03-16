@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { motion } from "framer-motion"
+import { trackEvent } from "@/lib/utils/analytics"
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -68,7 +69,7 @@ export function HeroSection() {
             </span>
             {/* "humana" - rich deep cyan coordinated with button */}
             <span className="italic text-[#0d9488] dark:text-teal-400 drop-shadow-[0_1px_2px_rgba(13,148,136,0.3)]">
-              {isEs ? "humana" : "human"}
+              {isEs ? "más humana" : "more human"}
             </span>
             {/* Animated white period - blinking cursor style */}
             <motion.span
@@ -95,9 +96,10 @@ export function HeroSection() {
           >
             {isEs 
               ? "Encuentra y agenda citas con los mejores profesionales de la salud en Chile. Confianza, cuidado y accesibilidad en un solo lugar."
-              : "Find and book appointments with the best healthcare professionals in Chile. Trust, care, and accessibility in one place."
+              : "Find and schedule appointments with the best health professionals in Chile. Trust, care, and accessibility in one place."
             }
           </motion.p>
+
         </motion.div>
 
         {/* Search Box - White rounded elevated panel */}

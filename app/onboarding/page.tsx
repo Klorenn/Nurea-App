@@ -6,8 +6,10 @@ import { SmokeyBackground } from "@/components/smokey-login"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar, User, Camera, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 import {
@@ -42,6 +44,7 @@ function OnboardingContent() {
   
   // Step 3: Información Adicional
   const [phone, setPhone] = useState("")
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -114,6 +117,13 @@ function OnboardingContent() {
       setError(null)
       setCurrentStep(2)
     } else if (currentStep === 2) {
+      if (!acceptedTerms) {
+        setError(isSpanish 
+          ? "Debes aceptar los Términos de Uso y la Política de Privacidad"
+          : "You must accept the Terms of Use and Privacy Policy")
+        return
+      }
+
       // Completar onboarding
       await handleComplete()
     }
@@ -146,9 +156,14 @@ function OnboardingContent() {
 
       // Obtener rol del usuario para redirección
       const userRole = data.userRole || 'patient'
-      const redirectPath = userRole === 'professional' 
-        ? '/professional/onboarding' 
-        : '/dashboard'
+      let redirectPath = '/dashboard'
+      
+      if (userRole === 'professional') {
+        redirectPath = '/professional/onboarding'
+      } else if (userRole === 'admin') {
+        redirectPath = '/admin'
+      }
+
       
       router.push(redirectPath)
     } catch (err) {
@@ -378,6 +393,31 @@ function OnboardingContent() {
                     disabled={loading}
                     className="bg-white/10 border-teal-300/50 text-white placeholder:text-gray-400"
                   />
+                </div>
+                
+                <div className="flex items-start space-x-3 mt-6">
+                  <Checkbox 
+                    id="terms" 
+                    checked={acceptedTerms}
+                    onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                    className="border-white/40 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500 mt-1"
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="terms"
+                      className="text-sm font-medium text-white cursor-pointer"
+                    >
+                      {isSpanish ? "He leído y acepto los " : "I have read and accept the "}
+                      <Link href="/terms" target="_blank" className="text-teal-300 hover:text-teal-200 underline">
+                        {isSpanish ? "Términos de Uso" : "Terms of Use"}
+                      </Link>
+                      {isSpanish ? " y la " : " and "}
+                      <Link href="/privacy" target="_blank" className="text-teal-300 hover:text-teal-200 underline">
+                        {isSpanish ? "Política de Privacidad" : "Privacy Policy"}
+                      </Link>
+                      {isSpanish ? " de NUREA." : " of NUREA."}
+                    </label>
+                  </div>
                 </div>
               </div>
             )}

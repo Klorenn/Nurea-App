@@ -28,7 +28,10 @@ import {
   AlertCircle,
   ShieldCheck,
   Key,
-  Lock
+  Lock,
+  FileText,
+  BadgeCheck,
+  History
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
@@ -164,6 +167,45 @@ export default function ProfessionalProfilePage() {
     loadProfile()
   }, [user, supabase, generalForm, clinicalForm, educationForm, galleryForm])
 
+  // --- Manage Credentials ---
+  const [credentials, setCredentials] = useState<any[]>([])
+  const [loadingCredentials, setLoadingCredentials] = useState(true)
+
+  useEffect(() => {
+    async function loadCredentials() {
+      if (!user) return
+      try {
+        const { data, error } = await supabase
+          .from('professional_credentials')
+          .select('*')
+          .eq('professional_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (data) setCredentials(data)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoadingCredentials(false)
+      }
+    }
+    if (user) loadCredentials()
+  }, [user, supabase])
+
+  const handleDeleteCredential = async (id: string) => {
+    const { error } = await supabase
+      .from('professional_credentials')
+      .delete()
+      .eq('id', id)
+      .eq('status', 'pending')
+
+    if (error) {
+       toast.error("No se puede eliminar una credencial ya verificada")
+    } else {
+       setCredentials(prev => prev.filter(c => c.id !== id))
+       toast.success("Credencial eliminada")
+    }
+  }
+
   // --- Save Handlers ---
   const onSaveGeneral = async (values: z.infer<typeof generalSchema>) => {
     if (!user) return
@@ -288,6 +330,61 @@ export default function ProfessionalProfilePage() {
     clinicalForm.setValue("conditions_treated", currentTags.filter(t => t !== tag), { shouldDirty: true })
   }
 
+  const handleCredentialUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
+    const file = e.target.files?.[0]
+    if (!file || !user?.id) return
+
+    if (file.type !== "application/pdf") {
+      toast.error("Solo se permiten archivos PDF")
+      return
+    }
+
+    setSaving(true)
+    try {
+      const fileExt = "pdf"
+      const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('credentials')
+        .upload(fileName, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('credentials')
+        .getPublicUrl(fileName)
+
+      // Prompt for title and year
+      const title = prompt("Nombre del Título/Diploma:", file.name.replace(".pdf", "")) || file.name
+      const institution = prompt("Universidad/Institución:") || "Por definir"
+      const year = prompt("Año de egreso:") || new Date().getFullYear().toString()
+
+      const { data, error: insertError } = await supabase
+        .from('professional_credentials')
+        .insert({
+          professional_id: user.id,
+          title,
+          institution,
+          year,
+          type,
+          file_url: publicUrl,
+          status: 'pending'
+        })
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+      
+      setCredentials(prev => [data, ...prev])
+      toast.success("Credencial subida y enviada a revisión")
+    } catch (err) {
+      console.error(err)
+      toast.error("Error al subir credencial")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // --- Image Upload ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -370,6 +467,10 @@ export default function ProfessionalProfilePage() {
           <TabsTrigger value="security" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-teal-600">
             <Lock className="h-4 w-4 mr-2" />
             Seguridad
+          </TabsTrigger>
+          <TabsTrigger value="verification" className="rounded-xl px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-teal-600">
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Verificación
           </TabsTrigger>
         </TabsList>
 
@@ -770,6 +871,118 @@ export default function ProfessionalProfilePage() {
               </Card>
             </form>
           </Form>
+        </TabsContent>
+        {/* --- TAB: VERIFICATION --- */}
+        <TabsContent value="verification">
+          <Card className="border-border/40 shadow-xl shadow-slate-200/40 rounded-3xl overflow-hidden">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center">
+                  <ShieldCheck className="h-5 w-5 text-teal-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold">Verificación de Credenciales</CardTitle>
+                  <CardDescription>Sube tus títulos y diplomas para obtener el sello oficial de NUREA.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 space-y-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {['Título', 'Diplomado', 'Magíster', 'Curso'].map((type) => (
+                  <div key={type} className="relative group p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 hover:border-teal-500 hover:bg-teal-50/20 transition-all text-center">
+                    <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mx-auto mb-3 text-slate-400 group-hover:text-teal-600 group-hover:scale-110 transition-all">
+                      <Upload className="h-6 w-6" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-700">{type}</span>
+                    <input 
+                      type="file" 
+                      className="absolute inset-0 opacity-0 cursor-pointer" 
+                      accept=".pdf"
+                      onChange={(e) => handleCredentialUpload(e, type)}
+                      disabled={saving}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-4 pt-4">
+                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                  <History className="h-4 w-4 text-slate-400" />
+                  Estado de tus documentos
+                </h3>
+                
+                <div className="grid gap-4">
+                  {loadingCredentials ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
+                    </div>
+                  ) : credentials.length === 0 ? (
+                    <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <FileText className="h-8 w-8 text-slate-200 mx-auto mb-2" />
+                      <p className="text-sm text-slate-400">Aún no has subido documentos para verificar.</p>
+                    </div>
+                  ) : (
+                    credentials.map((cred) => (
+                      <div key={cred.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+                            cred.status === 'verified' ? "bg-emerald-50 text-emerald-600" : 
+                            cred.status === 'rejected' ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+                          )}>
+                            <FileText className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-slate-900">{cred.title}</h4>
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold px-2">
+                                {cred.type}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-500">{cred.institution} • {cred.year}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                          <Badge className={cn(
+                            "rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-wider",
+                            cred.status === 'verified' ? "bg-emerald-500" : 
+                            cred.status === 'rejected' ? "bg-red-500" : "bg-amber-500"
+                          )}>
+                            {cred.status === 'verified' ? '¡Verificado!' : 
+                             cred.status === 'rejected' ? 'Rechazado' : '⌛ Pendiente'}
+                          </Badge>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0" 
+                              asChild
+                            >
+                              <a href={cred.file_url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            {cred.status === 'pending' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDeleteCredential(cred.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

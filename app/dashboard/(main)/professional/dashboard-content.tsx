@@ -10,7 +10,10 @@ import {
   Clock,
   Mail,
   Loader2,
+  Sparkles,
 } from "lucide-react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
@@ -42,9 +45,9 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 100, damping: 15 },
+    transition: { type: "spring", stiffness: 100, damping: 15 } as const,
   },
-}
+} as const
 
 function VerificationPendingCard({ isSpanish }: { isSpanish: boolean }) {
   return (
@@ -216,16 +219,25 @@ function VerifiedDashboard({
 
   return (
     <>
-      <motion.div variants={itemVariants} className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
-          {isSpanish ? "Hola, Dr. " : "Hello, Dr. "}
-          <span className="text-teal-600 dark:text-teal-400">{doctorName}</span>
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400">
-          {isSpanish
-            ? "Aquí tienes tu resumen de hoy"
-            : "Here's your summary for today"}
-        </p>
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-6 mb-2">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
+            {isSpanish ? "Hola, Dr. " : "Hello, Dr. "}
+            <span className="text-teal-600 dark:text-teal-400">{doctorName}</span>
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400">
+            {isSpanish
+              ? "Aquí tienes tu resumen de hoy"
+              : "Here's your summary for today"}
+          </p>
+        </div>
+        
+        <Link href="/dashboard/professional/welcome">
+          <Button className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-teal-500/10 hover:shadow-teal-500/20 transition-all">
+            <Sparkles className="mr-2 h-4 w-4" />
+            {isSpanish ? "Ver Guía de Éxito" : "View Success Guide"}
+          </Button>
+        </Link>
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">

@@ -3,9 +3,9 @@ import Stripe from "stripe"
 import { createClient } from "@/lib/supabase/server"
 
 function getStripeClient() {
-  const key = process.env.STRIPE_SECRET_KEY
-  if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured")
+  const key = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder'
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.warn("STRIPE_SECRET_KEY is not configured. Stripe operations will fail.")
   }
   return new Stripe(key, {
     apiVersion: "2024-12-18.acacia",

@@ -72,7 +72,7 @@ function LoginContent() {
   const alertData = getErrorAlert()
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-cyan-50/30 dark:bg-transparent">
+    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden dark:bg-transparent">
       <AuthPageBackground />
 
       <div className="absolute top-4 left-4 right-4 sm:top-8 sm:left-8 sm:right-8 z-50 flex items-center justify-between pointer-events-none">

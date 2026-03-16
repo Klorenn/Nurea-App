@@ -16,7 +16,8 @@ import {
   CalendarDays,
   Activity,
   Zap,
-  Star
+  Star,
+  AlertTriangle
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -70,6 +71,7 @@ export default function ProfessionalDashboard() {
 
   // States
   const [isVerified, setIsVerified] = useState<boolean | null>(null)
+  const [isStripeConfigured, setIsStripeConfigured] = useState<boolean>(true)
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     appointmentsToday: 0,
@@ -87,14 +89,15 @@ export default function ProfessionalDashboard() {
         const today = new Date().toISOString().split("T")[0]
         const firstDayOfMonth = startOfMonth(new Date()).toISOString()
 
-        // 1. Verification status
+        // 1. Verification & Stripe status
         const { data: profData } = await supabase
           .from("professionals")
-          .select("verified")
+          .select("verified, payouts_enabled")
           .eq("id", user.id)
           .maybeSingle()
         
         setIsVerified(profData?.verified ?? false)
+        setIsStripeConfigured(profData?.payouts_enabled ?? false)
 
         // 2. Stats
         const { count: countToday } = await supabase
@@ -205,6 +208,35 @@ export default function ProfessionalDashboard() {
       </div>
 
       {!isVerified && <VerificationPendingBanner isSpanish={isSpanish} />}
+
+      {!isStripeConfigured && isVerified && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 mb-2 shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                {isSpanish ? "⚠️ Pagos no configurados" : "⚠️ Payments not configured"}
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                {isSpanish 
+                  ? "Debes vincular tu cuenta bancaria en Stripe para recibir pagos de tus pacientes."
+                  : "You must link your bank account in Stripe to receive payments from your patients."}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-200/50" asChild>
+            <Link href="/dashboard/professional/settings">
+              {isSpanish ? "Configurar Stripe" : "Configure Stripe"}
+            </Link>
+          </Button>
+        </motion.div>
+      )}
 
       {/* Metrics */}
       <div className="grid gap-6 md:grid-cols-3">

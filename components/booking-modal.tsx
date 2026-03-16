@@ -297,8 +297,8 @@ export function BookingModal({
     const appointmentTime = selectedTime.length === 5 ? `${selectedTime}:00` : selectedTime
 
     try {
-      // Create Stripe Checkout Session
-      const response = await fetch("/api/appointments/checkout", {
+      // Create Mercado Pago Preference
+      const response = await fetch("/api/payments/mercadopago/preference", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -309,16 +309,20 @@ export function BookingModal({
           duration: 60,
         }),
       })
-
+      
       const data = await response.json()
 
       if (!response.ok) {
         throw new Error(data.message || "Error al procesar el pago")
       }
 
-      if (data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url
+      // Reutilizamos data.url que viene del backend (init_point o sandbox_init_point)
+      if (data.url || data.sandbox_url) {
+        // En desarrollo usamos sandbox si está disponible
+        const mpUrl = (process.env.NODE_ENV === 'development' && data.sandbox_url) 
+          ? data.sandbox_url 
+          : data.url;
+        window.location.href = mpUrl;
       } else {
         throw new Error("No se recibió URL de pago")
       }
@@ -545,8 +549,8 @@ export function BookingModal({
                   </h3>
                   <p className="text-slate-500 dark:text-slate-400">
                     {isSpanish 
-                      ? "Serás redirigido a Stripe para completar el pago de forma segura."
-                      : "You'll be redirected to Stripe to complete the payment securely."}
+                      ? "Serás redirigido a Mercado Pago para completar el pago de forma segura."
+                      : "You'll be redirected to Mercado Pago to complete the payment securely."}
                   </p>
                 </div>
 
@@ -557,10 +561,10 @@ export function BookingModal({
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-slate-900 dark:text-white">
-                        {isSpanish ? "Pago con Stripe" : "Pay with Stripe"}
+                        {isSpanish ? "Pago con Mercado Pago" : "Pay with Mercado Pago"}
                       </p>
                       <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {isSpanish ? "Tarjeta de crédito, débito o Google Pay" : "Credit card, debit or Google Pay"}
+                        {isSpanish ? "Tarjetas, transferencia o saldo Mercado Pago" : "Credit/Debit cards, bank transfer or MP balance"}
                       </p>
                     </div>
                   </div>

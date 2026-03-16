@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -13,12 +13,15 @@ import { ReviewModal } from "@/components/review-modal"
 import { QuickActions } from "@/components/appointments/quick-actions"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/use-auth"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import { useSearchParams } from "next/navigation"
+import { trackEvent } from "@/lib/utils/analytics"
 
 const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop"
 
@@ -78,7 +81,7 @@ async function fetchMyAppointments(
   })
 }
 
-export default function AppointmentsPage() {
+function AppointmentsContent() {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const { user } = useAuth()
@@ -97,6 +100,19 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const isSpanish = language === "es"
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment')
+    const appointmentId = searchParams.get('appointment')
+    
+    if (paymentStatus === 'success' && appointmentId) {
+      trackEvent('appointment_success', { appointmentId })
+      toast.success(isSpanish ? "¡Cita agendada con éxito!" : "Appointment successfully booked!")
+      // Clean up URL
+      router.replace('/dashboard/appointments')
+    }
+  }, [searchParams, router, isSpanish])
 
   useEffect(() => {
     if (user === undefined) return
@@ -125,7 +141,7 @@ export default function AppointmentsPage() {
     return () => {
       cancelled = true
     }
-  }, [user, language, router])
+  }, [user, language, router, isSpanish])
 
   const openReviewModal = (professionalName: string, appointmentId: string) => {
     setReviewModal({
@@ -547,5 +563,17 @@ export default function AppointmentsPage() {
         appointmentId={reviewModal.appointmentId}
       />
     </DashboardLayout>
+  )
+}
+
+export default function AppointmentsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <AppointmentsContent />
+    </Suspense>
   )
 }

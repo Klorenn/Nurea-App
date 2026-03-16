@@ -19,7 +19,8 @@ async function getProfessionalData(id: string) {
       .from('professionals')
       .select(`
         *,
-        profile:profiles!professionals_id_fkey(*)
+        profile:profiles!professionals_id_fkey(*),
+        specialty_data:specialties(*)
       `)
       .eq('id', id)
       .maybeSingle()
@@ -33,7 +34,8 @@ async function getProfessionalData(id: string) {
       .from('professionals')
       .select(`
         *,
-        profile:profiles!professionals_id_fkey(*)
+        profile:profiles!professionals_id_fkey(*),
+        specialty_data:specialties(*)
       `)
       .eq('slug', id)
       .maybeSingle()
@@ -49,13 +51,21 @@ async function getProfessionalData(id: string) {
   const { data: reviewsData } = await supabase
     .from('reviews')
     .select('*, patient:profiles(*)')
-    .eq('professional_id', professional.id)
+    .eq('doctor_id', professional.id)
     .order('created_at', { ascending: false })
 
   const reviewsCount = reviewsData?.length || 0
   const averageRating = reviewsData && reviewsData.length > 0
     ? reviewsData.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewsData.length
     : 4.8
+
+  // Fetch verified credentials
+  const { data: verifiedCredentials } = await supabase
+    .from('professional_credentials')
+    .select('*')
+    .eq('professional_id', professional.id)
+    .eq('status', 'verified')
+    .order('year', { ascending: false })
 
   // Format professional for the client
   const formattedProfessional = {
@@ -73,9 +83,12 @@ async function getProfessionalData(id: string) {
     verified: professional.verified || false,
     location: professional.location,
     bio: professional.bio,
-    bioExtended: professional.bio_extended,
+    bio_extended: professional.bio_extended,
     services: professional.services || [],
-    availableToday: true, // This would need actual logic but for initial SSR it's okay
+    education: professional.education || [],
+    awards_and_courses: professional.awards_and_courses || [],
+    verified_credentials: verifiedCredentials || [],
+    availableToday: true,
     patientsServed: 0,
     professionalRegistration: {
       number: professional.registration_number,

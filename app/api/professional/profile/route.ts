@@ -142,13 +142,15 @@ export async function PUT(request: Request) {
     }
 
     // Verificar que el usuario sea profesional
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
+    const { data: currentProfessional } = await supabase
+      .from('professionals')
+      .select('*, profile:profiles!professionals_id_fkey(first_name, last_name, role)')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'professional') {
+    const role = Array.isArray(currentProfessional?.profile) ? currentProfessional?.profile[0]?.role : currentProfessional?.profile?.role
+
+    if (role !== 'professional') {
       return NextResponse.json(
         { 
           error: 'forbidden',
@@ -230,6 +232,30 @@ export async function PUT(request: Request) {
     if (location !== undefined && location !== null) professionalUpdate.location = location.trim() || null
     if (yearsExperience !== undefined && yearsExperience !== null) professionalUpdate.years_experience = typeof yearsExperience === 'number' ? yearsExperience : parseInt(yearsExperience) || null
 
+    // 🛡️ Lógica de Sello de Verificación: Romper sello si cambian datos críticos
+    let sealBroken = false;
+    let securityAlertTriggered = false;
+    
+    // Comparar valores nuevos con los actuales
+    if (currentProfessional?.verification_status === 'verified' || currentProfessional?.verified === true) {
+      const currentFirstName = Array.isArray(currentProfessional?.profile) ? currentProfessional.profile[0]?.first_name : currentProfessional?.profile?.first_name;
+      const currentLastName = Array.isArray(currentProfessional?.profile) ? currentProfessional.profile[0]?.last_name : currentProfessional?.profile?.last_name;
+      
+      const changedFirstName = firstName !== undefined && firstName.trim() !== currentFirstName;
+      const changedLastName = lastName !== undefined && lastName.trim() !== currentLastName;
+      const changedSpecialty = title !== undefined && title.trim() !== currentProfessional?.specialty;
+      const changedRnpi = registrationNumber !== undefined && registrationNumber.trim() !== currentProfessional?.registration_number;
+
+      if (changedFirstName || changedLastName || changedSpecialty || changedRnpi) {
+        sealBroken = true;
+        professionalUpdate.verification_status = 'pending'; // In the DB this triggers verified=false
+        professionalUpdate.verified = false;
+        securityAlertTriggered = true;
+        // In theory we should set is_public to false, but the schema doesn't have is_public 
+        // We rely on verified=false to hide them in public directories.
+      }
+    }
+
     // Si se actualiza el precio online o presencial, también actualizar consultation_price como fallback
     if (onlinePrice !== undefined || inPersonPrice !== undefined) {
       const fallbackPrice = onlinePrice || inPersonPrice
@@ -257,9 +283,37 @@ export async function PUT(request: Request) {
       )
     }
 
+    // Si se rompió el sello, enviar alerta de seguridad al Admin Notification Center
+    if (securityAlertTriggered) {
+      const currentFirstName = Array.isArray(currentProfessional?.profile) ? currentProfessional.profile[0]?.first_name : currentProfessional?.profile?.first_name;
+      const currentLastName = Array.isArray(currentProfessional?.profile) ? currentProfessional.profile[0]?.last_name : currentProfessional?.profile?.last_name;
+      const doctorName = `${currentFirstName || ''} ${currentLastName || ''}`.trim() || 'Especialista';
+      
+      try {
+        await supabase.from('admin_notifications').insert({
+          type: 'SECURITY_ALERT',
+          message: `⚠️ Alerta Crítica: El Dr. ${doctorName} modificó datos críticos (RNPI, Especialidad o Nombre) y su perfil fue bloqueado automáticamente. Ha vuelto a estado pendiente.`,
+          professional_id: user.id,
+          is_read: false
+        });
+        
+        // Llamar endpoint para notificar admin por email
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+        fetch(`${siteUrl}/api/admin/notify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ professionalId: user.id, doctorName })
+        }).catch(err => console.error("Error sending admin email notification", err));
+        
+      } catch (alertError) {
+        console.error('Error creating security alert:', alertError)
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Perfil actualizado exitosamente.',
+      message: sealBroken ? 'Perfil actualizado. Alerta: Has modificado datos críticos. Tu cuenta está en revisión y ha sido temporalmente ocultada.' : 'Perfil actualizado exitosamente.',
+      sealBroken,
       profile: updatedProfessional
     })
   } catch (error) {

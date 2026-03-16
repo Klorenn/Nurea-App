@@ -45,6 +45,7 @@ export type SignUpInput = {
   role?: "patient" | "professional"
   specialty?: string
   registrationNumber?: string
+  nationalId?: string
 }
 
 export type AuthActionResult =
@@ -88,6 +89,7 @@ export async function signUp(input: SignUpInput): Promise<AuthActionResult> {
           date_of_birth: input.dateOfBirth || null,
           specialty: input.specialty || null,
           registration_number: input.registrationNumber || null,
+          national_id: input.nationalId || null,
         },
       },
     })

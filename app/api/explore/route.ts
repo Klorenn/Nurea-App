@@ -196,6 +196,7 @@ async function fallbackSearch(
       rating,
       review_count,
       verified,
+      is_public,
       years_experience,
       languages,
       availability,
@@ -220,9 +221,8 @@ async function fallbackSearch(
       )
     `, { count: 'exact' })
 
-  // REGLA DE NEGOCIO CRÍTICA: Solo profesionales verificados en búsqueda pública
-  // Siempre filtrar por verified = true para garantizar seguridad de pacientes
-  query = query.eq('verified', true)
+  // Solo profesionales verificados y públicos
+  query = query.eq('verified', true).eq('is_public', true)
 
   if (specialtySlug) {
     query = query.eq('specialties.slug', specialtySlug)

@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       .insert({
         appointment_id: appointmentId,
         patient_id: user.id,
-        professional_id: appointment.professional_id,
+        doctor_id: appointment.professional_id, // Map professional_id from appointment to doctor_id in reviews
         rating: rating,
         comment: comment
       })

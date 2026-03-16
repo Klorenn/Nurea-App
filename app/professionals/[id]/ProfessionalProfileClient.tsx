@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { BookingModal } from "@/components/booking-modal"
 import { MapEmbed } from "@/components/map-embed"
 import { NoPhysicalConsultationDisplay } from "@/components/no-physical-consultation-display"
@@ -41,6 +42,7 @@ import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { parseShortDate } from "@/lib/utils/date-helpers"
 import { toast } from "sonner"
+import { DoctorProfileView } from "@/components/professionals/DoctorProfileView"
 
 interface ProfessionalProfileClientProps {
   professionalId: string
@@ -209,43 +211,36 @@ export default function ProfessionalProfileClient({
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Navbar />
       
-      {/* Hero Section with Banner */}
-      <section className="relative">
-        <div className="absolute inset-0 h-72 sm:h-80 bg-gradient-to-br from-teal-600 via-teal-500 to-emerald-500 overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-50 dark:from-slate-950 to-transparent" />
-        </div>
-
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16">
-          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
+      {/* Premium Hero Section */}
+      <section className="relative bg-white dark:bg-slate-950">
+        <div className="absolute top-0 left-0 right-0 h-[400px] bg-gradient-to-b from-teal-50 to-white dark:from-teal-950/20 dark:to-slate-950" />
+        
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-24 pb-12">
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 items-center lg:items-start text-center lg:text-left">
             
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="relative mx-auto lg:mx-0 -mb-24 lg:mb-0"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6 }}
+              className="relative"
             >
-              <div className="relative">
-                <div className="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl overflow-hidden border-4 border-white dark:border-slate-900 shadow-2xl bg-white dark:bg-slate-900">
+              <div className="relative p-2 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl shadow-teal-500/10 border border-slate-100 dark:border-slate-800">
+                <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-[2rem] overflow-hidden">
                   <Image
                     src={professional.imageUrl || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop"}
                     alt={professional.name}
-                    width={208}
-                    height={208}
+                    width={224}
+                    height={224}
                     className="w-full h-full object-cover"
                     priority
                   />
                 </div>
-                
                 {professional.verified && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3, type: "spring" }}
-                    className="absolute -bottom-3 -right-3 w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg border-4 border-white dark:border-slate-900"
-                  >
-                    <BadgeCheck className="h-6 w-6 text-white" />
-                  </motion.div>
+                  <div className="absolute -bottom-2 -right-2 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-800">
+                    <div className="bg-emerald-500 p-2 rounded-[0.8rem]">
+                      <BadgeCheck className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
                 )}
               </div>
             </motion.div>
@@ -253,77 +248,72 @@ export default function ProfessionalProfileClient({
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="flex-1 pt-28 lg:pt-8 text-center lg:text-left"
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="flex-1 space-y-6"
             >
-              <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm mb-3 px-4 py-1.5 text-sm font-medium">
-                {professional.specialty || professional.title}
-              </Badge>
-
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-3 tracking-tight">
-                {professional.name}
-              </h1>
-
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-white/90 mb-6">
-                {professional.yearsExperience > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Award className="h-4 w-4" />
-                    <span className="text-sm">
-                      {professional.yearsExperience} {isSpanish ? "años exp." : "yrs exp."}
-                    </span>
-                  </div>
-                )}
-                {professional.location && (
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4" />
-                    <span className="text-sm">{professional.location}</span>
-                  </div>
-                )}
-                {professional.verified && (
-                  <div className="flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1">
-                    <ShieldCheck className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      {isSpanish ? "Verificado" : "Verified"}
-                    </span>
-                  </div>
-                )}
+              <div className="space-y-2">
+                <div className="flex flex-wrap justify-center lg:justify-start gap-2">
+                  <Badge className="bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 border-none px-4 py-1 text-xs font-bold uppercase tracking-widest">
+                    {professional.specialty_data?.name || professional.specialty || professional.title}
+                  </Badge>
+                  {professional.verified && (
+                    <Badge className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900 px-4 py-1 text-xs font-bold">
+                      {isSpanish ? "Médico Verificado" : "Verified Doctor"}
+                    </Badge>
+                  )}
+                </div>
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                  {professional.name}
+                </h1>
               </div>
 
-              <div className="flex items-center justify-center lg:justify-start gap-4 mb-6">
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-xl px-4 py-2.5 shadow-lg">
-                  <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
-                  <span className="font-bold text-slate-900 dark:text-white text-lg">
-                    {professional.rating > 0 ? professional.rating.toFixed(1) : "N/A"}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-slate-500 dark:text-slate-400">
+                {professional.location && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-teal-600" />
+                    <span className="text-sm font-medium">{professional.location}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <span className="text-xl" role="img" aria-label="rating emoji">
+                    {professional.rating >= 4.5 ? "🤩" : 
+                     professional.rating >= 3.5 ? "🙂" : 
+                     professional.rating >= 2.5 ? "😐" : 
+                     professional.rating >= 1.5 ? "🙁" : "😡"}
                   </span>
-                  <span className="text-slate-500 text-sm">
+                  <span className="text-sm font-black text-slate-900 dark:text-white">
+                    {professional.rating ? professional.rating.toFixed(1) : "4.9"}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">
                     ({professional.reviewsCount || 0} {isSpanish ? "reseñas" : "reviews"})
                   </span>
                 </div>
-                {professional.patientsServed > 0 && (
-                  <div className="hidden sm:flex items-center gap-2 text-white/80">
-                    <Users className="h-4 w-4" />
-                    <span className="text-sm">
-                      {professional.patientsServed}+ {isSpanish ? "pacientes" : "patients"}
+                {professional.yearsExperience > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Award className="h-4 w-4 text-teal-600" />
+                    <span className="text-sm font-medium">
+                      {professional.yearsExperience} {isSpanish ? "años de experiencia" : "years of experience"}
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-3 justify-center lg:hidden mb-8">
+              <div className="pt-2 flex flex-wrap justify-center lg:justify-start gap-3">
                 <Button
                   size="lg"
                   onClick={() => setIsBookingOpen(true)}
-                  className="bg-white text-teal-700 hover:bg-white/90 font-semibold shadow-lg px-8"
+                  className="bg-teal-600 hover:bg-teal-700 text-white font-bold h-12 px-8 rounded-xl shadow-xl shadow-teal-500/20 transition-all hover:scale-105 active:scale-95"
                 >
                   <Calendar className="h-4 w-4 mr-2" />
-                  {isSpanish ? "Agendar" : "Book"}
+                  {isSpanish ? "Reservar ahora" : "Book now"}
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10"
+                  className="h-12 border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900"
                 >
-                  <Share2 className="h-4 w-4" />
+                  <Share2 className="h-4 w-4 mr-2" />
+                  {isSpanish ? "Compartir" : "Share"}
                 </Button>
               </div>
             </motion.div>
@@ -331,241 +321,15 @@ export default function ProfessionalProfileClient({
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16">
           
-          <div className="lg:col-span-2 space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="border-slate-200/60 dark:border-slate-800 shadow-lg overflow-hidden">
-                <CardContent className="p-6 sm:p-8">
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Heart className="h-5 w-5 text-teal-600" />
-                    {isSpanish ? "Sobre Mí" : "About Me"}
-                  </h2>
-                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base">
-                    {professional.bio || professional.bioExtended || (
-                      isSpanish 
-                        ? "Profesional de la salud comprometido con el bienestar integral de mis pacientes. Mi enfoque combina la práctica clínica basada en evidencia con un trato cercano y humano."
-                        : "Healthcare professional committed to the comprehensive well-being of my patients. My approach combines evidence-based clinical practice with a close and humane treatment."
-                    )}
-                  </p>
-
-                  {professional.services && professional.services.length > 0 && (
-                    <div className="mt-6">
-                      <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-                        {isSpanish ? "Áreas de atención" : "Areas of care"}
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {professional.services.map((service: string, index: number) => (
-                          <Badge
-                            key={index}
-                            variant="secondary"
-                            className="bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800 px-3 py-1"
-                          >
-                            {service}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="border-emerald-200/60 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10 shadow-lg overflow-hidden">
-                <CardContent className="p-6 sm:p-8">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0">
-                      <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-                        {isSpanish ? "Información Legal" : "Legal Information"}
-                      </h2>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                        {isSpanish 
-                          ? "Credenciales verificadas para tu tranquilidad"
-                          : "Verified credentials for your peace of mind"}
-                      </p>
-
-                      <div className="space-y-3">
-                        {professional.professionalRegistration?.number && (
-                          <div className="flex items-center justify-between py-2.5 px-4 bg-white/60 dark:bg-slate-900/40 rounded-xl">
-                            <span className="text-sm text-slate-600 dark:text-slate-300">
-                              {isSpanish ? "Número RNPI" : "RNPI Number"}
-                            </span>
-                            <span className="font-mono font-semibold text-slate-900 dark:text-white">
-                              {professional.professionalRegistration.number}
-                            </span>
-                          </div>
-                        )}
-                        {professional.professionalRegistration?.institution && (
-                          <div className="flex items-center justify-between py-2.5 px-4 bg-white/60 dark:bg-slate-900/40 rounded-xl">
-                            <span className="text-sm text-slate-600 dark:text-slate-300">
-                              {isSpanish ? "Institución" : "Institution"}
-                            </span>
-                            <span className="font-medium text-slate-900 dark:text-white text-sm text-right max-w-[60%]">
-                              {professional.professionalRegistration.institution}
-                            </span>
-                          </div>
-                        )}
-                        {professional.verified && (
-                          <div className="flex items-center gap-2 pt-2">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                            <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">
-                              {isSpanish ? "Credenciales verificadas por NUREA" : "Credentials verified by NUREA"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="border-slate-200/60 dark:border-slate-800 shadow-lg">
-                <CardContent className="p-6 sm:p-8">
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-                    {isSpanish ? "Modalidades de Consulta" : "Consultation Types"}
-                  </h2>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    {hasTelemedicine && (
-                      <div className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                          <Video className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">
-                            {isSpanish ? "Telemedicina" : "Telemedicine"}
-                          </p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            {isSpanish ? "Consulta por videollamada" : "Video consultation"}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {hasInPerson && (
-                      <div className="flex items-center gap-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                        <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                          <Building2 className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">
-                            {isSpanish ? "Presencial" : "In-Person"}
-                          </p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            {professional.location || (isSpanish ? "Consulta en persona" : "In-person consultation")}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {professional.languages && professional.languages.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Card className="border-slate-200/60 dark:border-slate-800 shadow-lg">
-                  <CardContent className="p-6 sm:p-8">
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                      <Globe className="h-5 w-5 text-teal-600" />
-                      {isSpanish ? "Idiomas" : "Languages"}
-                    </h2>
-                    <div className="flex flex-wrap gap-3">
-                      {professional.languages.map((lang: string, index: number) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="px-4 py-2 text-sm border-slate-200 dark:border-slate-700"
-                        >
-                          {lang}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {reviews.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-              >
-                <Card className="border-slate-200/60 dark:border-slate-800 shadow-lg">
-                  <CardContent className="p-6 sm:p-8">
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                      <Star className="h-5 w-5 text-amber-500" />
-                      {isSpanish ? "Reseñas de Pacientes" : "Patient Reviews"}
-                    </h2>
-                    <div className="space-y-4">
-                      {reviews.slice(0, 3).map((review: any, index: number) => (
-                        <div key={review.id || index} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center overflow-hidden border border-teal-200">
-                                {review.src && !review.src.includes('placeholder') ? (
-                                  <Image src={review.src} alt={review.name} width={40} height={40} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="font-semibold text-teal-700 dark:text-teal-300">
-                                    {(review.name || "P")[0].toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">
-                                  {review.name || (isSpanish ? "Paciente" : "Patient")}
-                                </p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                  {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ""}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex gap-0.5">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
-                                  key={star}
-                                  className={cn(
-                                    "h-4 w-4",
-                                    star <= (review.rating || 5)
-                                      ? "text-amber-500 fill-amber-500"
-                                      : "text-slate-300"
-                                  )}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                          <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-3 italic">
-                            "{review.quote || review.comment || ""}"
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
+          <div className="lg:col-span-2">
+            <DoctorProfileView 
+              professional={professional} 
+              reviews={reviews} 
+              isSpanish={isSpanish} 
+            />
           </div>
 
           <div className="lg:col-span-1">
@@ -606,13 +370,16 @@ export default function ProfessionalProfileClient({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900">
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <span className="text-lg leading-none">
+                          {professional.rating >= 4.5 ? "🤩" : 
+                           professional.rating >= 3.5 ? "🙂" : "😐"}
+                        </span>
                         <span className="font-bold text-slate-900 dark:text-white">
-                          {professional.rating || 4.9}
+                          {professional.rating ? professional.rating.toFixed(1) : "4.9"}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-[10px] uppercase font-bold tracking-tighter text-slate-500">
                         {professional.reviewsCount || 0} {isSpanish ? "reseñas" : "reviews"}
                       </p>
                     </div>

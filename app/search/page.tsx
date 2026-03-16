@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import {
@@ -11,12 +12,15 @@ import {
   Clock,
   Video,
   Building2,
-  MapPin,
   Calendar,
   ChevronRight,
   Sparkles,
   Filter,
-  SlidersHorizontal,
+  Users,
+  GraduationCap,
+  MapPin,
+  CheckCircle2,
+  ArrowLeft,
 } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -26,119 +30,159 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { VerifiedBadge } from "@/components/verified-badge"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 
 interface Doctor {
   id: string
   name: string
   specialty: string
+  category: string
   avatarUrl?: string
   rating: number
   reviewCount: number
-  price: number
+  patientsCount: number
+  bio: string
+  education: string[]
   nextAvailable: {
     date: string
     time: string
     isToday: boolean
     isTomorrow: boolean
+    timestamp: number // for sorting
   }
   location: string
   consultationType: "online" | "in-person" | "both"
-  yearsExperience: number
   isVerified: boolean
-  languages: string[]
 }
 
 const mockDoctors: Doctor[] = [
   {
     id: "1",
     name: "Dra. María Fernández González",
-    specialty: "Psicóloga Clínica",
+    specialty: "Psicología Clínica",
+    category: "Psicología",
     avatarUrl: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop&crop=face",
     rating: 4.9,
     reviewCount: 127,
-    price: 25000,
+    patientsCount: 1240,
+    bio: "Especialista en terapia cognitivo-conductual con más de 12 años de experiencia ayudando a pacientes con ansiedad y depresión.",
+    education: ["Magíster en Psicología Clínica, PUC", "Especialidad en Terapia Breve, U. de Chile"],
     nextAvailable: {
       date: "Hoy",
       time: "16:30",
       isToday: true,
       isTomorrow: false,
+      timestamp: Date.now() + 2 * 60 * 60 * 1000,
     },
     location: "Providencia, Santiago",
     consultationType: "both",
-    yearsExperience: 12,
     isVerified: true,
-    languages: ["Español", "Inglés"],
   },
   {
     id: "2",
     name: "Dr. Carlos Andrés Muñoz",
     specialty: "Médico General",
+    category: "Medicina General",
     avatarUrl: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop&crop=face",
     rating: 4.8,
     reviewCount: 89,
-    price: 20000,
+    patientsCount: 3200,
+    bio: "Enfoque integral en medicina preventiva y salud familiar. Comprometido con el bienestar a largo plazo de sus pacientes.",
+    education: ["Médico Cirujano, U. de Concepción", "Diplomado en Salud Familiar"],
     nextAvailable: {
       date: "Mañana",
       time: "10:00",
       isToday: false,
       isTomorrow: true,
+      timestamp: Date.now() + 24 * 60 * 60 * 1000,
     },
     location: "Las Condes, Santiago",
     consultationType: "online",
-    yearsExperience: 8,
     isVerified: true,
-    languages: ["Español"],
   },
   {
     id: "3",
     name: "Dra. Ana Lucía Herrera",
-    specialty: "Pediatra",
+    specialty: "Pediatría",
+    category: "Pediatría",
     avatarUrl: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop&crop=face",
     rating: 5.0,
     reviewCount: 203,
-    price: 30000,
+    patientsCount: 4500,
+    bio: "Dedicada al cuidado de niños y adolescentes. Especialista en nutrición infantil y desarrollo temprano.",
+    education: ["Pediatría, U. Católica", "Fellowship en Nutrición Infantil, Miami Children's Hospital"],
     nextAvailable: {
       date: "Hoy",
       time: "18:00",
       isToday: true,
       isTomorrow: false,
+      timestamp: Date.now() + 4 * 60 * 60 * 1000,
     },
     location: "Vitacura, Santiago",
     consultationType: "both",
-    yearsExperience: 15,
     isVerified: true,
-    languages: ["Español", "Portugués"],
   },
   {
     id: "4",
     name: "Dr. Roberto Silva Campos",
-    specialty: "Nutricionista",
+    specialty: "Cardiología",
+    category: "Cardiología",
     avatarUrl: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=200&h=200&fit=crop&crop=face",
     rating: 4.7,
     reviewCount: 56,
-    price: 22000,
+    patientsCount: 1800,
+    bio: "Especialista en cardiología intervencionista. Experto en prevención de enfermedades cardiovasculares.",
+    education: ["Cardiología, U. de Chile", "Especialización en Intervencionismo, Madrid"],
     nextAvailable: {
-      date: "Miércoles",
+      date: "Próxima semana",
       time: "09:30",
       isToday: false,
       isTomorrow: false,
+      timestamp: Date.now() + 7 * 24 * 60 * 60 * 1000,
     },
     location: "Ñuñoa, Santiago",
     consultationType: "online",
-    yearsExperience: 6,
     isVerified: true,
-    languages: ["Español"],
   },
 ]
 
-const filterPills = [
-  { id: "today", label: "Disponibles Hoy", labelEn: "Available Today", icon: Clock },
-  { id: "psychology", label: "Psicología", labelEn: "Psychology", icon: null },
-  { id: "general", label: "Medicina General", labelEn: "General Medicine", icon: null },
-  { id: "pediatrics", label: "Pediatría", labelEn: "Pediatrics", icon: null },
-  { id: "top-rated", label: "Mejor Valorados", labelEn: "Top Rated", icon: Star },
-  { id: "online", label: "Solo Online", labelEn: "Online Only", icon: Video },
+const specialties = [
+  "Todos",
+  "Medicina General",
+  "Psicología",
+  "Pediatría",
+  "Cardiología",
+  "Dermatología",
+  "Nutrición",
+  "Ginecología",
 ]
+
+// Map slugs (from URL) to display names
+const specialtySlugMap: Record<string, string> = {
+  "medicina-general": "Medicina General",
+  "psicologia": "Psicología",
+  "pediatria": "Pediatría",
+  "cardiologia": "Cardiología",
+  "dermatologia": "Dermatología",
+  "nutricion": "Nutrición",
+  "ginecologia": "Ginecología",
+  "oftalmologia": "Todos", // fallback
+  "traumatologia": "Todos",
+}
 
 function TrustBanner({ isSpanish }: { isSpanish: boolean }) {
   return (
@@ -148,20 +192,20 @@ function TrustBanner({ isSpanish }: { isSpanish: boolean }) {
       transition={{ delay: 0.2 }}
       className="max-w-3xl mx-auto"
     >
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-teal-600 to-teal-500 p-4 sm:p-5 shadow-lg shadow-teal-600/20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnY0em0wLTZ2LTRoLTJ2NGgyek0zNCAyNGgtMnYtNGgydjR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
-        <div className="relative flex items-center justify-center gap-3 text-white">
-          <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/20 backdrop-blur-sm shrink-0">
-            <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 to-teal-800 p-5 sm:p-6 shadow-xl shadow-teal-900/10">
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+        <div className="relative flex items-center justify-center gap-4 text-white text-center sm:text-left">
+          <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shrink-0">
+            <ShieldCheck className="h-6 w-6 text-teal-300" />
           </div>
-          <div className="text-center sm:text-left">
-            <p className="font-bold text-sm sm:text-base">
-              {isSpanish ? "Garantía NUREA" : "NUREA Guarantee"}
+          <div>
+            <p className="font-bold text-base sm:text-lg">
+              {isSpanish ? "Excelencia Médica Garantizada" : "Guaranteed Medical Excellence"}
             </p>
-            <p className="text-xs sm:text-sm text-white/90">
+            <p className="text-xs sm:text-sm text-teal-50/90 leading-relaxed max-w-xl">
               {isSpanish
-                ? "El 100% de nuestros profesionales están verificados por la Superintendencia de Salud de Chile"
-                : "100% of our professionals are verified by the Chilean Health Superintendence"}
+                ? "NUREA prioriza el expertise y la reputación. Todos nuestros especialistas pasan por un riguroso proceso de verificación (SIS)."
+                : "NUREA prioritizes expertise and reputation. All our specialists undergo a rigorous verification process (SIS)."}
             </p>
           </div>
         </div>
@@ -179,165 +223,166 @@ function DoctorCard({
   isSpanish: boolean
   index: number
 }) {
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("es-CL", {
-      style: "currency",
-      currency: "CLP",
-      maximumFractionDigits: 0,
-    }).format(price)
-  }
-
-  const getAvailabilityText = () => {
-    if (doctor.nextAvailable.isToday) {
-      return isSpanish ? "Hoy" : "Today"
-    }
-    if (doctor.nextAvailable.isTomorrow) {
-      return isSpanish ? "Mañana" : "Tomorrow"
-    }
-    return doctor.nextAvailable.date
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      whileHover={{ y: -4 }}
       className="group"
     >
-      <Card className="overflow-hidden border-slate-200/80 dark:border-slate-700/60 hover:border-teal-300 dark:hover:border-teal-700 hover:shadow-xl hover:shadow-teal-500/10 transition-all duration-300">
+      <Card className="overflow-hidden border-slate-200/60 dark:border-slate-800/60 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:border-teal-500/50 dark:hover:border-teal-500/50 hover:shadow-2xl hover:shadow-teal-500/5 transition-all duration-500 rounded-3xl">
         <CardContent className="p-0">
-          {/* Next Available Badge - Prominente */}
-          <div className="px-5 pt-5">
-            <div
-              className={cn(
-                "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold",
-                doctor.nextAvailable.isToday
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                  : "bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20"
-              )}
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              <span>
-                {isSpanish ? "Próxima hora:" : "Next available:"}{" "}
-                <span className="font-bold">
-                  {getAvailabilityText()}, {doctor.nextAvailable.time} hrs
-                </span>
-              </span>
-            </div>
-          </div>
-
-          {/* Doctor Info */}
-          <div className="p-5 pt-4">
-            <div className="flex gap-4">
-              {/* Avatar */}
-              <div className="relative shrink-0">
-                <Avatar className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-2 border-slate-100 dark:border-slate-700">
-                  <AvatarImage
-                    src={doctor.avatarUrl}
-                    alt={doctor.name}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white text-2xl font-bold">
-                    {doctor.name.split(" ")[0][0]}
-                    {doctor.name.split(" ")[1]?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row gap-6">
+              {/* Avatar Column */}
+              <div className="relative shrink-0 flex flex-col items-center sm:items-start gap-3">
+                <div className="relative group/avatar">
+                  <div className="absolute inset-0 bg-teal-500 rounded-[2rem] blur-xl opacity-0 group-hover/avatar:opacity-20 transition-opacity" />
+                  <Avatar className="h-24 w-24 sm:h-28 sm:w-28 rounded-[2rem] border-4 border-white dark:border-slate-800 shadow-sm relative z-10">
+                    <AvatarImage
+                      src={doctor.avatarUrl}
+                      alt={doctor.name}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="rounded-[2rem] bg-slate-100 dark:bg-slate-800 text-slate-400">
+                      {doctor.name.split(" ").map(n => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                
+                {doctor.isVerified && (
+                  <VerifiedBadge variant="card" showLabel isSpanish={isSpanish} className="w-full" />
+                )}
               </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0 space-y-2">
-                {/* Name + Verified Badge */}
-                <div className="flex items-start gap-2">
-                  <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 truncate group-hover:text-teal-600 transition-colors">
-                    {doctor.name}
-                  </h3>
-                  {doctor.isVerified && (
-                    <VerifiedBadge variant="compact" isSpanish={isSpanish} />
-                  )}
-                </div>
-
-                {/* Specialty */}
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {doctor.specialty}
-                </p>
-
-                {/* Rating */}
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                    <span className="font-bold text-sm text-slate-700 dark:text-slate-200">
-                      {doctor.rating.toFixed(1)}
-                    </span>
+              {/* Content Column */}
+              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1 mb-2">
+                    <div>
+                      <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-50 tracking-tight leading-tight group-hover:text-teal-600 transition-colors">
+                        {doctor.name}
+                      </h3>
+                      <p className="text-base font-bold text-teal-600 dark:text-teal-400 mt-1">
+                        {doctor.specialty}
+                      </p>
+                    </div>
+                    
+                    {/* Availability Badge */}
+                    <div className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                      doctor.nextAvailable.isToday 
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" 
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                    )}>
+                      <Calendar className="h-3 w-3" />
+                      {isSpanish ? "Próxima:" : "Next:"} {doctor.nextAvailable.date}
+                    </div>
                   </div>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    ({doctor.reviewCount} {isSpanish ? "opiniones" : "reviews"})
-                  </span>
+
+                  <div className="flex flex-wrap items-center gap-y-2 gap-x-4 mt-4">
+                    <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-lg">
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {doctor.rating.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 border-l border-slate-300 dark:border-slate-700 pl-1.5 ml-0.5">
+                        {doctor.reviewCount} {isSpanish ? "reseñas" : "reviews"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-sm">
+                      <Users className="h-4 w-4 text-teal-500" />
+                      <span className="font-medium">
+                        {doctor.patientsCount}+ {isSpanish ? "pacientes" : "patients"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-sm">
+                      <MapPin className="h-4 w-4 text-teal-500" />
+                      <span className="font-medium truncate max-w-[150px]">
+                        {doctor.location}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Modality Badges */}
-                <div className="flex flex-wrap gap-1.5">
-                  {(doctor.consultationType === "online" ||
-                    doctor.consultationType === "both") && (
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] gap-1 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900"
-                    >
-                      <Video className="h-3 w-3" />
-                      {isSpanish ? "Telemedicina" : "Telemedicine"}
+                <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className="rounded-lg h-9 gap-2 border-slate-200 dark:border-slate-700 font-medium px-3">
+                      <Clock className="h-3.5 w-3.5 text-teal-500" />
+                      {doctor.nextAvailable.time} hrs
                     </Badge>
-                  )}
-                  {(doctor.consultationType === "in-person" ||
-                    doctor.consultationType === "both") && (
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] gap-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900"
-                    >
-                      <Building2 className="h-3 w-3" />
-                      {isSpanish ? "Presencial" : "In-person"}
-                    </Badge>
-                  )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Sheet>
+                      <SheetTrigger asChild>
+                        <Button variant="ghost" size="sm" className="rounded-xl font-bold h-10 px-4 hover:bg-slate-100 dark:hover:bg-slate-800">
+                          {isSpanish ? "Ver Perfil" : "View Profile"}
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto border-l-teal-500/10">
+                        <SheetHeader className="text-left space-y-4">
+                          <div className="relative pt-6">
+                            <Avatar className="h-24 w-24 rounded-3xl border-4 border-white dark:border-slate-800 shadow-xl mb-4">
+                              <AvatarImage src={doctor.avatarUrl} className="object-cover" />
+                              <AvatarFallback>{doctor.name.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                            </Avatar>
+                            <SheetTitle className="text-2xl font-black">{doctor.name}</SheetTitle>
+                            <span className="text-teal-600 dark:text-teal-400 font-bold text-lg">{doctor.specialty}</span>
+                          </div>
+                          
+                          <VerifiedBadge variant="card" isSpanish={isSpanish} showLabel />
+                          
+                          <div className="space-y-6 pt-4">
+                            <div className="space-y-2">
+                              <h4 className="font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider text-xs">{isSpanish ? "Biografía" : "Biography"}</h4>
+                              <p className="text-slate-600 dark:text-slate-400 leading-relaxed italic">{doctor.bio}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h4 className="font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider text-xs">{isSpanish ? "Especialización" : "Education"}</h4>
+                              <ul className="space-y-2">
+                                {doctor.education.map((edu, i) => (
+                                  <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                    <GraduationCap className="h-4 w-4 text-teal-500 mt-0.5" />
+                                    <span>{edu}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            <div className="bg-teal-50 dark:bg-teal-950/20 p-5 rounded-3xl border border-teal-100 dark:border-teal-900/50">
+                              <p className="text-teal-800 dark:text-teal-200 font-bold mb-3 flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                {isSpanish ? "Siguiente disponibilidad" : "Next Availability"}
+                              </p>
+                              <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-2xl shadow-sm">
+                                <div>
+                                  <p className="text-xs text-slate-500">{doctor.nextAvailable.date}</p>
+                                  <p className="text-lg font-black">{doctor.nextAvailable.time} hrs</p>
+                                </div>
+                                <Button className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl h-10 shadow-lg shadow-teal-600/20" asChild>
+                                  <Link href={`/booking/${doctor.id}`}>
+                                    {isSpanish ? "Agendar" : "Book Now"}
+                                  </Link>
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </SheetHeader>
+                      </SheetContent>
+                    </Sheet>
+
+                    <Button className="rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold h-10 px-5 shadow-lg shadow-teal-600/20 group/btn" asChild>
+                      <Link href={`/booking/${doctor.id}`} className="flex items-center gap-1.5">
+                        {isSpanish ? "Agendar" : "Book"}
+                        <ChevronRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Price & Actions */}
-          <div className="px-5 pb-5 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              {/* Price */}
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium">
-                  {isSpanish ? "Consulta" : "Consultation"}
-                </p>
-                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                  {formatPrice(doctor.price)}
-                  <span className="text-xs font-normal text-slate-500 ml-1">CLP</span>
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl text-xs h-9 px-3"
-                  asChild
-                >
-                  <Link href={`/professionals/${doctor.id}`}>
-                    {isSpanish ? "Ver Perfil" : "View Profile"}
-                  </Link>
-                </Button>
-                <Button
-                  size="sm"
-                  className="rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs h-9 px-4 shadow-md shadow-teal-600/20"
-                  asChild
-                >
-                  <Link href={`/booking/${doctor.id}`}>
-                    {isSpanish ? "Agendar Cita" : "Book Appointment"}
-                    <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                  </Link>
-                </Button>
               </div>
             </div>
           </div>
@@ -347,79 +392,40 @@ function DoctorCard({
   )
 }
 
-function EmptyState({
-  isSpanish,
-  onClearFilters,
-}: {
-  isSpanish: boolean
-  onClearFilters: () => void
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="col-span-full py-20"
-    >
-      <div className="max-w-md mx-auto text-center">
-        {/* Ilustración suave */}
-        <div className="relative w-32 h-32 mx-auto mb-6">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/30 dark:to-teal-800/20 rounded-full" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Search className="h-12 w-12 text-teal-400" />
-          </div>
-          <div className="absolute -top-2 -right-2 w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-slate-400" />
-          </div>
-        </div>
-
-        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-          {isSpanish
-            ? "No encontramos resultados exactos"
-            : "No exact results found"}
-        </h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-          {isSpanish
-            ? "No encontramos especialistas exactos para esta búsqueda, pero tenemos excelentes profesionales en áreas similares."
-            : "We couldn't find exact specialists for this search, but we have excellent professionals in similar areas."}
-        </p>
-        <Button
-          onClick={onClearFilters}
-          variant="outline"
-          className="rounded-xl border-teal-500/50 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30"
-        >
-          <X className="h-4 w-4 mr-2" />
-          {isSpanish ? "Limpiar filtros" : "Clear filters"}
-        </Button>
-      </div>
-    </motion.div>
-  )
-}
-
-export default function SearchPage() {
+function SearchContent() {
   const { language } = useLanguage()
   const isSpanish = language === "es"
+  const searchParams = useSearchParams()
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [activeFilters, setActiveFilters] = useState<string[]>([])
-  const [showResults, setShowResults] = useState(true)
+  const initialQ = searchParams.get("q") || ""
+  const specialtySlug = searchParams.get("specialty") || ""
+  const initialSpecialty = specialtySlugMap[specialtySlug] || "Todos"
 
-  const toggleFilter = (filterId: string) => {
-    setActiveFilters((prev) =>
-      prev.includes(filterId)
-        ? prev.filter((f) => f !== filterId)
-        : [...prev, filterId]
-    )
-  }
+  const [searchTerm, setSearchTerm] = useState(initialQ)
+  const [activeSpecialty, setActiveSpecialty] = useState(initialSpecialty)
+  const [activeAvailability, setActiveAvailability] = useState("Cualquier fecha")
+  const [minRating, setMinRating] = useState(0)
 
-  const clearFilters = () => {
-    setActiveFilters([])
-    setSearchTerm("")
-    setShowResults(true)
-  }
+  // Combined Search Suggestions (Specialties + Doctors)
+  const suggestions = useMemo(() => {
+    if (!searchTerm || searchTerm.length < 2) return []
+    const term = searchTerm.toLowerCase()
+    
+    const matchedSpecialties = specialties
+      .filter(s => s !== "Todos" && s.toLowerCase().includes(term))
+      .map(s => ({ type: "specialty", text: s }))
 
-  const filteredDoctors = useMemo(() => {
-    let results = mockDoctors
+    const matchedDoctors = mockDoctors
+      .filter(d => d.name.toLowerCase().includes(term))
+      .map(d => ({ type: "doctor", text: d.name }))
 
+    return [...matchedSpecialties, ...matchedDoctors].slice(0, 5)
+  }, [searchTerm])
+
+  const sortedAndFilteredDoctors = useMemo(() => {
+    let results = [...mockDoctors]
+
+    // Search Logic
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       results = results.filter(
@@ -429,165 +435,195 @@ export default function SearchPage() {
       )
     }
 
-    if (activeFilters.includes("today")) {
-      results = results.filter((d) => d.nextAvailable.isToday)
+    // Filter Logic
+    if (activeSpecialty !== "Todos") {
+      results = results.filter(d => d.category === activeSpecialty || d.specialty.includes(activeSpecialty))
     }
 
-    if (activeFilters.includes("top-rated")) {
-      results = results.filter((d) => d.rating >= 4.8)
+    if (activeAvailability === "Hoy") {
+      results = results.filter(d => d.nextAvailable.isToday)
+    } else if (activeAvailability === "Mañana") {
+      results = results.filter(d => d.nextAvailable.isTomorrow)
     }
 
-    if (activeFilters.includes("online")) {
-      results = results.filter(
-        (d) => d.consultationType === "online" || d.consultationType === "both"
-      )
+    if (minRating > 0) {
+      results = results.filter(d => d.rating >= minRating)
     }
 
-    return results
-  }, [searchTerm, activeFilters])
+    // ORDERING ALGORITHM: Reputation (Rating) * Weight + Availability Proximity
+    // We want higher rating AND closer dates at the top
+    return results.sort((a, b) => {
+      // Priority 1: Availability Proximity (Earlier is better)
+      if (a.nextAvailable.timestamp !== b.nextAvailable.timestamp) {
+        return a.nextAvailable.timestamp - b.nextAvailable.timestamp
+      }
+      // Priority 2: Rating (Higher is better)
+      return b.rating - a.rating
+    })
+  }, [searchTerm, activeSpecialty, activeAvailability, minRating])
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <main className="min-h-screen bg-white dark:bg-slate-950">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="pt-8 pb-6 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-900/95 border-b border-slate-200/60 dark:border-slate-800/60">
-        <div className="max-w-5xl mx-auto space-y-6">
-          {/* Title */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
+      {/* Back to dashboard bar */}
+      <div className="border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto px-4 h-12 flex items-center">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-teal-600 transition-colors"
           >
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-              {isSpanish
-                ? "Encuentra al especialista ideal para ti"
-                : "Find the ideal specialist for you"}
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400">
-              {isSpanish
-                ? "Profesionales verificados, agendamiento inmediato"
-                : "Verified professionals, instant booking"}
-            </p>
-          </motion.div>
+            <ArrowLeft className="h-4 w-4" />
+            {isSpanish ? "Volver al Dashboard" : "Back to Dashboard"}
+          </Link>
+        </div>
+      </div>
 
-          {/* Trust Banner */}
+      {/* Hero Search Section */}
+      <section className="relative pt-12 pb-16 px-4 overflow-hidden">
+        {/* Background elements */}
+        <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-teal-50/50 dark:from-teal-950/20 to-transparent -z-10" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-teal-200/20 dark:bg-teal-700/5 blur-[120px] rounded-full -z-10" />
+
+        <div className="max-w-5xl mx-auto space-y-10">
+          <div className="text-center space-y-4">
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl sm:text-6xl font-black text-slate-900 dark:text-slate-50 tracking-tight"
+            >
+              {isSpanish ? "Busca Calidad," : "Search Quality,"}{" "}
+              <span className="text-teal-600 block sm:inline">No Precios.</span>
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="text-slate-500 dark:text-slate-400 text-lg sm:text-xl font-medium max-w-2xl mx-auto"
+            >
+              {isSpanish 
+                ? "Conectamos pacientes con los mejores especialistas de Chile basándonos en rigor médico y reputación." 
+                : "We connect patients with Chile's best specialists based on medical rigor and reputation."}
+            </motion.p>
+          </div>
+
           <TrustBanner isSpanish={isSpanish} />
 
-          {/* Search Bar */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="max-w-3xl mx-auto"
-          >
+          {/* Search Bar with Suggestions */}
+          <div className="max-w-3xl mx-auto relative z-50">
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-teal-600/20 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-              <div className="relative">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <div className="absolute inset-0 bg-teal-500/10 dark:bg-teal-500/5 blur-2xl rounded-3xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+              <div className="relative bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-[2rem] shadow-2xl shadow-slate-200/50 dark:shadow-none focus-within:border-teal-500 transition-all">
+                <Search className="absolute left-6 top-1.2 -translate-y-1/2 top-[50%] h-6 w-6 text-slate-400" />
                 <input
-                  type="search"
+                  type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={
-                    isSpanish
-                      ? "Buscar por especialidad, nombre o síntoma..."
-                      : "Search by specialty, name or symptom..."
-                  }
-                  className={cn(
-                    "w-full pl-14 pr-14 py-4 sm:py-5 text-base sm:text-lg",
-                    "bg-white dark:bg-slate-800",
-                    "border-2 border-slate-200 dark:border-slate-700 rounded-2xl",
-                    "focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10",
-                    "placeholder:text-slate-400 dark:placeholder:text-slate-500",
-                    "shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50",
-                    "transition-all duration-200"
-                  )}
+                  placeholder={isSpanish ? "Especialidad o nombre del doctor..." : "Specialty or doctor name..."}
+                  className="w-full pl-16 pr-20 py-6 bg-transparent border-none focus:ring-0 text-xl font-medium placeholder:text-slate-400"
                 />
                 {searchTerm && (
-                  <button
+                  <button 
                     onClick={() => setSearchTerm("")}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
+                    className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
-                    <X className="h-4 w-4 text-slate-400" />
+                    <X className="h-5 w-5" />
                   </button>
                 )}
               </div>
-            </div>
-          </motion.div>
 
-          {/* Filter Pills */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0"
-          >
-            <div className="flex items-center gap-2 min-w-max justify-center">
-              {filterPills.map((pill) => {
-                const isActive = activeFilters.includes(pill.id)
-                return (
-                  <button
-                    key={pill.id}
-                    onClick={() => toggleFilter(pill.id)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium",
-                      "border transition-all duration-200",
-                      isActive
-                        ? "bg-teal-600 text-white border-teal-600 shadow-md shadow-teal-600/20"
-                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-teal-300 dark:hover:border-teal-700 hover:bg-teal-50 dark:hover:bg-teal-950/30"
-                    )}
+              {/* Suggestions Dropdown */}
+              <AnimatePresence>
+                {suggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full left-4 right-4 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl z-50 overflow-hidden"
                   >
-                    {pill.icon && (
-                      <pill.icon
-                        className={cn(
-                          "h-3.5 w-3.5",
-                          isActive ? "text-white" : "text-slate-400"
-                        )}
-                      />
-                    )}
-                    {isSpanish ? pill.label : pill.labelEn}
-                  </button>
-                )
-              })}
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setSearchTerm(s.text)
+                        }}
+                        className="w-full px-6 py-4 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                      >
+                        {s.type === "specialty" ? <Sparkles className="h-4 w-4 text-teal-500" /> : <Users className="h-4 w-4 text-slate-400" />}
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{s.text}</span>
+                        <span className="ml-auto text-xs text-slate-400 uppercase tracking-widest">{s.type}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </motion.div>
+          </div>
+
+          {/* Ethical Filter Toolbar */}
+          <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-4">
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <Select value={activeSpecialty} onValueChange={setActiveSpecialty}>
+                <SelectTrigger className="w-[180px] bg-transparent border-none focus:ring-0 font-bold h-10">
+                  <SelectValue placeholder="Especialidad" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  {specialties.map(s => (
+                    <SelectItem key={s} value={s} className="rounded-xl">{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700" />
+
+              <Select value={activeAvailability} onValueChange={setActiveAvailability}>
+                <SelectTrigger className="w-[180px] bg-transparent border-none focus:ring-0 font-bold h-10">
+                  <SelectValue placeholder="Disponibilidad" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="Cualquier fecha" className="rounded-xl">{isSpanish ? "Cualquier fecha" : "Any date"}</SelectItem>
+                  <SelectItem value="Hoy" className="rounded-xl">{isSpanish ? "Hoy" : "Today"}</SelectItem>
+                  <SelectItem value="Mañana" className="rounded-xl">{isSpanish ? "Mañana" : "Tomorrow"}</SelectItem>
+                  <SelectItem value="Próxima semana" className="rounded-xl">{isSpanish ? "Próxima semana" : "Next week"}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700" />
+
+              <Button 
+                variant={minRating === 4.5 ? "secondary" : "ghost"}
+                onClick={() => setMinRating(minRating === 4.5 ? 0 : 4.5)}
+                className="rounded-xl font-bold gap-2 h-10 px-4 whitespace-nowrap"
+              >
+                <Star className={cn("h-4 w-4", minRating === 4.5 ? "text-amber-500 fill-amber-500" : "text-slate-400")} />
+                {isSpanish ? "Top 4.5+" : "Top 4.5+"}
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Results Section */}
-      <section className="py-8 px-4 sm:px-6 lg:px-8">
+      <section className="pb-24 px-4">
         <div className="max-w-5xl mx-auto">
-          {/* Results Header */}
-          <div className="flex items-center justify-between mb-6">
-            <motion.p
-              key={filteredDoctors.length}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-sm text-slate-600 dark:text-slate-400"
-            >
-              {isSpanish ? "Mostrando" : "Showing"}{" "}
-              <span className="font-semibold text-slate-800 dark:text-slate-200">
-                {filteredDoctors.length}
-              </span>{" "}
-              {isSpanish ? "especialistas" : "specialists"}
-            </motion.p>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-xl text-xs gap-2"
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              {isSpanish ? "Más filtros" : "More filters"}
-            </Button>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+              <p className="text-sm font-bold text-slate-500 dark:text-slate-400 tracking-wide uppercase">
+                {isSpanish ? "Encontrados" : "Found"}: <span className="text-slate-900 dark:text-slate-100">{sortedAndFilteredDoctors.length} {isSpanish ? "especialistas de élite" : "elite specialists"}</span>
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-widest hidden sm:flex">
+              <Filter className="h-3 w-3" />
+              {isSpanish ? "Ordenado por: Relevancia y Disponibilidad" : "Sorted by: Relevance & Availability"}
+            </div>
           </div>
 
-          {/* Results Grid */}
-          <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+          <div className="grid gap-6">
             <AnimatePresence mode="popLayout">
-              {showResults && filteredDoctors.length > 0 ? (
-                filteredDoctors.map((doctor, index) => (
+              {sortedAndFilteredDoctors.length > 0 ? (
+                sortedAndFilteredDoctors.map((doctor, index) => (
                   <DoctorCard
                     key={doctor.id}
                     doctor={doctor}
@@ -596,12 +632,48 @@ export default function SearchPage() {
                   />
                 ))
               ) : (
-                <EmptyState isSpanish={isSpanish} onClearFilters={clearFilters} />
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="py-20 text-center space-y-4"
+                >
+                  <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-3xl mx-auto flex items-center justify-center">
+                    <Search className="h-8 w-8 text-slate-300" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+                    {isSpanish ? "No encontramos especialistas exactos" : "No exact specialists found"}
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                    {isSpanish 
+                      ? "Intenta ajustando tus filtros para encontrar otros profesionales de excelencia." 
+                      : "Try adjusting your filters to find other excellent professionals."}
+                  </p>
+                  <Button 
+                    onClick={() => {
+                      setSearchTerm("")
+                      setActiveSpecialty("Todos")
+                      setActiveAvailability("Cualquier fecha")
+                      setMinRating(0)
+                    }}
+                    variant="outline"
+                    className="rounded-xl"
+                  >
+                    {isSpanish ? "Limpiar filtros" : "Clear filters"}
+                  </Button>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
       </section>
     </main>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchContent />
+    </Suspense>
   )
 }

@@ -16,6 +16,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Loader2 } from "lucide-react"
+import { SupportTicketSheet } from "@/components/support/SupportTicketSheet"
 
 interface Profile {
   id: string
@@ -49,6 +50,7 @@ export default function DashboardMainLayout({
     }
 
     const loadProfile = async () => {
+      let isRedirecting = false
       try {
         const { data, error } = await supabase
           .from("profiles")
@@ -61,53 +63,83 @@ export default function DashboardMainLayout({
           if (process.env.NODE_ENV === "development") {
             console.error("Error loading profile:", errMsg, error)
           }
-          setProfileLoading(false)
+          isRedirecting = true
           router.push("/login")
           return
         }
 
         if (!data) {
-          setProfileLoading(false)
+          isRedirecting = true
           router.push("/complete-profile")
           return
         }
 
-        setProfile(data as Profile)
 
-        const userRole = data?.role || "patient"
+        setProfile(data as Profile)
+        const jwtRole = user.app_metadata?.role || user.user_metadata?.role
+        const userRole = data?.role || jwtRole || 'patient'
+
+        // Route detection
+        const isAdminRoute = pathname.startsWith("/dashboard/admin")
         const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
         const isPatientRoute = pathname.startsWith("/dashboard/patient")
 
-        if (userRole === "admin" && (isProfessionalRoute || isPatientRoute)) {
-          // Allow admin to see these for verification purposes, or redirect to /admin if on /dashboard root
-        } else if (userRole === "professional" && isPatientRoute) {
+        console.log("Layout Guard - User Info:", { 
+          role: userRole, 
+          pathname, 
+          isAdminRoute, 
+          isProfessionalRoute, 
+          isPatientRoute 
+        })
+
+        // 1. ADMIN GUARD: admins belong only in /dashboard/admin
+        if (userRole === "admin" && !isAdminRoute) {
+          console.log("Admin Guard Triggered")
+          isRedirecting = true
+          router.push("/dashboard/admin")
+          return
+        }
+
+        // 2. PROFESSIONAL GUARD: professionals belong only in /dashboard/professional
+        if (userRole === "professional" && !isProfessionalRoute) {
+          console.log("Professional Guard Triggered")
+          isRedirecting = true
           router.push("/dashboard/professional")
           return
-        } else if (userRole === "patient" && isProfessionalRoute) {
+        } 
+
+        // 3. PATIENT GUARD: patients belong only in /dashboard/patient
+        if (userRole === "patient" && !isPatientRoute) {
+          console.log("Patient Guard Triggered")
+          isRedirecting = true
           router.push("/dashboard/patient")
           return
         }
 
+        // 4. ROOT DASHBOARD REDIRECT
         if (pathname === "/dashboard") {
-          if (userRole === "admin") {
-            router.push("/admin")
-          } else {
-            router.push(
-              userRole === "professional"
-                ? "/dashboard/professional"
-                : "/dashboard/patient"
-            )
-          }
+          isRedirecting = true
+          const target = userRole === "admin" 
+            ? "/dashboard/admin" 
+            : userRole === "professional"
+              ? "/dashboard/professional"
+              : "/dashboard/patient"
+          
+          router.push(target)
+          return
         }
+
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)
         if (process.env.NODE_ENV === "development") {
           console.error("Error loading profile:", errMsg, err)
         }
-        setProfileLoading(false)
+        isRedirecting = true
         router.push("/login")
       } finally {
-        setProfileLoading(false)
+        if (!isRedirecting) {
+          setProfileLoading(false)
+        }
       }
     }
 
@@ -208,6 +240,7 @@ export default function DashboardMainLayout({
               </AnimatePresence>
             </div>
           </main>
+          <SupportTicketSheet />
         </SidebarInset>
       </div>
     </SidebarProvider>

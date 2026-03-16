@@ -66,10 +66,8 @@ export function AuthPageBackground() {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Fallback para modo oscuro si resolvedTheme aún no está (hidratación): leer clase en document
-    const dark =
-      resolvedTheme === "dark" ||
-      (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
+    // Use resolvedTheme directly for the colors inside the effect
+    const themeToUse = resolvedTheme === "dark"
 
     const gl = canvas.getContext("webgl")
     if (!gl) return
@@ -125,7 +123,7 @@ export function AuthPageBackground() {
 
     // Paleta con cuerpo: contraste para que el movimiento turbulento se vea claro y premium.
     // Light: teal-200, cyan-100. Dark: slate-950 base, fluido teal-600 para movimiento claramente visible.
-    if (dark) {
+    if (themeToUse) {
       gl.uniform3f(uGrayLocation, 0.008, 0.024, 0.09)   // slate-950 – base muy oscura
       gl.uniform3f(uColorLocation, 0.11, 0.49, 0.47)   // teal-600 – destellos vibrantes visibles
     } else {
@@ -154,7 +152,7 @@ export function AuthPageBackground() {
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId)
     }
-  }, [isDark])
+  }, [resolvedTheme, mounted])
 
   return (
     <div
@@ -336,13 +334,15 @@ export function LoginForm() {
       const role = profile?.role || "patient"
       const profileComplete = !!profile?.date_of_birth
       let redirectPath = "/dashboard"
+      
       if (role === "professional") {
-        redirectPath = profileComplete ? "/professional/dashboard" : "/complete-profile"
+        redirectPath = profileComplete ? "/dashboard/professional" : "/onboarding/professional"
       } else if (role === "admin") {
-        redirectPath = "/admin"
+        redirectPath = "/dashboard/admin"
       } else {
-        redirectPath = profileComplete ? "/dashboard" : "/complete-profile"
+        redirectPath = profileComplete ? "/dashboard/patient" : "/onboarding"
       }
+
 
       router.push(redirectPath)
       router.refresh()

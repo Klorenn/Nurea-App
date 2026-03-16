@@ -95,8 +95,13 @@ export async function POST(request: Request) {
       .single()
 
     const userRole = profileData?.role || 'patient'
-    const redirectPath = userRole === 'professional' ? '/professional/onboarding' : '/dashboard'
-
+    let redirectPath = '/dashboard'
+    
+    if (userRole === 'professional') {
+      redirectPath = '/professional/onboarding'
+    } else if (userRole === 'admin') {
+      redirectPath = '/admin'
+    }
     return NextResponse.json({ 
       success: true,
       redirectPath,

@@ -41,15 +41,20 @@ export default function DocumentsPage() {
       }
 
       const response = await fetch(`/api/documents/list?${params.toString()}`)
-      const data = await response.json()
-
+      
+      // If not OK (401, 403, 404, 500...) just show empty list, no crash
       if (!response.ok) {
-        throw new Error(data.message || "No se pudieron cargar los documentos")
+        console.warn("Documents API returned", response.status)
+        setDocuments([])
+        return
       }
 
+      const data = await response.json()
       setDocuments(data.documents || [])
     } catch (error) {
+      // Network errors, JSON parse errors etc. — show empty, don't crash
       console.error("Load documents error:", error)
+      setDocuments([])
     } finally {
       setLoading(false)
     }

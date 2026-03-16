@@ -215,6 +215,21 @@ async function handleProfessionalResponse(professional: any, supabase: any, id: 
       console.error('Error cargando documentos:', error)
     }
 
+    // Load verified credentials
+    let verifiedCredentials: any[] = []
+    try {
+      const { data: credData } = await supabase
+        .from('professional_credentials')
+        .select('*')
+        .eq('professional_id', id)
+        .eq('status', 'verified')
+        .order('year', { ascending: false })
+      
+      verifiedCredentials = credData || []
+    } catch (error) {
+      console.error('Error cargando credenciales:', error)
+    }
+
     // Formatear profesional real
     const formattedProfessional = {
       id: professional.id,
@@ -243,7 +258,11 @@ async function handleProfessionalResponse(professional: any, supabase: any, id: 
         : ['Español'],
       bio: professional.bio || '',
       bioExtended: professional.bio_extended || '',
+      bio_extended: professional.bio_extended || '',
       services: professional.services || [],
+      education: professional.education || [],
+      awards_and_courses: professional.awards_and_courses || [],
+      verified_credentials: verifiedCredentials,
       consultationTypes: professional.consultation_type === 'both' 
         ? ['online', 'in-person']
         : professional.consultation_type === 'online'
