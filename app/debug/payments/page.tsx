@@ -47,7 +47,7 @@ export default function PaymentDebugPage() {
       return
     }
     setIsVerifying(true)
-    addLog("Consultando Gatekeeper de RevenueCat...", "info")
+    addLog("Consultando recurso premium (suscripción)...", "info")
     
     try {
       const res = await fetch("/api/premium-resource")
@@ -92,7 +92,7 @@ export default function PaymentDebugPage() {
       
       if (res.ok) {
         addLog("API de Liquidación respondió EXITOSAMENTE.", "success")
-        addLog("RevenueCat Entitlement otorgado vía S2S (Simulado).", "success")
+        addLog("Acceso premium activado en BD (simulado).", "success")
         toast.success("Pago simulado con éxito")
       } else {
         addLog(`Fallo en liquidación: ${data.error}`, "error")
@@ -112,7 +112,7 @@ export default function PaymentDebugPage() {
     try {
       const res = await fetch("/api/debug/reset-user", { method: "POST" })
       if (res.ok) {
-        addLog("Usuario reseteado en RevenueCat Sandbox.", "success")
+        addLog("Usuario reseteado (suscripción inactiva).", "success")
         setRcStatus(null)
         toast.info("Estado de usuario reseteado")
       } else {
@@ -137,7 +137,7 @@ export default function PaymentDebugPage() {
               Nurea Finance Simulator
               <Badge variant="outline" className="ml-1 border-teal-500/50 text-teal-400 text-[10px]">QA Sandbox</Badge>
             </h1>
-            <p className="text-slate-400 text-xs">Herramienta interna para validación de RevenueCat + x402.</p>
+            <p className="text-slate-400 text-xs">Herramienta interna para validación de suscripción y x402.</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="h-9 border-white/10 bg-white/5 hover:bg-white/10 text-xs" onClick={() => setLogs([])}>
@@ -273,14 +273,12 @@ export default function PaymentDebugPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <a 
-                href="https://app.revenuecat.com/" 
-                target="_blank" 
-                rel="noreferrer"
+                href="/precios" 
                 className="p-2 rounded-xl border border-white/5 bg-slate-900/40 hover:bg-teal-500/5 hover:border-teal-500/30 transition-all flex items-center justify-between group"
               >
                 <div className="text-[9px]">
-                  <span className="block text-slate-500 mb-0.5">Control Panel</span>
-                  <span className="font-bold text-slate-300 group-hover:text-white transition-colors">RevenueCat Dashboard</span>
+                  <span className="block text-slate-500 mb-0.5">Suscripciones</span>
+                  <span className="font-bold text-slate-300 group-hover:text-white transition-colors">Planes (Mercado Pago)</span>
                 </div>
                 <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-teal-400 transition-colors" />
               </a>

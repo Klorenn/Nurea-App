@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       .insert({
         appointment_id: appointmentId,
         patient_id: user.id,
-        professional_id: appointment.professional_id,
+        doctor_id: appointment.professional_id, // renamed from professional_id in v2 migration
         rating: numericRating,
         comment: comment?.trim() || null,
       })
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         review: {
           id: review.id,
           appointmentId: review.appointment_id,
-          professionalId: review.professional_id,
+          professionalId: review.doctor_id, // renamed from professional_id in v2 migration
           rating: review.rating,
           comment: review.comment,
           createdAt: review.created_at,

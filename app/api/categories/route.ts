@@ -9,8 +9,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
     
-    const includeSpecialties = searchParams.get("includeSpecialties") === "true"
-    const withCounts = searchParams.get("withCounts") === "true"
+    const includeSpecialties =
+      searchParams.get("includeSpecialties") === "true" ||
+      searchParams.get("include_specialties") === "true"
+    const withCounts =
+      searchParams.get("withCounts") === "true" ||
+      searchParams.get("with_counts") === "true"
 
     // Fetch categories
     const { data: categories, error: catError } = await supabase
@@ -20,18 +24,23 @@ export async function GET(request: NextRequest) {
 
     if (catError) {
       return NextResponse.json(
-        { error: catError.message },
+        { success: false, message: catError.message },
         { status: 500 }
       )
     }
 
-    // If we don't need specialties, return just categories
+    const list = Array.isArray(categories) ? categories : []
+
+    // If we don't need specialties, return categories in the shape the client expects
     if (!includeSpecialties) {
-      return NextResponse.json(categories, {
-        headers: {
-          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-        },
-      })
+      return NextResponse.json(
+        { success: true, categories: list },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+          },
+        }
+      )
     }
 
     // Fetch all active specialties
@@ -43,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     if (specError) {
       return NextResponse.json(
-        { error: specError.message },
+        { success: false, message: specError.message },
         { status: 500 }
       )
     }
@@ -57,16 +66,18 @@ export async function GET(request: NextRequest) {
 
       if (!countError && counts) {
         counts.forEach((item) => {
-          professionalCounts[item.specialty_id] = 
+          professionalCounts[item.specialty_id] =
             (professionalCounts[item.specialty_id] || 0) + 1
         })
       }
     }
 
+    const specialtiesList = Array.isArray(specialties) ? specialties : []
+
     // Group specialties by category
-    const result = categories.map((category) => ({
+    const result = list.map((category) => ({
       ...category,
-      specialties: specialties
+      specialties: specialtiesList
         .filter((s) => s.category_id === category.id)
         .map((s) => ({
           ...s,
@@ -74,7 +85,7 @@ export async function GET(request: NextRequest) {
         })),
     }))
 
-    return NextResponse.json(result, {
+    return NextResponse.json({ success: true, categories: result }, {
       headers: {
         "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
       },
@@ -82,7 +93,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching categories:", error)
     return NextResponse.json(
-      { error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     )
   }

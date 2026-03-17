@@ -28,22 +28,8 @@ export async function GET(request: Request) {
     const activeSubs = profilesRes.count || 0
 
     // 3. Real-time stats derivation
-    // If transactions table is empty, we derive from completed/confirmed appointments for "realism"
-    const derivedGMV = appointments
-      .filter(a => a.status === 'confirmed' || a.status === 'completed')
-      .reduce((acc, a) => acc + Number(a.price || 0), 0)
-    
-    // Total platform GMV includes recorded transactions
-    const recordedGMV = transactions.reduce((acc, tx) => acc + Number(tx.amount_total), 0)
-    const totalGMV = Math.max(derivedGMV, recordedGMV)
-
-    const recordedPlatformFee = transactions.reduce((acc, tx) => acc + Number(tx.platform_fee), 0)
-    // Estimate platform fee (15%) for appointments that don't have a transaction record yet
-    const estimatedPlatformFee = appointments
-      .filter(a => a.status === 'confirmed' || a.status === 'completed')
-      .reduce((acc, a) => acc + (Number(a.price || 0) * 0.15), 0)
-    
-    const netRevenue = Math.max(recordedPlatformFee, estimatedPlatformFee)
+    const totalGMV = transactions.reduce((acc, tx) => acc + Number(tx.amount_total), 0)
+    const netRevenue = transactions.reduce((acc, tx) => acc + Number(tx.platform_fee), 0)
 
     const pendingPayouts = transactions
       .filter(tx => tx.status === 'available')
@@ -64,26 +50,18 @@ export async function GET(request: Request) {
         return txDate >= monthStart && txDate <= monthEnd
       })
 
-      const monthAppointments = appointments.filter(a => {
-        const aDate = new Date(a.created_at)
-        return aDate >= monthStart && aDate <= monthEnd
-      })
+      const commissions = monthTxs.reduce((acc, tx) => acc + Number(tx.platform_fee), 0)
 
-      const commissions = Math.max(
-        monthTxs.reduce((acc, tx) => acc + Number(tx.platform_fee), 0),
-        monthAppointments
-          .filter(a => a.status === 'confirmed' || a.status === 'completed')
-          .reduce((acc, a) => acc + (Number(a.price || 0) * 0.15), 0)
-      )
-
-      // Subscriptions revenue (approximate growth)
-      const subsRevenue = activeSubs * 29990 * (1 - (i * 0.02))
+      // We don't have historical subscriptions easily accessible here right now, 
+      // but to ensure 0 when no sales, we'll keep it simple and not fake it.
+      // Easiest is to rely on current activeSubs * 29990 for current month or 0 for past.
+      const subsRevenue = i === 0 ? mrr : 0;
 
       chartData.push({
         name: monthLabel,
-        subscriptions: Math.round(subsRevenue),
-        commissions: Math.round(commissions),
-        transactions: Math.max(monthTxs.length, monthAppointments.length)
+        subscriptions: subsRevenue,
+        commissions: commissions,
+        transactions: monthTxs.length
       })
     }
 

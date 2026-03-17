@@ -6,6 +6,7 @@ import { ResetPasswordEmail } from "@/components/emails/ResetPasswordEmail"
 import { WelcomeEmail } from "@/components/emails/WelcomeEmail"
 import { SupportTicketCreatedEmail } from "@/components/emails/SupportTicketCreatedEmail"
 import { SupportTicketReplyEmail } from "@/components/emails/SupportTicketReplyEmail"
+import { AppointmentReminderEmail } from "@/components/emails/AppointmentReminderEmail"
 
 function slugEntityId(id: string): string {
   return id.replace(/[^a-zA-Z0-9-]/g, "-").slice(0, 200)
@@ -67,6 +68,15 @@ export type SendSupportTicketReplyParams = {
   ticketSubject: string
   adminResponse: string
   supportLink: string
+}
+
+export type SendAppointmentReminderParams = {
+  to: string
+  userName: string
+  professionalName: string
+  appointmentDate: string
+  appointmentTime: string
+  patientPortalLink?: string
 }
 
 /**
@@ -290,6 +300,44 @@ export async function sendSupportTicketReply(
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error"
     console.error("[email-service] sendSupportTicketReply exception:", err)
+    return { success: false, error: message }
+  }
+}
+
+/**
+ * Envía recordatorio de cita al paciente (ej. 24h antes).
+ * Idempotency: appointment-reminder/<appointmentId>.
+ */
+export async function sendAppointmentReminder(
+  params: SendAppointmentReminderParams & { appointmentId: string }
+): Promise<EmailResult> {
+  const { to, userName, professionalName, appointmentDate, appointmentTime, patientPortalLink, appointmentId } = params
+  try {
+    const resend = getResend()
+    const { error } = await sendSingleWithRetry(
+      resend,
+      {
+        from: SECURITY_FROM,
+        to: [to],
+        subject: `Recordatorio: tu cita con ${professionalName} — NUREA`,
+        react: React.createElement(AppointmentReminderEmail, {
+          userName,
+          professionalName,
+          appointmentDate,
+          appointmentTime,
+          patientPortalLink,
+        }),
+      },
+      buildIdempotencyKey("appointment-reminder", appointmentId)
+    )
+    if (error) {
+      console.error("[email-service] sendAppointmentReminder error:", error)
+      return { success: false, error: error.message }
+    }
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error"
+    console.error("[email-service] sendAppointmentReminder exception:", err)
     return { success: false, error: message }
   }
 }

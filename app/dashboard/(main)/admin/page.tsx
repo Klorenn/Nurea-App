@@ -316,7 +316,7 @@ export default function AdminPage() {
             <TabsList className="bg-slate-200/50 p-1.5 rounded-2xl border border-slate-200 h-14">
               <TabsTrigger value="overview" className="rounded-xl px-8 font-black text-sm data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm h-full">Vista General</TabsTrigger>
               <TabsTrigger value="subscriptions" className="rounded-xl px-8 font-black text-sm data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm h-full">Suscripciones {stats.pendingSubscriptions > 0 && <Badge className="ml-2 bg-teal-500 text-white border-0">{stats.pendingSubscriptions}</Badge>}</TabsTrigger>
-              <TabsTrigger value="finances" className="rounded-xl px-8 font-black text-sm data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm h-full">Liquidaciones (Stripe)</TabsTrigger>
+              <TabsTrigger value="finances" className="rounded-xl px-8 font-black text-sm data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm h-full">Finanzas</TabsTrigger>
               <TabsTrigger value="security" className="rounded-xl px-8 font-black text-sm data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm h-full">Seguridad & Alertas</TabsTrigger>
             </TabsList>
 
@@ -589,13 +589,13 @@ export default function AdminPage() {
                <Card className="border-border/40 bg-white shadow-xl shadow-slate-200/40 rounded-[40px] overflow-hidden">
                   <CardHeader className="p-8 border-b border-slate-50">
                      <CardTitle className="text-2xl font-black text-slate-900">Liquidaciones de Mercado</CardTitle>
-                     <CardDescription className="text-slate-500 font-medium">Control de flujos entre Doctores, Stripe y NUREA</CardDescription>
+                     <CardDescription className="text-slate-500 font-medium">Suscripciones y métricas de la plataforma</CardDescription>
                   </CardHeader>
                   <CardContent className="p-8">
                      <div className="grid md:grid-cols-2 gap-8">
                         <div className="space-y-6">
                            <div className="p-8 rounded-[32px] bg-slate-50 border border-slate-100">
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Comisión Acumulada (Stripe Split)</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Suscripciones</p>
                               <div className="flex items-baseline gap-2">
                                  <h2 className="text-5xl font-black text-teal-600 tracking-tighter">${Math.round(stats.nureaCommission).toLocaleString()}</h2>
                                  <span className="text-sm font-black text-slate-400">CLP</span>

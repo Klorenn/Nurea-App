@@ -57,23 +57,16 @@ export function PaymentModal({
     }
   }, [isOpen])
 
-  const handleStripePayment = async () => {
+  const handleSubscriptionPayment = async () => {
     setPaymentMethod("fiat")
     setStep("processing")
     setIsProcessing(true)
-    
+    setError(null)
     try {
-      // Simulación de flujo de RevenueCat/Stripe
-      // En un entorno real llamaríamos a Purchases.purchasePackage() o Stripe Checkout
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      toast.success("Suscripción activada", {
-        description: "Ahora tienes acceso total a Nurea Pro."
-      })
-      onSuccess?.()
-      onClose()
+      window.location.href = "/precios"
+      return
     } catch (err: any) {
-      setError(err.message || "Error al procesar pago con tarjeta")
+      setError(err.message || "Error al redirigir")
       setStep("choice")
     } finally {
       setIsProcessing(false)
@@ -153,9 +146,9 @@ export function PaymentModal({
                 </DialogHeader>
 
                 <div className="grid gap-4">
-                  {/* Opción Stripe */}
+                  {/* Suscripción Mercado Pago */}
                   <button
-                    onClick={handleStripePayment}
+                    onClick={handleSubscriptionPayment}
                     className="group relative flex flex-col items-start p-4 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all text-left overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -167,7 +160,7 @@ export function PaymentModal({
                     </div>
                     <p className="text-sm text-slate-400 mb-3">Acceso ilimitado por mes/año. Incluye todos los servicios.</p>
                     <div className="flex items-center text-xs font-medium text-teal-400 group-hover:gap-2 transition-all">
-                      Gestionado por Stripe <ArrowRight className="w-3 h-3" />
+                      Mercado Pago <ArrowRight className="w-3 h-3" />
                     </div>
                   </button>
 
@@ -239,7 +232,7 @@ export function PaymentModal({
 
                 <div className="space-y-2">
                   <h3 className="text-xl font-medium text-white">
-                    {paymentMethod === "crypto" ? "Esperando red Stellar..." : "Conectando con Stripe..."}
+                    {paymentMethod === "crypto" ? "Esperando red Stellar..." : "Redirigiendo a planes..."}
                   </h3>
                   <p className="text-sm text-slate-500 max-w-[250px]">
                     No cierres esta ventana mientras procesamos tu acceso premium.

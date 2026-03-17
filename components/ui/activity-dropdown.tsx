@@ -52,7 +52,7 @@ const defaultPatientActivities: Activity[] = [
     descriptionEn: "Your appointment with Dr. Carlos Méndez is in 30 minutes",
     time: "Hace 1 hora",
     timeEn: "1 hour ago",
-    href: "/dashboard/appointments",
+    href: "/dashboard/patient/citas",
     type: "appointment",
   },
   {
@@ -65,7 +65,7 @@ const defaultPatientActivities: Activity[] = [
     descriptionEn: "Your appointment with Dr. María González has ended",
     time: "Hace 3 horas",
     timeEn: "3 hours ago",
-    href: "/dashboard/appointments",
+    href: "/dashboard/patient/citas",
     type: "review",
   },
   {

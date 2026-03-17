@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
+import { AddPatientModal } from "@/components/calendar/modals/add-patient-modal"
 
 interface MedicalEntry {
   id: string
@@ -67,161 +68,8 @@ interface Patient {
   privateNotes: string
 }
 
-const mockPatients: Patient[] = [
-  {
-    id: "1",
-    name: "María José Contreras Soto",
-    rut: "15.432.876-5",
-    email: "maria.contreras@email.com",
-    phone: "+56 9 8765 4321",
-    birthDate: "1990-05-15",
-    gender: "F",
-    avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face",
-    lastVisit: "2026-03-10",
-    hasAppointmentToday: true,
-    medicalHistory: [
-      {
-        id: "h1",
-        date: "2026-03-10",
-        reason: "Ansiedad generalizada y problemas de sueño",
-        diagnosis: "Trastorno de ansiedad generalizada (F41.1)",
-        treatment: "Sertralina 50mg/día. Técnicas de respiración y mindfulness. Control en 3 semanas.",
-      },
-      {
-        id: "h2",
-        date: "2026-02-15",
-        reason: "Primera consulta - Evaluación inicial",
-        diagnosis: "Síntomas compatibles con trastorno ansioso",
-        treatment: "Se solicitan exámenes de tiroides. Próxima sesión para iniciar tratamiento.",
-      },
-      {
-        id: "h3",
-        date: "2026-01-20",
-        reason: "Derivación desde medicina general",
-        diagnosis: "Evaluación psicológica pendiente",
-        treatment: "Inicio de proceso terapéutico. Entrevista clínica completa.",
-      },
-    ],
-    files: [
-      { id: "f1", name: "Examen_Tiroides_TSH.pdf", type: "lab", uploadedAt: "2026-02-20", size: "245 KB" },
-      { id: "f2", name: "Derivacion_MedicinaGeneral.pdf", type: "pdf", uploadedAt: "2026-01-18", size: "128 KB" },
-    ],
-    privateNotes: "Paciente presenta resistencia inicial al tratamiento farmacológico. Prefiere enfoque terapéutico. Considerar TCC como primera línea. Buena adherencia a las sesiones.",
-  },
-  {
-    id: "2",
-    name: "Carlos Andrés Muñoz Rivera",
-    rut: "12.876.543-2",
-    email: "carlos.munoz@email.com",
-    phone: "+56 9 7654 3210",
-    birthDate: "1985-11-22",
-    gender: "M",
-    avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face",
-    lastVisit: "2026-03-08",
-    hasAppointmentToday: false,
-    medicalHistory: [
-      {
-        id: "h1",
-        date: "2026-03-08",
-        reason: "Control de tratamiento - Depresión",
-        diagnosis: "Episodio depresivo moderado en remisión (F32.1)",
-        treatment: "Continuar con Escitalopram 10mg. Evolución favorable. Alta parcial.",
-      },
-      {
-        id: "h2",
-        date: "2026-02-01",
-        reason: "Seguimiento mensual",
-        diagnosis: "Mejora significativa en síntomas depresivos",
-        treatment: "Mantener medicación actual. Reforzar actividades de autocuidado.",
-      },
-    ],
-    files: [
-      { id: "f1", name: "Hemograma_Completo.pdf", type: "lab", uploadedAt: "2026-02-25", size: "312 KB" },
-    ],
-    privateNotes: "Paciente con excelente evolución. Considerar reducción gradual de medicación en próximas sesiones.",
-  },
-  {
-    id: "3",
-    name: "Ana Belén Herrera López",
-    rut: "18.234.567-8",
-    email: "ana.herrera@email.com",
-    phone: "+56 9 6543 2109",
-    birthDate: "1998-03-08",
-    gender: "F",
-    lastVisit: "2026-03-05",
-    hasAppointmentToday: true,
-    medicalHistory: [
-      {
-        id: "h1",
-        date: "2026-03-05",
-        reason: "Crisis de pánico recurrentes",
-        diagnosis: "Trastorno de pánico (F41.0)",
-        treatment: "Alprazolam 0.25mg SOS. Psicoeducación sobre crisis de pánico. Técnicas de grounding.",
-      },
-    ],
-    files: [],
-    privateNotes: "Paciente joven, primera experiencia con salud mental. Mostrar empatía y normalizar el proceso.",
-  },
-  {
-    id: "4",
-    name: "Roberto Ignacio Silva Campos",
-    rut: "10.543.876-K",
-    email: "roberto.silva@email.com",
-    phone: "+56 9 5432 1098",
-    birthDate: "1975-08-30",
-    gender: "M",
-    avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face",
-    lastVisit: "2026-02-28",
-    hasAppointmentToday: false,
-    medicalHistory: [
-      {
-        id: "h1",
-        date: "2026-02-28",
-        reason: "Estrés laboral y burnout",
-        diagnosis: "Síndrome de burnout (Z73.0)",
-        treatment: "Licencia médica por 15 días. Iniciar proceso terapéutico semanal. Evaluar antidepresivos.",
-      },
-      {
-        id: "h2",
-        date: "2026-02-10",
-        reason: "Insomnio y fatiga crónica",
-        diagnosis: "Evaluación inicial - Sospecha de burnout",
-        treatment: "Melatonina 3mg noche. Higiene del sueño. Reevaluación en 2 semanas.",
-      },
-    ],
-    files: [
-      { id: "f1", name: "Licencia_Medica.pdf", type: "pdf", uploadedAt: "2026-02-28", size: "89 KB" },
-      { id: "f2", name: "Electrocardiograma.jpg", type: "image", uploadedAt: "2026-02-15", size: "1.2 MB" },
-    ],
-    privateNotes: "Ejecutivo de empresa. Alta presión laboral. Evaluar contexto familiar como factor protector.",
-  },
-  {
-    id: "5",
-    name: "Valentina Paz González Díaz",
-    rut: "19.876.234-1",
-    email: "valentina.gonzalez@email.com",
-    phone: "+56 9 4321 0987",
-    birthDate: "2000-12-01",
-    gender: "F",
-    lastVisit: "2026-03-12",
-    hasAppointmentToday: false,
-    medicalHistory: [
-      {
-        id: "h1",
-        date: "2026-03-12",
-        reason: "Trastorno alimentario - Seguimiento",
-        diagnosis: "Trastorno de la conducta alimentaria no especificado (F50.9)",
-        treatment: "Continuar terapia semanal. Derivación a nutricionista. Control de peso semanal.",
-      },
-    ],
-    files: [
-      { id: "f1", name: "Informe_Nutricional.pdf", type: "pdf", uploadedAt: "2026-03-10", size: "456 KB" },
-    ],
-    privateNotes: "Paciente universitaria. Presión académica como factor desencadenante. Involucrar a familia en proceso.",
-  },
-]
-
-function calculateAge(birthDate: string): number {
+const calculateAge = (birthDate: string | null | undefined): number => {
+  if (!birthDate) return 0
   const today = new Date()
   const birth = new Date(birthDate)
   let age = today.getFullYear() - birth.getFullYear()
@@ -232,7 +80,10 @@ function calculateAge(birthDate: string): number {
   return age
 }
 
-function formatDate(dateString: string, isSpanish: boolean): string {
+
+
+const formatDate = (dateString: string | null | undefined, isSpanish: boolean): string => {
+  if (!dateString) return isSpanish ? "Sin registro" : "No record"
   const date = new Date(dateString)
   return date.toLocaleDateString(isSpanish ? "es-CL" : "en-US", {
     day: "numeric",
@@ -635,19 +486,61 @@ export default function ProfessionalPatientsPage() {
   const isSpanish = language === "es"
 
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(mockPatients[0].id)
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [addPatientOpen, setAddPatientOpen] = useState(false)
+
+  useMemo(() => {
+    const fetchPatients = async () => {
+      try {
+        const response = await fetch('/api/professional/patients')
+        const data = await response.json()
+        if (data.success && data.patients) {
+          const mappedPatients: Patient[] = data.patients.map((p: any) => ({
+            id: p.id,
+            name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Desconocido',
+            rut: 'N/A', // We'll assume RUT isn't straight from this API or use what's available
+            email: p.email || '',
+            phone: p.phone || '',
+            birthDate: p.date_of_birth || '',
+            gender: 'M', // Fallback
+            avatarUrl: p.avatar_url || '',
+            lastVisit: p.lastAppointment || '',
+            hasAppointmentToday: false, // We can compute this if needed
+            medicalHistory: [], // Real history not in basic API response for now
+            files: [], // Real files not in API response for now
+            privateNotes: '' // Real notes not in API response for now
+          }))
+          setPatients(mappedPatients)
+          if (mappedPatients.length > 0) {
+            setSelectedPatientId(mappedPatients[0].id)
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load patients", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPatients()
+  }, [])
 
   const filteredPatients = useMemo(() => {
-    if (!searchTerm) return mockPatients
+    if (!searchTerm) return patients
     const term = searchTerm.toLowerCase()
-    return mockPatients.filter(
+    return patients.filter(
       (p) =>
         p.name.toLowerCase().includes(term) ||
         p.rut.toLowerCase().includes(term)
     )
-  }, [searchTerm])
+  }, [searchTerm, patients])
 
-  const selectedPatient = mockPatients.find((p) => p.id === selectedPatientId)
+  const selectedPatient = patients.find((p) => p.id === selectedPatientId)
+
+  if (loading) {
+     return <div className="h-[calc(100vh-8rem)] flex items-center justify-center">Cargando pacientes...</div>
+  }
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col lg:flex-row gap-6">
@@ -708,8 +601,17 @@ export default function ProfessionalPatientsPage() {
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="flex-1 min-w-0"
+        className="flex-1 min-w-0 flex flex-col gap-4"
       >
+        <div className="flex justify-end pr-6">
+           <Button 
+             onClick={() => setAddPatientOpen(true)}
+             className="rounded-xl bg-teal-600 hover:bg-teal-700 shadow-lg shadow-teal-600/20"
+           >
+             <Plus className="h-4 w-4 mr-2" />
+             {isSpanish ? "Añadir Paciente" : "Add Patient"}
+           </Button>
+        </div>
         <Card className="h-full border-slate-200 dark:border-slate-800 overflow-hidden">
           {selectedPatient ? (
             <PatientRecord patient={selectedPatient} isSpanish={isSpanish} />
@@ -718,6 +620,44 @@ export default function ProfessionalPatientsPage() {
           )}
         </Card>
       </motion.div>
+
+      <AddPatientModal 
+        open={addPatientOpen}
+        onOpenChange={setAddPatientOpen}
+        onSuccess={() => {
+          // Re-fetch patients list
+          const fetchPatients = async () => {
+             setLoading(true)
+             try {
+                const response = await fetch('/api/professional/patients')
+                const data = await response.json()
+                if (data.success && data.patients) {
+                  const mappedPatients: Patient[] = data.patients.map((p: any) => ({
+                    id: p.id,
+                    name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Desconocido',
+                    rut: 'N/A',
+                    email: p.email || '',
+                    phone: p.phone || '',
+                    birthDate: p.date_of_birth || '',
+                    gender: 'M',
+                    avatarUrl: p.avatar_url || '',
+                    lastVisit: p.lastAppointment || '',
+                    hasAppointmentToday: false,
+                    medicalHistory: [],
+                    files: [],
+                    privateNotes: ''
+                  }))
+                  setPatients(mappedPatients)
+                }
+             } catch (err) {
+                console.error("Failed to reload patients", err)
+             } finally {
+                setLoading(false)
+             }
+          }
+          fetchPatients()
+        }}
+      />
     </div>
   )
 }

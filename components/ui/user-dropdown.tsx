@@ -86,7 +86,7 @@ export const UserDropdown = ({
         go(role === "admin" ? "/admin/settings" : role === "patient" ? "/dashboard/profile" : "/dashboard/professional")
         break
       case "appointments":
-        go("/dashboard/appointments")
+        go(role === "patient" ? "/dashboard/patient/citas" : "/dashboard/appointments")
         break
       case "calendar":
         go("/dashboard/professional")

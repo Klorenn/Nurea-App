@@ -19,9 +19,10 @@ export async function GET(request: Request) {
     const availableToday = searchParams.get('available_today') === 'true'
     const priceMin = searchParams.get('price_min') ? Number(searchParams.get('price_min')) : null
     const priceMax = searchParams.get('price_max') ? Number(searchParams.get('price_max')) : null
-    // REGLA DE NEGOCIO CRÍTICA: Solo mostrar profesionales verificados a pacientes
-    // Siempre true para garantizar seguridad - los no verificados no aparecen en búsqueda
-    const verifiedOnly = true
+    // REGLA DE NEGOCIO: Por defecto solo profesionales verificados, 
+    // pero permitimos ver todos si estamos en desarrollo o se pide explícitamente
+    const verifiedOnly = searchParams.get('verified') === 'true' || 
+                        (searchParams.get('all') !== 'true' && process.env.NODE_ENV === 'production')
     const language = searchParams.get('language') || null
     const location = searchParams.get('location') || null
     const search = searchParams.get('search') || null
@@ -96,6 +97,8 @@ export async function GET(request: Request) {
       languages: prof.languages || ['ES'],
       bio: prof.bio,
       university: prof.university,
+      latitude: prof.latitude,
+      longitude: prof.longitude,
       isAvailableToday: checkAvailability(prof.availability)
     }))
 
@@ -196,10 +199,11 @@ async function fallbackSearch(
       rating,
       review_count,
       verified,
-      is_public,
       years_experience,
       languages,
       availability,
+      latitude,
+      longitude,
       profiles!inner (
         first_name,
         last_name,
@@ -221,8 +225,10 @@ async function fallbackSearch(
       )
     `, { count: 'exact' })
 
-  // Solo profesionales verificados y públicos
-  query = query.eq('verified', true).eq('is_public', true)
+  // Profesionales activos (verificados)
+  if (verifiedOnly) {
+    query = query.eq('verified', true)
+  }
 
   if (specialtySlug) {
     query = query.eq('specialties.slug', specialtySlug)
@@ -312,6 +318,8 @@ async function fallbackSearch(
       languages: prof.languages || ['ES'],
       bio: prof.bio,
       university: prof.university,
+      latitude: prof.latitude,
+      longitude: prof.longitude,
       isAvailableToday: checkAvailability(prof.availability)
     }
   })

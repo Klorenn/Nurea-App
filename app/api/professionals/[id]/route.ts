@@ -265,10 +265,10 @@ async function handleProfessionalResponse(professional: any, supabase: any, id: 
       verified_credentials: verifiedCredentials,
       consultationTypes: professional.consultation_type === 'both' 
         ? ['online', 'in-person']
-        : professional.consultation_type === 'online'
-        ? ['online']
-        : ['in-person'],
-      consultationType: professional.consultation_type || 'both',
+        : professional.consultation_type === 'in-person'
+        ? ['in-person']
+        : ['online'],
+      consultationType: professional.consultation_type || 'online',
       availability: professional.availability || {},
       documents: documents,
       professionalRegistration: {
@@ -276,13 +276,16 @@ async function handleProfessionalResponse(professional: any, supabase: any, id: 
         institution: professional.registration_institution || '',
         verified: professional.verified || false,
       },
-      imageUrl: professional.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
+      imageUrl: professional.profile?.avatar_url || '',
       verified: professional.verified || false,
       isOnline: false, 
       availableToday: availableToday,
       availableUntil: availableUntil,
       patientsServed: patientsServed, 
       stellarWallet: professional.stellar_wallet ?? null,
+      accepted_insurances: professional.accepted_insurances ?? null,
+      patients_groups: professional.patients_groups ?? [],
+      payment_methods: professional.payment_methods ?? [],
     }
 
     return NextResponse.json({

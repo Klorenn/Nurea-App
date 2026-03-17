@@ -70,6 +70,12 @@ export default function ProfessionalOnboardingPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isSpanish = language === "es"
 
+  // Onboarding flow deprecated: redirect directly to new profile editor
+  useEffect(() => {
+    if (!user) return
+    router.replace("/dashboard/professional/profile")
+  }, [user, router])
+
   // Form state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -116,7 +122,6 @@ export default function ProfessionalOnboardingPage() {
     }
 
     loadProfile()
-    trackEvent('onboarding_start')
   }, [user?.id, supabase])
 
   const validateCode = async (code: string) => {

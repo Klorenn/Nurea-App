@@ -35,8 +35,6 @@ interface PricingPlan {
   description: string
   monthlyPrice: number
   yearlyPrice: number
-  stripePriceIdMonthly: string
-  stripePriceIdYearly: string
   features: string[]
   highlighted?: boolean
   badge?: string
@@ -45,13 +43,11 @@ interface PricingPlan {
 
 const plans: PricingPlan[] = [
   {
-    id: "starter",
+    id: "graduate",
     name: "Starter",
     description: "Para profesionales que inician",
     monthlyPrice: 29990,
     yearlyPrice: 299900,
-    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY || "price_starter_monthly",
-    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY || "price_starter_yearly",
     icon: Zap,
     features: [
       "Hasta 30 consultas/mes",
@@ -67,8 +63,6 @@ const plans: PricingPlan[] = [
     description: "El más popular para consultorios",
     monthlyPrice: 49990,
     yearlyPrice: 499900,
-    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY || "price_pro_monthly",
-    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY || "price_pro_yearly",
     icon: Sparkles,
     highlighted: true,
     badge: "Más Popular",
@@ -88,8 +82,6 @@ const plans: PricingPlan[] = [
     description: "Para clínicas y equipos",
     monthlyPrice: 99990,
     yearlyPrice: 999900,
-    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_CLINIC_MONTHLY || "price_clinic_monthly",
-    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_CLINIC_YEARLY || "price_clinic_yearly",
     icon: Crown,
     features: [
       "Todo en Professional",
@@ -129,14 +121,11 @@ export default function PreciosPage() {
     setLoadingPlan(plan.id)
 
     try {
-      const priceId = isYearly ? plan.stripePriceIdYearly : plan.stripePriceIdMonthly
-
-      const response = await fetch("/api/stripe/checkout", {
+      const planId = (plan.id === "clinic" ? "professional" : plan.id) as "professional" | "graduate"
+      const response = await fetch("/api/payments/mercadopago/subscription", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ priceId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId, isYearly }),
       })
 
       const data = await response.json()

@@ -62,6 +62,7 @@ export async function updateSession(request: NextRequest) {
     '/login',
     '/signup',
     '/auth',
+    '/verify',
     '/forgot-password',
     '/reset-password',
     '/verify-email',
@@ -71,6 +72,7 @@ export async function updateSession(request: NextRequest) {
     '/pacientes',
     '/profesionales',
     '/professionals',
+    '/explore',
   ]
 
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))

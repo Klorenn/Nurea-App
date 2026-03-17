@@ -48,6 +48,8 @@ interface HealthChatProps {
   contacts: Contact[]
   role: "patient" | "professional"
   onContactSelect?: (contactId: string) => void
+  /** Abrir conversación con este contacto al cargar (ej. desde explorar "Contactar") */
+  initialContactId?: string | null
   className?: string
 }
 
@@ -58,6 +60,7 @@ export function HealthChat({
   contacts,
   role,
   onContactSelect,
+  initialContactId,
   className,
 }: HealthChatProps) {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(contacts[0] || null)
@@ -69,11 +72,23 @@ export function HealthChat({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const appliedInitialContactRef = useRef<string | null>(null)
   const { language } = useLanguage()
   const t = useTranslations(language)
   const supabase = createClient()
 
   const isSpanish = language === "es"
+
+  // Abrir conversación con el contacto indicado solo una vez (evita bucle con presencia/contacts)
+  useEffect(() => {
+    if (!initialContactId || contacts.length === 0) return
+    if (appliedInitialContactRef.current === initialContactId) return
+    const contact = contacts.find((c) => c.id === initialContactId)
+    if (contact) {
+      appliedInitialContactRef.current = initialContactId
+      setSelectedContact(contact)
+    }
+  }, [initialContactId, contacts])
 
   // Load messages when contact changes
   useEffect(() => {

@@ -12,8 +12,8 @@ export const NUREA_DOCTOR_ID = "nurea-doctor-test" // Nuevo ID del profesional d
 export const mockProfessional = {
   id: TEST_PROFESSIONAL_ID,
   name: "Dr. Elena Vargas",
-  title: "Psicóloga Clínica",
-  specialty: "Psicología Clínica",
+  title: "Psicóloga",
+  specialty: "Psicólogo",
   specialtyEn: "Clinical Psychology",
   yearsExperience: 12,
   location: "Santiago, Chile",
@@ -75,7 +75,7 @@ export const mockProfessional = {
 export const mockProfessionalForSearch = {
   id: TEST_PROFESSIONAL_ID,
   name: "Dr. Elena Vargas",
-  specialty: "Psicóloga Clínica",
+  specialty: "Psicólogo",
   specialtyEn: "Clinical Psychologist",
   location: "Online / Santiago",
   rating: 4.9,

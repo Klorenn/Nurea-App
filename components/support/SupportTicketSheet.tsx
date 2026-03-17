@@ -23,7 +23,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -34,7 +33,6 @@ export function SupportTicketSheet() {
   const [success, setSuccess] = useState(false)
   const [subject, setSubject] = useState("")
   const [message, setMessage] = useState("")
-  const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,17 +48,24 @@ export function SupportTicketSheet() {
 
     setLoading(true)
     try {
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: user.id,
+      const response = await fetch('/api/support/tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           subject: subject.trim(),
           message: message.trim(),
           priority: 'medium',
-          user_role: user.user_metadata?.role || 'patient'
-        })
+          category: 'technical'
+        }),
+      })
 
-      if (error) throw error
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Error al enviar el ticket')
+      }
 
       setSuccess(true)
       setSubject("")
@@ -71,9 +76,12 @@ export function SupportTicketSheet() {
         setSuccess(false)
         setOpen(false)
       }, 2500)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error sending support ticket:", err)
-      toast.error("Error al enviar el ticket. Intenta nuevamente.")
+      const errorMessage = err?.message || "Error desconocido"
+      const errorDetails = err?.details || ""
+      console.error(`Detailed error: ${errorMessage} ${errorDetails}`)
+      toast.error(`Error al enviar el ticket: ${errorMessage}`)
     } finally {
       setLoading(false)
     }

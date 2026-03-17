@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -10,23 +10,17 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { BookingModal } from "@/components/booking-modal"
 import { MapEmbed } from "@/components/map-embed"
 import { NoPhysicalConsultationDisplay } from "@/components/no-physical-consultation-display"
 import {
   Star,
   MapPin,
-  Video,
-  Building2,
   Share2,
   Clock,
-  MessageCircle,
   FileText,
   Download,
-  ShieldCheck,
   Globe,
   GraduationCap,
   Calendar,
@@ -35,7 +29,6 @@ import {
   CheckCircle2,
   BadgeCheck,
   Heart,
-  Award,
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
@@ -43,6 +36,8 @@ import { cn } from "@/lib/utils"
 import { parseShortDate } from "@/lib/utils/date-helpers"
 import { toast } from "sonner"
 import { DoctorProfileView } from "@/components/professionals/DoctorProfileView"
+import { useAuth } from "@/hooks/use-auth"
+import { trackBookingEvent } from "@/lib/analytics"
 
 interface ProfessionalProfileClientProps {
   professionalId: string
@@ -58,13 +53,26 @@ export default function ProfessionalProfileClient({
   const { language } = useLanguage()
   const t = useTranslations(language)
   const router = useRouter()
-  
+  const pathname = usePathname()
+  const { user, loading: authLoading } = useAuth()
+
   const [professional, setProfessional] = useState<any>(initialProfessional)
   const [reviews, setReviews] = useState<any[]>(initialReviews)
   const [loading, setLoading] = useState(!initialProfessional)
   const [error, setError] = useState<string | null>(null)
-  const [isBookingOpen, setIsBookingOpen] = useState(false)
   const isSpanish = language === "es"
+
+  const handleOpenBooking = () => {
+    if (professional?.id) trackBookingEvent("click_agendar", { professionalId: professional.id, source: "profile" })
+    if (!authLoading && !user) {
+      const callbackUrl = professional?.id
+        ? `/dashboard/calendar?professionalId=${professional.id}`
+        : pathname || "/explore"
+      router.push("/login?callbackUrl=" + encodeURIComponent(callbackUrl))
+      return
+    }
+    if (professional?.id) router.push(`/dashboard/calendar?professionalId=${professional.id}`)
+  }
 
   useEffect(() => {
     // If we have initial data and it matches the profile we need, don't re-fetch
@@ -225,15 +233,27 @@ export default function ProfessionalProfileClient({
               className="relative"
             >
               <div className="relative p-2 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl shadow-teal-500/10 border border-slate-100 dark:border-slate-800">
-                <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-[2rem] overflow-hidden">
-                  <Image
-                    src={professional.imageUrl || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop"}
-                    alt={professional.name}
-                    width={224}
-                    height={224}
-                    className="w-full h-full object-cover"
-                    priority
-                  />
+                <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-[2rem] overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  {professional.imageUrl ? (
+                    <Image
+                      src={professional.imageUrl}
+                      alt={professional.name}
+                      width={224}
+                      height={224}
+                      className="w-full h-full object-cover"
+                      priority
+                    />
+                  ) : (
+                    <span className="text-4xl font-semibold text-slate-500">
+                      {professional.name
+                        .split(" ")
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join("")
+                        .toUpperCase()}
+                    </span>
+                  )}
                 </div>
                 {professional.verified && (
                   <div className="absolute -bottom-2 -right-2 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-800">
@@ -252,19 +272,22 @@ export default function ProfessionalProfileClient({
               className="flex-1 space-y-6"
             >
               <div className="space-y-2">
-                <div className="flex flex-wrap justify-center lg:justify-start gap-2">
-                  <Badge className="bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 border-none px-4 py-1 text-xs font-bold uppercase tracking-widest">
-                    {professional.specialty_data?.name || professional.specialty || professional.title}
-                  </Badge>
-                  {professional.verified && (
-                    <Badge className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900 px-4 py-1 text-xs font-bold">
-                      {isSpanish ? "Médico Verificado" : "Verified Doctor"}
-                    </Badge>
-                  )}
-                </div>
+                <p className="text-sm font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">
+                  {professional.specialty_data?.name || professional.specialty || professional.title}
+                </p>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                   {professional.name}
                 </h1>
+                {(professional.verified || (professional.yearsExperience != null && professional.yearsExperience > 0)) && (
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
+                    {professional.verified && (
+                      <span className="inline-flex items-center gap-1.5">✔ {isSpanish ? "Verificado en registro nacional" : "Verified in national registry"}</span>
+                    )}
+                    {professional.yearsExperience != null && professional.yearsExperience > 0 && (
+                      <span className="inline-flex items-center gap-1.5">👩‍⚕️ {professional.yearsExperience} {isSpanish ? "años de experiencia" : "years of experience"}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-slate-500 dark:text-slate-400">
@@ -275,7 +298,7 @@ export default function ProfessionalProfileClient({
                   </div>
                 )}
                 <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800">
-                  <span className="text-xl" role="img" aria-label="rating emoji">
+                  <span className="text-xl" role="img" aria-label="rating">
                     {professional.rating >= 4.5 ? "🤩" : 
                      professional.rating >= 3.5 ? "🙂" : 
                      professional.rating >= 2.5 ? "😐" : 
@@ -288,32 +311,16 @@ export default function ProfessionalProfileClient({
                     ({professional.reviewsCount || 0} {isSpanish ? "reseñas" : "reviews"})
                   </span>
                 </div>
-                {professional.yearsExperience > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Award className="h-4 w-4 text-teal-600" />
-                    <span className="text-sm font-medium">
-                      {professional.yearsExperience} {isSpanish ? "años de experiencia" : "years of experience"}
-                    </span>
-                  </div>
-                )}
               </div>
 
-              <div className="pt-2 flex flex-wrap justify-center lg:justify-start gap-3">
+              <div className="pt-2 flex flex-wrap justify-center lg:justify-start">
                 <Button
                   size="lg"
-                  onClick={() => setIsBookingOpen(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white font-bold h-12 px-8 rounded-xl shadow-xl shadow-teal-500/20 transition-all hover:scale-105 active:scale-95"
+                  onClick={handleOpenBooking}
+                  className="bg-teal-600 hover:bg-teal-700 text-white font-bold h-14 px-8 rounded-xl shadow-lg hover:shadow-xl shadow-teal-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  {isSpanish ? "Reservar ahora" : "Book now"}
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900"
-                >
-                  <Share2 className="h-4 w-4 mr-2" />
-                  {isSpanish ? "Compartir" : "Share"}
+                  <Calendar className="h-5 w-5 mr-2" />
+                  {isSpanish ? "Agendar cita" : "Book appointment"}
                 </Button>
               </div>
             </motion.div>
@@ -339,126 +346,64 @@ export default function ProfessionalProfileClient({
               transition={{ delay: 0.3 }}
               className="sticky top-24"
             >
-              <Card className="border-slate-200/60 dark:border-slate-800 shadow-2xl overflow-hidden">
-                <div className="bg-gradient-to-r from-teal-600 to-emerald-600 p-6 text-white">
-                  <p className="text-sm font-medium text-teal-100 mb-1">
-                    {isSpanish ? "Precio por consulta" : "Price per consultation"}
+              <Card className="border-slate-200/60 dark:border-slate-800 shadow-lg overflow-hidden">
+                <CardContent className="p-6 sm:p-8">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                    {isSpanish ? "Precio consulta" : "Consultation price"}
                   </p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold">
-                      ${Number(price).toLocaleString("es-CL")}
-                    </span>
-                    <span className="text-teal-200 text-sm">CLP</span>
-                  </div>
-                </div>
-
-                <CardContent className="p-6 space-y-6">
-                  <div className="flex flex-wrap gap-2">
-                    {hasTelemedicine && (
-                      <Badge className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
-                        <Video className="h-3 w-3 mr-1.5" />
-                        {isSpanish ? "Telemedicina" : "Telemedicine"}
-                      </Badge>
-                    )}
-                    {hasInPerson && (
-                      <Badge className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                        <Building2 className="h-3 w-3 mr-1.5" />
-                        {isSpanish ? "Presencial" : "In-Person"}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900">
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <span className="text-lg leading-none">
-                          {professional.rating >= 4.5 ? "🤩" : 
-                           professional.rating >= 3.5 ? "🙂" : "😐"}
-                        </span>
-                        <span className="font-bold text-slate-900 dark:text-white">
-                          {professional.rating ? professional.rating.toFixed(1) : "4.9"}
-                        </span>
-                      </div>
-                      <p className="text-[10px] uppercase font-bold tracking-tighter text-slate-500">
-                        {professional.reviewsCount || 0} {isSpanish ? "reseñas" : "reviews"}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 rounded-xl bg-slate-50 dark:bg-slate-900">
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <Clock className="h-4 w-4 text-teal-600" />
-                        <span className="font-bold text-slate-900 dark:text-white">60</span>
-                      </div>
-                      <p className="text-xs text-slate-500">
-                        {isSpanish ? "min/sesión" : "min/session"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {professional.availableToday && (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                  <p className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-6">
+                    ${Number(price).toLocaleString("es-CL")}{" "}
+                    <span className="text-lg font-bold text-slate-500 dark:text-slate-400">CLP</span>
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    {professional.availableToday && (
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
                         {isSpanish ? "Disponible hoy" : "Available today"}
                       </span>
-                    </div>
-                  )}
-
-                  <Separator className="bg-slate-200 dark:bg-slate-800" />
-
-                  <div className="space-y-3">
-                    <Button
-                      size="lg"
-                      className={cn(
-                        "w-full h-14 text-base font-semibold rounded-xl",
-                        "bg-gradient-to-r from-teal-600 to-emerald-600",
-                        "hover:from-teal-700 hover:to-emerald-700",
-                        "shadow-lg shadow-teal-500/20"
-                      )}
-                      onClick={() => setIsBookingOpen(true)}
-                    >
-                      <Calendar className="h-5 w-5 mr-2" />
-                      {isSpanish ? "Agendar Cita" : "Book Appointment"}
-                    </Button>
-                    
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="w-full h-12 rounded-xl border-2 border-slate-200 dark:border-slate-700"
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      {isSpanish ? "Enviar Mensaje" : "Send Message"}
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-2 pt-2">
-                    <ShieldCheck className="h-4 w-4 text-slate-400" />
-                    <span className="text-xs text-slate-500">
-                      {isSpanish ? "Pago seguro garantizado" : "Secure payment guaranteed"}
+                    )}
+                    <span className="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
+                      <Clock className="h-4 w-4 text-teal-600" />
+                      {professional.slotDuration || 60} {isSpanish ? "min" : "min"}
                     </span>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                    {hasTelemedicine && hasInPerson
+                      ? isSpanish ? "Online / Presencial" : "Online / In-person"
+                      : hasTelemedicine
+                        ? (isSpanish ? "Online" : "Online")
+                        : isSpanish ? "Presencial" : "In-person"}
+                  </p>
+                  <Button
+                    size="lg"
+                    className={cn(
+                      "w-full h-14 rounded-xl text-base font-bold shadow-md hover:shadow-lg transition-shadow",
+                      "bg-teal-600 hover:bg-teal-700 text-white"
+                    )}
+                    onClick={handleOpenBooking}
+                  >
+                    <Calendar className="h-5 w-5 mr-2 shrink-0" />
+                    {isSpanish ? "Agendar cita" : "Book appointment"}
+                  </Button>
+                  <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center leading-relaxed">
+                      {isSpanish
+                        ? "Pago coordinado directamente con el especialista"
+                        : "Payment coordinated directly with the specialist"}
+                    </p>
+                  </div>
+                  <div className="flex justify-center mt-4">
+                    <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                      <Share2 className="h-4 w-4 mr-2" />
+                      {isSpanish ? "Compartir perfil" : "Share profile"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
-
-              <div className="hidden lg:flex justify-center mt-4">
-                <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-700">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  {isSpanish ? "Compartir perfil" : "Share profile"}
-                </Button>
-              </div>
             </motion.div>
           </div>
         </div>
       </section>
-
-      <BookingModal
-        isOpen={isBookingOpen}
-        onClose={() => setIsBookingOpen(false)}
-        professionalId={professional.id}
-        professionalName={professional?.name ?? "the specialist"}
-        stellarWallet={professional?.stellarWallet ?? null}
-        offersInPerson={hasInPerson ?? true}
-        isSpanish={isSpanish}
-      />
 
       <Footer />
     </main>

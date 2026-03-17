@@ -19,9 +19,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { CreditCard, Coins, TrendingUp, Users, Wallet } from "lucide-react"
 
-// Mock Data - En producción esto vendría de un endpoint consolidado (Supabase + Stripe API)
+// Mock Data - En producción esto vendría de un endpoint consolidado (Supabase + Mercado Pago)
 const REVENUE_DATA = [
-  { name: "Stripe (Fiat)", value: 7500, color: "#0d9488" }, // Teal 600
+  { name: "Mercado Pago", value: 7500, color: "#0d9488" }, // Teal 600
   { name: "Stellar (USDC)", value: 2500, color: "#8b5cf6" }, // Violet 500
 ]
 
@@ -29,7 +29,7 @@ const TRANSACTION_HISTORY = [
   { 
     id: "TX_9921", 
     user: "Dr. Juan Perez", 
-    method: "Stripe", 
+    method: "Mercado Pago", 
     amount: "$25,000", 
     date: "2026-03-15", 
     status: "Active",
@@ -47,7 +47,7 @@ const TRANSACTION_HISTORY = [
   { 
     id: "TX_9920", 
     user: "Dra. Ana Gomez", 
-    method: "Stripe", 
+    method: "Mercado Pago", 
     amount: "$25,000", 
     date: "2026-03-14", 
     status: "Active",
@@ -76,7 +76,7 @@ export function RevenueMetrics() {
         <Card className="bg-slate-900 border-white/5 text-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
-              <CreditCard className="w-4 h-4" /> Transacciones Stripe
+              <CreditCard className="w-4 h-4" /> Suscripciones
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -135,7 +135,7 @@ export function RevenueMetrics() {
         <Card className="bg-slate-900 border-white/5 text-white">
           <CardHeader>
             <CardTitle>Últimas Transacciones</CardTitle>
-            <CardDescription className="text-slate-500">Historial unificado Stripe y Stellar</CardDescription>
+            <CardDescription className="text-slate-500">Suscripciones y actividad</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>

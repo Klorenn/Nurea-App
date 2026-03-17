@@ -9,7 +9,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Badge } from "@/components/ui/badge"
 import type { SpecialtyWithCount } from "@/types"
 
 interface SpecialtyComboboxProps {
@@ -66,30 +65,27 @@ export function SpecialtyCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between rounded-xl bg-accent/20 border-border/40 hover:bg-accent/40"
+          className="w-full justify-between items-center rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 min-h-10"
           disabled={loading}
         >
           {selectedSpecialty ? (
-            <span className="flex items-center gap-2">
-              <span>{selectedSpecialty.icon}</span>
-              <span className="truncate">{selectedSpecialty.name}</span>
-            </span>
+            <span className="truncate">{selectedSpecialty.name}</span>
           ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
+            <span className="text-slate-500">{placeholder}</span>
           )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-slate-400" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-0" align="start">
-        <div className="p-2 border-b border-border/40">
+      <PopoverContent className="w-[320px] p-0 rounded-lg border-slate-200 dark:border-slate-700 shadow-lg" align="start">
+        <div className="p-2 border-b border-slate-100 dark:border-slate-800">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
               placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-transparent border-none outline-none placeholder:text-slate-400 text-slate-900 dark:text-slate-100"
             />
             {search && (
               <button
@@ -109,24 +105,24 @@ export function SpecialtyCombobox({
               setOpen(false)
             }}
             className={cn(
-              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-accent/50 transition-colors",
-              !selected && "bg-accent"
+              "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+              !selected ? "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100" : "hover:bg-slate-50 dark:hover:bg-slate-800"
             )}
           >
             <span className="w-4 h-4 flex items-center justify-center">
               {!selected && <Check className="h-4 w-4" />}
             </span>
-            <span>✨ {allSpecialties}</span>
+            <span>{allSpecialties}</span>
           </button>
 
           {Object.entries(filteredGrouped).length === 0 ? (
-            <div className="px-3 py-6 text-sm text-center text-muted-foreground">
+            <div className="px-3 py-6 text-sm text-center text-slate-500">
               {noResults}
             </div>
           ) : (
             Object.entries(filteredGrouped).map(([categorySlug, specs]) => (
               <div key={categorySlug} className="mt-2">
-                <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   {specs[0]?.categoryName || categorySlug}
                 </div>
                 {specs.map((specialty) => (
@@ -137,19 +133,18 @@ export function SpecialtyCombobox({
                       setOpen(false)
                     }}
                     className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-accent/50 transition-colors",
-                      selected === specialty.slug && "bg-accent"
+                      "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
+                      selected === specialty.slug
+                        ? "bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300"
+                        : "hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                     )}
                   >
-                    <span className="w-4 h-4 flex items-center justify-center">
+                    <span className="w-4 h-4 flex items-center justify-center shrink-0">
                       {selected === specialty.slug && <Check className="h-4 w-4" />}
                     </span>
-                    <span>{specialty.icon}</span>
                     <span className="flex-1 text-left truncate">{specialty.name}</span>
-                    {specialty.professionalCount > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {specialty.professionalCount}
-                      </Badge>
+                    {specialty.professionalCount != null && specialty.professionalCount > 0 && (
+                      <span className="text-xs text-slate-400">{specialty.professionalCount}</span>
                     )}
                   </button>
                 ))}

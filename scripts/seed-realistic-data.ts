@@ -44,7 +44,7 @@ const professionalsData = [
       avatar_url: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop&auto=format',
     },
     professional: {
-      specialty: 'Psicología Clínica',
+      specialty: 'Psicólogo',
       bio: 'Psicóloga clínica con especialización en terapia cognitivo-conductual y manejo de ansiedad. Más de 8 años de experiencia ayudando a pacientes a superar desafíos emocionales y mejorar su bienestar mental.',
       bio_extended: 'Licenciada en Psicología de la Universidad de Chile, con Magíster en Psicología Clínica. Certificada en Terapia Cognitivo-Conductual (TCC) y Mindfulness. Experiencia trabajando con adultos y adolescentes en temas de ansiedad, depresión, estrés y relaciones interpersonales. Enfoque empático y orientado a resultados.',
       consultation_type: 'both',
@@ -100,7 +100,7 @@ const professionalsData = [
       avatar_url: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400&h=400&fit=crop&auto=format',
     },
     professional: {
-      specialty: 'Nutrición y Dietética',
+      specialty: 'Nutricionista',
       bio: 'Nutricionista clínico especializado en control de peso, nutrición deportiva y manejo de enfermedades crónicas. Enfoque en alimentación saludable y sostenible.',
       bio_extended: 'Nutricionista Universidad de Valparaíso, con Diplomado en Nutrición Deportiva y Certificación en Manejo de Diabetes. Experiencia en consulta privada y atención en clínicas. Ayudo a mis pacientes a alcanzar sus objetivos de salud a través de planes nutricionales personalizados y realistas.',
       consultation_type: 'both',
@@ -156,7 +156,7 @@ const professionalsData = [
       avatar_url: 'https://images.unsplash.com/photo-1594824694479-07ae59e0e02b?w=400&h=400&fit=crop&auto=format',
     },
     professional: {
-      specialty: 'Kinesiología y Rehabilitación',
+      specialty: 'Kinesiólogo',
       bio: 'Kinesióloga especializada en rehabilitación deportiva y terapia física. Certificada en técnicas de punción seca y terapia manual avanzada.',
       bio_extended: 'Kinesióloga Universidad de Concepción, con especialización en Rehabilitación Deportiva. Certificada en Punción Seca, Terapia Manual Ortopédica y Drenaje Linfático. Experiencia trabajando con deportistas de élite y pacientes con lesiones musculoesqueléticas. Enfoque integral y personalizado en cada tratamiento.',
       consultation_type: 'in-person',
@@ -212,7 +212,7 @@ const professionalsData = [
       avatar_url: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=400&h=400&fit=crop&auto=format',
     },
     professional: {
-      specialty: 'Medicina General',
+      specialty: 'Médico general',
       bio: 'Médico general con amplia experiencia en atención primaria y medicina familiar. Enfoque preventivo y atención integral del paciente.',
       bio_extended: 'Médico Cirujano Universidad de Chile, con especialización en Medicina Familiar. Más de 12 años de experiencia en atención primaria y consulta privada. Experto en manejo de patologías comunes, medicina preventiva y seguimiento de enfermedades crónicas. Enfoque humanista y cercano con los pacientes.',
       consultation_type: 'both',
@@ -308,13 +308,12 @@ async function seedProfessionals() {
           id: professionalId,
           first_name: profile.first_name,
           last_name: profile.last_name,
-          email: profile.email,
           avatar_url: profile.avatar_url,
           role: 'professional',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, {
-          onConflict: 'email'
+          onConflict: 'id'
         })
 
       if (profileError) {
@@ -364,13 +363,12 @@ async function seedPatients() {
           id: patientId,
           first_name: profile.first_name,
           last_name: profile.last_name,
-          email: profile.email,
           avatar_url: profile.avatar_url,
           role: 'patient',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, {
-          onConflict: 'email'
+          onConflict: 'id'
         })
 
       if (profileError) {

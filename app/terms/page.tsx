@@ -45,13 +45,16 @@ export default function TermsPage() {
             </p>
 
             <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mt-10 mb-4">
-              3. Comisiones, Agendamiento y Pagos
+              3. Agendamiento, Coordinación y Pagos
             </h2>
             <p className="text-slate-600 dark:text-slate-300">
-              Los pagos realizados mediante NUREA son procesados a través de intermediarios financieros regulados (Stripe). NUREA retiene, de manera automática, una <strong>comisión del 5%</strong> sobre el costo de la consulta del profesional por concepto de costos de intermediación, pasarela de pagos y mantenimiento de la plataforma tecnológica. 
+              NUREA conecta pacientes con profesionales de la salud. La <strong>coordinación y el pago de la consulta</strong> se realizan directamente entre el paciente y el especialista, por ejemplo a través del chat seguro de la plataforma (enlaces de pago externos, transferencia, instrucciones y horarios). NUREA no actúa como intermediario financiero de las consultas ni retiene comisiones por ellas.
             </p>
             <p className="text-slate-600 dark:text-slate-300 mt-4">
-              Los reembolsos al paciente derivadas de inasistencias injustificadas por parte del profesional se gestionarán íntegramente a través de la plataforma, restituyendo los fondos al usuario con base en los protocolos operativos.
+              Los profesionales pueden abonar una suscripción para acceder a las herramientas de la plataforma (agenda, perfil, mensajería). Dicha suscripción se factura por medios propios de NUREA (por ejemplo Mercado Pago) y es independiente del pago de las consultas.
+            </p>
+            <p className="text-slate-600 dark:text-slate-300 mt-4">
+              Cualquier reembolso o disputa relacionada con el pago de una consulta es materia exclusiva entre el paciente y el profesional.
             </p>
 
             <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mt-10 mb-4">

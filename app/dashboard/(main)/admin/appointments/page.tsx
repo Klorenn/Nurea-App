@@ -30,8 +30,11 @@ export default function AdminAppointmentsPage() {
         .from("appointments")
         .select(`
           *,
-          patient:profiles!appointments_patient_id_fkey(id, first_name, last_name, email),
-          professional:profiles!appointments_professional_id_fkey(id, first_name, last_name, email)
+          patient:profiles!appointments_patient_id_fkey(id, first_name, last_name),
+          professional:professionals!appointments_professional_id_fkey(
+            id,
+            profile:profiles(id, first_name, last_name)
+          )
         `)
         .order("appointment_date", { ascending: false })
         .order("appointment_time", { ascending: false })
@@ -55,12 +58,12 @@ export default function AdminAppointmentsPage() {
 
   const filteredAppointments = appointments.filter((apt) => {
     const query = searchQuery.toLowerCase()
+    const professionalProfile = apt.professional?.profile
     return (
       apt.patient?.first_name?.toLowerCase().includes(query) ||
       apt.patient?.last_name?.toLowerCase().includes(query) ||
-      apt.professional?.first_name?.toLowerCase().includes(query) ||
-      apt.professional?.last_name?.toLowerCase().includes(query) ||
-      apt.patient?.email?.toLowerCase().includes(query)
+      professionalProfile?.first_name?.toLowerCase().includes(query) ||
+      professionalProfile?.last_name?.toLowerCase().includes(query)
     )
   })
 
@@ -168,11 +171,11 @@ export default function AdminAppointmentsPage() {
                               <div className="space-y-1 text-sm text-muted-foreground">
                                 <p>
                                   <strong className="text-foreground">{isSpanish ? "Paciente:" : "Patient:"}</strong>{" "}
-                                  {apt.patient?.first_name} {apt.patient?.last_name} ({apt.patient?.email})
+                                  {apt.patient?.first_name} {apt.patient?.last_name}
                                 </p>
                                 <p>
                                   <strong className="text-foreground">{isSpanish ? "Profesional:" : "Professional:"}</strong>{" "}
-                                  {apt.professional?.first_name} {apt.professional?.last_name}
+                                   {apt.professional?.profile?.first_name} {apt.professional?.profile?.last_name}
                                 </p>
                                 {apt.price && (
                                   <p>

@@ -109,9 +109,9 @@ export const WelcomeGuidePDF = ({ doctorName, slug }: PDFProps) => (
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>3. Configura tus Pagos (Stripe)</Text>
+          <Text style={styles.cardTitle}>3. Suscripción y acceso</Text>
           <Text style={styles.cardText}>
-            Vincula tu cuenta bancaria. NUREA solo retiene un 5% de comisión por cada transacción exitosa, cubriendo pasarela de pagos y soporte legal.
+            Activa tu suscripción en la sección Planes (Mercado Pago) para acceder a agenda, perfil y chat. El cobro de consultas se coordina directamente con tus pacientes por chat.
           </Text>
         </View>
 

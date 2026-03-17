@@ -71,7 +71,8 @@ import {
   addWeeks, 
   subWeeks,
   isSameHour,
-  startOfHour
+  startOfHour,
+  subDays
 } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 import { toast } from "sonner"
@@ -100,7 +101,11 @@ interface Appointment {
   }
 }
 
-type ViewMode = "day" | "week" | "list"
+import { ProfessionalCalendar } from "@/components/dashboard/professional-calendar"
+import { AddPatientModal } from "@/components/calendar/modals/add-patient-modal"
+import { AddAppointmentModal } from "@/components/calendar/modals/add-appointment-modal"
+
+type CalendarViewMode = "monthly" | "weekly" | "daily"
 
 export default function ProfessionalAppointmentsPage() {
   const { language } = useLanguage()
@@ -109,13 +114,16 @@ export default function ProfessionalAppointmentsPage() {
   const locale = isSpanish ? es : enUS
 
   const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [patients, setPatients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<ViewMode>("week")
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
-  
-  // Filters
-  const [filterType, setFilterType] = useState<string>("all")
-  const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [viewMode, setViewMode] = useState<CalendarViewMode>("weekly")
+  const [availability, setAvailability] = useState<Record<string, any> | null>(null)
+
+  // Modal states
+  const [addPatientOpen, setAddPatientOpen] = useState(false)
+  const [addAppointmentOpen, setAddAppointmentOpen] = useState(false)
+  const [appointmentInitialDate, setAppointmentInitialDate] = useState<Date | undefined>()
 
   // Actions state
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -123,14 +131,19 @@ export default function ProfessionalAppointmentsPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
 
+  // Reschedule state
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false)
+  const [newDate, setNewDate] = useState("")
+  const [newTime, setNewTime] = useState("")
+
   const loadAppointments = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // For calendar views, we load a broader range (e.g., month around current date)
-      const rangeStart = format(subWeeks(startOfWeek(currentDate), 2), "yyyy-MM-dd")
-      const rangeEnd = format(addWeeks(endOfWeek(currentDate), 2), "yyyy-MM-dd")
+      // Load a broad range for calendar
+      const rangeStart = format(subMonths(startOfMonth(currentDate), 1), "yyyy-MM-dd")
+      const rangeEnd = format(addMonths(endOfMonth(currentDate), 1), "yyyy-MM-dd")
 
       const { data, error } = await supabase
         .from("appointments")
@@ -143,13 +156,11 @@ export default function ProfessionalAppointmentsPage() {
           status,
           payment_status,
           price,
-          notes,
           meeting_link,
-          patient:profiles!appointments_patient_id_fkey(
+          patient:patient_id(
             id,
             first_name,
             last_name,
-            email,
             avatar_url,
             phone
           )
@@ -161,16 +172,11 @@ export default function ProfessionalAppointmentsPage() {
         .order("appointment_time", { ascending: true })
 
       if (error) {
-        console.error("Error loading appointments:", error)
+        console.error("Error loading appointments:", error.message || error)
         return
       }
 
-      const typedData = (data || []).map((apt) => ({
-        ...apt,
-        patient: apt.patient as unknown as Appointment["patient"],
-      })) as Appointment[]
-
-      setAppointments(typedData)
+      setAppointments((data || []) as unknown as Appointment[])
     } catch (error) {
       console.error("Error:", error)
     } finally {
@@ -178,31 +184,60 @@ export default function ProfessionalAppointmentsPage() {
     }
   }, [supabase, currentDate])
 
+  const loadAvailability = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("availability")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      if (error) {
+        console.error("Error loading availability:", error.message || error)
+        return
+      }
+
+      if (data?.availability) {
+        setAvailability(data.availability as Record<string, any>)
+      } else {
+        setAvailability(null)
+      }
+    } catch (error) {
+      console.error("Error loading availability:", error)
+    }
+  }, [supabase])
+
+  const loadPatients = useCallback(async () => {
+    try {
+      const response = await fetch('/api/professional/patients')
+      const data = await response.json()
+      if (data.success) {
+        setPatients(data.patients)
+      }
+    } catch (err) {
+      console.error("Error loading patients:", err)
+    }
+  }, [])
+
   useEffect(() => {
     loadAppointments()
+    loadAvailability()
+    loadPatients()
     
-    // Set up Real-time subscription
     const channel = supabase
-      .channel('pro_appointments_realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments'
-        },
-        (payload) => {
-          console.log('Realtime change:', payload)
-          loadAppointments()
-          toast.info(isSpanish ? "Agenda actualizada" : "Schedule updated")
-        }
-      )
+      .channel('pro_appointments_realtime_v2')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
+        loadAppointments()
+      })
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [loadAppointments, supabase, isSpanish])
+  }, [loadAppointments, loadAvailability, loadPatients, supabase])
 
   // --- Handlers ---
   const handleComplete = async () => {
@@ -211,10 +246,7 @@ export default function ProfessionalAppointmentsPage() {
     try {
       const { error } = await supabase
         .from("appointments")
-        .update({ 
-          status: "completed",
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: "completed", updated_at: new Date().toISOString() })
         .eq("id", selectedAppointment.id)
 
       if (error) throw error
@@ -236,16 +268,11 @@ export default function ProfessionalAppointmentsPage() {
       const response = await fetch("/api/appointments/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          appointmentId: selectedAppointment.id,
-          reason: "Cancelled by professional",
-          initiatedBy: "professional"
-        }),
+        body: JSON.stringify({ appointmentId: selectedAppointment.id }),
       })
 
       if (!response.ok) throw new Error("Failed")
-      
-      toast.success(isSpanish ? "Cita cancelada y reembolso procesado" : "Cancelled and refunded")
+      toast.success(isSpanish ? "Cita cancelada" : "Cancelled")
       setCancelDialogOpen(false)
       setSelectedAppointment(null)
       loadAppointments()
@@ -256,295 +283,103 @@ export default function ProfessionalAppointmentsPage() {
     }
   }
 
-  // --- Helpers ---
-  const filteredAppointments = useMemo(() => {
-    return appointments.filter(apt => {
-      if (filterType !== 'all' && apt.type !== filterType) return false
-      if (filterStatus !== 'all' && apt.status !== filterStatus) return false
-      return true
-    })
-  }, [appointments, filterType, filterStatus])
+  const handleReschedule = async () => {
+    if (!selectedAppointment || !newDate || !newTime) return
+    setActionLoading(selectedAppointment.id)
+    try {
+      const response = await fetch("/api/appointments/reschedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId: selectedAppointment.id, newDate, newTime }),
+      })
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed': return 'bg-teal-500'
-      case 'pending': return 'bg-amber-500'
-      case 'completed': return 'bg-blue-500'
-      case 'cancelled': return 'bg-red-400'
-      default: return 'bg-slate-400'
+      if (!response.ok) throw new Error("Failed")
+      toast.success(isSpanish ? "Cita reagendada" : "Rescheduled")
+      setRescheduleDialogOpen(false)
+      setSelectedAppointment(null)
+      loadAppointments()
+    } catch (err) {
+      toast.error("Error")
+    } finally {
+      setActionLoading(null)
     }
   }
 
-  const hours = Array.from({ length: 15 }, (_, i) => i + 7) // 7 AM to 10 PM
-
-  // --- Views ---
-  const WeekView = () => {
-    const start = startOfWeek(currentDate, { weekStartsOn: 1 })
-    const end = endOfWeek(currentDate, { weekStartsOn: 1 })
-    const days = eachDayOfInterval({ start, end })
-
-    return (
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        <div className="grid grid-cols-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-          <div className="p-4 border-r border-slate-100 dark:border-slate-800 text-[10px] font-bold uppercase text-slate-400 flex items-end justify-center">Hora</div>
-          {days.map(day => (
-            <div key={day.toString()} className={cn(
-              "p-4 border-r border-slate-100 dark:border-slate-800 text-center",
-              isToday(day) && "bg-teal-50/30"
-            )}>
-              <span className="block text-[10px] font-bold uppercase text-slate-400 mb-1">{format(day, "EEE", { locale })}</span>
-              <span className={cn(
-                "w-8 h-8 flex items-center justify-center mx-auto rounded-full text-sm font-black",
-                isToday(day) ? "bg-teal-600 text-white" : "text-slate-900 dark:text-white"
-              )}>{format(day, "d")}</span>
-            </div>
-          ))}
-        </div>
-        <div className="relative">
-          {hours.map(hour => (
-            <div key={hour} className="grid grid-cols-8 border-b border-slate-50 dark:border-slate-800/50 group h-24">
-              <div className="p-2 border-r border-slate-100 dark:border-slate-800 text-[11px] font-medium text-slate-500 text-center">
-                {format(new Date().setHours(hour, 0), "HH:mm")}
-              </div>
-              {days.map(day => {
-                const dayStr = format(day, "yyyy-MM-dd")
-                const hourStr = `${hour.toString().padStart(2, '0')}:00`
-                const apts = filteredAppointments.filter(a => a.appointment_date === dayStr && a.appointment_time.startsWith(hour.toString().padStart(2, '0')))
-                
-                return (
-                  <div key={day.toString()} className={cn(
-                    "border-r border-slate-100 dark:border-slate-800 relative group/cell p-0.5",
-                    isToday(day) && "bg-teal-50/10"
-                  )}>
-                    {apts.map(apt => (
-                      <div 
-                        key={apt.id}
-                        onClick={() => setSelectedAppointment(apt)}
-                        className={cn(
-                          "absolute inset-x-1 rounded-lg border-l-4 shadow-sm p-1.5 cursor-pointer hover:scale-[1.02] transition-transform z-10 overflow-hidden",
-                          apt.status === 'confirmed' ? "bg-teal-50 border-teal-500 text-teal-800" :
-                          apt.status === 'pending' ? "bg-amber-50 border-amber-500 text-amber-800" :
-                          apt.status === 'completed' ? "bg-blue-50 border-blue-500 text-blue-800" :
-                          "bg-slate-50 border-slate-500 text-slate-800"
-                        )}
-                        style={{ height: '90%' }}
-                      >
-                        <div className="text-[10px] font-black truncate leading-tight">{apt.patient.first_name} {apt.patient.last_name}</div>
-                        <div className="flex items-center gap-1 opacity-70 mt-0.5">
-                           {apt.type === 'online' ? <Video className="h-2 w-2" /> : <Building2 className="h-2 w-2" />}
-                           <span className="text-[9px] font-bold">{apt.appointment_time.slice(0,5)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  const DayView = () => {
-    const dayStr = format(currentDate, "yyyy-MM-dd")
-    const apts = filteredAppointments.filter(a => a.appointment_date === dayStr)
-
-    return (
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        <div className="grid grid-cols-[100px_1fr] h-[700px]">
-          <div className="border-r border-slate-100 dark:border-slate-800 flex flex-col pt-4">
-             {hours.map(hour => (
-               <div key={hour} className="h-24 text-center text-[11px] font-bold text-slate-400 group relative">
-                 <span className="sticky top-4">{format(new Date().setHours(hour, 0), "HH:mm")}</span>
-                 <div className="absolute w-full border-b border-slate-100 dark:border-slate-800 top-0 left-0" />
-               </div>
-             ))}
-          </div>
-          <div className="relative p-0 pt-4 flex-1">
-             {apts.length === 0 && (
-               <div className="absolute inset-0 flex flex-col items-center justify-center opacity-30 grayscale">
-                 <CalendarX className="h-16 w-16 mb-4" />
-                 <p className="font-bold">No hay citas para este día</p>
-               </div>
-             )}
-             {apts.map(apt => {
-               const hourStart = parseInt(apt.appointment_time.split(':')[0])
-               const minStart = parseInt(apt.appointment_time.split(':')[1])
-               const top = (hourStart - 7) * 96 + (minStart / 60) * 96
-               const height = (apt.duration_minutes / 60) * 96
-
-               return (
-                 <div 
-                   key={apt.id}
-                   onClick={() => setSelectedAppointment(apt)}
-                   className={cn(
-                     "absolute left-4 right-8 rounded-2xl border flex flex-col p-4 cursor-pointer hover:shadow-lg transition-all z-10 group overflow-hidden",
-                     apt.status === 'confirmed' ? "bg-teal-50/80 border-teal-500/30 text-teal-900" :
-                     apt.status === 'pending' ? "bg-amber-50/80 border-amber-500/30 text-amber-900" :
-                     apt.status === 'completed' ? "bg-blue-50/80 border-blue-500/30 text-blue-900" :
-                     "bg-slate-50/80 border-slate-500/30 text-slate-900"
-                   )}
-                   style={{ top: `${top}px`, height: `${height}px` }}
-                 >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                         <Avatar className="h-10 w-10 border-2 border-white">
-                           <AvatarImage src={apt.patient.avatar_url} />
-                           <AvatarFallback>{apt.patient.first_name[0]}</AvatarFallback>
-                         </Avatar>
-                         <div>
-                            <p className="text-sm font-black">{apt.patient.first_name} {apt.patient.last_name}</p>
-                            <div className="flex items-center gap-2 opacity-60">
-                               <Clock className="h-3 w-3" />
-                               <span className="text-xs font-bold">{apt.appointment_time.slice(0,5)} • {apt.duration_minutes} min</span>
-                            </div>
-                         </div>
-                      </div>
-                      <Badge className={cn("rounded-full uppercase text-[10px] font-black", apt.status === 'confirmed' ? "bg-teal-100 text-teal-700" : "bg-slate-200")}>
-                        {apt.status}
-                      </Badge>
-                    </div>
-                 </div>
-               )
-             })}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-8 max-w-[1400px] mx-auto pb-10 px-4 sm:px-0">
-      
-      {/* --- HEADER --- */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div>
-           <div className="flex items-center gap-3 mb-2">
-             <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
-               <CalendarDays className="h-6 w-6" />
-             </div>
-             <h1 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase italic">Command Center <span className="text-teal-600">Nurea</span></h1>
-           </div>
-           <p className="text-slate-500 font-bold ml-1">{isSpanish ? "Gestiona tu jornada profesional en tiempo real." : "Manage your professional day in real-time."}</p>
-        </div>
-
-        <div className="flex gap-2 flex-wrap">
-           <Card className="flex items-center p-1 rounded-xl bg-slate-100/50 border-slate-200">
-              <Button 
-                variant={viewMode === 'day' ? 'default' : 'ghost'} 
-                size="sm" 
-                onClick={() => setViewMode('day')}
-                className={cn("rounded-lg h-8 px-4 font-bold text-xs", viewMode === 'day' && "bg-white shadow-sm text-teal-600 hover:bg-white")}
-              >Diario</Button>
-              <Button 
-                variant={viewMode === 'week' ? 'default' : 'ghost'} 
-                size="sm" 
-                onClick={() => setViewMode('week')}
-                className={cn("rounded-lg h-8 px-4 font-bold text-xs", viewMode === 'week' && "bg-white shadow-sm text-teal-600 hover:bg-white")}
-              >Semanal</Button>
-           </Card>
-
-           <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-sm px-4">
-              <Button variant="ghost" size="icon" onClick={() => setCurrentDate(subDays(currentDate, viewMode === 'week' ? 7 : 1))} className="h-8 w-8 rounded-lg outline-none"><ChevronLeft className="h-4 w-4" /></Button>
-              <span className="text-xs font-black uppercase tracking-wider mx-2 whitespace-nowrap">
-                {format(currentDate, viewMode === 'week' ? "'Semana de' d MMM" : "d 'de' MMMM", { locale })}
-              </span>
-              <Button variant="ghost" size="icon" onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'week' ? 7 : 1))} className="h-8 w-8 rounded-lg outline-none"><ChevronRight className="h-4 w-4" /></Button>
-           </div>
-
-           <Button 
-             variant="outline" 
-             onClick={loadAppointments} 
-             className="rounded-xl border-slate-200 h-10 hover:bg-teal-50 hover:text-teal-600 transition-colors"
-           >
-             <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-             Sincronizar
-           </Button>
-        </div>
+    <div className="space-y-8 max-w-[1600px] mx-auto pb-10 h-[calc(100vh-10rem)] flex flex-col scale-[0.98] origin-top">
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-950 rounded-2xl overflow-hidden shadow-2xl">
+        <ProfessionalCalendar
+          appointments={appointments}
+          isLoading={loading}
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          viewMode={viewMode}
+          onViewChange={(v) => setViewMode(v as CalendarViewMode)}
+          onAppointmentClick={(apt) => setSelectedAppointment(apt)}
+          availability={availability ?? undefined}
+          onAddAppointment={(date, time) => {
+            setAppointmentInitialDate(date)
+            setAddAppointmentOpen(true)
+          }}
+        />
       </div>
 
-      {/* --- FILTERS & QUICK STATS --- */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="md:col-span-3 border-transparent bg-slate-100/30 p-4 flex flex-wrap gap-4 items-center rounded-2xl">
-           <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-slate-400" />
-              <span className="text-[10px] font-black uppercase text-slate-400">Filtrar por:</span>
-           </div>
-           <div className="flex gap-2">
-              {['all', 'online', 'in-person'].map(t => (
-                <Badge 
-                  key={t}
-                  onClick={() => setFilterType(t)}
-                  className={cn(
-                    "cursor-pointer uppercase text-[9px] font-black h-7 px-3 rounded-full transition-all border-2",
-                    filterType === t ? "bg-teal-600 text-white border-teal-600" : "bg-white text-slate-500 border-slate-100 hover:border-teal-200"
-                  )}
-                >
-                  {t === 'all' ? 'Todos' : t === 'online' ? 'Videollamada' : 'Presencial'}
-                </Badge>
-              ))}
-           </div>
-           <Separator orientation="vertical" className="h-6 mx-2 hidden sm:block" />
-           <div className="flex gap-2">
-              {['all', 'confirmed', 'pending', 'completed'].map(s => (
-                <Badge 
-                  key={s}
-                  onClick={() => setFilterStatus(s)}
-                  className={cn(
-                    "cursor-pointer uppercase text-[9px] font-black h-7 px-3 rounded-full transition-all border-2",
-                    filterStatus === s ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-500 border-slate-100 hover:border-teal-200"
-                  )}
-                >
-                  {s === 'all' ? 'Todos los estados' : s}
-                </Badge>
-              ))}
-           </div>
-        </Card>
-        
-        <Card className="bg-teal-600 rounded-2xl p-4 text-white shadow-xl shadow-teal-500/20 flex flex-col justify-center">
-           <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black uppercase opacity-70">Citas {filterStatus === 'all' ? 'Totales' : filterStatus}</p>
-              <CalendarCheck className="h-4 w-4 opacity-50" />
-           </div>
-           <p className="text-3xl font-black">{filteredAppointments.length}</p>
-        </Card>
-      </div>
+      {/* Modals & Dialogs */}
+      <AddPatientModal 
+        open={addPatientOpen} 
+        onOpenChange={setAddPatientOpen} 
+        onSuccess={() => {
+          loadPatients()
+          setAddAppointmentOpen(true)
+        }} 
+      />
 
-      {/* --- MAIN CALENDAR VIEW --- */}
-      {viewMode === 'week' ? <WeekView /> : <DayView />}
+      <AddAppointmentModal 
+        open={addAppointmentOpen} 
+        onOpenChange={setAddAppointmentOpen} 
+        patients={patients}
+        initialDate={appointmentInitialDate}
+        onSuccess={() => loadAppointments()}
+      />
 
-
-      {/* --- APPOINTMENT SHEET (COMMAND DRAWER) --- */}
+      {/* Existing Appointment Detail Sheet & Dialogs Adapted */}
       <Sheet open={!!selectedAppointment} onOpenChange={(open) => !open && setSelectedAppointment(null)}>
         <SheetContent className="sm:max-w-md bg-white dark:bg-slate-950 p-0 overflow-hidden rounded-l-[2rem] border-none shadow-2xl">
           {selectedAppointment && (
             <div className="flex flex-col h-full">
                <div className={cn(
-                 "p-8 pt-12 text-white relative",
-                 getStatusColor(selectedAppointment.status)
+                 "p-8 pt-12 text-white relative bg-teal-600",
+                 selectedAppointment.status === 'confirmed' ? "bg-teal-600" :
+                 selectedAppointment.status === 'pending' ? "bg-amber-500" :
+                 selectedAppointment.status === 'completed' ? "bg-blue-600" :
+                 "bg-slate-500"
                )}>
-                  <div className="absolute top-8 right-8 flex gap-2">
-                     <Badge className="bg-white/20 backdrop-blur-md text-white border-none font-black uppercase text-[10px]">{selectedAppointment.type}</Badge>
-                  </div>
                   <div className="flex items-center gap-4 mb-6">
                     <Avatar className="h-20 w-20 border-4 border-white/20 shadow-xl">
-                       <AvatarImage src={selectedAppointment.patient.avatar_url} />
-                       <AvatarFallback className="bg-white text-teal-600 text-2xl font-black">{selectedAppointment.patient.first_name[0]}</AvatarFallback>
+                       <AvatarImage src={selectedAppointment.patient?.avatar_url} />
+                       <AvatarFallback className="bg-white text-teal-600 text-2xl font-black">{selectedAppointment.patient?.first_name?.[0]}</AvatarFallback>
                     </Avatar>
                     <div>
-                       <h2 className="text-2xl font-black tracking-tighter leading-none">{selectedAppointment.patient.first_name}</h2>
-                       <h2 className="text-2xl font-black tracking-tighter leading-none opacity-80">{selectedAppointment.patient.last_name}</h2>
+                       <h2 className="text-2xl font-black tracking-tighter leading-none uppercase">{selectedAppointment.patient?.first_name}</h2>
+                       <h2 className="text-2xl font-black tracking-tighter leading-none opacity-80 uppercase">{selectedAppointment.patient?.last_name}</h2>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-                        <p className="text-[9px] font-black uppercase opacity-60">Horario</p>
+                        <p className="text-[9px] font-black uppercase opacity-60">{isSpanish ? "Horario" : "Schedule"}</p>
                         <p className="text-sm font-bold">{selectedAppointment.appointment_time.slice(0,5)} • {selectedAppointment.duration_minutes}m</p>
                      </div>
                      <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
-                        <p className="text-[9px] font-black uppercase opacity-60">Pago</p>
-                        <p className="text-sm font-bold uppercase">{selectedAppointment.payment_status}</p>
+                        <p className="text-[9px] font-black uppercase opacity-60">{isSpanish ? "Estado" : "Status"}</p>
+                        <p className="text-sm font-bold uppercase transition-all">
+                           {isSpanish ? (
+                             selectedAppointment.status === 'confirmed' ? 'Confirmada' :
+                             selectedAppointment.status === 'pending' ? 'Pendiente' :
+                             selectedAppointment.status === 'completed' ? 'Completada' :
+                             selectedAppointment.status === 'cancelled' ? 'Cancelada' :
+                             selectedAppointment.status
+                           ) : selectedAppointment.status}
+                        </p>
                      </div>
                   </div>
                </div>
@@ -552,78 +387,49 @@ export default function ProfessionalAppointmentsPage() {
                <div className="flex-1 p-8 space-y-8 overflow-y-auto">
                   <div className="space-y-4">
                      <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                       <User className="h-3 w-3" /> Contacto del Paciente
+                       <User className="h-3 w-3" /> {isSpanish ? "Contacto" : "Contact"}
                      </h3>
                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 group">
-                           <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-teal-600 shadow-sm"><Mail className="h-4 w-4" /></div>
-                           <span className="text-sm font-bold text-slate-700 truncate">{selectedAppointment.patient.email}</span>
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                           <Mail className="h-4 w-4 text-teal-600" />
+                           <span className="text-sm font-bold text-slate-700 truncate">{selectedAppointment.patient?.email}</span>
                         </div>
-                        {selectedAppointment.patient.phone && (
-                          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 group">
-                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-teal-600 shadow-sm"><Phone className="h-4 w-4" /></div>
-                            <span className="text-sm font-bold text-slate-700">{selectedAppointment.patient.phone}</span>
+                        {selectedAppointment.patient?.phone && (
+                          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <Phone className="h-4 w-4 text-teal-600" />
+                            <span className="text-sm font-bold text-slate-700">{selectedAppointment.patient?.phone}</span>
                           </div>
                         )}
                      </div>
                   </div>
 
-                  {selectedAppointment.notes && (
-                    <div className="space-y-4">
-                       <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                         <Filter className="h-3 w-3" /> Motivo de Consulta
-                       </h3>
-                       <div className="p-4 rounded-2xl bg-teal-50 shadow-inner italic text-sm text-teal-900 border border-teal-100/50">
-                         "{selectedAppointment.notes}"
-                       </div>
-                    </div>
-                  )}
-
                   <div className="space-y-3 pt-6">
                      {selectedAppointment.status === 'confirmed' && (
                        <>
                          <Button 
-                           onClick={() => {
-                             const url = selectedAppointment.meeting_link || getJitsiMeetingUrl(selectedAppointment.id);
-                             window.open(url, '_blank');
-                           }}
+                           onClick={() => window.open(selectedAppointment.meeting_link || '#', '_blank')}
                            className="w-full h-14 rounded-2xl bg-teal-600 hover:bg-teal-700 font-bold shadow-lg shadow-teal-500/20 gap-3"
                          >
                            <Video className="h-5 w-5" />
-                           Iniciar Tele-consulta
+                           {isSpanish ? "Iniciar Tele-consulta" : "Start Video Call"}
                            <ArrowRight className="h-4 w-4 ml-auto" />
                          </Button>
                          <Button 
                            onClick={() => setCompleteDialogOpen(true)}
                            variant="outline"
-                           className="w-full h-14 rounded-2xl border-slate-200 font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all gap-3"
+                           className="w-full h-14 rounded-2xl border-slate-200 font-bold hover:bg-teal-50 gap-3"
                          >
-                           <CheckCircle2 className="h-5 w-5" />
-                           Marcar como Completada
+                           <CheckCircle2 className="h-5 w-5 text-teal-600" />
+                           {isSpanish ? "Marcar Completada" : "Mark Completed"}
                          </Button>
                        </>
                      )}
                      
                      <div className="grid grid-cols-2 gap-3">
-                        <Button 
-                          variant="ghost" 
-                          className="rounded-xl font-bold text-slate-500 h-11"
-                          onClick={() => window.open(`/dashboard/professional/patients/${selectedAppointment.patient.id}`, '_blank')}
-                        >Ficha Clínica</Button>
-                        <Button 
-                          variant="ghost" 
-                          className="rounded-xl font-bold text-red-500 h-11 hover:bg-red-50"
-                          onClick={() => setCancelDialogOpen(true)}
-                          disabled={selectedAppointment.status === 'cancelled' || selectedAppointment.status === 'completed'}
-                        >Cancelar Cita</Button>
+                        <Button variant="ghost" className="rounded-xl font-bold h-11 hover:bg-red-50 text-red-500 col-span-2" onClick={() => setCancelDialogOpen(true)}>
+                          {isSpanish ? "Cancelar Cita" : "Cancel Appointment"}
+                        </Button>
                      </div>
-                  </div>
-               </div>
-
-               <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase text-slate-400">Ref: {selectedAppointment.id.slice(0,8)}</span>
-                  <div className="flex gap-2">
-                     <Button variant="ghost" size="icon" className="rounded-full"><MoreVertical className="h-4 w-4" /></Button>
                   </div>
                </div>
             </div>
@@ -631,25 +437,28 @@ export default function ProfessionalAppointmentsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* --- DIALOGS --- */}
+      {/* Dialogs */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
          <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
             <AlertDialogHeader>
                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-4 mx-auto">
                   <CalendarX className="h-8 w-8" />
                </div>
-               <AlertDialogTitle className="text-2xl font-black text-center text-slate-900 leading-tight">¿Deseas cancelar esta consulta?</AlertDialogTitle>
-               <AlertDialogDescription className="text-center text-slate-500 font-medium">
-                  Esta acción no se puede deshacer. Se procesará el reembolso automático vía Stripe según la política de cancelación.
+               <AlertDialogTitle className="text-2xl font-black text-center text-slate-900 leading-tight">
+                 {isSpanish ? "¿Confirmar Cancelación?" : "Confirm Cancellation?"}
+               </AlertDialogTitle>
+               <AlertDialogDescription className="text-center text-slate-500 font-medium font-inter">
+                 {isSpanish 
+                   ? "Esta acción notificará al paciente y liberará el horario en tu agenda." 
+                   : "This action will notify the patient and free up the slot in your calendar."}
                </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-8 gap-3 sm:flex-col lg:flex-row">
-               <AlertDialogCancel className="w-full h-12 rounded-xl font-bold border-slate-200">No, mantener cita</AlertDialogCancel>
-               <AlertDialogAction 
-                 onClick={handleCancel}
-                 className="w-full h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/20"
-               >
-                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sí, cancelar consulta"}
+               <AlertDialogCancel className="w-full h-12 rounded-xl font-bold border-slate-200">
+                 {isSpanish ? "No, volver" : "No, go back"}
+               </AlertDialogCancel>
+               <AlertDialogAction onClick={handleCancel} className="w-full h-12 rounded-xl font-bold bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/20">
+                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (isSpanish ? "Sí, cancelar cita" : "Yes, cancel appointment")}
                </AlertDialogAction>
             </AlertDialogFooter>
          </AlertDialogContent>
@@ -661,23 +470,66 @@ export default function ProfessionalAppointmentsPage() {
                <div className="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 mb-4 mx-auto">
                   <CheckCircle2 className="h-8 w-8" />
                </div>
-               <AlertDialogTitle className="text-2xl font-black text-center text-slate-900 leading-tight">Confirmar Finalización</AlertDialogTitle>
+               <AlertDialogTitle className="text-2xl font-black text-center text-slate-900 leading-tight">
+                 {isSpanish ? "Finalizar Consulta" : "Finish Consultation"}
+               </AlertDialogTitle>
                <AlertDialogDescription className="text-center text-slate-500 font-medium">
-                  ¿La consulta ha terminado con éxito? Esto liberará el pago y notificará al paciente para calificar tu atención.
+                 {isSpanish 
+                   ? "¿Confirmas que la sesión ha terminado? Esto marcará la cita como completada en el sistema." 
+                   : "Confirm that the session has ended? This will mark the appointment as completed."}
                </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-8 gap-3 sm:flex-col lg:flex-row">
-               <AlertDialogCancel className="w-full h-12 rounded-xl font-bold border-slate-200">Aún no termina</AlertDialogCancel>
-               <AlertDialogAction 
-                 onClick={handleComplete}
-                 className="w-full h-12 rounded-xl font-bold bg-teal-600 hover:bg-teal-700 shadow-lg shadow-teal-500/20"
-               >
-                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar y Finalizar"}
+               <AlertDialogCancel className="w-full h-12 rounded-xl font-bold border-slate-200">
+                 {isSpanish ? "Cancelar" : "Cancel"}
+               </AlertDialogCancel>
+               <AlertDialogAction onClick={handleComplete} className="w-full h-12 rounded-xl font-bold bg-teal-600 hover:bg-teal-700 shadow-lg shadow-teal-500/20">
+                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (isSpanish ? "Confirmar y Finalizar" : "Confirm and Finish")}
                </AlertDialogAction>
             </AlertDialogFooter>
          </AlertDialogContent>
       </AlertDialog>
 
+      {/* Reschedule Dialog integrated into existing structure */}
+      <AlertDialog open={rescheduleDialogOpen} onOpenChange={setRescheduleDialogOpen}>
+         <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
+            <AlertDialogHeader>
+               <div className="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 mb-4 mx-auto">
+                  <RefreshCw className="h-8 w-8" />
+               </div>
+               <AlertDialogTitle className="text-2xl font-black text-center text-slate-900 leading-tight">
+                 {isSpanish ? "Reagendar Cita" : "Reschedule Appointment"}
+               </AlertDialogTitle>
+               <AlertDialogDescription className="text-center text-slate-500 font-medium mb-6">
+                 {isSpanish 
+                   ? "Selecciona la nueva fecha y hora para la cita. Esto notificará al paciente sobre el cambio." 
+                   : "Select a new date and time for the appointment. This will notify the patient."}
+               </AlertDialogDescription>
+               <div className="space-y-4">
+                 <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase">{isSpanish ? "Nueva Fecha" : "New Date"}</label>
+                   <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-full mt-1 h-12 rounded-xl border-slate-200 px-4 font-medium text-slate-800 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all" />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-slate-500 uppercase">{isSpanish ? "Nueva Hora" : "New Time"}</label>
+                   <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} className="w-full mt-1 h-12 rounded-xl border-slate-200 px-4 font-medium text-slate-800 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all" />
+                 </div>
+               </div>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-8 gap-3 sm:flex-col lg:flex-row">
+               <AlertDialogCancel className="w-full h-12 rounded-xl font-bold border-slate-200">
+                 {isSpanish ? "Cancelar" : "Cancel"}
+               </AlertDialogCancel>
+               <Button 
+                 onClick={handleReschedule}
+                 disabled={!newDate || !newTime || !!actionLoading}
+                 className="w-full h-12 rounded-xl font-bold bg-teal-600 hover:bg-teal-700 shadow-lg shadow-teal-500/20 text-white"
+               >
+                 {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (isSpanish ? "Confirmar Cambio" : "Confirm Change")}
+               </Button>
+            </AlertDialogFooter>
+         </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

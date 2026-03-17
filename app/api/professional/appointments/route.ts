@@ -51,11 +51,10 @@ export async function GET(request: Request) {
       .from('appointments')
       .select(`
         *,
-        patient:profiles!appointments_patient_id_fkey(
+        patient:patient_id(
           id,
           first_name,
           last_name,
-          email,
           avatar_url
         )
       `)

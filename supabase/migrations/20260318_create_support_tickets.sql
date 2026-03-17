@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   subject TEXT NOT NULL,
   message TEXT NOT NULL,
+  category TEXT,
   status support_ticket_status NOT NULL DEFAULT 'open',
   priority support_ticket_priority NOT NULL DEFAULT 'medium',
   admin_id UUID REFERENCES profiles(id),
@@ -53,7 +54,15 @@ RETURNS TRIGGER AS $$
 DECLARE
   v_user_name TEXT;
 BEGIN
-  SELECT first_name || ' ' || last_name INTO v_user_name FROM profiles WHERE id = NEW.user_id;
+  -- Use concat_ws to handle potential NULL values in first_name or last_name
+  SELECT TRIM(concat_ws(' ', first_name, last_name)) INTO v_user_name 
+  FROM profiles 
+  WHERE id = NEW.user_id;
+
+  -- Fallback if name is empty
+  IF v_user_name IS NULL OR v_user_name = '' THEN
+    v_user_name := 'Usuario ' || substring(NEW.user_id::text, 1, 8);
+  END IF;
 
   INSERT INTO admin_notifications (type, message, created_at)
   VALUES (

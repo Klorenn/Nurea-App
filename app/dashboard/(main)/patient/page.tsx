@@ -415,9 +415,9 @@ export default function PatientDashboard() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`)
+      router.push(`/explore?q=${encodeURIComponent(searchQuery)}`)
     } else {
-      router.push("/search")
+      router.push("/explore")
     }
   }
 
@@ -630,7 +630,7 @@ export default function PatientDashboard() {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {specialties.map((specialty) => (
-                <Link key={specialty.slug} href={`/search?specialty=${specialty.slug}`}>
+                <Link key={specialty.slug} href={`/explore?specialty=${specialty.slug}`}>
                   <motion.div
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}

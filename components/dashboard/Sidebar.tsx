@@ -9,6 +9,7 @@ import {
   CreditCard,
   Search,
   FileText,
+  List,
   MessageCircle,
   Settings,
   Users,
@@ -23,6 +24,12 @@ import {
   LayoutDashboard,
   HeadphonesIcon,
   CloudUpload,
+  HelpCircle,
+  ChevronDown,
+  ExternalLink,
+  Star,
+  Megaphone,
+  Zap,
   type LucideIcon,
 } from "lucide-react"
 import {
@@ -49,6 +56,10 @@ interface NavItem {
   href: string
   badge?: number
   isNew?: boolean
+  /** Muestra chevron (expandible). Por ahora solo visual. */
+  expandable?: boolean
+  /** Estilo botón destacado (ej. "Mi perfil") */
+  isButton?: boolean
 }
 
 interface NavGroup {
@@ -109,7 +120,7 @@ const adminNavigation: NavGroup[] = [
   },
 ]
 
-// ── Professional Navigation ───────────────────────────────────────────────────
+// ── Professional Navigation (referencia: Editar perfil, Canales de reserva, Opiniones, etc.) ──
 const professionalNavigation: NavGroup[] = [
   {
     title: "Principal",
@@ -137,7 +148,19 @@ const professionalNavigation: NavGroup[] = [
         icon: FileText,
         label: "Fichas Clínicas",
         labelEn: "Clinical Records",
-        href: "/dashboard/professional/others",
+        href: "/dashboard/professional/fichas",
+      },
+      {
+        icon: MessageCircle,
+        label: "Mensajes",
+        labelEn: "Messages",
+        href: "/dashboard/professional/chat",
+      },
+      {
+        icon: List,
+        label: "Recursos",
+        labelEn: "Resources",
+        href: "/dashboard/professional/recursos",
       },
       {
         icon: CloudUpload,
@@ -155,15 +178,60 @@ const professionalNavigation: NavGroup[] = [
     ],
   },
   {
-    title: "Configuración",
-    titleEn: "Settings",
+    title: "Perfil y visibilidad",
+    titleEn: "Profile & visibility",
     items: [
       {
         icon: User,
-        label: "Mi Perfil",
-        labelEn: "My Profile",
+        label: "Editar perfil",
+        labelEn: "Edit profile",
         href: "/dashboard/professional/profile",
       },
+      {
+        icon: Calendar,
+        label: "Canales de reserva",
+        labelEn: "Booking channels",
+        href: "/dashboard/professional/availability",
+      },
+      {
+        icon: Star,
+        label: "Opiniones",
+        labelEn: "Reviews",
+        href: "/dashboard/professional/reviews",
+      },
+      {
+        icon: Zap,
+        label: "First Class",
+        labelEn: "First Class",
+        href: "/dashboard/professional/settings",
+      },
+      {
+        icon: HelpCircle,
+        label: "Pregunta al Experto",
+        labelEn: "Ask the Expert",
+        href: "/dashboard/support",
+        expandable: true,
+      },
+      {
+        icon: Megaphone,
+        label: "Promoción de mi perfil",
+        labelEn: "Profile promotion",
+        href: "/dashboard/professional/profile#promotion",
+        expandable: true,
+      },
+      {
+        icon: ExternalLink,
+        label: "Mi perfil",
+        labelEn: "My profile",
+        href: "/dashboard/professional/profile",
+        isButton: true,
+      },
+    ],
+  },
+  {
+    title: "Configuración",
+    titleEn: "Settings",
+    items: [
       {
         icon: Settings,
         label: "Mi Consultorio",
@@ -190,25 +258,61 @@ const patientNavigation: NavGroup[] = [
         icon: Search,
         label: "Buscar Especialista",
         labelEn: "Find Specialist",
-        href: "/explore",
+        href: "/dashboard/patient/buscar",
       },
       {
         icon: Calendar,
         label: "Mis Citas",
         labelEn: "My Appointments",
-        href: "/dashboard/appointments",
+        href: "/dashboard/patient/citas",
       },
       {
-        icon: ClipboardList,
-        label: "Recetas",
-        labelEn: "Prescriptions",
+        icon: Heart,
+        label: "Mis Favoritos",
+        labelEn: "My Favorites",
+        href: "/dashboard/favorites",
+      },
+      {
+        icon: FileText,
+        label: "Documentos y Recetas",
+        labelEn: "Documents & Prescriptions",
         href: "/dashboard/documents",
+      },
+      {
+        icon: Users,
+        label: "Familiares",
+        labelEn: "Family",
+        href: "/dashboard/family",
+      },
+      {
+        icon: User,
+        label: "Mi Perfil",
+        labelEn: "My Profile",
+        href: "/dashboard/profile",
+      },
+      {
+        icon: MessageCircle,
+        label: "Mensajes",
+        labelEn: "Messages",
+        href: "/dashboard/chat",
       },
       {
         icon: CreditCard,
         label: "Pagos y Recibos",
         labelEn: "Payments & Receipts",
         href: "/dashboard/patient/payments",
+      },
+      {
+        icon: HeadphonesIcon,
+        label: "Soporte",
+        labelEn: "Support",
+        href: "/dashboard/support",
+      },
+      {
+        icon: HelpCircle,
+        label: "Ayuda",
+        labelEn: "Help",
+        href: "/dashboard/help",
       },
     ],
   },
@@ -240,7 +344,7 @@ export function DashboardSidebar({
     if (
       href === "/dashboard/professional" ||
       href === "/dashboard/patient" ||
-      href === "/admin"
+      href === "/dashboard/admin"
     ) {
       return pathname === href
     }
@@ -248,6 +352,52 @@ export function DashboardSidebar({
   }
 
   const roleColor = role === "admin" ? "#7c3aed" : "#0f766e"
+
+  // Compact icon-only navigation for professionals (Doctoralia-style left rail)
+  const professionalIconTop = React.useMemo(
+    () =>
+      role !== "professional"
+        ? []
+        : [
+            professionalNavigation[0].items.find(
+              (item) => item.href === "/dashboard/professional/appointments"
+            ),
+            professionalNavigation[0].items.find(
+              (item) => item.href === "/dashboard/professional/patients"
+            ),
+            professionalNavigation[0].items.find(
+              (item) => item.href === "/dashboard/professional/chat"
+            ),
+            professionalNavigation[0].items.find(
+              (item) => item.href === "/dashboard/professional/fichas"
+            ),
+            professionalNavigation[0].items.find(
+              (item) => item.href === "/dashboard/professional/payouts"
+            ),
+            professionalNavigation[1].items.find(
+              (item) => item.href === "/dashboard/professional/profile"
+            ),
+          ].filter(Boolean) as NavItem[],
+    []
+  )
+
+  const professionalIconBottom = React.useMemo(
+    () =>
+      role !== "professional"
+        ? []
+        : [
+            professionalNavigation[0].items.find(
+              (item) => item.href === "/dashboard/professional"
+            ),
+            professionalNavigation[1].items.find(
+              (item) => item.href === "/dashboard/professional/reviews"
+            ),
+            professionalNavigation[2].items.find(
+              (item) => item.href === "/dashboard/professional/settings"
+            ),
+          ].filter(Boolean) as NavItem[],
+    []
+  )
 
   return (
     <Sidebar
@@ -294,14 +444,42 @@ export function DashboardSidebar({
       </SidebarHeader>
 
       <SidebarContent className="py-4 px-2">
-        {navigation.map((group, groupIndex) => (
-          <SidebarGroup key={group.title}>
-            <SidebarGroupLabel className="px-3 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1">
-              {isSpanish ? group.title : group.titleEn}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
+        {role === "professional" ? (
+          <div className="flex flex-col justify-between h-full">
+            <SidebarMenu>
+              {professionalIconTop.map((item) => {
+                const active = isActive(item.href)
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={isSpanish ? item.label : item.labelEn}
+                      size="icon"
+                      className={cn(
+                        "h-11 w-11 mx-auto my-1 rounded-2xl flex items-center justify-center",
+                        "hover:bg-accent/60 hover:text-foreground",
+                        active && "bg-[#0f766e]/10 text-[#0f766e] shadow-sm"
+                      )}
+                    >
+                      <Link href={item.href} className="flex items-center justify-center">
+                        <item.icon
+                          className={cn(
+                            "h-[20px] w-[20px] shrink-0 transition-colors",
+                            active ? "text-[#0f766e]" : "text-muted-foreground"
+                          )}
+                        />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+
+            <div>
+              <SidebarSeparator className="my-3 mx-3 bg-border/30" />
               <SidebarMenu>
-                {group.items.map((item) => {
+                {professionalIconBottom.map((item) => {
                   const active = isActive(item.href)
                   return (
                     <SidebarMenuItem key={item.href}>
@@ -309,52 +487,112 @@ export function DashboardSidebar({
                         asChild
                         isActive={active}
                         tooltip={isSpanish ? item.label : item.labelEn}
+                        size="icon"
                         className={cn(
-                          "h-10 px-3 mx-0 rounded-xl transition-all duration-200",
+                          "h-10 w-10 mx-auto my-1 rounded-2xl flex items-center justify-center",
                           "hover:bg-accent/60 hover:text-foreground",
-                          active && role === "admin" && "bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium shadow-sm",
-                          active && role !== "admin" && "bg-[#0f766e]/10 text-[#0f766e] font-medium shadow-sm"
+                          active && "bg-[#0f766e]/10 text-[#0f766e] shadow-sm"
                         )}
                       >
-                        <Link href={item.href} className="flex items-center gap-3">
+                        <Link href={item.href} className="flex items-center justify-center">
                           <item.icon
                             className={cn(
                               "h-[18px] w-[18px] shrink-0 transition-colors",
-                              active && role === "admin"
-                                ? "text-violet-600 dark:text-violet-400"
-                                : active
-                                ? "text-[#0f766e]"
-                                : "text-muted-foreground"
+                              active ? "text-[#0f766e]" : "text-muted-foreground"
                             )}
                           />
-                          <span className="truncate text-[13px]">
-                            {isSpanish ? item.label : item.labelEn}
-                          </span>
-                          {item.isNew && (
-                            <span
-                              className="ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white"
-                              style={{ background: roleColor }}
-                            >
-                              {isSpanish ? "Nuevo" : "New"}
-                            </span>
-                          )}
-                          {item.badge !== undefined && item.badge > 0 && (
-                            <span className="ml-auto text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
-                              {item.badge}
-                            </span>
-                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )
                 })}
               </SidebarMenu>
-            </SidebarGroupContent>
-            {groupIndex < navigation.length - 1 && (
-              <SidebarSeparator className="my-3 mx-3 bg-border/30" />
-            )}
-          </SidebarGroup>
-        ))}
+            </div>
+          </div>
+        ) : (
+          navigation.map((group, groupIndex) => (
+            <SidebarGroup key={group.title}>
+              <SidebarGroupLabel className="px-3 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1">
+                {isSpanish ? group.title : group.titleEn}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const active = isActive(item.href)
+                    const isProfessionalProfileGroup =
+                      role === "professional" &&
+                      (group.title === "Perfil y visibilidad" ||
+                        group.titleEn === "Profile & visibility")
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          tooltip={isSpanish ? item.label : item.labelEn}
+                          size={item.isButton ? "lg" : "default"}
+                          variant={item.isButton ? "outline" : "default"}
+                          className={cn(
+                            "h-10 px-3 mx-0 rounded-xl transition-all duration-200",
+                            "hover:bg-accent/60 hover:text-foreground",
+                            active &&
+                              role === "admin" &&
+                              "bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium shadow-sm",
+                            active &&
+                              role !== "admin" &&
+                              "bg-[#0f766e]/10 text-[#0f766e] font-medium shadow-sm",
+                            isProfessionalProfileGroup &&
+                              active &&
+                              "border-l-4 border-l-[#0f766e] pl-2.5 bg-slate-100 dark:bg-slate-800/60",
+                            item.isButton &&
+                              "rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/50 font-medium hover:bg-slate-200/80 dark:hover:bg-slate-700/50"
+                          )}
+                        >
+                          <Link href={item.href} className="flex items-center gap-3 w-full">
+                            <item.icon
+                              className={cn(
+                                "h-[18px] w-[18px] shrink-0 transition-colors",
+                                active && role === "admin"
+                                  ? "text-violet-600 dark:text-violet-400"
+                                  : active
+                                  ? "text-[#0f766e]"
+                                  : "text-muted-foreground"
+                              )}
+                            />
+                            <span className="truncate text-[13px] flex-1 text-left">
+                              {isSpanish ? item.label : item.labelEn}
+                            </span>
+                            {item.expandable && (
+                              <ChevronDown
+                                className="h-4 w-4 shrink-0 text-muted-foreground"
+                                aria-hidden
+                              />
+                            )}
+                            {item.isNew && !item.expandable && (
+                              <span
+                                className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white"
+                                style={{ background: roleColor }}
+                              >
+                                {isSpanish ? "Nuevo" : "New"}
+                              </span>
+                            )}
+                            {item.badge !== undefined && item.badge > 0 && (
+                              <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+              {groupIndex < navigation.length - 1 && (
+                <SidebarSeparator className="my-3 mx-3 bg-border/30" />
+              )}
+            </SidebarGroup>
+          ))
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-border/30">

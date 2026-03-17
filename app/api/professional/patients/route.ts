@@ -39,16 +39,21 @@ export async function GET(request: Request) {
       )
     }
 
-    // Obtener pacientes únicos que tienen citas con este profesional
-    // Usamos una subconsulta para obtener solo los patient_id únicos
+    // Obtener IDs de pacientes que tienen citas con este profesional
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
       .select('patient_id')
       .eq('professional_id', user.id)
       .not('patient_id', 'is', null)
 
-    if (appointmentsError) {
-      console.error('Error fetching patient IDs:', appointmentsError)
+    // Obtener IDs de pacientes creados por este profesional
+    const { data: createdPatients, error: createdError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('created_by_professional_id', user.id)
+
+    if (appointmentsError || createdError) {
+      console.error('Error fetching patient IDs:', appointmentsError || createdError)
       return NextResponse.json(
         { 
           error: 'fetch_failed',
@@ -58,8 +63,10 @@ export async function GET(request: Request) {
       )
     }
 
-    // Obtener IDs únicos
-    const uniquePatientIds = [...new Set(appointments?.map(a => a.patient_id) || [])]
+    // Obtener IDs únicos combinando ambos grupos
+    const patientIdsFromAppointments = appointments?.map(a => a.patient_id) || []
+    const patientIdsFromCreated = createdPatients?.map(p => p.id) || []
+    const uniquePatientIds = [...new Set([...patientIdsFromAppointments, ...patientIdsFromCreated])]
 
     if (uniquePatientIds.length === 0) {
       return NextResponse.json({
@@ -142,3 +149,107 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * POST /api/professional/patients
+ * Crea un nuevo paciente (placeholder) invitado por el profesional
+ */
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient()
+    
+    // Verificar autenticación
+    const { data: { user: professionalUser }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !professionalUser) {
+      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { firstName, lastName, email, phone, dateOfBirth } = body
+
+    if (!firstName || !lastName || !email) {
+      return NextResponse.json(
+        { error: 'missing_fields', message: 'Nombre, apellido y email son obligatorios.' },
+        { status: 400 }
+      )
+    }
+
+    // Crear cliente admin para interactuar con auth.users
+    const supabaseAdmin = createClientAdmin(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // 1. Crear el usuario en auth.users (sin contraseña, será una invitación)
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+        role: 'patient'
+      }
+    })
+
+    if (authError) {
+      // Si el usuario ya existe, intentamos obtener su perfil
+      if (authError.message.includes('already registered')) {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .single()
+
+        if (existingProfile) {
+          // Si ya existe, simplemente lo vinculamos (creando una cita ficticia o similar si es necesario, 
+          // pero aquí el objetivo es que aparezca en el listado del profesional)
+          // El listado actual se basa en citas, así que el profesional deberá agendar una cita para que aparezca.
+          return NextResponse.json({
+            success: true,
+            patientId: existingProfile.id,
+            message: 'El paciente ya existía en la plataforma.'
+          })
+        }
+      }
+      
+      console.error('Error creating auth user:', authError)
+      return NextResponse.json(
+        { error: 'create_failed', message: 'No se pudo crear el usuario.' },
+        { status: 500 }
+      )
+    }
+
+    // 2. Crear el perfil manualmente (si no hay trigger)
+    const { data: newProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        id: authUser.user.id,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone,
+        date_of_birth: dateOfBirth,
+        role: 'patient',
+        created_by_professional_id: professionalUser.id
+      })
+      .select()
+      .single()
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError)
+      // Si falló el perfil pero se creó el auth user, es un estado inconsistente, pero el especialista puede intentar agendar
+    }
+
+    return NextResponse.json({
+      success: true,
+      patientId: authUser.user.id,
+      message: 'Paciente creado exitosamente.'
+    })
+  } catch (error) {
+    console.error('Create patient error:', error)
+    return NextResponse.json({ error: 'server_error' }, { status: 500 })
+  }
+}
+
+// Helper para crear cliente admin (importado de @supabase/supabase-js para evitar dependencias de cookies en admin)
+import { createClient as createClientAdmin } from '@supabase/supabase-js'

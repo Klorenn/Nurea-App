@@ -35,9 +35,9 @@ export function FaqSection() {
         "NUREA se enfoca en la conexión humana y la confianza. Todos nuestros profesionales son verificados, y la plataforma está diseñada pensando en el paciente. Ofrecemos herramientas completas para gestionar tu salud de manera integral.",
     },
     {
-      question: "¿Cómo funciona el cobro y la comisión del 5%?",
+      question: "¿Cómo funciona NUREA?",
       answer:
-        "NUREA cobra una comisión fija del 5% por cada transacción exitosa. El 95% restante se transfiere automáticamente a tu cuenta bancaria vinculada a través de Stripe Connect. Sin cobros ocultos ni mantenciones mensuales abusivas.",
+        "NUREA conecta pacientes con profesionales de la salud. La coordinación y el pago de la consulta se realizan directamente con el especialista a través del chat seguro de la plataforma.",
     },
     {
       question: "¿Qué documentos necesito para verificarme como profesional?",
@@ -45,9 +45,9 @@ export function FaqSection() {
         "Para garantizar la seguridad de los pacientes, solicitamos tu Cédula de Identidad (ambos lados) y el certificado de la Superintendencia de Salud (SIS). Una vez validados, obtendrás el sello de verificación en tu perfil.",
     },
     {
-      question: "¿Es seguro el sistema de pagos?",
+      question: "¿Cómo pago mi consulta?",
       answer:
-        "Totalmente. Usamos Stripe, el estándar mundial en pagos digitales. NUREA no almacena tus datos bancarios ni de tarjetas. Todo el proceso está encriptado y cumple con las normativas de seguridad internacionales.",
+        "El pago de la consulta se coordina directamente con el especialista (por ejemplo por chat: enlace de pago externo, transferencia o instrucciones que te indique). NUREA no cobra ni procesa el pago de la consulta; solo conecta y facilita la comunicación y la agenda.",
     },
     {
       question: "¿Puedo cancelar mi suscripción en cualquier momento?",
@@ -81,9 +81,9 @@ export function FaqSection() {
         "NUREA focuses on human connection and trust. All our professionals are verified, and the platform is designed with the patient in mind. We offer comprehensive tools to manage your health holistically.",
     },
     {
-      question: "How does the payment and 5% commission work?",
+      question: "How does NUREA work?",
       answer:
-        "NUREA charges a flat 5% commission for each successful transaction. The remaining 95% is automatically transferred to your linked bank account via Stripe Connect. No hidden fees or abusive monthly maintenance costs.",
+        "NUREA connects patients with healthcare professionals. Appointment coordination and consultation payment are done directly with the specialist through the platform's secure chat.",
     },
     {
       question: "What documents do I need to be verified as a professional?",
@@ -91,9 +91,9 @@ export function FaqSection() {
         "To ensure patient safety, we request your ID Card (both sides) and the certificate from the Superintendency of Health (SIS). Once validated, you will get the verification seal on your profile.",
     },
     {
-      question: "Is the payment system secure?",
+      question: "How do I pay for my consultation?",
       answer:
-        "Absolutely. We use Stripe, the world standard in digital payments. NUREA does not store your bank or card data. The entire process is encrypted and complies with international security regulations.",
+        "Consultation payment is coordinated directly with the specialist (e.g. via chat: external payment link, bank transfer, or instructions they provide). NUREA does not charge or process consultation payments; it only connects you and facilitates communication and scheduling.",
     },
     {
       question: "Can I cancel my subscription anytime?",

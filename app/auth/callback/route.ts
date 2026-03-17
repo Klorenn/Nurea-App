@@ -82,6 +82,7 @@ export async function GET(request: Request) {
       '/verify-email',
       '/dashboard',
       '/dashboard/patient',
+      '/dashboard/patient/citas',
       '/dashboard/professional',
       '/dashboard/admin',
       '/dashboard/appointments',

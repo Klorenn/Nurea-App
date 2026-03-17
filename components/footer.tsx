@@ -2,48 +2,80 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { ShieldCheck } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
 
 export function Footer() {
+  const { language } = useLanguage()
+  const isSpanish = language === "es"
+
   return (
-    <footer className="bg-slate-950 text-slate-400 border-t border-slate-900 py-12 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-center md:items-start gap-8">
-          
-          {/* Logo & Badge Area */}
-          <div className="flex flex-col items-center md:items-start gap-4">
-            <Link href="/" className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+    <footer
+      className="relative z-10 border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/80 shrink-0"
+      role="contentinfo"
+    >
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          {/* Logo + tagline */}
+          <div className="flex flex-col gap-1 sm:gap-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 w-fit shrink-0 rounded-lg opacity-95 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
+            >
               <Image
                 src="/logo.png"
                 alt="NUREA"
-                width={32}
-                height={32}
-                className="h-8 w-8 rounded-lg grayscale invert brightness-200"
+                width={28}
+                height={28}
+                className="h-7 w-7 rounded-lg object-contain"
               />
-              <span className="text-xl font-bold tracking-tight text-white">NUREA</span>
+              <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+                NUREA
+              </span>
             </Link>
-            
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300">
-              <ShieldCheck className="h-3.5 w-3.5 text-teal-500" />
-              Plataforma conforme a la Ley de Derechos y Deberes del Paciente
-            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs">
+              {isSpanish
+                ? "Ley de Derechos y Deberes del Paciente."
+                : "Patient Rights and Duties Law."}
+            </p>
           </div>
 
-          {/* Links Area */}
-          <div className="flex flex-wrap justify-center md:justify-end gap-x-8 gap-y-4 text-sm font-medium">
-            <Link href="/terms" className="hover:text-white transition-colors">Términos y Condiciones</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacidad</Link>
-            <Link href="/faq" className="hover:text-white transition-colors">Preguntas Frecuentes</Link>
-            <a href="mailto:contacto@nurea.cl" className="hover:text-white transition-colors">Contacto</a>
-          </div>
+          {/* Nav links */}
+          <nav
+            className="flex flex-wrap gap-x-6 gap-y-1 sm:gap-x-8"
+            aria-label={isSpanish ? "Enlaces del sitio" : "Site links"}
+          >
+            <Link
+              href="/legal/terms"
+              className="text-sm font-medium text-slate-600 hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-400 transition-colors"
+            >
+              {isSpanish ? "Términos" : "Terms"}
+            </Link>
+            <Link
+              href="/legal/privacy"
+              className="text-sm font-medium text-slate-600 hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-400 transition-colors"
+            >
+              {isSpanish ? "Privacidad" : "Privacy"}
+            </Link>
+            <Link
+              href="/support#faq"
+              className="text-sm font-medium text-slate-600 hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-400 transition-colors"
+            >
+              FAQ
+            </Link>
+            <a
+              href="mailto:contacto@nurea.cl"
+              className="text-sm font-medium text-slate-600 hover:text-teal-600 dark:text-slate-300 dark:hover:text-teal-400 transition-colors"
+            >
+              Contacto
+            </a>
+          </nav>
         </div>
 
-        {/* Divider & Copyright */}
-        <div className="mt-10 pt-8 border-t border-slate-900 flex flex-col items-center text-center gap-2 text-xs text-slate-500">
-          <p>
-            © 2026 NUREA. Todos los derechos reservados. Verificado por la Superintendencia de Salud.
-          </p>
-        </div>
+        {/* Copyright: contraste claro para que se lea bien */}
+        <p className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800 text-sm text-slate-600 dark:text-slate-400">
+          © {new Date().getFullYear()} NUREA.{" "}
+          {isSpanish ? "Todos los derechos reservados." : "All rights reserved."}
+        </p>
       </div>
     </footer>
   )

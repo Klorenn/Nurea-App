@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactElement } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import { TermsDialog } from "@/components/ui/terms-dialog"
@@ -283,10 +283,19 @@ export function SmokeyBackground({
   )
 }
 
+/** Si es una URL relativa segura (empieza por / y no por //) la usamos como redirect tras login */
+function isSafeCallbackUrl(url: string | null): boolean {
+  if (!url || typeof url !== "string") return false
+  const decoded = decodeURIComponent(url)
+  return decoded.startsWith("/") && !decoded.startsWith("//")
+}
+
 export function LoginForm() {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get("callbackUrl")
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const isDark = mounted && resolvedTheme === "dark"
@@ -334,15 +343,16 @@ export function LoginForm() {
       const role = profile?.role || "patient"
       const profileComplete = !!profile?.date_of_birth
       let redirectPath = "/dashboard"
-      
-      if (role === "professional") {
+
+      if (isSafeCallbackUrl(callbackUrl)) {
+        redirectPath = decodeURIComponent(callbackUrl!)
+      } else if (role === "professional") {
         redirectPath = profileComplete ? "/dashboard/professional" : "/onboarding/professional"
       } else if (role === "admin") {
         redirectPath = "/dashboard/admin"
       } else {
         redirectPath = profileComplete ? "/dashboard/patient" : "/onboarding"
       }
-
 
       router.push(redirectPath)
       router.refresh()
@@ -357,7 +367,10 @@ export function LoginForm() {
   const handleGoogleSignIn = async () => {
     setLoading(true)
     try {
-      window.location.href = "/api/auth/google"
+      const next = isSafeCallbackUrl(callbackUrl) ? callbackUrl : undefined
+      window.location.href = next
+        ? "/api/auth/google?next=" + encodeURIComponent(next)
+        : "/api/auth/google"
     } catch {
       setError(language === "es" ? "No se pudo iniciar sesión con Google" : "Failed to initiate Google sign in")
       setLoading(false)
@@ -526,7 +539,7 @@ export function LoginForm() {
 
       <p className={`mt-2 text-center text-xs ${footerClass}`}>
         {language === "es" ? "¿No tienes una cuenta?" : "Don't have an account?"}{" "}
-        <a href="/auth/register" className={footerLinkClass}>
+        <a href={isSafeCallbackUrl(callbackUrl) ? `/auth/register?callbackUrl=${encodeURIComponent(callbackUrl!)}` : "/auth/register"} className={footerLinkClass}>
           {language === "es" ? "Regístrate" : "Sign Up"}
         </a>
       </p>

@@ -43,7 +43,7 @@ export default function WelcomeProfessionalEmail({ doctorName, professionalSlug 
           <Section style={{ backgroundColor: '#f8fafc', padding: '24px', borderRadius: '8px', marginBottom: '32px' }}>
             <Heading as="h3" style={{ fontSize: '16px', color: '#0f766e', marginTop: 0 }}>Paso 3: Cobros y Finanzas</Heading>
             <Text style={{ fontSize: '14px', color: '#475569' }}>
-              Recuerda vincular tu cuenta bancaria a través de Stripe Connect en la sección "Finanzas" para recibir tus pagos (menos el 5% de comisión de NUREA).
+              La coordinación y el pago de las consultas se realizan directamente con tus pacientes (por ejemplo por chat). Si aún no lo has hecho, activa tu suscripción en la sección de planes para acceder a agenda, perfil y mensajería.
             </Text>
           </Section>
 

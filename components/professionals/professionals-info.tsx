@@ -293,12 +293,12 @@ export function ProfessionalsInfo() {
                   </div>
                   <div>
                     <CardTitle className="text-2xl">
-                      {isSpanish ? "Comisiones y Pagos" : "Commissions and Payments"}
+                      {isSpanish ? "Suscripción y cobro de consultas" : "Subscription and consultation billing"}
                     </CardTitle>
                     <CardDescription>
                       {isSpanish 
-                        ? "Cómo funcionan las comisiones y el proceso de pago"
-                        : "How commissions and payment process work"}
+                        ? "Acceso a la plataforma y coordinación con pacientes"
+                        : "Platform access and coordination with patients"}
                     </CardDescription>
                   </div>
                 </div>
@@ -308,32 +308,12 @@ export function ProfessionalsInfo() {
                   <div className="space-y-4">
                     <div>
                       <h4 className="font-semibold text-foreground mb-2">
-                        {isSpanish ? "Comisión de NUREA" : "NUREA Commission"}
+                        {isSpanish ? "Suscripción NUREA" : "NUREA Subscription"}
                       </h4>
                       <p className="text-sm text-muted-foreground mb-3">
                         {isSpanish 
-                          ? "NUREA cobra una comisión por cada cita completada y pagada. Esta comisión cubre:"
-                          : "NUREA charges a commission for each completed and paid appointment. This commission covers:"}
-                      </p>
-                      <ul className="space-y-1 text-sm text-muted-foreground ml-4">
-                        <li>• {isSpanish ? "Mantenimiento de la plataforma" : "Platform maintenance"}</li>
-                        <li>• {isSpanish ? "Procesamiento de pagos seguro" : "Secure payment processing"}</li>
-                        <li>• {isSpanish ? "Soporte técnico y atención al cliente" : "Technical support and customer service"}</li>
-                        <li>• {isSpanish ? "Marketing y promoción" : "Marketing and promotion"}</li>
-                      </ul>
-                    </div>
-
-                    <div className="p-4 rounded-lg bg-muted/50 border border-border">
-                      <p className="text-sm font-semibold text-foreground mb-1">
-                        {isSpanish ? "Tarifa de Comisión:" : "Commission Rate:"}
-                      </p>
-                      <p className="text-2xl font-bold text-primary mb-1">
-                        {isSpanish ? "15% por cita" : "15% per appointment"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {isSpanish 
-                          ? "Aplicada solo sobre citas completadas y pagadas"
-                          : "Applied only on completed and paid appointments"}
+                          ? "Los profesionales abonan una suscripción mensual para acceder a la plataforma: perfil, agenda, chat y herramientas. Esta suscripción se factura por NUREA (por ejemplo vía Mercado Pago) y es independiente del cobro de tus consultas."
+                          : "Professionals pay a monthly subscription to access the platform: profile, calendar, chat and tools. This subscription is billed by NUREA (e.g. via Mercado Pago) and is separate from how you charge for consultations."}
                       </p>
                     </div>
                   </div>
@@ -341,46 +321,13 @@ export function ProfessionalsInfo() {
                   <div className="space-y-4">
                     <div>
                       <h4 className="font-semibold text-foreground mb-2">
-                        {isSpanish ? "Proceso de Pago" : "Payment Process"}
+                        {isSpanish ? "Cobro de consultas" : "Charging for consultations"}
                       </h4>
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-primary">1</span>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              {isSpanish 
-                                ? "El paciente paga antes de la cita a través de NUREA"
-                                : "Patient pays before appointment through NUREA"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-primary">2</span>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              {isSpanish 
-                                ? "NUREA retiene la comisión (15%)"
-                                : "NUREA retains commission (15%)"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="text-xs font-bold text-primary">3</span>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              {isSpanish 
-                                ? "El resto se transfiere a tu cuenta bancaria (dentro de 3-5 días hábiles)"
-                                : "The remainder is transferred to your bank account (within 3-5 business days)"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {isSpanish 
+                          ? "La coordinación y el pago de la consulta se realizan directamente entre tú y el paciente, por ejemplo a través del chat seguro de la plataforma (enlace de pago externo, transferencia, instrucciones). NUREA no retiene comisiones ni actúa como intermediario del pago de la consulta."
+                          : "Coordination and payment of the consultation are done directly between you and the patient, for example through the platform's secure chat (external payment link, bank transfer, instructions). NUREA does not retain commissions or act as intermediary for consultation payments."}
+                      </p>
                     </div>
 
                     <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
@@ -392,8 +339,8 @@ export function ProfessionalsInfo() {
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {isSpanish 
-                              ? "Si una cita se cancela o reembolsa, no se cobra comisión. La comisión solo aplica a citas completadas exitosamente."
-                              : "If an appointment is cancelled or refunded, no commission is charged. Commission only applies to successfully completed appointments."}
+                              ? "Cualquier reembolso o disputa relacionada con el pago de una consulta es materia exclusiva entre el paciente y el profesional."
+                              : "Any refund or dispute related to consultation payment is solely between the patient and the professional."}
                           </p>
                         </div>
                       </div>

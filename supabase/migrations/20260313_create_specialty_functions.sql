@@ -136,6 +136,8 @@ RETURNS TABLE (
   years_experience INTEGER,
   languages TEXT[],
   availability JSONB,
+  latitude NUMERIC,
+  longitude NUMERIC,
   total_count BIGINT
 )
 LANGUAGE plpgsql
@@ -200,6 +202,8 @@ BEGIN
     pr.years_experience,
     pr.languages,
     pr.availability,
+    pr.latitude,
+    pr.longitude,
     v_total as total_count
   FROM public.professionals pr
   JOIN public.profiles pf ON pf.id = pr.id

@@ -30,7 +30,8 @@ const DEFAULT_FILTERS: SpecialistFilters = {
 
 export function useSpecialists(
   initialFilters: Partial<SpecialistFilters> = {},
-  lang: string = 'es'
+  lang: string = 'es',
+  urlSyncKey?: string
 ): UseSpecialistsResult {
   const [specialists, setSpecialists] = useState<SpecialistCard[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,6 +45,16 @@ export function useSpecialists(
   })
 
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Sincronizar estado con la URL cuando el usuario navega (atrás/adelante)
+  useEffect(() => {
+    if (urlSyncKey === undefined) return
+    const merged = { ...DEFAULT_FILTERS, ...initialFilters }
+    setFiltersState(prev => ({
+      ...merged,
+      page: merged.page ?? prev.page ?? 1
+    }))
+  }, [urlSyncKey]) // eslint-disable-line react-hooks/exhaustive-deps -- initialFilters from URL, sync only when urlSyncKey changes
 
   const fetchSpecialists = useCallback(async () => {
     // Cancelar petición anterior si existe

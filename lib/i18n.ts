@@ -179,7 +179,7 @@ export const translations = {
       consultationFrom: "Consulta desde",
       perSession: "/ sesión",
       viewProfile: "Ver Perfil",
-      bookNow: "Reservar Ahora",
+      bookNow: "Agendar cita",
       nextAvailable: "Próxima disponible",
     },
     // Footer
@@ -704,7 +704,7 @@ export const translations = {
       consultationFrom: "Consultation from",
       perSession: "/ session",
       viewProfile: "View Profile",
-      bookNow: "Book Now",
+      bookNow: "Book appointment",
       nextAvailable: "Next available",
     },
     // Footer

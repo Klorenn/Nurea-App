@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { DashboardLayout } from "@/components/dashboard-layout"
+import { useSearchParams } from "next/navigation"
 import { HealthChat } from "@/components/messaging/health-chat"
 import { useAuth } from "@/hooks/use-auth"
 import { usePresence } from "@/hooks/use-presence"
@@ -22,6 +22,8 @@ interface Contact {
 }
 
 function ChatContent() {
+  const searchParams = useSearchParams()
+  const withProfessionalId = searchParams.get("with")
   const { user, loading: authLoading } = useAuth()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,16 +33,21 @@ function ChatContent() {
   const professionalIds = contacts.map((c) => c.id)
   const { isOnline } = usePresence(professionalIds)
   
-  // Actualizar estado online/offline de contactos
+  // Actualizar estado online/offline de contactos (solo si cambió el status para no crear nuevos refs en bucle)
   useEffect(() => {
-    if (professionalIds.length > 0) {
-      setContacts((prev) =>
-        prev.map((contact) => ({
-          ...contact,
-          status: isOnline(contact.id) ? 'online' : 'offline',
-        }))
-      )
-    }
+    if (professionalIds.length === 0) return
+    setContacts((prev) => {
+      let changed = false
+      const next = prev.map((contact) => {
+        const status = isOnline(contact.id) ? 'online' as const : 'offline' as const
+        if (contact.status !== status) {
+          changed = true
+          return { ...contact, status }
+        }
+        return contact
+      })
+      return changed ? next : prev
+    })
   }, [isOnline, professionalIds.length])
 
   useEffect(() => {
@@ -147,6 +154,38 @@ function ChatContent() {
           }
         }
 
+        // Si llegamos con ?with=id, asegurar que ese profesional esté en la lista
+        if (withProfessionalId && user) {
+          const exists = contactsData.some((c) => c.id === withProfessionalId)
+          if (!exists) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("id, first_name, last_name, avatar_url")
+              .eq("id", withProfessionalId)
+              .single()
+            if (profile) {
+              let businessHours = "Lunes a Viernes, 9:00 - 18:00"
+              const { data: professional } = await supabase
+                .from("professionals")
+                .select("availability")
+                .eq("id", withProfessionalId)
+                .single()
+              if (professional?.availability?.monday?.hours || professional?.availability?.weekdays?.hours) {
+                const monFri = professional.availability.monday || professional.availability.weekdays
+                businessHours = `Lunes a Viernes, ${monFri?.hours || "9:00 - 18:00"}`
+              }
+              contactsData.unshift({
+                id: profile.id,
+                name: `Dr. ${profile.first_name} ${profile.last_name}`,
+                avatar: profile.avatar_url || undefined,
+                status: "offline",
+                responseTime: "2-4 horas",
+                businessHours,
+              })
+            }
+          }
+        }
+
         setContacts(contactsData)
       } catch (error) {
         console.error("Error loading contacts:", error)
@@ -156,7 +195,7 @@ function ChatContent() {
     }
 
     loadContacts()
-  }, [user, authLoading, supabase])
+  }, [user, authLoading, supabase, withProfessionalId])
 
   if (authLoading || loading) {
     return (
@@ -181,6 +220,7 @@ function ChatContent() {
       currentUserAvatar={user.user_metadata?.avatar_url}
       contacts={contacts}
       role="patient"
+      initialContactId={withProfessionalId}
     />
   )
 }

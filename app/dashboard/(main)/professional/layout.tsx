@@ -43,8 +43,8 @@ export default function ProfessionalLayout({
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Check if we're already on the onboarding page
-  const isOnboardingPage = pathname?.includes("/onboarding")
+  // Check if we're already on the onboarding page (used in redirect effect)
+  const shouldRedirectToOnboarding = false
 
   useEffect(() => {
     if (authLoading) return
@@ -130,6 +130,8 @@ export default function ProfessionalLayout({
     loadProfile()
   }, [user, authLoading, router, supabase])
 
+  // Onboarding redirect desactivado: usamos directamente la página de perfil profesional como lugar de configuración inicial.
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -145,30 +147,19 @@ export default function ProfessionalLayout({
 
   // Check 1: Subscription active or trialing (and not expired)
   const now = new Date()
-  const hasTrialAccess = profileInfo?.subscription_status === "trialing" && 
-                         profileInfo?.trial_end_date && 
-                         new Date(profileInfo.trial_end_date) > now
+  const hasTrialAccess = profileInfo?.subscription_status === "trialing" &&
+    profileInfo?.trial_end_date &&
+    new Date(profileInfo.trial_end_date) > now
 
   const isSubscriptionActive = profileInfo?.subscription_status === "active" || hasTrialAccess
 
-  if (!isSubscriptionActive) {
-    return <SubscriptionPaywall language={language} status={profileInfo?.subscription_status || "inactive"} />
-  }
+  // Sin suscripción solo se bloquean: mensajes (chat) y pacientes. El resto (perfil, horarios, configuración, citas, etc.) se permite.
+  const isMessagesPage = pathname?.startsWith("/dashboard/professional/chat")
+  const isPatientsPage = pathname?.startsWith("/dashboard/professional/patients")
+  const requiresSubscription = isMessagesPage || isPatientsPage
 
-  // Check 2: Onboarding complete? (only redirect if NOT already on onboarding page)
-  const isOnboarded = profileInfo?.is_onboarded === true
-  if (!isOnboarded && !isOnboardingPage) {
-    router.push("/dashboard/professional/onboarding")
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 text-teal-600 animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">
-            {isSpanish ? "Redirigiendo..." : "Redirecting..."}
-          </p>
-        </div>
-      </div>
-    )
+  if (!isSubscriptionActive && requiresSubscription) {
+    return <SubscriptionPaywall language={language} status={profileInfo?.subscription_status || "inactive"} />
   }
 
   return <>{children}</>

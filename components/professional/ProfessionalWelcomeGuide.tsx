@@ -51,7 +51,7 @@ export function ProfessionalWelcomeGuide({ doctorName, slug }: ProfessionalWelco
     },
     {
       title: "Configurar Pagos",
-      description: "Activa Stripe para recibir transferencias (comisión 5%).",
+      description: "Activa tu suscripción en Planes para acceder a agenda y pacientes.",
       icon: CreditCard,
       color: "bg-slate-50 text-slate-800",
       link: "/dashboard/professional/payouts",

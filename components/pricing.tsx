@@ -188,23 +188,9 @@ const PricingSwitch = ({
   )
 }
 
-interface PlanConfig {
-  id: string
-  stripePriceIdMonthly: string
-  stripePriceIdYearly: string
-}
-
-const STRIPE_PLANS: Record<string, PlanConfig> = {
-  professional: {
-    id: "professional",
-    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY || "",
-    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY || "",
-  },
-  recentGraduate: {
-    id: "starter",
-    stripePriceIdMonthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY || "",
-    stripePriceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY || "",
-  },
+const SUBSCRIPTION_PLAN_IDS: Record<string, "professional" | "graduate"> = {
+  professional: "professional",
+  recentGraduate: "graduate",
 }
 
 export function Pricing() {
@@ -281,37 +267,26 @@ export function Pricing() {
       return
     }
 
-    const stripeConfig = STRIPE_PLANS[planKey]
-    if (!stripeConfig) {
+    const planId = SUBSCRIPTION_PLAN_IDS[planKey]
+    if (!planId) {
       console.error("Plan configuration not found:", planKey)
-      return
-    }
-
-    const priceId = isYearly ? stripeConfig.stripePriceIdYearly : stripeConfig.stripePriceIdMonthly
-
-    if (!priceId) {
-      router.push("/precios")
       return
     }
 
     setLoadingPlan(planKey)
 
     try {
-      const response = await fetch("/api/stripe/checkout", {
+      const response = await fetch("/api/payments/mercadopago/subscription", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ priceId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId, isYearly }),
       })
 
       const data = await response.json()
 
       if (data.error) {
         console.error("Checkout error:", data.error)
-        alert(language === "es" 
-          ? `Error: ${data.error}` 
-          : `Error: ${data.error}`)
+        alert(language === "es" ? `Error: ${data.error}` : `Error: ${data.error}`)
         return
       }
 
@@ -320,8 +295,8 @@ export function Pricing() {
       }
     } catch (error) {
       console.error("Error initiating checkout:", error)
-      alert(language === "es" 
-        ? "Error al procesar. Por favor intenta de nuevo." 
+      alert(language === "es"
+        ? "Error al procesar. Por favor intenta de nuevo."
         : "Processing error. Please try again.")
     } finally {
       setLoadingPlan(null)
