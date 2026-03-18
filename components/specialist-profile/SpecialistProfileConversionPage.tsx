@@ -144,10 +144,7 @@ export function SpecialistProfileConversionPage({
               />
 
               <FormatsSection
-                hasInPerson={
-                  specialist.consultationTypes.includes('in-person') &&
-                  !!specialist.location
-                }
+                hasInPerson={specialist.consultationTypes.includes('in-person')}
                 hasOnline={specialist.consultationTypes.includes('online')}
                 locationLabel={specialist.location}
                 isSpanish={isSpanish}
@@ -217,10 +214,7 @@ export function SpecialistProfileConversionPage({
                 defaultPrice={specialist.consultationPrice}
                 defaultDuration={specialist.slotDuration}
                 hasOnline={specialist.consultationTypes.includes('online')}
-                hasInPerson={
-                  specialist.consultationTypes.includes('in-person') &&
-                  !!specialist.location
-                }
+                hasInPerson={specialist.consultationTypes.includes('in-person')}
                 insuranceOptions={specialist.insuranceOptions}
                 isSpanish={isSpanish}
                 onBook={handleBook}

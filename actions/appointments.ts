@@ -19,21 +19,31 @@ export async function bookAppointment(
     throw new Error("Missing patient data");
   }
 
-  const slot = await prisma.slot.update({
-    where: { id: slotId },
-    data: { isBooked: true },
-  });
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.slot.updateMany({
+      where: {
+        id: slotId,
+        professionalId,
+        isBooked: false,
+      },
+      data: { isBooked: true },
+    });
 
-  await prisma.appointment.create({
-    data: {
-      patientId: patientId || undefined,
-      patientName,
-      patientEmail,
-      patientPhone,
-      professionalId,
-      slotId: slot.id,
-      status: "confirmed",
-    },
+    if (updated.count !== 1) {
+      throw new Error("El horario ya no está disponible.");
+    }
+
+    await tx.appointment.create({
+      data: {
+        patientId: patientId || undefined,
+        patientName,
+        patientEmail,
+        patientPhone,
+        professionalId,
+        slotId,
+        status: "confirmed",
+      },
+    });
   });
 
   revalidatePath(`/profesionales/${professionalId}`);

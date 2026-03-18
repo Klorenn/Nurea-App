@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 
 export async function GET() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient();
 
   // 1. Verificación de Autenticación (Supabase)
   const { data: { user }, error } = await supabase.auth.getUser();

@@ -98,16 +98,26 @@ export default function ProfessionalLayout({
               } else {
                 // Standard professional plan goes to Mercado Pago
                 console.log(`🚀 Redirecting to Mercado Pago for pending plan: ${pendingPlan}`)
-                const res = await fetch("/api/payments/mercadopago/subscription", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ planId: pendingPlan, isYearly: false }),
-                })
-                const { url } = await res.json()
-                if (url) {
+                try {
+                  const res = await fetch("/api/payments/mercadopago/subscription", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ planId: pendingPlan, isYearly: false }),
+                  })
+                  if (res.ok) {
+                    const { url } = await res.json()
+                    if (url) {
+                      sessionStorage.removeItem("pending_plan")
+                      window.location.href = url
+                      return
+                    }
+                  } else {
+                    console.error("Payment API returned an error:", res.status)
+                    sessionStorage.removeItem("pending_plan")
+                  }
+                } catch (err) {
+                  console.error("Failed to parse payment API response:", err)
                   sessionStorage.removeItem("pending_plan")
-                  window.location.href = url
-                  return
                 }
               }
             }
@@ -211,10 +221,14 @@ function SubscriptionPaywall({ language, status }: { language: string, status: s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId: "professional", isYearly: false }),
       })
-      const { url } = await res.json()
-      if (url) {
-        window.location.href = url
-        return
+      if (res.ok) {
+        const { url } = await res.json()
+        if (url) {
+          window.location.href = url
+          return
+        }
+      } else {
+        console.error("Payment API returned an error:", res.status)
       }
       // Fallback a la página de precios si falla la API
       router.push("/pricing")

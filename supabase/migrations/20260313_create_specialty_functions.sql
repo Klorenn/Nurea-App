@@ -157,6 +157,7 @@ BEGIN
   LEFT JOIN public.categories c ON c.id = s.category_id
   WHERE 
     (NOT p_verified_only OR pr.verified = true)
+    AND (NOT p_available_today OR public.is_available_today(pr.availability))
     AND (p_specialty_slug IS NULL OR s.slug = p_specialty_slug)
     AND (p_category_slug IS NULL OR c.slug = p_category_slug)
     AND (
@@ -211,6 +212,7 @@ BEGIN
   LEFT JOIN public.categories c ON c.id = s.category_id
   WHERE 
     (NOT p_verified_only OR pr.verified = true)
+    AND (NOT p_available_today OR public.is_available_today(pr.availability))
     AND (p_specialty_slug IS NULL OR s.slug = p_specialty_slug)
     AND (p_category_slug IS NULL OR c.slug = p_category_slug)
     AND (

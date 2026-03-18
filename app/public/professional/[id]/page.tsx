@@ -78,7 +78,11 @@ export async function generateMetadata(
 
   const { professional } = data
   const name = professional.name
-  const specialty = professional.specialty_data?.name || professional.specialty || 'Especialista'
+  const specialty =
+    professional.specialty_data?.name_es ||
+    professional.specialty_data?.name_en ||
+    professional.specialty ||
+    'Profesional de salud'
 
   return {
     title: `${name} - ${specialty} | NUREA Premium`,

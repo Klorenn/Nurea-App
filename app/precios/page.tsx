@@ -118,6 +118,20 @@ export default function PreciosPage() {
       return
     }
 
+    const role =
+      (user.app_metadata as any)?.role ||
+      (user.user_metadata as any)?.role ||
+      null
+
+    if (role !== "professional") {
+      alert(
+        isSpanish
+          ? "Este plan de suscripción es solo para profesionales de la salud. Como paciente no necesitas pagar nada para usar NUREA."
+          : "Subscription plans are only available for health professionals. As a patient you don't need to pay anything to use NUREA."
+      )
+    return
+    }
+
     setLoadingPlan(plan.id)
 
     try {

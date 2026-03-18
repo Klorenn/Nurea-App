@@ -38,8 +38,8 @@ export function ProfessionalWelcomeGuide({ doctorName, slug }: ProfessionalWelco
       description: "Define tu biografía y especialidad para destacar en el buscador.",
       icon: UserCheck,
       color: "bg-teal-50 text-teal-600",
-      link: "/dashboard/professional/settings",
-      action: "Ir a Ajustes"
+      link: "/dashboard/professional/profile",
+      action: "Ir a Perfil"
     },
     {
       title: "Abrir Agenda",

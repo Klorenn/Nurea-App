@@ -1,11 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarInset,
-} from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useAuth } from "@/hooks/use-auth"
 import { UserDropdown } from "@/components/ui/user-dropdown"
@@ -25,15 +21,13 @@ export function DashboardLayout({
   const isSpanish = language === "es"
 
   return (
-    <SidebarProvider defaultOpen>
+    <SidebarProvider defaultOpen={false}>
       <div className="flex min-h-screen w-full bg-background">
         <DashboardSidebar role={role as UserRole} language={language} />
 
         <SidebarInset className="flex flex-col">
           <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-xl border-b border-border/40 sticky top-0 z-30">
             <div className="flex items-center gap-3">
-              <SidebarTrigger className="h-8 w-8" />
-              <div className="hidden sm:block h-4 w-px bg-border/40" />
               <h1 className="hidden sm:block text-sm font-medium text-muted-foreground">
                 {role === "professional"
                   ? isSpanish ? "Panel Profesional" : "Professional Dashboard"

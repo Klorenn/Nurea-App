@@ -58,6 +58,7 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { format, parseISO, isToday, isTomorrow, differenceInHours, isPast } from "date-fns"
 import { es, enUS } from "date-fns/locale"
+import { mutate } from "swr"
 import { toast } from "sonner"
 import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
 import { Link as LinkIcon } from "lucide-react"
@@ -338,9 +339,20 @@ export default function PatientDashboard() {
         .upload(path, file, { upsert: true })
       if (uploadError) throw uploadError
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      
+      // 1. Update profiles table
       await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+      
+      // 2. Update auth metadata so the global header / navbar refreshes
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      })
+      
+      // 3. Update local state
       setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : null)
       toast.success(isSpanish ? "Foto actualizada ✓" : "Photo updated ✓")
+      // Invalidate the unified profile key
+      mutate(["profile", user?.id])
     } catch (err) {
       console.error(err)
       toast.error(isSpanish ? "Error al subir la foto" : "Error uploading photo")

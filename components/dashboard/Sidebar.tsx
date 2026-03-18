@@ -203,7 +203,7 @@ const professionalNavigation: NavGroup[] = [
         icon: Zap,
         label: "First Class",
         labelEn: "First Class",
-        href: "/dashboard/professional/settings",
+        href: "/dashboard/professional/profile",
       },
       {
         icon: HelpCircle,
@@ -236,7 +236,7 @@ const professionalNavigation: NavGroup[] = [
         icon: Settings,
         label: "Mi Consultorio",
         labelEn: "Practice Settings",
-        href: "/dashboard/professional/settings",
+        href: "/dashboard/professional/profile",
       },
     ],
   },
@@ -258,7 +258,7 @@ const patientNavigation: NavGroup[] = [
         icon: Search,
         label: "Buscar Especialista",
         labelEn: "Find Specialist",
-        href: "/dashboard/patient/buscar",
+        href: "/explore",
       },
       {
         icon: Calendar,
@@ -360,6 +360,9 @@ export function DashboardSidebar({
         ? []
         : [
             professionalNavigation[0].items.find(
+              (item) => item.href === "/dashboard/professional"
+            ),
+            professionalNavigation[0].items.find(
               (item) => item.href === "/dashboard/professional/appointments"
             ),
             professionalNavigation[0].items.find(
@@ -374,11 +377,8 @@ export function DashboardSidebar({
             professionalNavigation[0].items.find(
               (item) => item.href === "/dashboard/professional/payouts"
             ),
-            professionalNavigation[1].items.find(
-              (item) => item.href === "/dashboard/professional/profile"
-            ),
           ].filter(Boolean) as NavItem[],
-    []
+    [role]
   )
 
   const professionalIconBottom = React.useMemo(
@@ -386,17 +386,82 @@ export function DashboardSidebar({
       role !== "professional"
         ? []
         : [
-            professionalNavigation[0].items.find(
-              (item) => item.href === "/dashboard/professional"
+            professionalNavigation[1].items.find(
+              (item) => item.href === "/dashboard/professional/profile"
             ),
             professionalNavigation[1].items.find(
               (item) => item.href === "/dashboard/professional/reviews"
             ),
-            professionalNavigation[2].items.find(
-              (item) => item.href === "/dashboard/professional/settings"
+          ].filter(Boolean) as NavItem[],
+    [role]
+  )
+
+  const professionalIcons = React.useMemo(
+    () =>
+      role !== "professional"
+        ? []
+        : [...professionalIconTop, ...professionalIconBottom],
+    [role, professionalIconTop, professionalIconBottom]
+  )
+
+  // Compact icon-only navigation for patients (same design language as professionals)
+  const patientIconTop = React.useMemo(
+    () =>
+      role !== "patient"
+        ? []
+        : [
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/patient"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/explore"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/chat"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/patient/citas"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/favorites"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/family"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/documents"
             ),
           ].filter(Boolean) as NavItem[],
-    []
+    [role]
+  )
+
+  const patientIconBottom = React.useMemo(
+    () =>
+      role !== "patient"
+        ? []
+        : [
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/profile"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/patient/payments"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/support"
+            ),
+            patientNavigation[0].items.find(
+              (item) => item.href === "/dashboard/help"
+            ),
+          ].filter(Boolean) as NavItem[],
+    [role]
+  )
+
+  const patientIcons = React.useMemo(
+    () =>
+      role !== "patient"
+        ? []
+        : [...patientIconTop, ...patientIconBottom],
+    [role, patientIconTop, patientIconBottom]
   )
 
   return (
@@ -445,9 +510,9 @@ export function DashboardSidebar({
 
       <SidebarContent className="py-4 px-2">
         {role === "professional" ? (
-          <div className="flex flex-col justify-between h-full">
-            <SidebarMenu>
-              {professionalIconTop.map((item) => {
+          <div className="flex flex-col h-full">
+            <SidebarMenu className="space-y-1">
+              {professionalIcons.map((item) => {
                 const active = isActive(item.href)
                 return (
                   <SidebarMenuItem key={item.href}>
@@ -476,38 +541,39 @@ export function DashboardSidebar({
               })}
             </SidebarMenu>
 
-            <div>
-              <SidebarSeparator className="my-3 mx-3 bg-border/30" />
-              <SidebarMenu>
-                {professionalIconBottom.map((item) => {
-                  const active = isActive(item.href)
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        tooltip={isSpanish ? item.label : item.labelEn}
-                        size="icon"
-                        className={cn(
-                          "h-10 w-10 mx-auto my-1 rounded-2xl flex items-center justify-center",
-                          "hover:bg-accent/60 hover:text-foreground",
-                          active && "bg-[#0f766e]/10 text-[#0f766e] shadow-sm"
-                        )}
-                      >
-                        <Link href={item.href} className="flex items-center justify-center">
-                          <item.icon
-                            className={cn(
-                              "h-[18px] w-[18px] shrink-0 transition-colors",
-                              active ? "text-[#0f766e]" : "text-muted-foreground"
-                            )}
-                          />
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </div>
+          </div>
+        ) : role === "patient" ? (
+          <div className="flex flex-col h-full">
+            <SidebarMenu className="space-y-1">
+              {patientIcons.map((item) => {
+                const active = isActive(item.href)
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={isSpanish ? item.label : item.labelEn}
+                      size="icon"
+                      className={cn(
+                        "h-11 w-11 mx-auto my-1 rounded-2xl flex items-center justify-center",
+                        "hover:bg-accent/60 hover:text-foreground",
+                        active && "bg-[#0f766e]/10 text-[#0f766e] shadow-sm"
+                      )}
+                    >
+                      <Link href={item.href} className="flex items-center justify-center">
+                        <item.icon
+                          className={cn(
+                            "h-[20px] w-[20px] shrink-0 transition-colors",
+                            active ? "text-[#0f766e]" : "text-muted-foreground"
+                          )}
+                        />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+            </SidebarMenu>
+
           </div>
         ) : (
           navigation.map((group, groupIndex) => (
@@ -519,10 +585,7 @@ export function DashboardSidebar({
                 <SidebarMenu>
                   {group.items.map((item) => {
                     const active = isActive(item.href)
-                    const isProfessionalProfileGroup =
-                      role === "professional" &&
-                      (group.title === "Perfil y visibilidad" ||
-                        group.titleEn === "Profile & visibility")
+                    const isProfessionalProfileGroup = false
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
@@ -595,22 +658,24 @@ export function DashboardSidebar({
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-3 border-t border-border/30">
-        <div className="group-data-[collapsible=icon]:hidden">
-          <div className="px-3 py-2 rounded-xl bg-accent/30">
-            <p className="text-[11px] text-muted-foreground">
-              {isSpanish ? "¿Necesitas ayuda?" : "Need help?"}
-            </p>
-            <Link
-              href={role === "admin" ? "/admin/support" : "/support"}
-              className="text-[12px] font-medium hover:underline"
-              style={{ color: roleColor }}
-            >
-              {isSpanish ? "Centro de soporte" : "Support center"} →
-            </Link>
+      {role === "admin" && (
+        <SidebarFooter className="p-3 border-t border-border/30">
+          <div className="group-data-[collapsible=icon]:hidden">
+            <div className="px-3 py-2 rounded-xl bg-accent/30">
+              <p className="text-[11px] text-muted-foreground">
+                {isSpanish ? "¿Necesitas ayuda?" : "Need help?"}
+              </p>
+              <Link
+                href="/admin/support"
+                className="text-[12px] font-medium hover:underline"
+                style={{ color: roleColor }}
+              >
+                {isSpanish ? "Centro de soporte" : "Support center"} →
+              </Link>
+            </div>
           </div>
-        </div>
-      </SidebarFooter>
+        </SidebarFooter>
+      )}
     </Sidebar>
   )
 }

@@ -295,7 +295,7 @@ export default function AdminSupportPage() {
 
                       {/* Right Column: Actions */}
                       <div className="md:w-64 bg-slate-50/50 dark:bg-slate-900/30 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 p-8 flex flex-col justify-center items-center gap-4">
-                        {ticket.status === 'resolved' ? (
+                        {ticket.status === 'resolved' || ticket.status === 'closed' ? (
                           <div className="flex flex-col items-center gap-2 text-emerald-600">
                             <div className="bg-emerald-100 dark:bg-emerald-900/30 rounded-full p-2">
                               <Check className="h-6 w-6" />

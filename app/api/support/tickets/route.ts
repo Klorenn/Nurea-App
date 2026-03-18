@@ -154,8 +154,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validar categoría si se proporciona
-    const validCategories = ['technical', 'billing', 'account', 'appointment', 'other']
+    // Validar categoría si se proporciona (sin categoría de facturación)
+    const validCategories = ['technical', 'account', 'appointment', 'other']
     const finalCategory = category && validCategories.includes(category) ? category : 'other'
 
     // Validar prioridad si se proporciona
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Crear el ticket
+    // Crear el ticket (dejamos que los defaults de la tabla manejen status/fechas)
     const { data: ticket, error: ticketError } = await supabase
       .from('support_tickets')
       .insert({
@@ -197,7 +197,6 @@ export async function POST(request: Request) {
         message: sanitizedMessage,
         category: finalCategory,
         priority: finalPriority,
-        status: 'open'
       })
       .select()
       .single()
@@ -207,10 +206,26 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { 
           error: 'create_failed',
-          message: 'No pudimos crear el ticket. Por favor, intenta nuevamente.'
+          message: 'No pudimos crear el ticket. Por favor, intenta nuevamente.',
+          details: ticketError.message ?? ticketError.code ?? String(ticketError)
         },
         { status: 500 }
       )
+    }
+
+    // Crear el primer mensaje de la conversación
+    const { error: messageError } = await supabase
+      .from('ticket_messages')
+      .insert({
+        ticket_id: ticket.id,
+        sender_id: user.id,
+        sender_role: 'user',
+        message: sanitizedMessage,
+      })
+
+    if (messageError) {
+      console.error('Error creating first ticket message:', messageError)
+      // No fallar al usuario si solo el mensaje tiene problema
     }
 
     if (process.env.RESEND_API_KEY && user.email) {

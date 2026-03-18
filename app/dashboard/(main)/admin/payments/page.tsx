@@ -30,13 +30,16 @@ export default function AdminPaymentsPage() {
       if (statusFilter !== "all") params.append("status", statusFilter)
 
       const response = await fetch(`/api/admin/payments?${params.toString()}`)
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
-      if (data.success) {
+      if (response.ok && data?.success) {
         setPayments(data.payments || [])
+      } else {
+        console.error("Error loading payments (admin):", data)
+        setPayments([])
       }
     } catch (error) {
-      console.error("Error loading payments:", error)
+      console.error("Error loading payments (admin):", error)
     } finally {
       setLoading(false)
     }

@@ -27,6 +27,7 @@ import {
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
+import { GoogleAddressInput } from "@/components/ui/google-address-input"
 
 export default function ProfessionalProfileEditPage() {
   const { language } = useLanguage()
@@ -588,11 +589,12 @@ export default function ProfessionalProfileEditPage() {
                       <div className="space-y-3">
                         <div className="space-y-2">
                           <Label>{isSpanish ? "Dirección de Consulta" : "Clinic Address"}</Label>
-                          <Input
+                          <GoogleAddressInput
                             value={clinicAddress}
-                            onChange={(e) => setClinicAddress(e.target.value)}
-                            placeholder={isSpanish ? "Las Condes 1245, Santiago" : "Las Condes 1245, Santiago"}
+                            onChange={(val) => setClinicAddress(val)}
+                            placeholder={isSpanish ? "Busca tu dirección..." : "Search your address..."}
                             className="rounded-xl bg-accent/20 border-none"
+                            language={isSpanish ? "es" : "en"}
                           />
                         </div>
                         <div className="space-y-2">

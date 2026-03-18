@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
+import { GoogleAddressInput } from "@/components/ui/google-address-input"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useFieldArray } from "react-hook-form"
 import * as z from "zod"
@@ -62,6 +63,7 @@ import { ProfileCompleteness } from "@/components/professional/profile-completen
 import { ProfilePhotoUpload } from "@/components/professional/profile-photo-upload"
 import { ProfileSectionCard } from "@/components/professional/profile-section-card"
 import { TipTapEditor } from "@/components/professional/tiptap-editor"
+import { useProfile } from "@/hooks/use-profile"
 
 // --- Availability Types & Constants ---
 interface DaySchedule {
@@ -134,7 +136,6 @@ const generalSchema = z.object({
   registration_number: z.string().min(1, "Nº Registro es requerido"),
   registration_institution: z.string().optional(),
   specialty_id: z.string().uuid("Selecciona una especialidad"),
-  sub_specialties: z.array(z.string()).optional(),
 })
 
 const clinicalSchema = z.object({
@@ -170,6 +171,7 @@ export default function ProfessionalProfilePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
+  const { profile, mutate: mutateProfile } = useProfile()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -211,7 +213,6 @@ export default function ProfessionalProfilePage() {
       registration_number: "",
       registration_institution: "",
       specialty_id: "",
-      sub_specialties: []
     }
   })
 
@@ -304,7 +305,6 @@ export default function ProfessionalProfilePage() {
             registration_number: professional.registration_number || "",
             registration_institution: professional.registration_institution || "",
             specialty_id: professional.specialty_id || "",
-            sub_specialties: [] // Multi-select sub-specialties would come from professional_specialties
           })
           setAvatarUrl(professional.avatar_url)
           clinicalForm.reset({
@@ -407,6 +407,9 @@ export default function ProfessionalProfilePage() {
     if (!user) return
     setSaving(true)
     try {
+      const selectedSpecialty = specialties.find(s => s.id === values.specialty_id)
+      const specialtyLabel = selectedSpecialty?.name_es || null
+
       const { error } = await supabase
         .from('professionals')
         .update({
@@ -414,7 +417,9 @@ export default function ProfessionalProfilePage() {
           years_experience: values.years_experience ?? null,
           registration_number: values.registration_number,
           registration_institution: values.registration_institution,
-          specialty_id: values.specialty_id
+          specialty_id: values.specialty_id,
+          // Mantener también la columna de texto legacy para que el perfil público muestre el título correcto.
+          specialty: specialtyLabel,
         })
         .eq('id', user.id)
 
@@ -431,31 +436,34 @@ export default function ProfessionalProfilePage() {
   const handleProfilePhotoUpload = async (file: File) => {
     if (!user) return { success: false }
     try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}/${Math.random()}.${fileExt}`
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file)
+      const formData = new FormData()
+      formData.append("file", file)
 
-      if (uploadError) throw uploadError
+      const response = await fetch("/api/user/upload-avatar", {
+        method: "POST",
+        body: formData,
+      })
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName)
+      const data = await response.json()
 
-      const { error: updateError } = await supabase
-        .from('professionals')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id)
+      if (!response.ok || !data?.success) {
+        const message =
+          data?.message ||
+          "No se pudo actualizar la foto de perfil"
+        throw new Error(message)
+      }
 
-      if (updateError) throw updateError
-      
-      setAvatarUrl(publicUrl)
+      if (data.avatarUrl) {
+        const timestampedUrl = `${data.avatarUrl}?t=${Date.now()}`
+        setAvatarUrl(timestampedUrl)
+      }
+
+      // Refresca el perfil unificado (navbar, etc.)
+      mutateProfile()
+
       toast.success("Foto de perfil actualizada")
       return { success: true }
     } catch (err) {
-      console.error(err)
       toast.error("Error al subir foto")
       return { success: false }
     }
@@ -496,6 +504,7 @@ export default function ProfessionalProfilePage() {
       DAYS_OF_WEEK.forEach(({ key }) => {
         const daySchedule = schedule[key as keyof WeeklySchedule]
         availability[key] = {
+          enabled: daySchedule.enabled,
           online: {
             available: daySchedule.enabled,
             hours: daySchedule.enabled ? `${daySchedule.startTime} - ${daySchedule.endTime}` : null,
@@ -517,6 +526,10 @@ export default function ProfessionalProfilePage() {
 
       setOriginalSchedule(schedule)
       setHasScheduleChanges(false)
+      
+      // Sync with profile SWR if needed (e.g. if we add availability summary to profile)
+      mutateProfile()
+      
       toast.success("Horarios guardados exitosamente")
     } catch (error) {
       console.error(error)
@@ -751,7 +764,6 @@ export default function ProfessionalProfilePage() {
     if (values.registration_number) score += 10
     if (values.registration_institution) score += 5
     if (values.specialty_id) score += 10
-    if (values.sub_specialties && values.sub_specialties.length > 0) score += 5
     const clinicalValues = clinicalForm.getValues()
     if (clinicalValues.conditions_treated.length > 0) score += 10
     const eduValues = educationForm.getValues()
@@ -841,13 +853,17 @@ export default function ProfessionalProfilePage() {
           <ProfileSectionCard
             title="Información básica"
             description="Añade tu información principal y una foto tuya en la que tu cara sea fácil de identificar. Nuestra IA revisa tu foto manteniéndola a salvo y asegurándose de que nunca se utiliza para ningún otro propósito."
-            onEdit={() => document.getElementById("form-general")?.scrollIntoView({ behavior: "smooth" })}
-            editLabel="Editar"
+            onEdit={() => {
+              // Trigger click on the avatar uploader button/area
+              const uploaderBtn = document.querySelector('[data-avatar-uploader-trigger]') as HTMLButtonElement
+              uploaderBtn?.click()
+            }}
+            editLabel="Cambiar foto"
           >
             <div className="flex flex-col sm:flex-row gap-6">
               <div className="flex justify-center sm:justify-start">
                 <ProfilePhotoUpload
-                  currentUrl={avatarUrl || undefined}
+                  currentUrl={avatarUrl || profile?.avatar_url || undefined}
                   onUpload={handleProfilePhotoUpload}
                 />
               </div>
@@ -878,11 +894,26 @@ export default function ProfessionalProfilePage() {
             editLabel="Editar"
           >
             <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {generalForm.watch("bio") ? (
-                <p className="whitespace-pre-wrap">{generalForm.watch("bio").slice(0, 300)}{generalForm.watch("bio").length > 300 ? "…" : ""}</p>
-              ) : (
-                <p className="text-slate-400 dark:text-slate-500 italic">Sin descripción. Edita en la sección General para añadir tu biografía.</p>
-              )}
+              {(() => {
+                const rawBio = generalForm.watch("bio") || ""
+                const plainText = rawBio
+                  .replace(/<[^>]+>/g, "")
+                  .replace(/&nbsp;/g, " ")
+                  .trim()
+
+                if (!plainText) {
+                  return (
+                    <p className="text-slate-400 dark:text-slate-500 italic">
+                      Sin descripción. Edita en la sección General para añadir tu biografía.
+                    </p>
+                  )
+                }
+
+                const preview =
+                  plainText.length > 300 ? `${plainText.slice(0, 300)}…` : plainText
+
+                return <p className="whitespace-pre-wrap">{preview}</p>
+              })()}
             </div>
           </ProfileSectionCard>
 
@@ -905,7 +936,7 @@ export default function ProfessionalProfilePage() {
                     {/* Left Column: Profile Photo */}
                     <div className="flex flex-col items-center pt-4">
                       <ProfilePhotoUpload 
-                        currentUrl={avatarUrl || undefined} 
+                        currentUrl={avatarUrl || profile?.avatar_url || undefined} 
                         onUpload={handleProfilePhotoUpload} 
                       />
                     </div>
@@ -1017,50 +1048,34 @@ export default function ProfessionalProfilePage() {
                             </FormItem>
                           )}
                         />
-                        <FormField
-                          control={generalForm.control}
-                          name="sub_specialties"
-                          render={({ field }: { field: any }) => (
-                            <FormItem>
-                              <div className="flex items-center gap-2 mb-1.5">
-                                <Stethoscope className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                                <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Sub-especialidades</FormLabel>
-                              </div>
-                              <FormControl>
-                                <div className="flex flex-wrap gap-2 p-2 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 focus-within:ring-2 focus-within:ring-teal-500/20 focus-within:border-teal-500 transition-all min-h-[40px]">
-                                  {field.value?.map((tag: string, i: number) => (
-                                    <Badge key={i} variant="secondary" className="bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-100 dark:border-teal-900/50 flex items-center gap-1 py-1 px-2 rounded-lg group">
-                                      {tag}
-                                      <button 
-                                        type="button" 
-                                        onClick={() => field.onChange(field.value.filter((_: any, idx: number) => idx !== i))}
-                                        className="hover:text-rose-500 transition-colors"
-                                      >
-                                        <X className="h-2 w-2" />
-                                      </button>
-                                    </Badge>
-                                  ))}
-                                  <input
-                                    placeholder={field.value?.length ? "" : "Ej: Psiquiatría Infantil..."}
-                                    className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold min-w-[120px] dark:text-slate-200"
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter' || e.key === ',') {
-                                        e.preventDefault()
-                                        const val = e.currentTarget.value.trim()
-                                        if (val && !field.value.includes(val)) {
-                                          field.onChange([...field.value, val])
-                                          e.currentTarget.value = ""
-                                        }
-                                      }
-                                    }}
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormDescription className="text-[10px] italic">Presiona Enter o Coma para añadir.</FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                        <div>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Stethoscope className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                            <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              Condiciones que tratas
+                            </FormLabel>
+                          </div>
+                          <div className="flex flex-wrap gap-2 p-2 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 min-h-[40px]">
+                            {clinicalForm.watch("conditions_treated")?.length
+                              ? clinicalForm.watch("conditions_treated").map((tag: string) => (
+                                  <Badge
+                                    key={tag}
+                                    variant="secondary"
+                                    className="bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-100 dark:border-teal-900/50 rounded-lg"
+                                  >
+                                    {tag}
+                                  </Badge>
+                                ))
+                              : (
+                                  <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                                    Edita las condiciones en la pestaña Clínica.
+                                  </span>
+                                )}
+                          </div>
+                          <FormDescription className="text-[10px] italic">
+                            Este resumen muestra las enfermedades que configuras en la sección Clínica.
+                          </FormDescription>
+                        </div>
                       </div>
 
                       {/* Row 3: Bio */}
@@ -1161,7 +1176,12 @@ export default function ProfessionalProfilePage() {
                         <FormItem>
                           <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 block">Dirección Consulta</FormLabel>
                           <FormControl>
-                            <Input {...field} className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200" placeholder="Ej: Av. Providencia 1234" />
+                            <GoogleAddressInput 
+                              value={field.value} 
+                              onChange={field.onChange}
+                              className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200" 
+                              placeholder="Ej: Av. Providencia 1234" 
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

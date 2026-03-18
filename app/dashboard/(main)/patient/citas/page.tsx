@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
 import PatientAppointments from "../PatientAppointments";
 
 export default async function PatientCitasPage() {
@@ -14,11 +13,9 @@ export default async function PatientCitasPage() {
     redirect("/login");
   }
 
-  const appointments = await prisma.appointment.findMany({
-    where: { patientEmail: user.email },
-    include: { slot: true, professional: true, review: true },
-    orderBy: { createdAt: "desc" },
-  });
+  // Prisma todavía no está conectado a la misma base que Supabase,
+  // así que por ahora mostramos la página sin intentar leer citas.
+  const appointments: any[] = [];
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">

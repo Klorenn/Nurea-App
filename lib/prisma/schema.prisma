@@ -50,6 +50,8 @@ model Slot {
   isBooked       Boolean       @default(false)
   professional   Professional  @relation(fields: [professionalId], references: [id])
   appointment    Appointment?
+
+  @@unique([professionalId, startTime])
 }
 
 model Appointment {

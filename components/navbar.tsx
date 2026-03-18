@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,11 @@ export function Navbar({ sticky = true }: NavbarProps) {
   const t = useTranslations(language)
   const { user, loading } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   const navLinks = [
     { href: "#how-it-works", label: language === "es" ? "Cómo Funciona" : "How it works" },
@@ -110,44 +115,46 @@ export function Navbar({ sticky = true }: NavbarProps) {
               </Button>
             )}
 
-            {/* Mobile menu trigger - siempre renderizado para evitar hydration mismatch */}
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="lg:hidden h-9 w-9 rounded-md hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-primary/30 active:opacity-80"
-                  aria-label={language === "es" ? "Abrir menú de navegación" : "Open navigation menu"}
-                  aria-expanded={menuOpen}
-                >
-                  <Menu className="h-5 w-5" aria-hidden="true" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] sm:w-[320px]">
-                <div className="sr-only">
-                  <SheetTitle>{language === "es" ? "Menú de navegación" : "Navigation Menu"}</SheetTitle>
-                </div>
-                <nav className="flex flex-col gap-1 pt-8" aria-label={language === "es" ? "Menú" : "Menu"}>
-                  {navLinks.map(({ href, label }) => (
-                    <a
-                      key={href}
-                      href={href}
-                      className={cn(navLinkClass, "block py-3 px-4 rounded-lg")}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      {label}
-                    </a>
-                  ))}
-                  <div className="mt-4 px-4">
-                    <Button className="w-full rounded-full font-semibold" size="lg" asChild>
-                      <Link href="/explore" onClick={() => setMenuOpen(false)}>
-                        {ctaLabel}
-                      </Link>
-                    </Button>
+            {/* Mobile menu trigger */}
+            {hasMounted && (
+              <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden h-9 w-9 rounded-md hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-primary/30 active:opacity-80"
+                    aria-label={language === "es" ? "Abrir menú de navegación" : "Open navigation menu"}
+                    aria-expanded={menuOpen}
+                  >
+                    <Menu className="h-5 w-5" aria-hidden="true" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[280px] sm:w-[320px]">
+                  <div className="sr-only">
+                    <SheetTitle>{language === "es" ? "Menú de navegación" : "Navigation Menu"}</SheetTitle>
                   </div>
-                </nav>
-              </SheetContent>
-            </Sheet>
+                  <nav className="flex flex-col gap-1 pt-8" aria-label={language === "es" ? "Menú" : "Menu"}>
+                    {navLinks.map(({ href, label }) => (
+                      <a
+                        key={href}
+                        href={href}
+                        className={cn(navLinkClass, "block py-3 px-4 rounded-lg")}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        {label}
+                      </a>
+                    ))}
+                    <div className="mt-4 px-4">
+                      <Button className="w-full rounded-full font-semibold" size="lg" asChild>
+                        <Link href="/explore" onClick={() => setMenuOpen(false)}>
+                          {ctaLabel}
+                        </Link>
+                      </Button>
+                    </div>
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            )}
           </div>
         </div>
       </div>

@@ -110,6 +110,8 @@ export function StickyReservationWidget({
               days={4}
               maxSlotsPerDay={5}
               isSpanish={isSpanish}
+              // Use Supabase availability (same source of truth as the profile editor)
+              useProfessionalsApi
             />
             <button
               type="button"

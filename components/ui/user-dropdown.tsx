@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { useProfile } from "@/hooks/use-profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -62,18 +63,22 @@ export const UserDropdown = ({
   const [mounted, setMounted] = React.useState(false)
   const [helpOpen, setHelpOpen] = React.useState(false)
 
+  const { profile, isLoading: profileLoading } = useProfile()
+
   React.useEffect(() => setMounted(true), [])
   const isDark = mounted && resolvedTheme === "dark"
 
-  const displayUser = user ?? {
-    name: authUser?.user_metadata?.first_name
-      ? `${authUser.user_metadata.first_name} ${authUser.user_metadata.last_name || ""}`.trim()
+  const displayUser = {
+    name: profile?.first_name
+      ? `${profile.first_name} ${profile.last_name || ""}`.trim()
+      : user?.name || authUser?.user_metadata?.first_name
+      ? `${authUser?.user_metadata?.first_name} ${authUser?.user_metadata?.last_name || ""}`.trim()
         : role === "admin"
           ? (language === "es" ? "Administrador" : "Administrator")
           : (language === "es" ? "Profesional" : "Professional"),
-    email: authUser?.email ?? "",
-    initials: authUser?.user_metadata?.first_name?.[0]?.toUpperCase() ?? (role === "patient" ? "U" : "P"),
-    avatar: authUser?.user_metadata?.avatar_url,
+    email: user?.email ?? authUser?.email ?? "",
+    initials: profile?.first_name?.[0]?.toUpperCase() ?? user?.initials ?? authUser?.user_metadata?.first_name?.[0]?.toUpperCase() ?? (role === "patient" ? "U" : "P"),
+    avatar: profile !== undefined ? profile?.avatar_url : (user?.avatar || authUser?.user_metadata?.avatar_url),
   }
 
   const go = (path: string) => {
@@ -101,7 +106,7 @@ export const UserDropdown = ({
         go("/dashboard/payments")
         break
       case "settings":
-        go(role === "admin" ? "/admin/settings" : role === "patient" ? "/dashboard/settings" : "/dashboard/professional/settings")
+        go(role === "admin" ? "/admin/settings" : role === "patient" ? "/dashboard/settings" : "/dashboard/professional/profile")
         break
       case "language":
         setLanguage(language === "es" ? "en" : "es")

@@ -164,6 +164,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
+    // Verificar rol antes de cualquier operación admin
+    const { data: professionalProfile, error: professionalProfileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', professionalUser.id)
+      .single()
+
+    if (professionalProfileError || professionalProfile?.role !== 'professional') {
+      return NextResponse.json(
+        { error: 'forbidden', message: 'Solo los profesionales pueden crear pacientes.' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const { firstName, lastName, email, phone, dateOfBirth } = body
 
@@ -175,6 +189,13 @@ export async function POST(request: Request) {
     }
 
     // Crear cliente admin para interactuar con auth.users
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[professional/patients] Missing Supabase admin env vars')
+      return NextResponse.json(
+        { error: 'server_error', message: 'Configuración de servidor incompleta.' },
+        { status: 500 }
+      )
+    }
     const supabaseAdmin = createClientAdmin(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!

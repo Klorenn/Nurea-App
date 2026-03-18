@@ -28,6 +28,20 @@ interface ApiProfessional {
   [key: string]: unknown
 }
 
+function stripHtml(input?: string | null): string {
+  if (!input) return ""
+  return input
+    // Remove HTML tags
+    .replace(/<\/?[^>]+(>|$)/g, "")
+    // Decode common HTML entities we might store
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s+\n/g, "\n")
+    .trim()
+}
+
 interface ApiReview {
   id: string
   name?: string
@@ -122,10 +136,16 @@ export function mapApiProfessionalToSpecialist(
       ? ((api as any).payment_methods as string[])
       : []
 
+  // Normalize bios: many profiles store HTML (<p>...</p>). We want clean text paragraphs.
+  const cleanedBio = stripHtml(api.bio)
+  const cleanedBioExtended = stripHtml(api.bio_extended)
+  const bioExtended =
+    cleanedBioExtended && cleanedBioExtended !== cleanedBio ? cleanedBioExtended : undefined
+
   return {
     id: api.id,
-    name: api.name ?? 'Especialista',
-    specialty: api.specialty ?? 'Especialista',
+    name: api.name ?? 'Profesional',
+    specialty: api.specialty ?? 'Profesional de salud',
     tagline: undefined,
     imageUrl: api.imageUrl ?? '',
     location: api.city ?? api.location ?? '',
@@ -136,8 +156,8 @@ export function mapApiProfessionalToSpecialist(
     patientsCount: api.patientsCount,
     certification: certifications[0],
     onlineAvailable: api.consultationTypes?.includes('online') ?? true,
-    bio: api.bio ?? '',
-    bioExtended: api.bio_extended,
+    bio: cleanedBio,
+    bioExtended,
     education,
     certifications,
     approaches: [],

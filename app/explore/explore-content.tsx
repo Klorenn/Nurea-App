@@ -14,6 +14,7 @@ import { useSpecialties } from "@/hooks/use-specialties"
 import { useSpecialists } from "@/hooks/use-specialists"
 import { useLanguage } from "@/contexts/language-context"
 import type { SpecialistFilters } from "@/types"
+import { SearchFilters } from "@/components/search/SearchFilters"
 
 export function ExploreContent() {
   const router = useRouter()
@@ -61,6 +62,7 @@ export function ExploreContent() {
       const name = lang === "es" ? (s.name_es ?? s.name) : (s.name_en ?? s.name ?? s.name_es)
       if (!grouped[catSlug]) grouped[catSlug] = []
       grouped[catSlug].push({
+        ...s,
         id: s.id,
         slug: s.slug,
         name: name || s.slug,
@@ -84,6 +86,41 @@ export function ExploreContent() {
     nextPage,
     prevPage
   } = useSpecialists(currentFilters, lang, urlSyncKey)
+
+  const resolveQuickSpecialtySlug = useCallback(
+    (term: string | undefined | null): string | undefined => {
+      if (!term) return undefined
+      const normalized = term.trim().toLowerCase()
+      if (!normalized || normalized.length < 2) return undefined
+
+      const candidates = (specialties as any[]).map((s) => {
+        const name =
+          lang === "es"
+            ? (s.name_es ?? s.name)
+            : (s.name_en ?? s.name ?? s.name_es)
+        return {
+          slug: s.slug as string | undefined,
+          name: (name || "").toString().toLowerCase(),
+          professionalCount: (s.professional_count as number | undefined) ?? 0,
+        }
+      })
+
+      const matches = candidates.filter(
+        (c) =>
+          c.slug?.toLowerCase().includes(normalized) ||
+          c.name.includes(normalized)
+      )
+
+      if (!matches.length) return undefined
+
+      matches.sort(
+        (a, b) => (b.professionalCount || 0) - (a.professionalCount || 0)
+      )
+
+      return matches[0]?.slug
+    },
+    [specialties, lang]
+  )
 
   // Autofocus búsqueda cuando se llega desde "Buscar especialista" (/?focus=search o ?openSearch=1)
   useEffect(() => {
@@ -118,19 +155,38 @@ export function ExploreContent() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
+  const handleFilterChange = useCallback(
+    (newFilters: Partial<SpecialistFilters>) => {
+      const currentFilters = getFiltersFromURL()
+      const updatedFilters: Partial<SpecialistFilters> = {
+        ...currentFilters,
+        ...newFilters,
+      }
+
+      if (typeof newFilters.search === "string" && newFilters.search.trim()) {
+        const quickSlug = resolveQuickSpecialtySlug(newFilters.search)
+        if (quickSlug) {
+          updatedFilters.specialtySlug = quickSlug
+          // Si encontramos una especialidad clara, podemos limpiar el término de búsqueda 
+          // para que no interfiera con otros filtros, o dejarlo si queremos búsqueda combinada.
+          // Por ahora lo dejamos para que el backend también busque por texto.
+        } else {
+          // No limpiar automáticamente una especialidad ya seleccionada por el usuario.
+        }
+      }
+
+      setFilters(updatedFilters)
+      updateURL(updatedFilters)
+    },
+    [getFiltersFromURL, setFilters, updateURL, resolveQuickSpecialtySlug]
+  )
+
   useEffect(() => {
     const urlSearch = getFiltersFromURL().search || ""
     if (debouncedSearch !== urlSearch) {
       handleFilterChange({ search: debouncedSearch || undefined })
     }
-  }, [debouncedSearch]) // Only trigger when user types, not when URL changes
-
-  const handleFilterChange = useCallback((newFilters: Partial<SpecialistFilters>) => {
-    const currentFilters = getFiltersFromURL()
-    const updatedFilters = { ...currentFilters, ...newFilters }
-    setFilters(updatedFilters)
-    updateURL(updatedFilters)
-  }, [getFiltersFromURL, setFilters, updateURL])
+  }, [debouncedSearch, getFiltersFromURL, handleFilterChange]) // Only trigger when user types, not when URL changes
 
   const handleReset = useCallback(() => {
     resetFilters()
@@ -138,12 +194,15 @@ export function ExploreContent() {
     router.push("/explore", { scroll: false })
   }, [resetFilters, router])
 
-  const handleCategoryChange = useCallback((slug: string | null) => {
-    handleFilterChange({ 
-      categorySlug: slug || undefined,
-      specialtySlug: undefined
-    })
-  }, [handleFilterChange])
+  const handleCategoryChange = useCallback(
+    (slug: string | null) => {
+      handleFilterChange({
+        categorySlug: slug || undefined,
+        specialtySlug: undefined,
+      })
+    },
+    [handleFilterChange]
+  )
 
   const labels = {
     title: lang === "es" ? "Explorar Especialistas" : "Explore Specialists",
@@ -160,8 +219,8 @@ export function ExploreContent() {
       <div className="min-h-screen flex flex-col">
         <Navbar sticky={false} />
 
-        {/* Hero + buscador principal — estilo NUREA / Doctoralia */}
-        <section className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        {/* Hero + buscador principal — mantener mismo color de fondo */}
+        <section className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
             <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50 tracking-tight mb-1">
               {labels.title}
@@ -204,6 +263,23 @@ export function ExploreContent() {
                 onSelect={handleCategoryChange}
                 loading={categoriesLoading}
                 lang={lang}
+              />
+            </div>
+
+            {/* Condiciones por especialidad (filtros rápidos) */}
+            <div className="mt-4">
+              <SearchFilters
+                onChange={(filters) =>
+                  handleFilterChange({
+                    specialtySlug: filters.specialty,
+                    // guardamos las condiciones seleccionadas en el campo search como texto
+                    // para que el backend pueda usarlas mientras definimos un API más rico
+                    search:
+                      filters.conditions.length > 0
+                        ? `${searchTerm} ${filters.conditions.join(" ")}`
+                        : searchTerm || undefined,
+                  })
+                }
               />
             </div>
           </div>

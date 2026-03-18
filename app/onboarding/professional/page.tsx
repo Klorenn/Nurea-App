@@ -340,7 +340,7 @@ export default function ProfessionalOnboarding() {
                         <SelectItem value="medicina_general" className="py-3 text-base">Medicina General</SelectItem>
                         <SelectItem value="neurologia" className="py-3 text-base">Neurología</SelectItem>
                         <SelectItem value="pediatria" className="py-3 text-base">Pediatría</SelectItem>
-                        <SelectItem value="psicologia" className="py-3 text-base">Psicología Clínca</SelectItem>
+                        <SelectItem value="psicologia" className="py-3 text-base">Psicología</SelectItem>
                         <SelectItem value="psiquiatria" className="py-3 text-base">Psiquiatría</SelectItem>
                         <SelectItem value="traumatologia" className="py-3 text-base">Traumatología</SelectItem>
                       </SelectContent>

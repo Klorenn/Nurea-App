@@ -267,6 +267,20 @@ export function Pricing() {
       return
     }
 
+    const role =
+      (user.app_metadata as any)?.role ||
+      (user.user_metadata as any)?.role ||
+      null
+
+    if (role !== "professional") {
+      alert(
+        language === "es"
+          ? "Los planes de suscripción son solo para profesionales de la salud. Como paciente, NUREA es gratis para ti."
+          : "Subscription plans are only available for health professionals. As a patient, NUREA is free for you."
+      )
+      return
+    }
+
     const planId = SUBSCRIPTION_PLAN_IDS[planKey]
     if (!planId) {
       console.error("Plan configuration not found:", planKey)

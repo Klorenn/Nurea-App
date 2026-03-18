@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { usePresence } from "@/hooks/use-presence"
 
+const supabase = createClient()
+
 interface Contact {
   id: string
   name: string
@@ -23,7 +25,6 @@ function ChatContent() {
   const { user, loading: authLoading } = useAuth()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
   
   // Get presence status for all contacts
   const { getPresenceStatus } = usePresence(contacts.map((contact) => contact.id))
@@ -109,40 +110,14 @@ function ChatContent() {
     } finally {
       setLoading(false)
     }
-  }, [user, supabase, getPresenceStatus])
+  }, [user, getPresenceStatus])
 
   useEffect(() => {
     if (!user || authLoading) return
     loadContacts()
   }, [user, authLoading, loadContacts])
 
-  // Subscribe to presence changes
-  useEffect(() => {
-    if (!user || contacts.length === 0) return
-
-    const channel = supabase.channel('presence-chat')
-    
-    // Subscribe to presence changes for all contacts
-    contacts.forEach(contact => {
-      channel.on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState()
-        const contactPresence = state[contact.id]?.[0] as { status?: 'online' | 'offline' } | undefined
-        if (contactPresence) {
-          setContacts(prev => prev.map(c => 
-            c.id === contact.id 
-              ? { ...c, status: contactPresence.status || 'offline' }
-              : c
-          ))
-        }
-      })
-    })
-
-    channel.subscribe()
-
-    return () => {
-      channel.unsubscribe()
-    }
-  }, [user, contacts, supabase])
+  // Presence ya se maneja en `usePresence`; evitar subscripción duplicada (causa handlers repetidos).
 
   if (authLoading || loading) {
     return (

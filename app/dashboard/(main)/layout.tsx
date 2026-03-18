@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
+import { useProfile } from "@/hooks/use-profile"
 import { DashboardSidebar, type UserRole } from "@/components/dashboard/Sidebar"
 import { UserDropdown } from "@/components/ui/user-dropdown"
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown"
@@ -13,7 +14,6 @@ import { useLanguage } from "@/contexts/language-context"
 import {
   SidebarProvider,
   SidebarInset,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Loader2 } from "lucide-react"
 import { SupportTicketSheet } from "@/components/support/SupportTicketSheet"
@@ -38,105 +38,62 @@ export default function DashboardMainLayout({
   const { language } = useLanguage()
   const supabase = createClient()
 
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [profileLoading, setProfileLoading] = useState(true)
+  const { profile, isLoading: profileLoading } = useProfile()
+  const [redirecting, setRedirecting] = useState(false)
 
   useEffect(() => {
-    if (authLoading) return
+    if (authLoading || profileLoading || redirecting) return
 
     if (!user) {
+      setRedirecting(true)
       router.push("/login")
       return
     }
 
-    const loadProfile = async () => {
-      let isRedirecting = false
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, role, first_name, last_name, avatar_url, email_verified")
-          .eq("id", user.id)
-          .maybeSingle()
-
-        if (error) {
-          const errMsg = error?.message ?? error?.code ?? String(error)
-          if (process.env.NODE_ENV === "development") {
-            console.error("Error loading profile:", errMsg, error)
-          }
-          isRedirecting = true
-          router.push("/login")
-          return
-        }
-
-        if (!data) {
-          isRedirecting = true
-          router.push("/complete-profile")
-          return
-        }
-
-
-        setProfile(data as Profile)
-        const jwtRole = user.app_metadata?.role || user.user_metadata?.role
-        const userRole = data?.role || jwtRole || 'patient'
-
-        // Route detection
-        const isAdminRoute = pathname.startsWith("/dashboard/admin")
-        const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
-        const isPatientRoute = pathname.startsWith("/dashboard/patient")
-
-        // 1. ADMIN GUARD: admins belong only in /dashboard/admin
-        if (userRole === "admin" && !isAdminRoute) {
-          console.log("Admin Guard Triggered")
-          isRedirecting = true
-          router.push("/dashboard/admin")
-          return
-        }
-
-        // 2. PROFESSIONAL GUARD: professionals belong only in /dashboard/professional
-        if (userRole === "professional" && !isProfessionalRoute) {
-          console.log("Professional Guard Triggered")
-          isRedirecting = true
-          router.push("/dashboard/professional")
-          return
-        } 
-
-        // 3. PATIENT GUARD: patients belong only in /dashboard/patient
-        if (userRole === "patient" && !isPatientRoute) {
-          console.log("Patient Guard Triggered")
-          isRedirecting = true
-          router.push("/dashboard/patient")
-          return
-        }
-
-        // 4. ROOT DASHBOARD REDIRECT
-        if (pathname === "/dashboard") {
-          isRedirecting = true
-          const target = userRole === "admin" 
-            ? "/dashboard/admin" 
-            : userRole === "professional"
-              ? "/dashboard/professional"
-              : "/dashboard/patient"
-          
-          router.push(target)
-          return
-        }
-
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err)
-        if (process.env.NODE_ENV === "development") {
-          console.error("Error loading profile:", errMsg, err)
-        }
-        isRedirecting = true
-        router.push("/login")
-      } finally {
-        if (!isRedirecting) {
-          setProfileLoading(false)
-        }
-      }
+    if (!profile) {
+      setRedirecting(true)
+      router.push("/complete-profile")
+      return
     }
 
-    loadProfile()
-  }, [user, authLoading, router, supabase, pathname])
+    const { role: userRole } = profile
+    const isAdminRoute = pathname.startsWith("/dashboard/admin")
+    const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
+    const isPatientRoute = pathname.startsWith("/dashboard/patient")
+
+    // Admin guard
+    if (userRole === "admin" && !isAdminRoute) {
+      setRedirecting(true)
+      router.push("/dashboard/admin")
+      return
+    }
+
+    // Professional guard
+    if (userRole === "professional" && !isProfessionalRoute) {
+      setRedirecting(true)
+      router.push("/dashboard/professional")
+      return
+    }
+
+    // Patient guard
+    if (userRole === "patient" && !isPatientRoute) {
+      setRedirecting(true)
+      router.push("/dashboard/patient")
+      return
+    }
+
+    // Root redirect
+    if (pathname === "/dashboard") {
+      setRedirecting(true)
+      const target = userRole === "admin" 
+        ? "/dashboard/admin" 
+        : userRole === "professional"
+          ? "/dashboard/professional"
+          : "/dashboard/patient"
+      router.push(target)
+      return
+    }
+  }, [user, authLoading, profile, profileLoading, pathname, router, redirecting])
 
   if (authLoading || profileLoading) {
     return (
@@ -172,19 +129,13 @@ export default function DashboardMainLayout({
   const isSpanish = language === "es"
 
   return (
-    <SidebarProvider defaultOpen={role !== "professional"}>
+    <SidebarProvider defaultOpen={role === "admin"}>
       <div className="flex min-h-screen w-full bg-background">
         <DashboardSidebar role={role} language={language} />
 
         <SidebarInset className="flex flex-col">
           <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-xl border-b border-border/40 sticky top-0 z-30">
             <div className="flex items-center gap-3">
-              {role !== "professional" && (
-                <>
-                  <SidebarTrigger className="h-8 w-8" />
-                  <div className="hidden sm:block h-4 w-px bg-border/40" />
-                </>
-              )}
               <h1 className="hidden sm:block text-sm font-medium text-muted-foreground">
                 {role === "admin"
                   ? isSpanish

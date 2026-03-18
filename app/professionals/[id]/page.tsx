@@ -67,23 +67,42 @@ async function getProfessionalData(id: string) {
     .eq('status', 'verified')
     .order('year', { ascending: false })
 
+  const resolvedSpecialty =
+    professional.specialty_data?.name_es ||
+    professional.specialty_data?.name_en ||
+    professional.specialty ||
+    'Profesional de salud'
+
   // Format professional for the conversion profile page (trust + booking focus)
   const formattedProfessional = {
     ...professional,
     id: professional.id,
     slug: professional.slug,
-    name: `${professional.profile?.first_name || ''} ${professional.profile?.last_name || ''}`.trim() || 'Especialista',
-    specialty: professional.specialty_data?.name || professional.specialty,
+    name: `${professional.profile?.first_name || ''} ${professional.profile?.last_name || ''}`.trim() || 'Profesional',
+    specialty: resolvedSpecialty,
     rating: averageRating,
     reviewsCount: reviewsCount,
     imageUrl: professional.profile?.avatar_url || '',
-    consultationTypes: professional.consultation_type === 'both' ? ['online', 'in-person'] : (professional.consultation_type ? [professional.consultation_type] : ['online']),
+    consultationTypes:
+      professional.consultation_type === 'both'
+        ? ['online', 'in-person']
+        : professional.consultation_type
+          ? [professional.consultation_type]
+          : ['online'],
     consultationPrice: professional.consultation_price ?? 0,
     slotDuration: professional.slot_duration ?? 60,
     languages: professional.languages || ['Español'],
     verified: professional.verified || false,
-    city: professional.city || professional.location,
-    location: professional.location || professional.city,
+    // Usar ciudad/dirección clínica si existen para reflejar correctamente la atención presencial.
+    city:
+      (professional as any).clinic_city ||
+      professional.city ||
+      professional.location,
+    location:
+      (professional as any).clinic_address ||
+      professional.location ||
+      professional.city ||
+      (professional as any).clinic_city,
     bio: professional.bio || professional.bio_extended || '',
     bio_extended: professional.bio_extended || professional.bio || '',
     services: professional.services || [],
@@ -116,11 +135,27 @@ async function getProfessionalData(id: string) {
   // Determine if the professional has any availability configured
   const availability = (professional as any).availability as Record<string, any> | null | undefined
   let noAvailability = true
-  if (availability && typeof availability === 'object') {
+
+  if (availability && typeof availability === "object") {
     for (const value of Object.values(availability)) {
-      if (value && typeof value === 'object' && (value as any).enabled) {
-        noAvailability = false
-        break
+      if (value && typeof value === "object") {
+        const v = value as any
+
+        // New format: { online: { available, hours }, 'in-person': { available, hours }, slotDuration }
+        const hasOnline =
+          v.online && typeof v.online === "object" && v.online.available === true
+        const hasInPerson =
+          v["in-person"] &&
+          typeof v["in-person"] === "object" &&
+          v["in-person"].available === true
+
+        // Legacy format: { enabled, available, hours, ... }
+        const hasLegacyEnabled = v.enabled === true || v.available === true
+
+        if (hasOnline || hasInPerson || hasLegacyEnabled) {
+          noAvailability = false
+          break
+        }
       }
     }
   }

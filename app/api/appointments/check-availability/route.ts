@@ -14,12 +14,24 @@ export async function GET(request: Request) {
     const date = searchParams.get('date')
     const time = searchParams.get('time')
     const type = searchParams.get('type') as 'online' | 'in-person' | null // Tipo de consulta solicitada
+    const durationParam = searchParams.get('duration')
+    const duration = durationParam ? Number(durationParam) : 60
 
     if (!professionalId || !date || !time) {
       return NextResponse.json(
         { 
           error: 'missing_fields',
           message: 'Por favor, proporciona professionalId, date y time.'
+        },
+        { status: 400 }
+      )
+    }
+    
+    if (!Number.isFinite(duration) || duration <= 0 || duration > 24 * 60) {
+      return NextResponse.json(
+        {
+          error: 'invalid_duration',
+          message: 'Duración inválida.',
         },
         { status: 400 }
       )
@@ -182,7 +194,6 @@ export async function GET(request: Request) {
     // Verificar si hay conflicto de horarios
     if (existingAppointments && existingAppointments.length > 0) {
       const appointmentTimeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
-      const duration = 60 // Duración por defecto
 
       for (const existing of existingAppointments) {
         const existingTimeParts = existing.appointment_time.split(':')

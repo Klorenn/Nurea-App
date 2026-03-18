@@ -45,10 +45,9 @@ export async function getSlotsForPrismaProfessional(
   const timeOffs = await prisma.professionalTimeOff.findMany({
     where: {
       professionalId: prismaProfessionalId,
-      OR: [
-        { startTime: { gte: dayStart, lte: dayEnd } },
-        { endTime: { gte: dayStart, lte: dayEnd } },
-      ],
+      // Cualquier bloqueo que se solape con el día, incluso si empieza antes y termina después.
+      startTime: { lte: dayEnd },
+      endTime: { gte: dayStart },
     },
   });
 
@@ -76,8 +75,8 @@ export async function getSlotsForPrismaProfessional(
 
     while (current < end) {
       const endTime = addMinutes(current, professional.slotDuration);
-      const isBlocked = timeOffs.some((block) =>
-        isWithinInterval(current, { start: block.startTime, end: block.endTime })
+      const isBlocked = timeOffs.some(
+        (block) => current < block.endTime && endTime > block.startTime
       );
       if (!isBlocked) {
         data.push({

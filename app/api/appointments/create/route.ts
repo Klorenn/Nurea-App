@@ -282,6 +282,16 @@ export async function POST(request: Request) {
 
     if (appointmentError) {
       console.error('Error creating appointment:', appointmentError)
+      const pgCode = (appointmentError as any)?.code as string | undefined
+      if (pgCode === '23505' || pgCode === '23P01') {
+        return NextResponse.json(
+          {
+            error: 'time_conflict',
+            message: 'Este horario ya está ocupado. Por favor, selecciona otro horario.',
+          },
+          { status: 409 }
+        )
+      }
       return NextResponse.json(
         { 
           error: 'creation_failed',

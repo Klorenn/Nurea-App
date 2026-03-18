@@ -43,7 +43,7 @@ import { cn } from "@/lib/utils"
 import { trackEvent } from "@/lib/utils/analytics"
 
 const SPECIALTIES = [
-  { value: "psicologia", label: "Psicología Clínica", labelEn: "Clinical Psychology" },
+  { value: "psicologia", label: "Psicología", labelEn: "Psychology" },
   { value: "psiquiatria", label: "Psiquiatría", labelEn: "Psychiatry" },
   { value: "medicina-general", label: "Medicina General", labelEn: "General Medicine" },
   { value: "nutricion", label: "Nutrición y Dietética", labelEn: "Nutrition & Dietetics" },

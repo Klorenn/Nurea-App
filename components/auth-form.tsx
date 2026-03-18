@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 
 const SPECIALTY_OPTIONS = [
   "Medicina General",
-  "Psicología Clínica",
+  "Psicología",
   "Nutrición y Dietética",
   "Kinesiología y Rehabilitación",
   "Dermatología",

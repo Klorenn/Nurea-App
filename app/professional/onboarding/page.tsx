@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { GoogleAddressInput } from "@/components/ui/google-address-input"
 import { RouteGuard } from "@/components/auth/route-guard"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -942,12 +943,12 @@ export default function ProfessionalOnboardingPage() {
                         <Label htmlFor="clinicAddress">
                           {isSpanish ? "Dirección de la Clínica" : "Clinic Address"} *
                         </Label>
-                        <Textarea
-                          id="clinicAddress"
+                        <GoogleAddressInput
                           value={clinicAddress}
-                          onChange={(e) => setClinicAddress(e.target.value)}
-                          placeholder={isSpanish ? "Dirección completa..." : "Full address..."}
-                          rows={3}
+                          onChange={(val) => setClinicAddress(val)}
+                          placeholder={isSpanish ? "Busca la dirección de tu clínica..." : "Search your clinic address..."}
+                          className="rounded-xl"
+                          language={isSpanish ? "es" : "en"}
                         />
                       </div>
                     </>
