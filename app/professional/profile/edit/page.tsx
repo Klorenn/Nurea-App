@@ -42,6 +42,7 @@ export default function ProfessionalProfileEditPage() {
   // Basic info
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [gender, setGender] = useState<"M" | "F" | "">("")
   const [title, setTitle] = useState("")
   const [bio, setBio] = useState("")
   const [bioExtended, setBioExtended] = useState("")
@@ -88,6 +89,7 @@ export default function ProfessionalProfileEditPage() {
       // Set all form fields
       setFirstName(profile.firstName || "")
       setLastName(profile.lastName || "")
+      setGender(profile.gender === "F" ? "F" : profile.gender === "M" ? "M" : "")
       setTitle(profile.title || "")
       setBio(profile.bio || "")
       setBioExtended(profile.bioExtended || "")
@@ -149,6 +151,7 @@ export default function ProfessionalProfileEditPage() {
         body: JSON.stringify({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          gender: gender === "" ? null : gender,
           title: title.trim(),
           bio: bio.trim(),
           bioExtended: bioExtended.trim(),
@@ -400,6 +403,22 @@ export default function ProfessionalProfileEditPage() {
                       onChange={(e) => setLastName(e.target.value)}
                       className="rounded-xl bg-accent/20 border-none" 
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">{isSpanish ? "Eres hombre o mujer" : "Are you male or female"}</Label>
+                    <Select
+                      value={gender}
+                      onValueChange={(v: any) => setGender(v)}
+                    >
+                      <SelectTrigger className="rounded-xl bg-accent/20 border-none">
+                        <SelectValue placeholder={isSpanish ? "Selecciona" : "Select"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">{isSpanish ? "Selecciona" : "Select"}</SelectItem>
+                        <SelectItem value="M">{isSpanish ? "Hombre" : "Male"}</SelectItem>
+                        <SelectItem value="F">{isSpanish ? "Mujer" : "Female"}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-2">

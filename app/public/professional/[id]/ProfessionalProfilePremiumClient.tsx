@@ -12,6 +12,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { trackBookingEvent } from "@/lib/analytics"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { genderizeSpecialtyLabel } from "@/lib/utils/genderize-specialty"
 
 interface ProfessionalProfilePremiumClientProps {
   professionalId: string
@@ -59,7 +60,10 @@ export default function ProfessionalProfilePremiumClient({
           <div className="space-y-0">
             <ProfileAuthorityHeader
               name={professional.name}
-              title={professional.specialty_data?.name || professional.specialty}
+              title={genderizeSpecialtyLabel(
+                professional.specialty_data?.name || professional.specialty,
+                professional.profile?.gender || professional.gender
+              )}
               location={professional.city || professional.location}
               registrationNumber={professional.registration_number || professional.professionalRegistration?.number}
               rating={professional.rating || 4.9}
@@ -156,7 +160,10 @@ export default function ProfessionalProfilePremiumClient({
             <StickyReservationWidget
               professionalId={professional.id}
               price={professional.consultationPrice || 35000}
-              serviceLabel={professional.specialty_data?.name || professional.specialty}
+              serviceLabel={genderizeSpecialtyLabel(
+                professional.specialty_data?.name || professional.specialty,
+                professional.profile?.gender || professional.gender
+              )}
               durationMinutes={professional.slotDuration ?? 60}
               onBook={handleBook}
               hasTelemedicine={professional.consultationTypes?.includes("online")}

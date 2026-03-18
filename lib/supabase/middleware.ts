@@ -137,12 +137,20 @@ export async function updateSession(request: NextRequest) {
 
     if (pathname === '/complete-profile') {
       const emailVerified = user.email_confirmed_at !== null || profile?.email_verified
-      const profileComplete = !!profile?.date_of_birth && emailVerified
+      const onboardingCompleted = !!profile?.onboarding_completed
 
-      if (profileComplete) {
-        const redirectPath = userRole === 'professional' ? '/dashboard/professional' : (userRole === 'admin' ? '/dashboard/admin' : '/dashboard/patient')
+      if (onboardingCompleted && emailVerified) {
+        const redirectPath =
+          userRole === 'professional'
+            ? '/dashboard/professional'
+            : userRole === 'admin'
+              ? '/dashboard/admin'
+              : '/dashboard/patient'
         return redirectWithCookies(redirectPath)
       }
+
+      // Wizard v2 will handle the rest.
+      return redirectWithCookies('/onboarding')
     }
   }
 

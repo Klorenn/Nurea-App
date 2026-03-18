@@ -5,7 +5,6 @@ import { normalizeAvailability } from "@/lib/utils/availability-helpers"
 /**
  * GET /api/professionals/[id]/slots?date=YYYY-MM-DD
  * [id] = Supabase professional UUID (profiles.id o professionals.id).
- * Resuelve a Prisma professional por supabaseUserId; si no existe, devuelve slots de demo.
  */
 export async function GET(
   request: NextRequest,
@@ -15,6 +14,7 @@ export async function GET(
     const { id: supabaseId } = await context.params
     const { searchParams } = new URL(request.url)
     const dateParam = searchParams.get("date")
+    const requestedType = searchParams.get("type") as "online" | "in-person" | null
 
     if (!dateParam) {
       return NextResponse.json({ error: "Missing date" }, { status: 400 })
@@ -34,10 +34,13 @@ export async function GET(
     }
 
     const availabilityRaw = professional.availability as any
-    const consultationType = (professional.consultation_type ?? "both") as
-      | "online"
-      | "in-person"
-      | "both"
+    const rawConsultationType = professional.consultation_type
+    const consultationType: "online" | "in-person" | "both" =
+      rawConsultationType === "online" ||
+      rawConsultationType === "in-person" ||
+      rawConsultationType === "both"
+        ? rawConsultationType
+        : "both"
 
     const normalizedAvailability = normalizeAvailability(availabilityRaw, consultationType)
 
@@ -73,6 +76,8 @@ export async function GET(
 
     const ranges: Array<{ start: string; end: string }> = []
     const addRangeIf = (type: "online" | "in-person") => {
+      // If caller requested an explicit consultation type, respect it.
+      if (requestedType && type !== requestedType) return
       if (consultationType === "online" && type !== "online") return
       if (consultationType === "in-person" && type !== "in-person") return
 
@@ -136,7 +141,7 @@ export async function GET(
         const slotStartMinutes = parseTimeToMinutes(time)
         const slotEndMinutes = slotStartMinutes + durationMin
         const available = !overlaps(slotStartMinutes, slotEndMinutes)
-        return { time, available }
+        return { id: time, time, available, durationMinutes: durationMin }
       })
       .filter((s) => {
         const startLocal = new Date(`${dateParam}T${s.time}:00`)
@@ -147,6 +152,9 @@ export async function GET(
         const startLocal = new Date(`${dateParam}T${s.time}:00`)
         const endLocal = new Date(startLocal.getTime() + durationMin * 60 * 1000)
         return {
+          id: s.id,
+          time: s.time,
+          durationMinutes: s.durationMinutes,
           startTime: startLocal.toISOString(),
           endTime: endLocal.toISOString(),
         }

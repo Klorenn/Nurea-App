@@ -86,6 +86,7 @@ export async function GET(request: Request) {
         email,
         avatar_url,
         date_of_birth,
+        gender,
         phone
       `)
       .in('id', uniquePatientIds)

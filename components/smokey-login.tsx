@@ -318,19 +318,19 @@ export function LoginForm() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, date_of_birth")
+        .select("role, onboarding_completed")
         .eq("id", data.user.id)
         .single()
 
       const role = profile?.role || "patient"
-      const profileComplete = !!profile?.date_of_birth
+      const onboardingCompleted = !!profile?.onboarding_completed
       let redirectPath = "/dashboard"
       if (role === "professional") {
-        redirectPath = profileComplete ? "/dashboard/professional" : "/onboarding/professional"
+        redirectPath = onboardingCompleted ? "/dashboard/professional" : "/onboarding"
       } else if (role === "admin") {
         redirectPath = "/dashboard/admin"
       } else {
-        redirectPath = profileComplete ? "/dashboard/patient" : "/onboarding"
+        redirectPath = onboardingCompleted ? "/dashboard/patient" : "/onboarding"
       }
 
       router.push(redirectPath)

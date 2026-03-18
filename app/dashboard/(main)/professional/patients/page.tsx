@@ -504,7 +504,7 @@ export default function ProfessionalPatientsPage() {
             email: p.email || '',
             phone: p.phone || '',
             birthDate: p.date_of_birth || '',
-            gender: 'M', // Fallback
+            gender: p.gender === "F" ? "F" : "M",
             avatarUrl: p.avatar_url || '',
             lastVisit: p.lastAppointment || '',
             hasAppointmentToday: false, // We can compute this if needed
@@ -639,7 +639,7 @@ export default function ProfessionalPatientsPage() {
                     email: p.email || '',
                     phone: p.phone || '',
                     birthDate: p.date_of_birth || '',
-                    gender: 'M',
+                    gender: p.gender === "F" ? "F" : "M",
                     avatarUrl: p.avatar_url || '',
                     lastVisit: p.lastAppointment || '',
                     hasAppointmentToday: false,

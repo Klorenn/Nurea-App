@@ -38,6 +38,7 @@ import { toast } from "sonner"
 import { DoctorProfileView } from "@/components/professionals/DoctorProfileView"
 import { useAuth } from "@/hooks/use-auth"
 import { trackBookingEvent } from "@/lib/analytics"
+import { genderizeSpecialtyLabel } from "@/lib/utils/genderize-specialty"
 
 interface ProfessionalProfileClientProps {
   professionalId: string
@@ -273,7 +274,10 @@ export default function ProfessionalProfileClient({
             >
               <div className="space-y-2">
                 <p className="text-sm font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">
-                  {professional.specialty_data?.name || professional.specialty || professional.title}
+                  {genderizeSpecialtyLabel(
+                    professional.specialty_data?.name || professional.specialty || professional.title,
+                    professional.profile?.gender || professional.gender
+                  )}
                 </p>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                   {professional.name}

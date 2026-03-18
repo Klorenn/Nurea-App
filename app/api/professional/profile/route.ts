@@ -40,23 +40,75 @@ export async function GET(request: Request) {
     }
 
     // Obtener datos del profesional
+    const selectWithGender = `
+      *,
+      profile:profiles!professionals_id_fkey(
+        id,
+        first_name,
+        last_name,
+        avatar_url,
+        gender,
+        phone,
+        email
+      )
+    `
+
+    const selectWithoutGender = `
+      *,
+      profile:profiles!professionals_id_fkey(
+        id,
+        first_name,
+        last_name,
+        avatar_url,
+        phone,
+        email
+      )
+    `
+
     const { data: professional, error: professionalError } = await supabase
-      .from('professionals')
-      .select(`
-        *,
-        profile:profiles!professionals_id_fkey(
-          id,
-          first_name,
-          last_name,
-          avatar_url,
-          phone,
-          email
-        )
-      `)
-      .eq('id', user.id)
+      .from("professionals")
+      .select(selectWithGender)
+      .eq("id", user.id)
       .single()
 
     if (professionalError) {
+      if (professionalError.message?.toLowerCase().includes("gender")) {
+        const { data: retryProfessional } = await supabase
+          .from("professionals")
+          .select(selectWithoutGender)
+          .eq("id", user.id)
+          .single()
+        if (!retryProfessional) {
+          console.error("Error fetching professional profile retry:", professionalError)
+        }
+        return NextResponse.json({
+          success: true,
+          profile: {
+            firstName: retryProfessional?.profile?.first_name || '',
+            lastName: retryProfessional?.profile?.last_name || '',
+            gender: '',
+            title: retryProfessional?.specialty || '',
+            bio: retryProfessional?.bio || '',
+            bioExtended: retryProfessional?.bio_extended || '',
+            avatarUrl: retryProfessional?.profile?.avatar_url || '',
+            specialties: retryProfessional?.services || [],
+            languages: retryProfessional?.languages || [],
+            consultationType: retryProfessional?.consultation_type || 'both',
+            onlinePrice: retryProfessional?.online_price || retryProfessional?.consultation_price || 0,
+            inPersonPrice: retryProfessional?.in_person_price || retryProfessional?.consultation_price || 0,
+            videoPlatform: retryProfessional?.video_platform || 'google-meet',
+            clinicAddress: retryProfessional?.clinic_address || retryProfessional?.location || '',
+            availability: retryProfessional?.availability || {},
+            bankAccount: retryProfessional?.bank_account || '',
+            bankName: retryProfessional?.bank_name || '',
+            registrationNumber: retryProfessional?.registration_number || '',
+            registrationInstitution: retryProfessional?.registration_institution || '',
+            location: retryProfessional?.location || '',
+            yearsExperience: retryProfessional?.years_experience || 0,
+          },
+        })
+      }
+
       console.error('Error fetching professional profile:', professionalError)
       return NextResponse.json(
         { 
@@ -72,6 +124,7 @@ export async function GET(request: Request) {
       // Información básica
       firstName: professional.profile?.first_name || '',
       lastName: professional.profile?.last_name || '',
+      gender: professional.profile?.gender || '',
       title: professional.specialty || '',
       bio: professional.bio || '',
       bioExtended: professional.bio_extended || '',
@@ -164,6 +217,7 @@ export async function PUT(request: Request) {
     const {
       firstName,
       lastName,
+      gender,
       title,
       bio,
       bioExtended,
@@ -184,7 +238,7 @@ export async function PUT(request: Request) {
     } = body
 
     // Actualizar perfil en tabla profiles
-    if (firstName !== undefined || lastName !== undefined) {
+    if (firstName !== undefined || lastName !== undefined || gender !== undefined) {
       const profileUpdate: any = {
         updated_at: new Date().toISOString(),
       }
@@ -194,6 +248,11 @@ export async function PUT(request: Request) {
       }
       if (lastName !== undefined && lastName !== null && lastName.trim() !== '') {
         profileUpdate.last_name = lastName.trim()
+      }
+
+      if (gender !== undefined && gender !== null) {
+        if (gender === "M" || gender === "F") profileUpdate.gender = gender
+        else profileUpdate.gender = null
       }
 
       if (Object.keys(profileUpdate).length > 1) { // More than just updated_at

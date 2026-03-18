@@ -136,6 +136,7 @@ const generalSchema = z.object({
   registration_number: z.string().min(1, "Nº Registro es requerido"),
   registration_institution: z.string().optional(),
   specialty_id: z.string().uuid("Selecciona una especialidad"),
+  gender: z.enum(["M", "F"]).optional(),
 })
 
 const clinicalSchema = z.object({
@@ -213,6 +214,7 @@ export default function ProfessionalProfilePage() {
       registration_number: "",
       registration_institution: "",
       specialty_id: "",
+      gender: undefined,
     }
   })
 
@@ -254,7 +256,7 @@ export default function ProfessionalProfilePage() {
       if (!user) return
       try {
         const [{ data: profileData }, { data }] = await Promise.all([
-          supabase.from("profiles").select("first_name, last_name").eq("id", user.id).single(),
+          supabase.from("profiles").select("first_name, last_name, gender").eq("id", user.id).single(),
           supabase.from("professionals").select("*").eq("id", user.id).single(),
         ])
 
@@ -305,6 +307,10 @@ export default function ProfessionalProfilePage() {
             registration_number: professional.registration_number || "",
             registration_institution: professional.registration_institution || "",
             specialty_id: professional.specialty_id || "",
+            gender:
+              profileData?.gender === "F" || profileData?.gender === "M"
+                ? profileData.gender
+                : undefined,
           })
           setAvatarUrl(professional.avatar_url)
           clinicalForm.reset({
@@ -424,6 +430,15 @@ export default function ProfessionalProfilePage() {
         .eq('id', user.id)
 
       if (error) throw error
+
+      // Sincroniza el género en la tabla unificada de perfiles.
+      if (values.gender === "M" || values.gender === "F") {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ gender: values.gender })
+          .eq("id", user.id)
+        if (profileError) console.error("Error updating professional gender:", profileError)
+      }
       toast.success("Información general actualizada")
       generalForm.reset(values)
     } catch (err) {
@@ -1020,6 +1035,37 @@ export default function ProfessionalProfilePage() {
                           )}
                         />
                       </div>
+
+                      {/* Gender */}
+                      <FormField
+                        control={generalForm.control}
+                        name="gender"
+                        render={({ field }: { field: any }) => (
+                          <FormItem>
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                              <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                Eres hombre o mujer
+                              </FormLabel>
+                            </div>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value || undefined}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
+                                  <SelectValue placeholder="Selecciona" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="M">Hombre</SelectItem>
+                                <SelectItem value="F">Mujer</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
                       {/* Row 2: Specialties */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

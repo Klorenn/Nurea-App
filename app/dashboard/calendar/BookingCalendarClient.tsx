@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, CalendarDays, CheckCircle2, Clock, Loader2, MessageCircle } from "lucide-react";
 import Link from "next/link";
@@ -17,15 +19,33 @@ import { trackBookingEvent } from "@/lib/analytics";
 
 interface Slot {
   id: string;
+  time: string; // HH:mm
+  durationMinutes: number;
   startTime: string;
   endTime: string;
 }
 
 interface ProfessionalInfo {
-  prismaId: string;
   supabaseUserId: string;
   name: string;
   specialty?: string;
+  consultationType?: "online" | "in-person" | "both";
+  avatarUrl?: string | null;
+  bio?: string;
+}
+
+const sanitizeBioPreview = (bio: string) => {
+  // El bio puede venir con HTML persistido (ej. <p>...</p> y &nbsp;).
+  const withoutTags = bio
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+
+  return withoutTags.replace(/\s+/g, " ").trim()
 }
 
 export function BookingCalendarClient() {
@@ -41,6 +61,8 @@ export function BookingCalendarClient() {
   const [isPending, startTransition] = useTransition();
   const [bookingSuccess, setBookingSuccess] = useState<{ chatRedirect: string | null; appointmentId: string } | null>(null);
 
+  const bookingType: "online" | "in-person" = info?.consultationType === "online" ? "online" : "in-person";
+
   useEffect(() => {
     if (!professionalId) {
       setLoadingProfessional(false);
@@ -55,7 +77,7 @@ export function BookingCalendarClient() {
         return res.json();
       })
       .then((data) => {
-        if (data?.prismaId) {
+        if (data?.supabaseUserId) {
           setInfo(data);
           trackBookingEvent("calendar_opened", { professionalId: professionalId! });
         } else setInfo(null);
@@ -77,20 +99,20 @@ export function BookingCalendarClient() {
   }, [user, authLoading, professionalId, router]);
 
   useEffect(() => {
-    if (!selectedDate || !info?.prismaId) {
+    if (!selectedDate || !info?.supabaseUserId) {
       setSlots([]);
       setSelectedSlotId(null);
       return;
     }
     const dateStr = format(selectedDate, "yyyy-MM-dd");
-    fetch(`/api/profesionales/${info.prismaId}/slots?date=${dateStr}`)
+    fetch(`/api/professionals/${info.supabaseUserId}/slots?date=${dateStr}&type=${encodeURIComponent(bookingType)}`)
       .then((res) => (res.ok ? res.json() : { slots: [] }))
       .then((data) => {
         setSlots(data.slots ?? []);
         setSelectedSlotId(null);
       })
       .catch(() => setSlots([]));
-  }, [selectedDate, info?.prismaId]);
+  }, [selectedDate, info?.supabaseUserId, bookingType]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -99,36 +121,52 @@ export function BookingCalendarClient() {
     const patientName = (form.elements.namedItem("patientName") as HTMLInputElement)?.value;
     const patientEmail = (form.elements.namedItem("patientEmail") as HTMLInputElement)?.value;
     const patientPhone = (form.elements.namedItem("patientPhone") as HTMLInputElement)?.value;
-    if (!patientName?.trim() || !patientEmail?.trim() || !patientPhone?.trim()) {
-      toast.error("Completa nombre, email y teléfono");
+    const consultationReason = (form.elements.namedItem("consultationReason") as HTMLTextAreaElement)?.value;
+    const firstVisitEl = form.elements.namedItem("isFirstVisit") as HTMLInputElement | null;
+    const isFirstVisit = firstVisitEl?.checked ?? true;
+    if (!patientName?.trim() || !patientEmail?.trim() || !patientPhone?.trim() || !consultationReason?.trim()) {
+      toast.error("Completa nombre, email, teléfono y motivo de consulta");
       return;
     }
+    const selected = slots.find((s) => s.id === selectedSlotId);
+    if (!selected) return;
+
     startTransition(async () => {
       try {
-        const res = await fetch("/api/calendar/book", {
+        const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
+        const res = await fetch("/api/appointments/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            prismaProfessionalId: info.prismaId,
-            slotId: selectedSlotId,
-            patientId: user?.id ?? null,
+            professionalId: info.supabaseUserId,
+            appointmentDate: dateStr,
+            appointmentTime: selected.time,
+            type: bookingType,
+            duration: selected.durationMinutes ?? 60,
+            consultationReason: consultationReason.trim(),
+            isFirstVisit,
+            // Campos extra para mantener el formulario actual sin romper validaciones
             patientName: patientName.trim(),
             patientEmail: patientEmail.trim(),
             patientPhone: patientPhone.trim(),
+            patientId: user?.id ?? null,
           }),
         });
+
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data.error || "Error al reservar");
+          toast.error(data.message || data.error || "Error al reservar");
           return;
         }
+
         trackBookingEvent("appointment_created", {
-          appointmentId: data.appointmentId,
-          professionalId: info.supabaseUserId ?? info.prismaId,
+          appointmentId: data?.appointment?.id ?? "",
+          professionalId: info.supabaseUserId,
         });
+
         setBookingSuccess({
-          chatRedirect: data.chatRedirect ?? null,
-          appointmentId: data.appointmentId,
+          chatRedirect: `/dashboard/chat?with=${info.supabaseUserId}`,
+          appointmentId: data?.appointment?.id ?? "",
         });
       } catch {
         toast.error("Error al confirmar la reserva");
@@ -215,7 +253,7 @@ export function BookingCalendarClient() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
+    <div className="mx-auto max-w-5xl px-4 py-4">
       <div className="mb-6 flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/explore">
@@ -231,116 +269,176 @@ export function BookingCalendarClient() {
         </div>
       </div>
 
-      <Card className="overflow-hidden">
-        <CardHeader className="border-b bg-muted/30">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <CalendarDays className="h-5 w-5 text-primary" />
-            Elige fecha y hora
-          </CardTitle>
-          <CardDescription>
-            El pago de la consulta se coordina directamente con el especialista por chat después de reservar.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={setSelectedDate}
-            locale={es}
-            className="rounded-md border-0"
-            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-          />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px] lg:gap-6">
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b bg-muted/30">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              Elige fecha y hora
+            </CardTitle>
+            <CardDescription>
+              El pago de la consulta se coordina directamente con el especialista por chat después de reservar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              locale={es}
+              className="rounded-md border-0"
+              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+            />
 
-          {selectedDate && (
-            <div className="mt-6">
-              <p className="mb-2 flex items-center gap-2 text-sm font-medium">
-                <Clock className="h-4 w-4" />
-                Horarios disponibles · {format(selectedDate, "EEEE d MMMM", { locale: es })}
-              </p>
-              {slots.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No hay horarios disponibles este día. Elige otra fecha.
+            {selectedDate && (
+            <div className="mt-4">
+                <p className="mb-2 flex items-center gap-2 text-sm font-medium">
+                  <Clock className="h-4 w-4" />
+                  Horarios disponibles · {format(selectedDate, "EEEE d MMMM", { locale: es })}
                 </p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {slots.map((slot) => (
-                    <Button
-                      key={slot.id}
-                      type="button"
-                      variant={selectedSlotId === slot.id ? "default" : "outline"}
-                      size="sm"
-                      className="h-9"
-                      onClick={() => {
-                        setSelectedSlotId(slot.id === selectedSlotId ? null : slot.id);
-                        if (slot.id !== selectedSlotId) {
-                          trackBookingEvent("slot_selected", {
-                            professionalId: info.prismaId,
-                            slotId: slot.id,
-                            date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
-                          });
-                        }
-                      }}
-                    >
-                      {format(new Date(slot.startTime), "HH:mm")}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {selectedSlotId && (
-            <form onSubmit={handleSubmit} className="mt-8 space-y-4 border-t pt-6">
-              <p className="text-sm font-medium">Datos de contacto</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="patientName">Nombre completo</Label>
-                  <Input
-                    id="patientName"
-                    name="patientName"
-                    defaultValue={user.user_metadata?.first_name && user.user_metadata?.last_name
-                      ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`.trim()
-                      : ""}
-                    placeholder="Tu nombre"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="patientEmail">Email</Label>
-                  <Input
-                    id="patientEmail"
-                    name="patientEmail"
-                    type="email"
-                    defaultValue={user.email ?? ""}
-                    placeholder="tu@email.com"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="patientPhone">Teléfono o WhatsApp</Label>
-                <Input
-                  id="patientPhone"
-                  name="patientPhone"
-                  type="tel"
-                  placeholder="+56 9 1234 5678"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isPending}>
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Confirmando...
-                  </>
+                {slots.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No hay horarios disponibles este día. Elige otra fecha.
+                  </p>
                 ) : (
-                  "Confirmar reserva"
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {slots.map((slot) => (
+                      <Button
+                        key={slot.id}
+                        type="button"
+                        variant={selectedSlotId === slot.id ? "default" : "outline"}
+                        size="sm"
+                        className="h-9"
+                        onClick={() => {
+                          setSelectedSlotId(slot.id === selectedSlotId ? null : slot.id);
+                          if (slot.id !== selectedSlotId) {
+                            trackBookingEvent("slot_selected", {
+                              professionalId: info.supabaseUserId,
+                              slotId: slot.id,
+                              date: selectedDate ? format(selectedDate, "yyyy-MM-dd") : "",
+                            });
+                          }
+                        }}
+                      >
+                        {slot.time}
+                      </Button>
+                    ))}
+                  </div>
                 )}
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            )}
+
+            {selectedSlotId && (
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4 border-t pt-6">
+                <p className="text-sm font-medium">Datos de contacto</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="patientName">Nombre completo</Label>
+                    <Input
+                      id="patientName"
+                      name="patientName"
+                      defaultValue={
+                        user.user_metadata?.first_name && user.user_metadata?.last_name
+                          ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`.trim()
+                          : ""
+                      }
+                      placeholder="Tu nombre"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="patientEmail">Email</Label>
+                    <Input
+                      id="patientEmail"
+                      name="patientEmail"
+                      type="email"
+                      defaultValue={user.email ?? ""}
+                      placeholder="tu@email.com"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="patientPhone">Teléfono o WhatsApp</Label>
+                  <Input
+                    id="patientPhone"
+                    name="patientPhone"
+                    type="tel"
+                    placeholder="+56 9 1234 5678"
+                    required
+                  />
+                </div>
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="consultationReason">Motivo de consulta</Label>
+                  <Textarea
+                    id="consultationReason"
+                    name="consultationReason"
+                    placeholder="Ej: Dolor de espalda, control de rutina, ansiedad, etc."
+                    required
+                    className="min-h-[96px]"
+                  />
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      id="isFirstVisit"
+                      name="isFirstVisit"
+                      type="checkbox"
+                      defaultChecked
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="isFirstVisit" className="text-sm text-muted-foreground">
+                      Es primera vez que me atiendo con este especialista
+                    </Label>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={isPending}>
+                  {isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Confirmando...
+                    </>
+                  ) : (
+                    "Confirmar reserva"
+                  )}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Panel derecho tipo perfil del especialista */}
+        <div className="lg:sticky lg:top-4">
+          <Card className="overflow-hidden">
+            <CardHeader className="border-b bg-muted/30">
+              <CardTitle className="text-base">Especialista</CardTitle>
+              <CardDescription>Tu cita con {info.name}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4">
+                <Avatar className="size-14">
+                  {info.avatarUrl ? (
+                    <AvatarImage src={info.avatarUrl} alt={info.name} />
+                  ) : (
+                    <AvatarFallback>{info.name?.charAt(0) ?? "D"}</AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground truncate">{info.name}</p>
+                  {info.specialty ? (
+                    <p className="text-sm text-muted-foreground mt-0.5">{info.specialty}</p>
+                  ) : null}
+                  {info.bio ? (
+                    <p className="text-sm text-muted-foreground mt-3 line-clamp-3">
+                      {sanitizeBioPreview(info.bio)}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-3">Sin descripción.</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

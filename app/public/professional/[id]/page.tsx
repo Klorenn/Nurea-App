@@ -2,6 +2,7 @@ import { Metadata, ResolvingMetadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import ProfessionalProfilePremiumClient from './ProfessionalProfilePremiumClient'
 import { notFound } from 'next/navigation'
+import { genderizeSpecialtyLabel } from '@/lib/utils/genderize-specialty'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -78,6 +79,7 @@ export async function generateMetadata(
 
   const { professional } = data
   const name = professional.name
+  const gender = professional.profile?.gender as "M" | "F" | undefined
   const specialty =
     professional.specialty_data?.name_es ||
     professional.specialty_data?.name_en ||
@@ -85,10 +87,10 @@ export async function generateMetadata(
     'Profesional de salud'
 
   return {
-    title: `${name} - ${specialty} | NUREA Premium`,
+    title: `${name} - ${genderizeSpecialtyLabel(specialty, gender)} | NUREA Premium`,
     description: `Perfil profesional de ${name} en NUREA. Agenda tu cita 100% online de forma segura vía Mercado Pago.`,
     openGraph: {
-      title: `${name} | ${specialty}`,
+      title: `${name} | ${genderizeSpecialtyLabel(specialty, gender)}`,
       images: [professional.imageUrl],
     }
   }

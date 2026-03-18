@@ -20,6 +20,21 @@ export function SpecialistCard({
   onBookAppointment,
   lang = "es",
 }: SpecialistCardProps) {
+  const sanitizeBioPreview = (bio: string) => {
+    // Bio puede venir con HTML persistido (ej. <p>...</p> y &nbsp;).
+    // En Explore queremos texto plano para evitar que se vea "<p>" literal.
+    const withoutTags = bio
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+
+    return withoutTags.replace(/\s+/g, " ").trim()
+  }
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat(lang === "es" ? "es-CL" : "en-US", {
       style: "currency",
@@ -140,7 +155,7 @@ export function SpecialistCard({
 
         {specialist.bio && (
           <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mt-2">
-            {specialist.bio}
+            {sanitizeBioPreview(specialist.bio)}
           </p>
         )}
       </div>

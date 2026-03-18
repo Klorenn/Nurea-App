@@ -40,6 +40,7 @@ export default function ProfilePage() {
     email: "",
     phone: "",
     dateOfBirth: "",
+    gender: "",
     address: "",
     healthInsurance: "",
   })
@@ -72,6 +73,7 @@ export default function ProfilePage() {
             email: user.email || "",
             phone: data.profile.phone || "",
             dateOfBirth: data.profile.date_of_birth || "",
+            gender: data.profile.gender || "",
             address: data.profile.address || "",
             healthInsurance: data.profile.health_insurance || "",
           })
@@ -86,6 +88,7 @@ export default function ProfilePage() {
             email: user.email || "",
             phone: "",
             dateOfBirth: "",
+            gender: "",
             address: "",
             healthInsurance: "",
           })
@@ -100,6 +103,7 @@ export default function ProfilePage() {
           email: user.email || "",
           phone: "",
           dateOfBirth: "",
+          gender: "",
           address: "",
           healthInsurance: "",
         })
@@ -162,6 +166,7 @@ export default function ProfilePage() {
       if (formData.dateOfBirth) updateData.date_of_birth = formData.dateOfBirth
       if (formData.address?.trim()) updateData.address = formData.address.trim()
       if (formData.healthInsurance !== undefined) updateData.health_insurance = formData.healthInsurance
+      if (formData.gender === "M" || formData.gender === "F") updateData.gender = formData.gender
 
       const response = await fetch("/api/user/profile", {
         method: "PUT",
@@ -495,6 +500,39 @@ export default function ProfilePage() {
                 ) : (
                   <p className="text-sm font-medium py-2">
                     {formData.dateOfBirth || (language === "es" ? "No agregado" : "Not added")}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="gender" className="flex items-center gap-2">
+                  {language === "es" ? "Eres hombre o mujer" : "Are you male or female"}
+                </Label>
+                {isEditing ? (
+                  <select
+                    id="gender"
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                    disabled={loading}
+                  >
+                    <option value="">{language === "es" ? "Selecciona" : "Select"}</option>
+                    <option value="M">{language === "es" ? "Hombre" : "Male"}</option>
+                    <option value="F">{language === "es" ? "Mujer" : "Female"}</option>
+                  </select>
+                ) : (
+                  <p className="text-sm font-medium py-2">
+                    {formData.gender
+                      ? formData.gender === "F"
+                        ? language === "es"
+                          ? "Mujer"
+                          : "Female"
+                        : language === "es"
+                          ? "Hombre"
+                          : "Male"
+                      : language === "es"
+                        ? "No agregado"
+                        : "Not added"}
                   </p>
                 )}
               </div>

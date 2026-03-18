@@ -2,6 +2,7 @@ import { Metadata, ResolvingMetadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { SpecialistProfileConversionPage } from '@/components/specialist-profile'
 import { notFound } from 'next/navigation'
+import { genderizeSpecialtyLabel } from '@/lib/utils/genderize-specialty'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -73,13 +74,16 @@ async function getProfessionalData(id: string) {
     professional.specialty ||
     'Profesional de salud'
 
+  const gender = professional.profile?.gender as "M" | "F" | undefined
+  const genderedSpecialty = genderizeSpecialtyLabel(resolvedSpecialty, gender)
+
   // Format professional for the conversion profile page (trust + booking focus)
   const formattedProfessional = {
     ...professional,
     id: professional.id,
     slug: professional.slug,
     name: `${professional.profile?.first_name || ''} ${professional.profile?.last_name || ''}`.trim() || 'Profesional',
-    specialty: resolvedSpecialty,
+    specialty: genderedSpecialty,
     rating: averageRating,
     reviewsCount: reviewsCount,
     imageUrl: professional.profile?.avatar_url || '',

@@ -51,7 +51,7 @@ export function RouteGuard({
         try {
           const { data, error } = await supabase
             .from("profiles")
-            .select("role, date_of_birth, email_verified")
+            .select("role, date_of_birth, email_verified, onboarding_completed")
             .eq("id", user.id)
             .single()
 
@@ -63,49 +63,18 @@ export function RouteGuard({
 
           setProfile(data)
 
-          // If user is a professional, check onboarding status
-          // Only check for professional routes (not onboarding page itself)
+          // Wizard v2 onboarding gating for professional routes.
+          // If `onboarding_completed` is missing (older environments), we avoid blocking.
           if (data?.role === "professional" && typeof window !== "undefined") {
             const currentPath = window.location.pathname
-            // Don't check onboarding for the onboarding page itself
-            if (currentPath !== "/professional/onboarding") {
-              try {
-                const onboardingResponse = await fetch("/api/professional/onboarding/status", {
-                  method: "GET",
-                  credentials: "include",
-                })
-                
-                if (!onboardingResponse.ok) {
-                  // If API call fails, allow access (don't block user)
-                  console.warn("Onboarding status check failed, allowing access")
-                  setOnboardingComplete(true)
-                  return
-                }
-                
-                const onboardingData = await onboardingResponse.json()
-                
-                if (onboardingData.success !== false) {
-                  setOnboardingComplete(onboardingData.isComplete !== false)
-                  
-                  // If onboarding is incomplete, redirect to onboarding page
-                  if (onboardingData.isComplete === false) {
-                    router.push("/professional/onboarding")
-                    return
-                  }
-                } else {
-                  // API returned error but not a critical one, allow access
-                  setOnboardingComplete(true)
-                }
-              } catch (onboardingError) {
-                console.error("Error checking onboarding status:", onboardingError)
-                // Don't block access if we can't check onboarding status
-                // Allow user to proceed - they can complete onboarding later
-                setOnboardingComplete(true)
+            const completed = data?.onboarding_completed
+            if (currentPath !== "/onboarding") {
+              if (completed === false) {
+                router.push("/onboarding")
+                return
               }
-            } else {
-              // On onboarding page, allow access
-              setOnboardingComplete(true)
             }
+            setOnboardingComplete(completed !== false)
           } else {
             setOnboardingComplete(true)
           }
