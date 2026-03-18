@@ -104,29 +104,36 @@ export async function POST(request: Request) {
       missingFields.push('consultation_type')
     }
     
-    const consultationType = professional.consultation_type || 'both'
-    if (consultationType === 'online' || consultationType === 'both') {
-      if (!professional.online_price || professional.online_price === 0) {
-        missingFields.push('online_price')
+    // Solo validar precios del tipo de consulta solicitado.
+    // Esto evita bloquear reservas cuando el profesional ofrece "both" pero aún no completó
+    // el precio del tipo que el paciente NO está solicitando.
+    if (type === 'online') {
+      const consultationType = professional.consultation_type || 'both'
+      if (consultationType === 'online' || consultationType === 'both') {
+        if (!professional.online_price || Number(professional.online_price) === 0) {
+          missingFields.push('online_price')
+        }
       }
     }
-    if (consultationType === 'in-person' || consultationType === 'both') {
-      if (!professional.in_person_price || professional.in_person_price === 0) {
-        missingFields.push('in_person_price')
+
+    if (type === 'in-person') {
+      const consultationType = professional.consultation_type || 'both'
+      if (consultationType === 'in-person' || consultationType === 'both') {
+        if (!professional.in_person_price || Number(professional.in_person_price) === 0) {
+          missingFields.push('in_person_price')
+        }
       }
     }
     
     // Verificar disponibilidad usando helper (soporta formato antiguo y nuevo)
-    if (!hasAnyAvailability(professional.availability, professional.consultation_type || 'both')) {
+    if (!hasAnyAvailability(professional.availability, type)) {
       missingFields.push('availability')
     }
     
-    if (!professional.registration_number || professional.registration_number.trim() === '') {
-      missingFields.push('registration_number')
-    }
-    if (!professional.registration_institution || professional.registration_institution.trim() === '') {
-      missingFields.push('registration_institution')
-    }
+    // Para agendar no bloqueamos por datos bancarios/registro.
+    // Esos datos pueden ser requeridos para cobros/verificación, pero no deberían
+    // impedir que el paciente elija un horario si el profesional ya configuró
+    // especialidad, bio, modalidad y disponibilidad.
 
     if (missingFields.length > 0) {
       return NextResponse.json(
