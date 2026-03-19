@@ -88,7 +88,7 @@ export const UserDropdown = ({
   const handleAction = (action: string) => {
     switch (action) {
       case "profile":
-        go(role === "admin" ? "/admin/settings" : role === "patient" ? "/dashboard/profile" : "/dashboard/professional")
+        go(role === "admin" ? "/dashboard/admin/settings" : role === "patient" ? "/dashboard/profile" : "/dashboard/professional")
         break
       case "appointments":
         go(role === "patient" ? "/dashboard/patient/citas" : "/dashboard/appointments")
@@ -106,7 +106,7 @@ export const UserDropdown = ({
         go("/dashboard/payments")
         break
       case "settings":
-        go(role === "admin" ? "/admin/settings" : role === "patient" ? "/dashboard/settings" : "/dashboard/professional/profile")
+        go(role === "admin" ? "/dashboard/admin/settings" : role === "patient" ? "/dashboard/settings" : "/dashboard/professional/profile")
         break
       case "language":
         setLanguage(language === "es" ? "en" : "es")
