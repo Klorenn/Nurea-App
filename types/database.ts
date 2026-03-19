@@ -15,6 +15,11 @@ export interface Profile {
   phone: string | null
   email_verified: boolean
   health_insurance: string | null
+  mp_access_token?: string | null
+  mp_refresh_token?: string | null
+  mp_user_id?: string | null
+  mp_public_key?: string | null
+  mp_token_updated_at?: string | null
   created_at: string
   updated_at: string
 }

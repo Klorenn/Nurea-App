@@ -40,23 +40,75 @@ export async function GET(request: Request) {
     }
 
     // Obtener datos del profesional
+    const selectWithGender = `
+      *,
+      profile:profiles!professionals_id_fkey(
+        id,
+        first_name,
+        last_name,
+        avatar_url,
+        gender,
+        phone,
+        email
+      )
+    `
+
+    const selectWithoutGender = `
+      *,
+      profile:profiles!professionals_id_fkey(
+        id,
+        first_name,
+        last_name,
+        avatar_url,
+        phone,
+        email
+      )
+    `
+
     const { data: professional, error: professionalError } = await supabase
-      .from('professionals')
-      .select(`
-        *,
-        profile:profiles!professionals_id_fkey(
-          id,
-          first_name,
-          last_name,
-          avatar_url,
-          phone,
-          email
-        )
-      `)
-      .eq('id', user.id)
+      .from("professionals")
+      .select(selectWithGender)
+      .eq("id", user.id)
       .single()
 
     if (professionalError) {
+      if (professionalError.message?.toLowerCase().includes("gender")) {
+        const { data: retryProfessional } = await supabase
+          .from("professionals")
+          .select(selectWithoutGender)
+          .eq("id", user.id)
+          .single()
+        if (!retryProfessional) {
+          console.error("Error fetching professional profile retry:", professionalError)
+        }
+        return NextResponse.json({
+          success: true,
+          profile: {
+            firstName: retryProfessional?.profile?.first_name || '',
+            lastName: retryProfessional?.profile?.last_name || '',
+            gender: '',
+            title: retryProfessional?.specialty || '',
+            bio: retryProfessional?.bio || '',
+            bioExtended: retryProfessional?.bio_extended || '',
+            avatarUrl: retryProfessional?.profile?.avatar_url || '',
+            specialties: retryProfessional?.services || [],
+            languages: retryProfessional?.languages || [],
+            consultationType: retryProfessional?.consultation_type || 'both',
+            onlinePrice: retryProfessional?.online_price || retryProfessional?.consultation_price || 0,
+            inPersonPrice: retryProfessional?.in_person_price || retryProfessional?.consultation_price || 0,
+            videoPlatform: retryProfessional?.video_platform || 'google-meet',
+            clinicAddress: retryProfessional?.clinic_address || retryProfessional?.location || '',
+            availability: retryProfessional?.availability || {},
+            bankAccount: retryProfessional?.bank_account || '',
+            bankName: retryProfessional?.bank_name || '',
+            registrationNumber: retryProfessional?.registration_number || '',
+            registrationInstitution: retryProfessional?.registration_institution || '',
+            location: retryProfessional?.location || '',
+            yearsExperience: retryProfessional?.years_experience || 0,
+          },
+        })
+      }
+
       console.error('Error fetching professional profile:', professionalError)
       return NextResponse.json(
         { 
@@ -72,6 +124,7 @@ export async function GET(request: Request) {
       // Información básica
       firstName: professional.profile?.first_name || '',
       lastName: professional.profile?.last_name || '',
+      gender: professional.profile?.gender || '',
       title: professional.specialty || '',
       bio: professional.bio || '',
       bioExtended: professional.bio_extended || '',
@@ -142,13 +195,15 @@ export async function PUT(request: Request) {
     }
 
     // Verificar que el usuario sea profesional
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
+    const { data: currentProfessional } = await supabase
+      .from('professionals')
+      .select('*, profile:profiles!professionals_id_fkey(first_name, last_name, role)')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'professional') {
+    const role = Array.isArray(currentProfessional?.profile) ? currentProfessional?.profile[0]?.role : currentProfessional?.profile?.role
+
+    if (role !== 'professional') {
       return NextResponse.json(
         { 
           error: 'forbidden',
@@ -162,6 +217,7 @@ export async function PUT(request: Request) {
     const {
       firstName,
       lastName,
+      gender,
       title,
       bio,
       bioExtended,
@@ -182,7 +238,7 @@ export async function PUT(request: Request) {
     } = body
 
     // Actualizar perfil en tabla profiles
-    if (firstName !== undefined || lastName !== undefined) {
+    if (firstName !== undefined || lastName !== undefined || gender !== undefined) {
       const profileUpdate: any = {
         updated_at: new Date().toISOString(),
       }
@@ -192,6 +248,11 @@ export async function PUT(request: Request) {
       }
       if (lastName !== undefined && lastName !== null && lastName.trim() !== '') {
         profileUpdate.last_name = lastName.trim()
+      }
+
+      if (gender !== undefined && gender !== null) {
+        if (gender === "M" || gender === "F") profileUpdate.gender = gender
+        else profileUpdate.gender = null
       }
 
       if (Object.keys(profileUpdate).length > 1) { // More than just updated_at
@@ -230,6 +291,30 @@ export async function PUT(request: Request) {
     if (location !== undefined && location !== null) professionalUpdate.location = location.trim() || null
     if (yearsExperience !== undefined && yearsExperience !== null) professionalUpdate.years_experience = typeof yearsExperience === 'number' ? yearsExperience : parseInt(yearsExperience) || null
 
+    // 🛡️ Lógica de Sello de Verificación: Romper sello si cambian datos críticos
+    let sealBroken = false;
+    let securityAlertTriggered = false;
+    
+    // Comparar valores nuevos con los actuales
+    if (currentProfessional?.verification_status === 'verified' || currentProfessional?.verified === true) {
+      const currentFirstName = Array.isArray(currentProfessional?.profile) ? currentProfessional.profile[0]?.first_name : currentProfessional?.profile?.first_name;
+      const currentLastName = Array.isArray(currentProfessional?.profile) ? currentProfessional.profile[0]?.last_name : currentProfessional?.profile?.last_name;
+      
+      const changedFirstName = firstName !== undefined && firstName.trim() !== currentFirstName;
+      const changedLastName = lastName !== undefined && lastName.trim() !== currentLastName;
+      const changedSpecialty = title !== undefined && title.trim() !== currentProfessional?.specialty;
+      const changedRnpi = registrationNumber !== undefined && registrationNumber.trim() !== currentProfessional?.registration_number;
+
+      if (changedFirstName || changedLastName || changedSpecialty || changedRnpi) {
+        sealBroken = true;
+        professionalUpdate.verification_status = 'pending'; // In the DB this triggers verified=false
+        professionalUpdate.verified = false;
+        securityAlertTriggered = true;
+        // In theory we should set is_public to false, but the schema doesn't have is_public 
+        // We rely on verified=false to hide them in public directories.
+      }
+    }
+
     // Si se actualiza el precio online o presencial, también actualizar consultation_price como fallback
     if (onlinePrice !== undefined || inPersonPrice !== undefined) {
       const fallbackPrice = onlinePrice || inPersonPrice
@@ -257,9 +342,37 @@ export async function PUT(request: Request) {
       )
     }
 
+    // Si se rompió el sello, enviar alerta de seguridad al Admin Notification Center
+    if (securityAlertTriggered) {
+      const currentFirstName = Array.isArray(currentProfessional?.profile) ? currentProfessional.profile[0]?.first_name : currentProfessional?.profile?.first_name;
+      const currentLastName = Array.isArray(currentProfessional?.profile) ? currentProfessional.profile[0]?.last_name : currentProfessional?.profile?.last_name;
+      const doctorName = `${currentFirstName || ''} ${currentLastName || ''}`.trim() || 'Especialista';
+      
+      try {
+        await supabase.from('admin_notifications').insert({
+          type: 'SECURITY_ALERT',
+          message: `⚠️ Alerta Crítica: El Dr. ${doctorName} modificó datos críticos (RNPI, Especialidad o Nombre) y su perfil fue bloqueado automáticamente. Ha vuelto a estado pendiente.`,
+          professional_id: user.id,
+          is_read: false
+        });
+        
+        // Llamar endpoint para notificar admin por email
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+        fetch(`${siteUrl}/api/admin/notify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ professionalId: user.id, doctorName })
+        }).catch(err => console.error("Error sending admin email notification", err));
+        
+      } catch (alertError) {
+        console.error('Error creating security alert:', alertError)
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Perfil actualizado exitosamente.',
+      message: sealBroken ? 'Perfil actualizado. Alerta: Has modificado datos críticos. Tu cuenta está en revisión y ha sido temporalmente ocultada.' : 'Perfil actualizado exitosamente.',
+      sealBroken,
       profile: updatedProfessional
     })
   } catch (error) {

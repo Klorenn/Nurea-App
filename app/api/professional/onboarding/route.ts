@@ -209,6 +209,8 @@ export async function POST(request: Request) {
       registrationInstitution,
       location,
       yearsExperience,
+      referralCodeUsed,
+      isVip,
     } = body
 
     // Prepare update object
@@ -252,6 +254,8 @@ export async function POST(request: Request) {
     if (registrationInstitution !== undefined) professionalUpdate.registration_institution = registrationInstitution
     if (location !== undefined) professionalUpdate.location = location
     if (yearsExperience !== undefined) professionalUpdate.years_experience = yearsExperience
+    if (referralCodeUsed !== undefined) professionalUpdate.referral_code_used = referralCodeUsed
+    if (isVip !== undefined) professionalUpdate.is_vip = isVip
 
     // If updating prices, also update consultation_price as fallback
     if (onlinePrice !== undefined || inPersonPrice !== undefined) {
@@ -282,6 +286,11 @@ export async function POST(request: Request) {
       
       updatedProfessional = newProfessional
       professionalError = createError
+
+      // Update code usage count if new record and code used
+      if (newProfessional && referralCodeUsed) {
+        await supabase.rpc('increment_referral_usage', { code_param: referralCodeUsed })
+      }
     } else {
       // Update existing professional record
       const { data: updated, error: updateError } = await supabase

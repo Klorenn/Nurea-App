@@ -15,39 +15,34 @@ export function AvailabilityToggle({ checked, onChange, lang = "es" }: Availabil
 
   return (
     <button
+      type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+        "w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left",
         checked
-          ? "border-teal-500 bg-teal-50 dark:bg-teal-950/30"
-          : "border-border/40 hover:border-border hover:bg-accent/20"
+          ? "border-teal-500/50 bg-teal-50/80 dark:bg-teal-950/20 dark:border-teal-800"
+          : "border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50"
       )}
     >
       <div className={cn(
-        "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-        checked
-          ? "bg-teal-500 text-white"
-          : "bg-accent text-muted-foreground"
+        "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors",
+        checked ? "bg-teal-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-400"
       )}>
-        <Clock className="h-5 w-5" />
+        <Clock className="h-4 w-4" />
       </div>
-
-      <div className="flex-1 text-left">
-        <span className={cn(
-          "text-sm font-medium transition-colors",
-          checked ? "text-teal-700 dark:text-teal-300" : "text-foreground"
-        )}>
-          {label}
-        </span>
-      </div>
-
+      <span className={cn(
+        "text-sm font-medium flex-1",
+        checked ? "text-slate-900 dark:text-slate-100" : "text-slate-600 dark:text-slate-400"
+      )}>
+        {label}
+      </span>
       <div className={cn(
-        "w-10 h-6 rounded-full p-0.5 transition-colors",
-        checked ? "bg-teal-500" : "bg-muted"
+        "w-9 h-5 rounded-full p-0.5 shrink-0 transition-colors",
+        checked ? "bg-teal-600" : "bg-slate-200 dark:bg-slate-700"
       )}>
         <motion.div
-          className="w-5 h-5 rounded-full bg-white shadow-sm"
-          animate={{ x: checked ? 16 : 0 }}
+          className="w-4 h-4 rounded-full bg-white shadow-sm"
+          animate={{ x: checked ? 18 : 2 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
         />
       </div>

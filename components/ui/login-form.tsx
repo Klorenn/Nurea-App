@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, type ReactElement } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useTheme } from "next-themes"
 import { TermsDialog } from "@/components/ui/terms-dialog"
@@ -66,10 +66,8 @@ export function AuthPageBackground() {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Fallback para modo oscuro si resolvedTheme aún no está (hidratación): leer clase en document
-    const dark =
-      resolvedTheme === "dark" ||
-      (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
+    // Use resolvedTheme directly for the colors inside the effect
+    const themeToUse = resolvedTheme === "dark"
 
     const gl = canvas.getContext("webgl")
     if (!gl) return
@@ -125,7 +123,7 @@ export function AuthPageBackground() {
 
     // Paleta con cuerpo: contraste para que el movimiento turbulento se vea claro y premium.
     // Light: teal-200, cyan-100. Dark: slate-950 base, fluido teal-600 para movimiento claramente visible.
-    if (dark) {
+    if (themeToUse) {
       gl.uniform3f(uGrayLocation, 0.008, 0.024, 0.09)   // slate-950 – base muy oscura
       gl.uniform3f(uColorLocation, 0.11, 0.49, 0.47)   // teal-600 – destellos vibrantes visibles
     } else {
@@ -154,7 +152,7 @@ export function AuthPageBackground() {
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId)
     }
-  }, [isDark])
+  }, [resolvedTheme, mounted])
 
   return (
     <div
@@ -285,10 +283,19 @@ export function SmokeyBackground({
   )
 }
 
+/** Si es una URL relativa segura (empieza por / y no por //) la usamos como redirect tras login */
+function isSafeCallbackUrl(url: string | null): boolean {
+  if (!url || typeof url !== "string") return false
+  const decoded = decodeURIComponent(url)
+  return decoded.startsWith("/") && !decoded.startsWith("//")
+}
+
 export function LoginForm() {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get("callbackUrl")
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const isDark = mounted && resolvedTheme === "dark"
@@ -329,19 +336,22 @@ export function LoginForm() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, date_of_birth")
+        .select("role, onboarding_completed")
         .eq("id", data.user.id)
         .single()
 
       const role = profile?.role || "patient"
-      const profileComplete = !!profile?.date_of_birth
+      const onboardingCompleted = !!profile?.onboarding_completed
       let redirectPath = "/dashboard"
-      if (role === "professional") {
-        redirectPath = profileComplete ? "/professional/dashboard" : "/complete-profile"
+
+      if (isSafeCallbackUrl(callbackUrl)) {
+        redirectPath = decodeURIComponent(callbackUrl!)
+      } else if (role === "professional") {
+        redirectPath = onboardingCompleted ? "/dashboard/professional" : "/onboarding"
       } else if (role === "admin") {
-        redirectPath = "/admin"
+        redirectPath = "/dashboard/admin"
       } else {
-        redirectPath = profileComplete ? "/dashboard" : "/complete-profile"
+        redirectPath = onboardingCompleted ? "/dashboard/patient" : "/onboarding"
       }
 
       router.push(redirectPath)
@@ -357,7 +367,10 @@ export function LoginForm() {
   const handleGoogleSignIn = async () => {
     setLoading(true)
     try {
-      window.location.href = "/api/auth/google"
+      const next = isSafeCallbackUrl(callbackUrl) ? callbackUrl : undefined
+      window.location.href = next
+        ? "/api/auth/google?next=" + encodeURIComponent(next)
+        : "/api/auth/google"
     } catch {
       setError(language === "es" ? "No se pudo iniciar sesión con Google" : "Failed to initiate Google sign in")
       setLoading(false)
@@ -526,7 +539,7 @@ export function LoginForm() {
 
       <p className={`mt-2 text-center text-xs ${footerClass}`}>
         {language === "es" ? "¿No tienes una cuenta?" : "Don't have an account?"}{" "}
-        <a href="/auth/register" className={footerLinkClass}>
+        <a href={isSafeCallbackUrl(callbackUrl) ? `/auth/register?callbackUrl=${encodeURIComponent(callbackUrl!)}` : "/auth/register"} className={footerLinkClass}>
           {language === "es" ? "Regístrate" : "Sign Up"}
         </a>
       </p>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,10 @@ import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { createClient } from "@/lib/supabase/client"
+import { AvatarCropDialog } from "@/components/profile/AvatarCropDialog"
+import { GoogleAddressInput } from "@/components/ui/google-address-input"
+import { mutate } from "swr"
 
 export default function ProfilePage() {
   const { language } = useLanguage()
@@ -21,6 +25,14 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingProfile, setLoadingProfile] = useState(true)
+  const [initialEmail, setInitialEmail] = useState<string>("")
+  const [emailPassword, setEmailPassword] = useState<string>("")
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [cropOpen, setCropOpen] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const supabase = createClient()
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -28,6 +40,7 @@ export default function ProfilePage() {
     email: "",
     phone: "",
     dateOfBirth: "",
+    gender: "",
     address: "",
     healthInsurance: "",
   })
@@ -60,9 +73,14 @@ export default function ProfilePage() {
             email: user.email || "",
             phone: data.profile.phone || "",
             dateOfBirth: data.profile.date_of_birth || "",
+            gender: data.profile.gender || "",
             address: data.profile.address || "",
             healthInsurance: data.profile.health_insurance || "",
           })
+          setInitialEmail(user.email || "")
+          if (data.profile.avatar_url) {
+            setAvatarUrl(data.profile.avatar_url)
+          }
         } else {
           setFormData({
             firstName: user.user_metadata?.first_name || "",
@@ -70,9 +88,11 @@ export default function ProfilePage() {
             email: user.email || "",
             phone: "",
             dateOfBirth: "",
+            gender: "",
             address: "",
             healthInsurance: "",
           })
+          setInitialEmail(user.email || "")
         }
       } catch (error) {
         console.error("Error loading profile:", error)
@@ -83,9 +103,11 @@ export default function ProfilePage() {
           email: user.email || "",
           phone: "",
           dateOfBirth: "",
+          gender: "",
           address: "",
           healthInsurance: "",
         })
+        setInitialEmail(user.email || "")
       } finally {
         setLoadingProfile(false)
       }
@@ -99,6 +121,43 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setLoading(true)
     try {
+      const emailChanged = formData.email && formData.email !== initialEmail
+
+      if (emailChanged) {
+        if (!emailPassword.trim()) {
+          setError(
+            language === "es"
+              ? "Para cambiar tu correo debes ingresar tu contraseña."
+              : "To change your email, please enter your password."
+          )
+          setLoading(false)
+          return
+        }
+
+        const emailResponse = await fetch("/api/user/change-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            newEmail: formData.email,
+            password: emailPassword,
+          }),
+        })
+
+        const emailData = await emailResponse.json()
+
+        if (!emailResponse.ok || !emailData.success) {
+          const message =
+            emailData.message ||
+            (language === "es"
+              ? "No se pudo actualizar el correo"
+              : "Could not update email")
+          throw new Error(message)
+        }
+
+        setInitialEmail(formData.email)
+        setEmailPassword("")
+      }
+
       // Preparar datos solo con valores definidos
       const updateData: any = {}
       if (formData.firstName?.trim()) updateData.first_name = formData.firstName.trim()
@@ -107,6 +166,7 @@ export default function ProfilePage() {
       if (formData.dateOfBirth) updateData.date_of_birth = formData.dateOfBirth
       if (formData.address?.trim()) updateData.address = formData.address.trim()
       if (formData.healthInsurance !== undefined) updateData.health_insurance = formData.healthInsurance
+      if (formData.gender === "M" || formData.gender === "F") updateData.gender = formData.gender
 
       const response = await fetch("/api/user/profile", {
         method: "PUT",
@@ -124,6 +184,8 @@ export default function ProfilePage() {
       setSuccess(language === "es" ? "Perfil actualizado correctamente" : "Profile updated successfully")
       setError(null)
       setIsEditing(false)
+      // Invalidate the unified profile key
+      mutate(["profile", user?.id])
       setTimeout(() => setSuccess(null), 3000)
     } catch (error) {
       console.error("Error saving profile:", error)
@@ -131,6 +193,81 @@ export default function ProfilePage() {
       setSuccess(null)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleAvatarButtonClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !user?.id) return
+
+    if (!file.type.startsWith("image/")) {
+      setError(
+        language === "es" ? "Solo se permiten archivos de imagen." : "Only image files are allowed."
+      )
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError(
+        language === "es"
+          ? "La imagen no debe superar los 5MB."
+          : "Image size must be under 5MB."
+      )
+      return
+    }
+
+    setError(null)
+    setAvatarFile(file)
+    setCropOpen(true)
+  }
+
+  const uploadAvatarFile = async (file: File) => {
+    setUploadingAvatar(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/user/upload-avatar", {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data?.success) {
+        const message =
+          data?.message ||
+          (language === "es"
+            ? "No se pudo actualizar la foto de perfil"
+            : "Could not update profile photo")
+        throw new Error(message)
+      }
+
+      if (data.avatarUrl) {
+        setAvatarUrl(data.avatarUrl as string)
+      }
+      setSuccess(
+        language === "es"
+          ? "Foto de perfil actualizada correctamente"
+          : "Profile photo updated successfully"
+      )
+      // Invalidate both potential keys
+      mutate(`profile-avatar-${user?.id}`)
+      mutate("/api/user/profile")
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (error) {
+      console.error("Error uploading avatar:", error)
+      setError(
+        language === "es"
+          ? "No se pudo actualizar la foto de perfil"
+          : "Could not update profile photo"
+      )
+    } finally {
+      setUploadingAvatar(false)
     }
   }
 
@@ -196,15 +333,36 @@ export default function ProfilePage() {
             <CardContent className="p-6">
               <div className="flex flex-col items-center space-y-4">
                 <Avatar className="h-32 w-32 rounded-2xl border-2 border-border/40">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarImage src={avatarUrl || user?.user_metadata?.avatar_url || undefined} />
                   <AvatarFallback className="text-2xl">
                     {formData.firstName?.[0] || ""}{formData.lastName?.[0] || ""}
                   </AvatarFallback>
                 </Avatar>
                 {isEditing && (
-                  <Button variant="outline" className="rounded-xl w-full">
-                    {language === "es" ? "Cambiar Foto" : "Change Photo"}
-                  </Button>
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    <Button
+                      variant="outline"
+                      className="rounded-xl w-full"
+                      onClick={handleAvatarButtonClick}
+                      disabled={uploadingAvatar}
+                    >
+                      {uploadingAvatar ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {language === "es" ? "Subiendo..." : "Uploading..."}
+                        </>
+                      ) : (
+                        <>{language === "es" ? "Cambiar Foto" : "Change Photo"}</>
+                      )}
+                    </Button>
+                  </>
                 )}
                 <div className="text-center">
                   <p className="font-bold text-lg">
@@ -270,14 +428,34 @@ export default function ProfilePage() {
                   {language === "es" ? "Correo Electrónico" : "Email"}
                 </Label>
                 {isEditing ? (
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="rounded-xl"
-                    disabled={loading}
-                  />
+                  <div className="space-y-2">
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="rounded-xl"
+                      disabled={loading}
+                    />
+                    {formData.email !== initialEmail && (
+                      <div className="space-y-1">
+                        <Label htmlFor="emailPassword" className="text-xs flex items-center gap-1 text-muted-foreground">
+                          <Shield className="h-3 w-3" />
+                          {language === "es"
+                            ? "Ingresa tu contraseña para confirmar el cambio de correo"
+                            : "Enter your password to confirm the email change"}
+                        </Label>
+                        <Input
+                          id="emailPassword"
+                          type="password"
+                          value={emailPassword}
+                          onChange={(e) => setEmailPassword(e.target.value)}
+                          className="rounded-xl text-sm"
+                          disabled={loading}
+                        />
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm font-medium py-2">{formData.email}</p>
                 )}
@@ -327,18 +505,51 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="gender" className="flex items-center gap-2">
+                  {language === "es" ? "Eres hombre o mujer" : "Are you male or female"}
+                </Label>
+                {isEditing ? (
+                  <select
+                    id="gender"
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+                    disabled={loading}
+                  >
+                    <option value="">{language === "es" ? "Selecciona" : "Select"}</option>
+                    <option value="M">{language === "es" ? "Hombre" : "Male"}</option>
+                    <option value="F">{language === "es" ? "Mujer" : "Female"}</option>
+                  </select>
+                ) : (
+                  <p className="text-sm font-medium py-2">
+                    {formData.gender
+                      ? formData.gender === "F"
+                        ? language === "es"
+                          ? "Mujer"
+                          : "Female"
+                        : language === "es"
+                          ? "Hombre"
+                          : "Male"
+                      : language === "es"
+                        ? "No agregado"
+                        : "Not added"}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="address" className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   {language === "es" ? "Dirección" : "Address"}
                 </Label>
                 {isEditing ? (
-                  <Input
-                    id="address"
+                  <GoogleAddressInput
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(val) => setFormData({ ...formData, address: val })}
                     className="rounded-xl"
-                    placeholder={language === "es" ? "Tu dirección" : "Your address"}
+                    placeholder={language === "es" ? "Busca tu dirección..." : "Search your address..."}
                     disabled={loading}
+                    language={language as "es" | "en"}
                   />
                 ) : (
                   <p className="text-sm font-medium py-2">
@@ -420,6 +631,17 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+      <AvatarCropDialog
+        open={cropOpen && !!avatarFile}
+        file={avatarFile}
+        onOpenChange={(open) => {
+          setCropOpen(open)
+          if (!open) {
+            setAvatarFile(null)
+          }
+        }}
+        onConfirm={uploadAvatarFile}
+      />
     </DashboardLayout>
   )
 }

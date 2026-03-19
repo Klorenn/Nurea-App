@@ -109,13 +109,13 @@ export default function ProfessionalSupportPage() {
   }
 
   const getStatusBadge = (status: string) => {
+    const normalizedStatus = status === "closed" ? "resolved" : status
     const statuses: Record<string, { label: string; icon: any; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       open: { label: isSpanish ? "Abierto" : "Open", icon: Clock, variant: "outline" },
       in_progress: { label: isSpanish ? "En Progreso" : "In Progress", icon: AlertCircle, variant: "secondary" },
       resolved: { label: isSpanish ? "Resuelto" : "Resolved", icon: CheckCircle2, variant: "default" },
-      closed: { label: isSpanish ? "Cerrado" : "Closed", icon: XCircle, variant: "outline" },
     }
-    const statusInfo = statuses[status] || statuses.open
+    const statusInfo = statuses[normalizedStatus] || statuses.open
     const Icon = statusInfo.icon
     return (
       <Badge variant={statusInfo.variant} className="flex items-center gap-1">
@@ -128,7 +128,6 @@ export default function ProfessionalSupportPage() {
   const getCategoryLabel = (category: string) => {
     const categories: Record<string, string> = {
       technical: isSpanish ? "Técnico" : "Technical",
-      billing: isSpanish ? "Facturación" : "Billing",
       account: isSpanish ? "Cuenta" : "Account",
       appointment: isSpanish ? "Cita" : "Appointment",
       other: isSpanish ? "Otro" : "Other",
@@ -179,7 +178,6 @@ export default function ProfessionalSupportPage() {
                 <SelectItem value="open">{isSpanish ? "Abierto" : "Open"}</SelectItem>
                 <SelectItem value="in_progress">{isSpanish ? "En Progreso" : "In Progress"}</SelectItem>
                 <SelectItem value="resolved">{isSpanish ? "Resuelto" : "Resolved"}</SelectItem>
-                <SelectItem value="closed">{isSpanish ? "Cerrado" : "Closed"}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -293,7 +291,6 @@ export default function ProfessionalSupportPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="technical">{isSpanish ? "Técnico" : "Technical"}</SelectItem>
-                      <SelectItem value="billing">{isSpanish ? "Facturación" : "Billing"}</SelectItem>
                       <SelectItem value="account">{isSpanish ? "Cuenta" : "Account"}</SelectItem>
                       <SelectItem value="appointment">{isSpanish ? "Cita" : "Appointment"}</SelectItem>
                       <SelectItem value="other">{isSpanish ? "Otro" : "Other"}</SelectItem>

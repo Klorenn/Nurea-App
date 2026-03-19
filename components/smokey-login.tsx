@@ -318,19 +318,19 @@ export function LoginForm() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, date_of_birth")
+        .select("role, onboarding_completed")
         .eq("id", data.user.id)
         .single()
 
       const role = profile?.role || "patient"
-      const profileComplete = !!profile?.date_of_birth
+      const onboardingCompleted = !!profile?.onboarding_completed
       let redirectPath = "/dashboard"
       if (role === "professional") {
-        redirectPath = profileComplete ? "/professional/dashboard" : "/complete-profile"
+        redirectPath = onboardingCompleted ? "/dashboard/professional" : "/onboarding"
       } else if (role === "admin") {
-        redirectPath = "/admin"
+        redirectPath = "/dashboard/admin"
       } else {
-        redirectPath = profileComplete ? "/dashboard" : "/complete-profile"
+        redirectPath = onboardingCompleted ? "/dashboard/patient" : "/onboarding"
       }
 
       router.push(redirectPath)
@@ -673,15 +673,34 @@ export function LoginForm() {
 /** Especialidades para el select de profesionales (valor guardado igual en ES/EN). */
 const SPECIALTY_OPTIONS = [
   "Medicina General",
-  "Psicología Clínica",
-  "Nutrición y Dietética",
-  "Kinesiología y Rehabilitación",
+  "Psicología",
+  "Psiquiatría",
+  "Nutrición",
+  "Kinesiología",
+  "Odontología",
   "Dermatología",
-  "Cardiología",
-  "Pediatría",
   "Ginecología y Obstetricia",
-  "Traumatología",
+  "Pediatría",
+  "Cardiología",
+  "Traumatología y Ortopedia",
+  "Oftalmología",
+  "Otorrinolaringología",
+  "Urología",
+  "Neurología",
+  "Endocrinología",
+  "Gastroenterología",
+  "Oncología",
+  "Reumatología",
+  "Neumología",
+  "Fisiatría",
   "Medicina Interna",
+  "Medicina Deportiva",
+  "Medicina Estética",
+  "Nutrición Infantil",
+  "Psicopedagogía",
+  "Fonoaudiología",
+  "Terapia Ocupacional",
+  "Matrona",
   "Otra",
 ]
 
@@ -714,7 +733,9 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [specialty, setSpecialty] = useState("")
+  const [otherSpecialty, setOtherSpecialty] = useState("")
   const [registrationNumber, setRegistrationNumber] = useState("")
+  const [nationalId, setNationalId] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -773,8 +794,16 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
       if (!specialty.trim()) {
         errors.specialty = isSpanish ? "Selecciona tu especialidad" : "Select your specialty"
       }
+      if (specialty === "Otra" && !otherSpecialty.trim()) {
+        errors.otherSpecialty = isSpanish ? "Especifica tu especialidad" : "Specify your specialty"
+      }
       if (!registrationNumber.trim()) {
         errors.registrationNumber = isSpanish ? "El RUT o registro médico es obligatorio" : "Medical ID is required"
+      }
+    } else {
+      // Pacientes: RUT/DNI obligatorio según petición del usuario
+      if (!nationalId.trim()) {
+        errors.nationalId = isSpanish ? "El RUT o DNI es obligatorio" : "National ID (RUT/DNI) is required"
       }
     }
 
@@ -804,8 +833,9 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
         lastName: lastName.trim(),
         dateOfBirth: dateOfBirth || undefined,
         role,
-        specialty: isProfessional ? specialty : undefined,
+        specialty: isProfessional ? (specialty === "Otra" ? otherSpecialty : specialty) : undefined,
         registrationNumber: isProfessional ? registrationNumber.trim() : undefined,
+        nationalId: nationalId.trim() || (isProfessional ? registrationNumber.trim() : undefined),
       })
       if (result.success) {
         if (role === "professional" && selectedPlan) {
@@ -937,49 +967,45 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
         </div>
       )}
 
-      {/* 2. Selector de Rol - Pills/Segmented Control */}
-      <div className="flex flex-col gap-2">
-        <label className="text-center block text-[11px] font-medium text-slate-600 dark:text-slate-400 tracking-normal" style={{ letterSpacing: "normal" }}>
+      {/* 2. Selector de Rol - Premium Segmented Control */}
+      <div className="flex flex-col gap-2 relative z-30">
+        <label className="text-center block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em]">
           {t.auth.selectAccountType}
         </label>
-        <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+        <div className="flex p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner overflow-hidden">
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault()
-              e.stopPropagation()
               handleRoleChange("patient")
             }}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg transition-all duration-200 text-xs font-semibold",
+              "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 text-xs font-bold",
               role === "patient"
-                ? "bg-teal-600 text-white shadow-md"
-                : "bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                ? "bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-[0_4px_12px_rgba(20,184,166,0.15)] ring-1 ring-teal-500/10"
+                : "bg-transparent text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             )}
             aria-pressed={role === "patient"}
-            aria-label={t.auth.imPatient}
           >
-            <User className="h-3.5 w-3.5 shrink-0" />
-            <span className="leading-tight">{t.auth.imPatient}</span>
+            <User className={cn("h-4 w-4 transition-transform", role === "patient" && "scale-110")} />
+            <span>{t.auth.imPatient}</span>
           </button>
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault()
-              e.stopPropagation()
               handleRoleChange("professional")
             }}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg transition-all duration-200 text-xs font-semibold",
+              "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 text-xs font-bold",
               role === "professional"
-                ? "bg-teal-600 text-white shadow-md"
-                : "bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                ? "bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-[0_4px_12px_rgba(20,184,166,0.15)] ring-1 ring-teal-500/10"
+                : "bg-transparent text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             )}
             aria-pressed={role === "professional"}
-            aria-label={t.auth.imProfessionalHealth}
           >
-            <Stethoscope className="h-3.5 w-3.5 shrink-0" />
-            <span className="leading-tight">{t.auth.imProfessionalHealth}</span>
+            <Stethoscope className={cn("h-4 w-4 transition-transform", role === "professional" && "scale-110")} />
+            <span>{t.auth.imProfessional}</span>
           </button>
         </div>
       </div>
@@ -1032,77 +1058,98 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
               </div>
             </div>
 
-            {/* Campos base - Email */}
-            <div className="flex flex-col gap-1">
+            {/* Campos base - Email y Contraseña */}
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex flex-col gap-1">
+                <AnimatedInput
+                  type="email"
+                  id="floating_email_signup"
+                  label={t.auth.email}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  required
+                  variant="stacked"
+                  aria-invalid={!!fieldErrors.email}
+                />
+                {fieldErrors.email ? (
+                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.email}</p>
+                ) : (
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 px-0">
+                    {language === "es" 
+                      ? "Tu email es tu identidad en NUREA."
+                      : "Your email is your identity on NUREA."}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <AnimatedInput
+                  type="password"
+                  id="floating_password_signup"
+                  label={t.auth.password}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                  minLength={6}
+                  variant="stacked"
+                  aria-invalid={!!fieldErrors.password}
+                />
+                {fieldErrors.password && (
+                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.password}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Campo NATIONAL ID (RUT/DNI) - Obligatorio para todos ahora según UX premium */}
+            <div className="flex flex-col gap-1 pt-1">
               <AnimatedInput
-                type="email"
-                id="floating_email_signup"
-                label={t.auth.email}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                id="floating_national_id"
+                label={isSpanish ? "RUT / DNI" : "National ID (RUT/DNI)"}
+                value={nationalId}
+                onChange={(e) => setNationalId(e.target.value)}
                 disabled={loading}
                 required
                 variant="stacked"
-                aria-invalid={!!fieldErrors.email}
+                className="font-medium"
+                placeholder={isSpanish ? "Ej: 12.345.678-9" : "e.g. 12.345.678-9"}
+                aria-invalid={!!fieldErrors.nationalId}
               />
-              {fieldErrors.email ? (
-                <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.email}</p>
+              {fieldErrors.nationalId ? (
+                <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.nationalId}</p>
               ) : (
-                <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0">
-                  {language === "es" 
-                    ? "Tu email es tu identidad en NUREA. Lo usamos para confirmar tus citas."
-                    : "Your email is your identity on NUREA. We use it to confirm your appointments."}
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 px-0">
+                  {isSpanish ? "Identificación oficial requerida." : "Official identification required."}
                 </p>
               )}
             </div>
 
-            {/* Campos base - Contraseña */}
-            <div className="flex flex-col gap-1">
-              <AnimatedInput
-                type="password"
-                id="floating_password_signup"
-                label={t.auth.password}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                required
-                minLength={6}
-                variant="stacked"
-                aria-invalid={!!fieldErrors.password}
-              />
-              {fieldErrors.password ? (
-                <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.password}</p>
-              ) : (
-                <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0">
-                  {language === "es" 
-                    ? "Una contraseña fuerte protege tu información de salud."
-                    : "A strong password protects your health information."}
-                </p>
-              )}
-            </div>
-
-            {/* Campos condicionales para PROFESIONAL con animación */}
+            {/* Campos condicionales para PROFESIONAL */}
             {isProfessional && (
               <div className="flex flex-col gap-3 pt-4 mt-1 border-t border-slate-200 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
-                  {isSpanish ? "Datos profesionales" : "Professional details"}
+                <p className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
+                  {isSpanish ? "Datos del Especialista" : "Specialist Details"}
                 </p>
+                
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="signup_specialty" className="text-xs font-medium text-slate-700 dark:text-slate-200 tracking-normal" style={{ letterSpacing: "normal" }}>
+                  <label htmlFor="signup_specialty" className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                     {t.auth.mainSpecialty} *
                   </label>
                   <select
                     id="signup_specialty"
                     value={specialty}
-                    onChange={(e) => setSpecialty(e.target.value)}
+                    onChange={(e) => {
+                      setSpecialty(e.target.value)
+                      if (e.target.value !== "Otra") setOtherSpecialty("")
+                    }}
                     disabled={loading}
                     required={isProfessional}
                     className={cn(
-                      "w-full h-10 rounded-xl border bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50",
-                      fieldErrors.specialty ? "border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-600"
+                      "w-full h-10 rounded-xl border bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all shadow-sm",
+                      fieldErrors.specialty ? "border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                     )}
-                    aria-required={isProfessional}
-                    aria-invalid={!!fieldErrors.specialty}
                   >
                     <option value="">{isSpanish ? "Selecciona una especialidad" : "Select a specialty"}</option>
                     {SPECIALTY_OPTIONS.map((opt) => (
@@ -1113,17 +1160,39 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
                     <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.specialty}</p>
                   )}
                 </div>
+
+                {/* Input condicional para "Otra" especialidad */}
+                {specialty === "Otra" && (
+                  <div className="flex flex-col gap-1 animate-in zoom-in-95 duration-200">
+                    <AnimatedInput
+                      type="text"
+                      id="floating_other_specialty"
+                      label={isSpanish ? "¿Cuál es tu especialidad?" : "What is your specialty?"}
+                      value={otherSpecialty}
+                      onChange={(e) => setOtherSpecialty(e.target.value)}
+                      disabled={loading}
+                      required
+                      variant="stacked"
+                      placeholder={isSpanish ? "Ej: Podología" : "e.g. Podiatry"}
+                      aria-invalid={!!fieldErrors.otherSpecialty}
+                    />
+                    {fieldErrors.otherSpecialty && (
+                      <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.otherSpecialty}</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-1.5">
                   <AnimatedInput
                     type="text"
                     id="floating_registration"
-                    label={t.auth.registrationNumberRut}
+                    label={isSpanish ? "Número de Registro Médico" : "Medical Registration Number"}
                     value={registrationNumber}
                     onChange={(e) => setRegistrationNumber(e.target.value)}
                     disabled={loading}
                     required={isProfessional}
-                    autoComplete="off"
                     variant="stacked"
+                    placeholder={isSpanish ? "Ej: 123456" : "e.g. 123456"}
                     aria-invalid={!!fieldErrors.registrationNumber}
                   />
                   {fieldErrors.registrationNumber && (
@@ -1133,15 +1202,11 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
               </div>
             )}
 
-            {/* Campo condicional para PACIENTE - Fecha de nacimiento (opcional) con animación */}
+            {/* Campo condicional para PACIENTE - Fecha de nacimiento (opcional) */}
             {!isProfessional && (
               <div className="flex flex-col gap-1 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <label
-                  htmlFor="floating_dob"
-                  className="text-xs font-medium text-slate-700 dark:text-slate-200 tracking-normal"
-                  style={{ letterSpacing: "normal" }}
-                >
-                  {t.auth.dateOfBirth} <span className="text-slate-400 dark:text-slate-500 font-normal">({isSpanish ? "opcional" : "optional"})</span>
+                <label htmlFor="floating_dob" className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  {t.auth.dateOfBirth} <span className="text-slate-400 font-normal">({isSpanish ? "opcional" : "optional"})</span>
                 </label>
                 <input
                   type="date"
@@ -1154,17 +1219,11 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
                   onBlur={handleDateOfBirthBlur}
                   disabled={loading}
                   aria-invalid={!!dateOfBirthError}
-                  aria-describedby={dateOfBirthError ? "dob-error" : undefined}
-                  className="w-full h-9 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 py-1.5 px-3 text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-colors disabled:opacity-50"
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1.5 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all shadow-sm"
                 />
                 {dateOfBirthError && (
-                  <p id="dob-error" className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">
-                    {dateOfBirthError}
-                  </p>
+                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{dateOfBirthError}</p>
                 )}
-                <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0">
-                  {isSpanish ? "Si la proporcionas, debes ser mayor de 18 años" : "If provided, you must be at least 18 years old"}
-                </p>
               </div>
             )}
 

@@ -23,6 +23,8 @@ export interface SpecialistCard {
   university: string | null
   isAvailableToday: boolean
   nextAvailableSlot?: string
+  latitude?: number
+  longitude?: number
 }
 
 export interface SpecialistFilters {
@@ -37,6 +39,7 @@ export interface SpecialistFilters {
   verified?: boolean
   sortBy?: 'rating' | 'price_asc' | 'price_desc' | 'experience' | 'reviews'
   search?: string
+  date?: string
   page?: number
   limit?: number
 }

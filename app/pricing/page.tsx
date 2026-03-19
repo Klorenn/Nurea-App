@@ -53,19 +53,19 @@ export default function PricingPage() {
     {
       name: isSpanish ? "Recién Graduado" : "Recent Graduate",
       price: isYearly ? "111.600" : "15.000",
-      description: isSpanish ? "Precio especial para nuevos profesionales" : "Special price for new professionals",
+      description: isSpanish ? "Bajo revisión para nuevos profesionales" : "Under review for new professionals",
       features: [
         isSpanish ? "Todo en Profesional" : "Everything in Professional",
-        isSpanish ? "50% de descuento primeros 3 meses" : "50% off for the first 3 months",
+        isSpanish ? "Sujeto a aprobación por administración" : "Subject to admin approval",
+        isSpanish ? "Posibilidad de hasta 3 meses gratis" : "Possibility of up to 3 months free",
         isSpanish ? "Soporte de incorporación prioritario" : "Priority onboarding support",
         isSpanish ? "Asistencia de marketing" : "Marketing assistance",
-        isSpanish ? "Acceso a programa de mentoría" : "Access to mentorship program",
         isSpanish ? "Panel de análisis" : "Analytics dashboard",
       ],
-      cta: isSpanish ? "Aplicar para Descuento" : "Apply for Discount",
+      cta: isSpanish ? "Solicitar Acceso" : "Request Access",
       popular: false,
       id: "graduate",
-      badge: isSpanish ? "OFERTA" : "OFFER"
+      badge: isSpanish ? "SOLICITAR" : "REQUEST"
     }
   ]
 
@@ -242,8 +242,8 @@ export default function PricingPage() {
           </div>
           <p className="text-slate-400 text-sm max-w-2xl mx-auto leading-relaxed">
             {isSpanish 
-              ? "Precios expresados en Pesos Chilenos (CLP). Al facturar anualmente se aplica un descuento del 38% ya incluido en el precio mostrado. NUREA no cobra comisiones transaccionales. El profesional es responsable de las comisiones de procesamiento de Stripe (aprox. 3.4% + $250 CLP)."
-              : "Prices expressed in Chilean Pesos (CLP). Yearly billing includes a 38% discount already reflected in the price. NUREA does not charge transaction commissions. The professional is responsible for Stripe processing fees (approx. 3.4% + $250 CLP)."}
+              ? "Precios expresados en Pesos Chilenos (CLP). Al facturar anualmente se aplica un descuento del 38% ya incluido en el precio mostrado. NUREA no cobra comisiones transaccionales. El profesional es responsable de las comisiones de procesamiento de Mercado Pago."
+              : "Prices expressed in Chilean Pesos (CLP). Yearly billing includes a 38% discount already reflected in the price. NUREA does not charge transaction commissions. The professional is responsible for Mercado Pago processing fees."}
           </p>
         </motion.div>
       </main>

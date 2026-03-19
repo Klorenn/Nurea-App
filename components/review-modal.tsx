@@ -88,6 +88,10 @@ export function ReviewModal({ isOpen, onClose, professionalName, appointmentId }
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="max-w-md p-0 overflow-hidden border-none shadow-2xl">
+          <div className="sr-only">
+            <DialogTitle>{t.reviews.thankYou}</DialogTitle>
+            <DialogDescription>{t.reviews.reviewSubmitted}</DialogDescription>
+          </div>
           <div className="flex flex-col items-center justify-center text-center space-y-6 py-12 px-8">
             <div className="w-24 h-24 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
               <CheckCircle2 className="h-16 w-16" />

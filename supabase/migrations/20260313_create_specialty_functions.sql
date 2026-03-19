@@ -136,6 +136,8 @@ RETURNS TABLE (
   years_experience INTEGER,
   languages TEXT[],
   availability JSONB,
+  latitude NUMERIC,
+  longitude NUMERIC,
   total_count BIGINT
 )
 LANGUAGE plpgsql
@@ -155,6 +157,7 @@ BEGIN
   LEFT JOIN public.categories c ON c.id = s.category_id
   WHERE 
     (NOT p_verified_only OR pr.verified = true)
+    AND (NOT p_available_today OR public.is_available_today(pr.availability))
     AND (p_specialty_slug IS NULL OR s.slug = p_specialty_slug)
     AND (p_category_slug IS NULL OR c.slug = p_category_slug)
     AND (
@@ -200,6 +203,8 @@ BEGIN
     pr.years_experience,
     pr.languages,
     pr.availability,
+    pr.latitude,
+    pr.longitude,
     v_total as total_count
   FROM public.professionals pr
   JOIN public.profiles pf ON pf.id = pr.id
@@ -207,6 +212,7 @@ BEGIN
   LEFT JOIN public.categories c ON c.id = s.category_id
   WHERE 
     (NOT p_verified_only OR pr.verified = true)
+    AND (NOT p_available_today OR public.is_available_today(pr.availability))
     AND (p_specialty_slug IS NULL OR s.slug = p_specialty_slug)
     AND (p_category_slug IS NULL OR c.slug = p_category_slug)
     AND (

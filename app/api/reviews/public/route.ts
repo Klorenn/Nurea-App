@@ -16,7 +16,7 @@ export async function GET(request: Request) {
         comment,
         created_at,
         patient_id,
-        professional_id,
+        doctor_id,
         profiles!reviews_patient_id_fkey(
           id,
           first_name,
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
     // Filter by professional if provided
     if (professionalId) {
-      query = query.eq('professional_id', professionalId)
+      query = query.eq('doctor_id', professionalId)
     }
 
     const { data: reviews, error } = await query.limit(professionalId ? 50 : 10)

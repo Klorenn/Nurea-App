@@ -35,11 +35,16 @@ export function useCategories(options: UseCategoriesOptions = {}): UseCategories
       const response = await fetch(`/api/categories?${params}`)
       const data = await response.json()
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Error al cargar categorías')
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Error al cargar categorías')
       }
 
-      setCategories(data.categories || [])
+      // API puede devolver { success, categories } o directamente el array (legacy)
+      const list = Array.isArray(data) ? data : (data.categories ?? [])
+      if (!Array.isArray(data) && data.success === false) {
+        throw new Error(data.message || 'Error al cargar categorías')
+      }
+      setCategories(list)
     } catch (err) {
       console.error('Error fetching categories:', err)
       setError(err instanceof Error ? err.message : 'Error desconocido')

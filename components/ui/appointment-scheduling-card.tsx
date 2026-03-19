@@ -214,7 +214,18 @@ export function AppointmentSchedulingCard({
       const data = await response.json()
 
       if (!response.ok || !data.available) {
-        setAvailabilityError(data.message || (language === "es" ? "Este horario no está disponible" : "This time slot is not available"))
+        const missingFields = Array.isArray(data?.missingFields) ? data.missingFields : null
+        const baseMessage =
+          data.message ||
+          (language === "es"
+            ? "Este horario no está disponible"
+            : "This time slot is not available")
+
+        setAvailabilityError(
+          missingFields && missingFields.length
+            ? `${baseMessage} (${missingFields.join(", ")})`
+            : baseMessage
+        )
         setCheckingAvailability(false)
         return
       }

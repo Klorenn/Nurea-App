@@ -1,0 +1,469 @@
+"use client"
+
+import { useEffect, useCallback, useRef } from "react"
+import useSWR from "swr"
+import { createClient } from "@/lib/supabase/client"
+import { useProfile } from "@/hooks/use-profile"
+import type {
+  ChatMessageDB,
+  ChatProfile,
+  ConversationListItem,
+  ChatMessage,
+  SendMessageInput,
+  RequestStatus,
+} from "@/lib/types/chat"
+
+const supabase = createClient()
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function formatTimestamp(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return formatTime(dateString)
+  if (diffDays === 1) return "Ayer"
+  if (diffDays < 7) return date.toLocaleDateString("es-ES", { weekday: "short" })
+  return date.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
+}
+
+function formatTime(dateString: string): string {
+  return new Date(dateString).toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+function buildFullName(profile: { first_name: string | null; last_name: string | null }): string {
+  return `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+// =============================================================================
+// FETCHER FUNCTIONS
+// =============================================================================
+
+async function fetchCurrentProfile(userId: string): Promise<ChatProfile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, first_name, last_name, avatar_url, role, response_time, status, last_seen")
+    .eq("id", userId)
+    .single()
+
+  if (error || !data) {
+    console.error("fetchCurrentProfile error:", error)
+    return null
+  }
+
+  return {
+    ...data,
+    full_name: buildFullName(data),
+    status: (data.status as ChatProfile["status"]) || "offline",
+    response_time: data.response_time || "2-4 horas",
+    role: data.role as ChatProfile["role"],
+  } as ChatProfile
+}
+
+async function fetchConversations(userId: string): Promise<ConversationListItem[]> {
+  const { data, error } = await supabase
+    .from("conversation_participants")
+    .select(`
+      conversation_id,
+      conversations!inner (
+        id,
+        updated_at,
+        request_status,
+        initiated_by
+      )
+    `)
+    .eq("user_id", userId)
+    .neq("conversations.request_status", "rejected") // Hide rejected chats
+    .order("conversations(updated_at)", { ascending: false })
+
+  if (error) throw error
+
+  const result: ConversationListItem[] = []
+
+  // Filter out any that were rejected since PostgREST !inner might not fully filter the outer array correctly
+  const activeChats = (data || []).filter((item: any) => item.conversations?.request_status !== "rejected")
+
+  for (const item of activeChats) {
+    // Obtener el otro participante
+    const { data: otherPart } = await supabase
+      .from("conversation_participants")
+      .select(`
+        profiles!inner (
+          id,
+          first_name,
+          last_name,
+          avatar_url,
+          role,
+          status,
+          last_seen,
+          response_time
+        )
+      `)
+      .eq("conversation_id", item.conversation_id)
+      .neq("user_id", userId)
+      .single()
+
+    if (!otherPart?.profiles) continue
+
+    const rawProfile = otherPart.profiles as unknown as {
+      id: string
+      first_name: string | null
+      last_name: string | null
+      avatar_url: string | null
+      role: string
+      status: string
+      last_seen: string
+      response_time: string | null
+    }
+
+    const otherProfile: ChatProfile = {
+      id: rawProfile.id,
+      first_name: rawProfile.first_name || "",
+      last_name: rawProfile.last_name || "",
+      full_name: buildFullName(rawProfile),
+      avatar_url: rawProfile.avatar_url,
+      role: rawProfile.role as ChatProfile["role"],
+      status: (rawProfile.status as ChatProfile["status"]) || "offline",
+      last_seen: rawProfile.last_seen,
+      response_time: rawProfile.response_time || "2-4 horas",
+    }
+
+    // Último mensaje
+    const { data: lastMsg } = await supabase
+      .from("chat_messages")
+      .select("content, created_at")
+      .eq("conversation_id", item.conversation_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    // Conteo de no leídos
+    const { data: participant } = await supabase
+      .from("conversation_participants")
+      .select("last_read_at")
+      .eq("conversation_id", item.conversation_id)
+      .eq("user_id", userId)
+      .single()
+
+    const { count: unreadCount } = await supabase
+      .from("chat_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("conversation_id", item.conversation_id)
+      .neq("sender_id", userId)
+      .gt("created_at", participant?.last_read_at || "1970-01-01")
+
+    const convData = item.conversations as any
+
+    result.push({
+      id: item.conversation_id,
+      name: otherProfile.full_name,
+      avatar: otherProfile.avatar_url,
+      initials: getInitials(otherProfile.full_name),
+      lastMessage: lastMsg?.content || "",
+      timestamp: formatTimestamp(lastMsg?.created_at || convData.updated_at),
+      unread: unreadCount || 0,
+      status: otherProfile.status,
+      otherParticipant: otherProfile,
+      requestStatus: convData.request_status as RequestStatus,
+      initiatedBy: convData.initiated_by,
+    })
+  }
+
+  return result
+}
+
+async function fetchMessages(conversationId: string, userId: string): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true })
+
+  if (error) throw error
+
+  return (data || []).map((msg: ChatMessageDB) => ({
+    id: msg.id,
+    content: msg.content,
+    timestamp: formatTime(msg.created_at),
+    isOwn: msg.sender_id === userId,
+    status: msg.status,
+    messageType: msg.message_type,
+    fileUrl: msg.file_url || undefined,
+    fileName: msg.file_name || undefined,
+  }))
+}
+
+// =============================================================================
+// HOOKS
+// =============================================================================
+
+export function useCurrentChatUser() {
+  const { profile, isLoading, error, mutate } = useProfile()
+  return { user: profile ?? null, isLoading, error, mutate }
+}
+
+export function useConversations() {
+  const { user } = useCurrentChatUser()
+
+  const { data, error, isLoading, mutate } = useSWR(
+    user ? ["chat-conversations", user.id] : null,
+    () => fetchConversations(user!.id),
+    { refreshInterval: 30000 }
+  )
+
+  // Suscripción en tiempo real a nuevos mensajes y cambios de estado de conversaciones
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel("nurea-chat-conversations")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "chat_messages" },
+        () => { mutate() }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversations" },
+        () => { mutate() }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [user, mutate])
+
+  return { conversations: data || [], isLoading, error, mutate }
+}
+
+export function useMessages(conversationId: string | null) {
+  const { user } = useCurrentChatUser()
+
+  const { data, error, isLoading, mutate } = useSWR(
+    conversationId && user ? ["chat-messages", conversationId, user.id] : null,
+    () => fetchMessages(conversationId!, user!.id)
+  )
+
+  // Suscripción en tiempo real a mensajes de esta conversación
+  useEffect(() => {
+    if (!conversationId || !user) return
+
+    const channel = supabase
+      .channel(`nurea-chat-msgs-${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as ChatMessageDB
+          const chatMessage: ChatMessage = {
+            id: newMessage.id,
+            content: newMessage.content,
+            timestamp: formatTime(newMessage.created_at),
+            isOwn: newMessage.sender_id === user.id,
+            status: newMessage.status,
+            messageType: newMessage.message_type,
+            fileUrl: newMessage.file_url || undefined,
+            fileName: newMessage.file_name || undefined,
+          }
+          mutate((prev) => {
+            const existing = prev || []
+            if (existing.some((m) => m.id === chatMessage.id)) return existing
+            return [...existing, chatMessage]
+          }, false)
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "chat_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as ChatMessageDB
+          mutate(
+            (prev) =>
+              prev?.map((msg) =>
+                msg.id === updated.id ? { ...msg, status: updated.status } : msg
+              ),
+            false
+          )
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [conversationId, user, mutate])
+
+  // Marcar mensajes como leídos al abrir la conversación
+  useEffect(() => {
+    if (!conversationId || !user) return
+
+    supabase
+      .from("conversation_participants")
+      .update({ last_read_at: new Date().toISOString() })
+      .eq("conversation_id", conversationId)
+      .eq("user_id", user.id)
+  }, [conversationId, user])
+
+  return { messages: data || [], isLoading, error, mutate }
+}
+
+export function useSendMessage() {
+  const { user } = useCurrentChatUser()
+  const sendingRef = useRef(false)
+
+  const sendMessage = useCallback(
+    async (input: SendMessageInput) => {
+      if (!user || sendingRef.current) return null
+      sendingRef.current = true
+
+      try {
+        const { data, error } = await supabase
+          .from("chat_messages")
+          .insert({
+            conversation_id: input.conversationId,
+            sender_id: user.id,
+            content: input.content,
+            message_type: input.messageType || "text",
+            file_url: input.fileUrl || null,
+            file_name: input.fileName || null,
+            file_size: input.fileSize || null,
+            status: "sent",
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Simular entrega (en producción viene del receptor)
+        setTimeout(async () => {
+          await supabase
+            .from("chat_messages")
+            .update({ status: "delivered" })
+            .eq("id", data.id)
+        }, 800)
+
+        return data as ChatMessageDB
+      } finally {
+        sendingRef.current = false
+      }
+    },
+    [user]
+  )
+
+  return { sendMessage }
+}
+
+export function useUpdateUserStatus() {
+  const { user, mutate } = useCurrentChatUser()
+
+  const updateStatus = useCallback(
+    async (status: "online" | "offline" | "away") => {
+      if (!user) return
+      await supabase
+        .from("profiles")
+        .update({ status, last_seen: new Date().toISOString() })
+        .eq("id", user.id)
+      mutate()
+    },
+    [user, mutate]
+  )
+
+  useEffect(() => {
+    if (!user) return
+
+    updateStatus("online")
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") updateStatus("online")
+      else updateStatus("away")
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      updateStatus("offline")
+    }
+  }, [user, updateStatus])
+
+  return { updateStatus }
+}
+
+export function useCreateConversation() {
+  const { user } = useCurrentChatUser()
+  const { mutate: mutateConversations } = useConversations()
+
+  const createConversation = useCallback(
+    async (participantId: string, professionalId?: string) => {
+      if (!user) return null
+
+      try {
+        // Usar la función RPC del servidor
+        const { data, error } = await supabase.rpc("get_or_create_conversation", {
+          p_user_a: user.id,
+          p_user_b: participantId,
+          p_professional_id: professionalId || null,
+        })
+
+        if (error) throw error
+
+        mutateConversations()
+        return data as string
+      } catch (err) {
+        console.error("Error creating conversation:", err)
+        return null
+      }
+    },
+    [user, mutateConversations]
+  )
+
+  return { createConversation }
+}
+
+export function useUpdateConversationStatus() {
+  const { mutate: mutateConversations } = useConversations()
+
+  const updateStatus = useCallback(
+    async (conversationId: string, status: "accepted" | "rejected") => {
+      try {
+        const { error } = await supabase.rpc("update_conversation_request_status", {
+          p_conversation_id: conversationId,
+          p_status: status,
+        })
+
+        if (error) throw error
+        
+        mutateConversations()
+        return true
+      } catch (err) {
+        console.error("Error updating conversation status:", err)
+        return false
+      }
+    },
+    [mutateConversations]
+  )
+
+  return { updateStatus }
+}

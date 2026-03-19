@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { canAccessRoute } from '@/lib/auth/utils'
-import { validateRouteAccess } from '@/lib/auth/authorization'
+import { validateRouteAccess } from '@/lib/auth/auth-logic'
 
 export async function updateSession(request: NextRequest) {
   // Skip Supabase if not configured (for development/testing)
@@ -62,6 +62,7 @@ export async function updateSession(request: NextRequest) {
     '/login',
     '/signup',
     '/auth',
+    '/verify',
     '/forgot-password',
     '/reset-password',
     '/verify-email',
@@ -71,6 +72,7 @@ export async function updateSession(request: NextRequest) {
     '/pacientes',
     '/profesionales',
     '/professionals',
+    '/explore',
   ]
 
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
@@ -89,14 +91,15 @@ export async function updateSession(request: NextRequest) {
 
   // Si hay usuario, verificar acceso por rol
   if (user && !isPublicRoute && !isApiRoute && !isStaticFile) {
-    // Obtener el rol del usuario desde el perfil
+    // Obtener el rol del usuario desde el perfil con fallback al JWT
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, blocked')
+      .select('role, blocked, date_of_birth, email_verified')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    const userRole = (profile?.role as 'patient' | 'professional' | 'admin') || 'patient'
+    const jwtRole = user.app_metadata?.role || user.user_metadata?.role
+    const userRole = (profile?.role || jwtRole || 'patient') as 'patient' | 'professional' | 'admin'
 
     // Verificar si la cuenta está bloqueada
     if (profile?.blocked) {
@@ -108,9 +111,13 @@ export async function updateSession(request: NextRequest) {
       return res
     }
 
-    // Redirigir /dashboard exacto al dashboard por rol (evita 404 por ruta ambigua)
+    // Redirigir /dashboard exacto al dashboard por rol
     if (pathname === '/dashboard') {
-      const redirectPath = userRole === 'professional' ? '/dashboard/professional' : userRole === 'admin' ? '/admin' : '/dashboard/patient'
+      const redirectPath = userRole === 'professional' 
+        ? '/dashboard/professional' 
+        : userRole === 'admin' 
+          ? '/dashboard/admin' 
+          : '/dashboard/patient'
       return redirectWithCookies(redirectPath)
     }
 
@@ -119,29 +126,31 @@ export async function updateSession(request: NextRequest) {
     
     if (!routeValidation.allowed) {
       const redirectPath = routeValidation.redirectTo ||
-        (userRole === 'professional' ? '/dashboard/professional' : '/dashboard/patient')
+        (userRole === 'professional' ? '/dashboard/professional' : (userRole === 'admin' ? '/dashboard/admin' : '/dashboard/patient'))
       return redirectWithCookies(redirectPath)
     }
 
     if (!canAccessRoute(userRole, pathname)) {
-      const redirectPath = userRole === 'professional' ? '/dashboard/professional' : '/dashboard/patient'
+      const redirectPath = userRole === 'professional' ? '/dashboard/professional' : (userRole === 'admin' ? '/dashboard/admin' : '/dashboard/patient')
       return redirectWithCookies(redirectPath)
     }
 
     if (pathname === '/complete-profile') {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('date_of_birth, email_verified')
-        .eq('id', user.id)
-        .single()
-
       const emailVerified = user.email_confirmed_at !== null || profile?.email_verified
-      const profileComplete = !!profile?.date_of_birth && emailVerified
+      const onboardingCompleted = !!profile?.onboarding_completed
 
-      if (profileComplete) {
-        const redirectPath = userRole === 'professional' ? '/dashboard/professional' : '/dashboard/patient'
+      if (onboardingCompleted && emailVerified) {
+        const redirectPath =
+          userRole === 'professional'
+            ? '/dashboard/professional'
+            : userRole === 'admin'
+              ? '/dashboard/admin'
+              : '/dashboard/patient'
         return redirectWithCookies(redirectPath)
       }
+
+      // Wizard v2 will handle the rest.
+      return redirectWithCookies('/onboarding')
     }
   }
 

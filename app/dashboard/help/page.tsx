@@ -72,8 +72,8 @@ const faqItems: FAQItem[] = [
   {
     question: "¿Cómo funciona el pago?",
     questionEn: "How does payment work?",
-    answer: "El pago se realiza antes de la cita a través de nuestra plataforma segura. NUREA actúa como intermediario: recibimos el pago y lo transferimos al profesional después de la consulta. Puedes descargar tus recibos desde tu panel de pagos.",
-    answerEn: "Payment is made before the appointment through our secure platform. NUREA acts as an intermediary: we receive the payment and transfer it to the professional after the consultation. You can download your receipts from your payments dashboard."
+    answer: "La coordinación y el pago de la consulta se realizan directamente con el especialista, por ejemplo a través del chat seguro de la plataforma (enlace de pago externo, transferencia o instrucciones que te indique el profesional). NUREA no cobra ni procesa el pago de la consulta.",
+    answerEn: "Appointment coordination and consultation payment are done directly with the specialist, for example through the platform's secure chat (external payment link, bank transfer, or instructions from the professional). NUREA does not charge or process consultation payments."
   },
   {
     question: "¿Puedo confiar en los profesionales de NUREA?",

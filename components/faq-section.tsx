@@ -35,6 +35,21 @@ export function FaqSection() {
         "NUREA se enfoca en la conexión humana y la confianza. Todos nuestros profesionales son verificados, y la plataforma está diseñada pensando en el paciente. Ofrecemos herramientas completas para gestionar tu salud de manera integral.",
     },
     {
+      question: "¿Cómo funciona NUREA?",
+      answer:
+        "NUREA conecta pacientes con profesionales de la salud. La coordinación y el pago de la consulta se realizan directamente con el especialista a través del chat seguro de la plataforma.",
+    },
+    {
+      question: "¿Qué documentos necesito para verificarme como profesional?",
+      answer:
+        "Para garantizar la seguridad de los pacientes, solicitamos tu Cédula de Identidad (ambos lados) y el certificado de la Superintendencia de Salud (SIS). Una vez validados, obtendrás el sello de verificación en tu perfil.",
+    },
+    {
+      question: "¿Cómo pago mi consulta?",
+      answer:
+        "El pago de la consulta se coordina directamente con el especialista (por ejemplo por chat: enlace de pago externo, transferencia o instrucciones que te indique). NUREA no cobra ni procesa el pago de la consulta; solo conecta y facilita la comunicación y la agenda.",
+    },
+    {
       question: "¿Puedo cancelar mi suscripción en cualquier momento?",
       answer:
         "Absolutamente. Puedes cancelar tu suscripción en cualquier momento con un solo clic. Sin complicaciones, sin preguntas. Tu acceso continúa hasta el final de tu período de facturación actual.",
@@ -64,6 +79,21 @@ export function FaqSection() {
       question: "What makes NUREA different from other platforms?",
       answer:
         "NUREA focuses on human connection and trust. All our professionals are verified, and the platform is designed with the patient in mind. We offer comprehensive tools to manage your health holistically.",
+    },
+    {
+      question: "How does NUREA work?",
+      answer:
+        "NUREA connects patients with healthcare professionals. Appointment coordination and consultation payment are done directly with the specialist through the platform's secure chat.",
+    },
+    {
+      question: "What documents do I need to be verified as a professional?",
+      answer:
+        "To ensure patient safety, we request your ID Card (both sides) and the certificate from the Superintendency of Health (SIS). Once validated, you will get the verification seal on your profile.",
+    },
+    {
+      question: "How do I pay for my consultation?",
+      answer:
+        "Consultation payment is coordinated directly with the specialist (e.g. via chat: external payment link, bank transfer, or instructions they provide). NUREA does not charge or process consultation payments; it only connects you and facilitates communication and scheduling.",
     },
     {
       question: "Can I cancel my subscription anytime?",

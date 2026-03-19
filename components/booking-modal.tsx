@@ -2,31 +2,42 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Video, 
-  Home, 
-  ChevronRight, 
-  Clock, 
-  CreditCard, 
-  CheckCircle2, 
-  Loader2, 
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Video,
+  Home,
+  ChevronRight,
+  Clock,
+  CheckCircle2,
+  Loader2,
   AlertTriangle,
   CalendarDays,
-  Sparkles,
+  ArrowRight,
+  ChevronLeft,
 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { NoPhysicalConsultationDisplay } from "@/components/no-physical-consultation-display"
 import { createClient } from "@/lib/supabase/client"
-import { toast } from "sonner"
+import { useAuth } from "@/hooks/use-auth"
+import { bookAppointment } from "@/actions/appointments"
+import { format } from "date-fns"
 
 interface TimeSlot {
   time: string
   available: boolean
   displayTime: string
+}
+
+interface PrismaSlot {
+  id: string
+  startTime: string
+  endTime: string
 }
 
 interface DayAvailability {
@@ -84,6 +95,7 @@ export function BookingModal({
   stellarWallet = null,
   offersInPerson = true,
   isSpanish = true,
+  initialDate,
 }: {
   isOpen: boolean
   onClose: () => void
@@ -92,18 +104,26 @@ export function BookingModal({
   stellarWallet?: string | null
   offersInPerson?: boolean
   isSpanish?: boolean
+  initialDate?: Date
 }) {
   const router = useRouter()
   const supabase = createClient()
-  
+  const { user } = useAuth()
+
   const [step, setStep] = useState(1)
   const [type, setType] = useState<"online" | "in-person" | null>(null)
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
+  const [prismaSlots, setPrismaSlots] = useState<PrismaSlot[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [patientName, setPatientName] = useState("")
+  const [patientEmail, setPatientEmail] = useState("")
+  const [patientPhone, setPatientPhone] = useState("")
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [createdRef, setCreatedRef] = useState<string | null>(null)
   const [confirmedAt, setConfirmedAt] = useState<{ date: string; time: string } | null>(null)
+  const [prices, setPrices] = useState({ online: 45000, inPerson: 45000 })
 
   // Availability state
   const [availability, setAvailability] = useState<Record<string, DayAvailability>>({})
@@ -112,142 +132,50 @@ export function BookingModal({
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set())
 
-  // Always allow booking with Stripe payments
-  const canBookWithPayment = true
-
-  // Load professional availability
+  // Load Prisma slots when date is selected (new system)
   useEffect(() => {
-    const loadAvailability = async () => {
-      if (!professionalId || !isOpen) return
-
-      setLoadingAvailability(true)
-      try {
-        const { data: professional, error } = await supabase
-          .from("professionals")
-          .select("availability, online_price, in_person_price, consultation_price")
-          .eq("id", professionalId)
-          .single()
-
-        if (!error && professional?.availability) {
-          setAvailability(professional.availability as Record<string, DayAvailability>)
-        }
-      } catch (error) {
-        console.error("Error loading availability:", error)
-      } finally {
-        setLoadingAvailability(false)
-      }
+    if (!professionalId || !selectedDate || !isOpen) {
+      setPrismaSlots([])
+      setSelectedSlotId(null)
+      return
     }
-
-    loadAvailability()
-  }, [professionalId, isOpen, supabase])
-
-  // Generate slots when date is selected
-  const loadSlotsForDate = useCallback(async (date: Date) => {
-    if (!professionalId || !type) return
-
+    const dateStr = selectedDate.toISOString().split("T")[0]
     setLoadingSlots(true)
-    setTimeSlots([])
-    setSelectedTime(null)
+    setPrismaSlots([])
+    setSelectedSlotId(null)
+    fetch(`/api/profesionales/${professionalId}/slots?date=${dateStr}`)
+      .then((res) => res.json())
+      .then((data) => setPrismaSlots(data.slots ?? []))
+      .catch(() => setPrismaSlots([]))
+      .finally(() => setLoadingSlots(false))
+  }, [professionalId, selectedDate, isOpen])
 
-    try {
-      const dayOfWeek = DAYS_MAP[date.getDay()]
-      const dayAvailability = availability[dayOfWeek]
-
-      if (!dayAvailability) {
-        setTimeSlots([])
-        return
-      }
-
-      // Get the hours for the selected consultation type
-      const typeAvailability = type === "online" 
-        ? dayAvailability.online 
-        : dayAvailability["in-person"]
-
-      if (!typeAvailability?.available || !typeAvailability.hours) {
-        setTimeSlots([])
-        return
-      }
-
-      // Parse hours
-      const [startTime, endTime] = typeAvailability.hours.split(" - ")
-      const duration = dayAvailability.slotDuration || 60
-
-      // Generate all possible slots
-      const allSlots = generateTimeSlots(startTime, endTime, duration)
-
-      // Get existing appointments for this date
-      const dateStr = date.toISOString().split("T")[0]
-      const { data: existingAppointments } = await supabase
-        .from("appointments")
-        .select("appointment_time")
-        .eq("professional_id", professionalId)
-        .eq("appointment_date", dateStr)
-        .in("status", ["pending", "confirmed"])
-
-      const bookedTimes = new Set(
-        existingAppointments?.map((apt) => 
-          apt.appointment_time.substring(0, 5)
-        ) || []
-      )
-      setBookedSlots(bookedTimes)
-
-      // Mark slots as available or booked
-      const slotsWithAvailability: TimeSlot[] = allSlots.map((time) => ({
-        time,
-        available: !bookedTimes.has(time),
-        displayTime: formatTimeDisplay(time),
-      }))
-
-      setTimeSlots(slotsWithAvailability)
-    } catch (error) {
-      console.error("Error loading slots:", error)
-    } finally {
-      setLoadingSlots(false)
-    }
-  }, [professionalId, type, availability, supabase])
-
-  // Reload slots when date changes
+  // Prefill contact from auth
   useEffect(() => {
-    if (selectedDate && type) {
-      loadSlotsForDate(selectedDate)
-    }
-  }, [selectedDate, type, loadSlotsForDate])
+    if (user?.email) setPatientEmail(user.email)
+    const name = user?.user_metadata?.full_name || user?.user_metadata?.name
+    if (name) setPatientName(String(name))
+  }, [user])
 
-  // Check if a date is available
+  // Only disable past dates (Prisma slots API returns availability per day)
   const isDateDisabled = useCallback((date: Date) => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
-    // Past dates
-    if (date < today) return true
-
-    // Check if the day has availability for the selected type
-    const dayOfWeek = DAYS_MAP[date.getDay()]
-    const dayAvailability = availability[dayOfWeek]
-
-    if (!dayAvailability) return true
-
-    if (type === "online") {
-      return !dayAvailability.online?.available
-    } else if (type === "in-person") {
-      return !dayAvailability["in-person"]?.available
-    }
-
-    // If no type selected yet, check if any availability exists
-    return !(dayAvailability.online?.available || dayAvailability["in-person"]?.available)
-  }, [availability, type])
+    return date < today
+  }, [])
 
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setStep(1)
       setType(null)
-      setSelectedDate(undefined)
-      setSelectedTime(null)
-      setSubmitError(null)
       setCreatedRef(null)
       setConfirmedAt(null)
       setTimeSlots([])
+      setPrismaSlots([])
+      setSelectedSlotId(null)
+      setSelectedTime(null)
+      setSelectedDate(initialDate)
       return
     }
 
@@ -269,454 +197,496 @@ export function BookingModal({
   const nextStep = () => setStep(step + 1)
   const prevStep = () => setStep(step - 1)
 
-  const canConfirmStep2 = Boolean(selectedDate && selectedTime)
+  const canConfirmStep2 = Boolean(
+    selectedDate && (professionalId ? selectedSlotId : selectedTime)
+  )
 
   const handleCompleteBooking = async () => {
-    if (!professionalId || !type || !selectedDate || !selectedTime) {
-      setSubmitError(isSpanish 
-        ? "Faltan datos para confirmar la cita."
-        : "Missing data to confirm appointment.")
+    if (!professionalId || !selectedDate) {
+      setSubmitError(isSpanish ? "Faltan datos." : "Missing data.")
       return
     }
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      onClose()
-      router.push("/login?message=" + encodeURIComponent(
-        isSpanish 
-          ? "Debes iniciar sesión para agendar."
-          : "You must log in to book."
-      ))
+    const slotId = selectedSlotId
+    if (!slotId) {
+      setSubmitError(isSpanish ? "Elige un horario." : "Select a time.")
+      return
+    }
+    const name = patientName.trim()
+    const email = patientEmail.trim()
+    const phone = patientPhone.trim()
+    if (!name || !email || !phone) {
+      setSubmitError(isSpanish ? "Completa nombre, email y teléfono." : "Fill name, email and phone.")
       return
     }
 
     setIsLoading(true)
     setSubmitError(null)
-
-    const appointmentDate = selectedDate.toISOString().slice(0, 10)
-    const appointmentTime = selectedTime.length === 5 ? `${selectedTime}:00` : selectedTime
+    const formData = new FormData()
+    formData.set("patientName", name)
+    formData.set("patientEmail", email)
+    formData.set("patientPhone", phone)
 
     try {
-      // Create Stripe Checkout Session
-      const response = await fetch("/api/appointments/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          professionalId,
-          appointmentDate,
-          appointmentTime,
-          type,
-          duration: 60,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Error al procesar el pago")
+      await bookAppointment(formData, professionalId, slotId)
+      const slot = prismaSlots.find((s) => s.id === slotId)
+      if (slot) {
+        setConfirmedAt({
+          date: format(new Date(slot.startTime), "dd/MM/yyyy"),
+          time: format(new Date(slot.startTime), "HH:mm"),
+        })
       }
-
-      if (data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url
-      } else {
-        throw new Error("No se recibió URL de pago")
-      }
+      setStep(4)
     } catch (err) {
-      const message = err instanceof Error 
-        ? err.message 
-        : (isSpanish 
-            ? "No se pudo completar la reserva. Intenta de nuevo."
-            : "Could not complete the booking. Please try again.")
-      setSubmitError(message)
+      setSubmitError(err instanceof Error ? err.message : (isSpanish ? "Error al reservar." : "Booking failed."))
+    } finally {
       setIsLoading(false)
     }
   }
 
-  const availableSlotsCount = timeSlots.filter(s => s.available).length
+  const availableSlotsCount = professionalId ? prismaSlots.length : timeSlots.filter(s => s.available).length
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl">
-        <div className="flex flex-col h-[600px]">
+      <DialogContent className="max-w-xl p-0 overflow-hidden border shadow-lg bg-card rounded-xl">
+        <div className="flex flex-col max-h-[75vh] min-h-0">
           {/* Header Progress */}
-          <div className="bg-gradient-to-r from-teal-600/10 to-emerald-600/10 p-6 sm:p-8 border-b border-teal-500/10">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-                {isSpanish ? "Agendar Consulta" : "Book Consultation"}
-              </h2>
-              <Badge variant="outline" className="rounded-full border-teal-500/30 text-teal-700 dark:text-teal-300 bg-white/80 dark:bg-slate-900/80">
-                {isSpanish ? `Paso ${step} de 4` : `Step ${step} of 4`}
-              </Badge>
+          <div className="relative overflow-hidden bg-card px-4 pt-4 pb-4 border-b border-border">
+            <div className="flex justify-between items-start mb-4 relative z-10">
+              <div className="space-y-0.5">
+                <DialogTitle className="text-lg font-bold text-foreground">
+                  {isSpanish ? "Agendar Consulta" : "Book Consultation"}
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground text-sm">
+                  {isSpanish 
+                    ? `Cita con ${professionalName}` 
+                    : `Appointment with ${professionalName}`}
+                </DialogDescription>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant="secondary" className="rounded-full px-3 py-1 bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border-none font-semibold">
+                  {isSpanish ? `Paso ${step} de 4` : `Step ${step} of 4`}
+                </Badge>
+              </div>
             </div>
-            <div className="flex gap-2">
+
+            {/* Premium Progress Bar */}
+            <div className="flex gap-3 relative z-10">
               {[1, 2, 3, 4].map((s) => (
-                <div
-                  key={s}
-                  className={cn(
-                    "h-1.5 flex-1 rounded-full transition-all duration-500",
-                    step >= s ? "bg-teal-600" : "bg-teal-600/20",
-                  )}
-                />
+                <div key={s} className="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <motion.div
+                    initial={false}
+                    animate={{ 
+                      width: step >= s ? "100%" : "0%",
+                      backgroundColor: step === s ? "#0d9488" : step > s ? "#14b8a6" : "#f1f5f9"
+                    }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                    className="h-full rounded-full"
+                  />
+                </div>
               ))}
             </div>
+            
+            {/* Decorative background element */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl pointer-events-none" />
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 sm:p-8">
-            {/* Step 1: Consultation Type */}
-            {step === 1 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                {offersInPerson ? (
-                  <>
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                        {isSpanish ? "Elige tipo de consulta" : "Select Consultation Mode"}
-                      </h3>
-                      <p className="text-slate-500 dark:text-slate-400">
-                        {isSpanish 
-                          ? "¿Cómo te gustaría reunirte con el especialista?" 
-                          : "How would you like to meet with the specialist?"}
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                      <button
-                        onClick={() => {
-                          setType("online")
-                          nextStep()
-                        }}
-                        className={cn(
-                          "flex flex-col items-center gap-4 p-8 rounded-2xl border-2 transition-all group",
-                          "border-slate-200 dark:border-slate-700",
-                          "hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-950/30",
-                        )}
-                      >
-                        <div className="w-16 h-16 rounded-2xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform">
-                          <Video className="h-8 w-8" />
-                        </div>
-                        <div className="text-center">
-                          <p className="font-bold text-lg text-slate-900 dark:text-white">
-                            {isSpanish ? "Consulta Online" : "Online Session"}
-                          </p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            {isSpanish ? "Videollamada segura" : "Secure video call"}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="p-4 sm:p-5"
+              >
+                {/* Step 1: Consultation Type */}
+                {step === 1 && (
+                  <div className="max-w-md mx-auto space-y-5">
+                    {offersInPerson ? (
+                      <>
+                        <div className="text-center space-y-2">
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+                            {isSpanish ? "¿Cómo prefieres tu consulta?" : "How would you like to meet?"}
+                          </h3>
+                          <p className="text-slate-500 dark:text-slate-400">
+                            {isSpanish 
+                              ? "Selecciona la modalidad que más te acomode." 
+                              : "Choose the mode that fits you best."}
                           </p>
                         </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setType("in-person")
-                          nextStep()
-                        }}
-                        className={cn(
-                          "flex flex-col items-center gap-4 p-8 rounded-2xl border-2 transition-all group",
-                          "border-slate-200 dark:border-slate-700",
-                          "hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/30",
-                        )}
-                      >
-                        <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
-                          <Home className="h-8 w-8" />
-                        </div>
-                        <div className="text-center">
-                          <p className="font-bold text-lg text-slate-900 dark:text-white">
-                            {isSpanish ? "Presencial" : "In-person Visit"}
-                          </p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            {isSpanish ? "En consultorio" : "At clinic location"}
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <NoPhysicalConsultationDisplay
-                    inModal
-                    isSpanish={isSpanish}
-                    onAgendarTeleconsulta={() => {
-                      setType("online")
-                      nextStep()
-                    }}
-                    variant="inline"
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Step 2: Date & Time Selection */}
-            {step === 2 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                    {isSpanish ? "Selecciona Fecha y Hora" : "Select Date & Time"}
-                  </h3>
-                  <p className="text-slate-500 dark:text-slate-400">
-                    {isSpanish 
-                      ? "Elige el momento que mejor te convenga."
-                      : "Choose the time that works best for you."}
-                  </p>
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-6 pt-4">
-                  {/* Calendar */}
-                  <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-2 bg-white dark:bg-slate-900">
-                    {loadingAvailability ? (
-                      <div className="h-[300px] flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
-                      </div>
-                    ) : (
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        disabled={isDateDisabled}
-                        className="rounded-lg"
-                      />
-                    )}
-                  </div>
-
-                  {/* Time Slots */}
-                  <div className="flex-1 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                        <Clock className="h-4 w-4" /> 
-                        {isSpanish ? "Horarios Disponibles" : "Available Slots"}
-                      </p>
-                      {selectedDate && !loadingSlots && (
-                        <Badge variant="outline" className="text-xs">
-                          {availableSlotsCount} {isSpanish ? "disponibles" : "available"}
-                        </Badge>
-                      )}
-                    </div>
-
-                    {!selectedDate ? (
-                      <div className="h-[200px] flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 space-y-2">
-                        <CalendarDays className="h-10 w-10" />
-                        <p className="text-sm text-center">
-                          {isSpanish 
-                            ? "Selecciona una fecha para ver los horarios"
-                            : "Select a date to see available times"}
-                        </p>
-                      </div>
-                    ) : loadingSlots ? (
-                      <div className="h-[200px] flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-teal-600" />
-                      </div>
-                    ) : timeSlots.length === 0 ? (
-                      <div className="h-[200px] flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 space-y-2">
-                        <AlertTriangle className="h-10 w-10" />
-                        <p className="text-sm text-center">
-                          {isSpanish 
-                            ? "No hay horarios disponibles para este día"
-                            : "No available slots for this day"}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[280px] overflow-y-auto pr-2">
-                        {timeSlots.map((slot) => (
-                          <Button
-                            key={slot.time}
-                            variant={selectedTime === slot.time ? "default" : "outline"}
-                            size="sm"
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+                          <motion.button
+                            whileHover={{ scale: 1.02, translateY: -4 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                              setType("online")
+                              nextStep()
+                            }}
                             className={cn(
-                              "h-11 rounded-xl transition-all",
-                              selectedTime === slot.time 
-                                ? "bg-teal-600 hover:bg-teal-700 text-white border-teal-600" 
-                                : "bg-white dark:bg-slate-900 hover:border-teal-500",
-                              !slot.available && "opacity-40 line-through pointer-events-none"
+                              "relative flex flex-col items-center gap-6 p-8 rounded-[2.5rem] transition-all duration-300 overflow-hidden group",
+                              "bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none",
+                              "hover:border-teal-500/50 hover:shadow-teal-500/10"
                             )}
-                            onClick={() => slot.available && setSelectedTime(slot.time)}
-                            disabled={!slot.available}
                           >
-                            {slot.displayTime}
-                          </Button>
-                        ))}
+                            <div className="absolute -top-4 -right-4 w-24 h-24 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/10 transition-colors" />
+                            <div className="w-20 h-20 rounded-3xl bg-teal-50 dark:bg-teal-900/40 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:rotate-6 transition-transform duration-500">
+                              <Video className="h-10 w-10" />
+                            </div>
+                            <div className="text-center relative z-10">
+                              <p className="font-bold text-xl text-slate-900 dark:text-white">
+                                {isSpanish ? "Telemedicina" : "Online Video"}
+                              </p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                                {isSpanish ? "Desde la comodidad de tu hogar mediante videollamada." : "Meet from anywhere via secure video call."}
+                              </p>
+                            </div>
+                            <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-teal-600 font-semibold text-sm gap-1">
+                              {isSpanish ? "Seleccionar" : "Select"} <ChevronRight className="h-4 w-4" />
+                            </div>
+                          </motion.button>
+
+                          <motion.button
+                            whileHover={{ scale: 1.02, translateY: -4 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                              setType("in-person")
+                              nextStep()
+                            }}
+                            className={cn(
+                              "relative flex flex-col items-center gap-6 p-8 rounded-[2.5rem] transition-all duration-300 overflow-hidden group",
+                              "bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none",
+                              "hover:border-indigo-500/50 hover:shadow-indigo-500/10"
+                            )}
+                          >
+                            <div className="absolute -top-4 -right-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors" />
+                            <div className="w-20 h-20 rounded-3xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:rotate-6 transition-transform duration-500">
+                              <Home className="h-10 w-10" />
+                            </div>
+                            <div className="text-center relative z-10">
+                              <p className="font-bold text-xl text-slate-900 dark:text-white">
+                                {isSpanish ? "Presencial" : "In-person"}
+                              </p>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                                {isSpanish ? "Atención directa en el centro médico o consulta." : "Visit the specialist at their physical location."}
+                              </p>
+                            </div>
+                            <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center text-indigo-600 font-semibold text-sm gap-1">
+                              {isSpanish ? "Seleccionar" : "Select"} <ChevronRight className="h-4 w-4" />
+                            </div>
+                          </motion.button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="animate-in fade-in zoom-in-95 duration-500">
+                        <NoPhysicalConsultationDisplay
+                          inModal
+                          isSpanish={isSpanish}
+                          onAgendarTeleconsulta={() => {
+                            setType("online")
+                            nextStep()
+                          }}
+                          variant="inline"
+                        />
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Step 3: Payment */}
-            {step === 3 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="space-y-2">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                    {isSpanish ? "Confirmar y Pagar" : "Confirm & Pay"}
-                  </h3>
-                  <p className="text-slate-500 dark:text-slate-400">
-                    {isSpanish 
-                      ? "Serás redirigido a Stripe para completar el pago de forma segura."
-                      : "You'll be redirected to Stripe to complete the payment securely."}
-                  </p>
-                </div>
-
-                <div className="grid gap-4 pt-4">
-                  <div className="h-20 flex items-center gap-4 px-6 rounded-2xl border-2 border-teal-500/30 bg-teal-50/50 dark:bg-teal-950/30">
-                    <div className="w-12 h-12 rounded-xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-600">
-                      <CreditCard className="h-6 w-6" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-bold text-slate-900 dark:text-white">
-                        {isSpanish ? "Pago con Stripe" : "Pay with Stripe"}
-                      </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {isSpanish ? "Tarjeta de crédito, débito o Google Pay" : "Credit card, debit or Google Pay"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Booking Summary */}
-                <div className="bg-teal-50 dark:bg-teal-950/30 p-5 rounded-xl border border-teal-200 dark:border-teal-800 space-y-3">
-                  <p className="text-sm font-semibold text-teal-800 dark:text-teal-200">
-                    {isSpanish ? "Resumen de tu cita" : "Appointment Summary"}
-                  </p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-teal-700 dark:text-teal-300">
-                        {isSpanish ? "Fecha" : "Date"}
-                      </span>
-                      <span className="font-medium text-teal-900 dark:text-teal-100">
-                        {selectedDate?.toLocaleDateString(isSpanish ? "es-CL" : "en-US", { 
-                          weekday: "short",
-                          day: "numeric", 
-                          month: "short" 
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-teal-700 dark:text-teal-300">
-                        {isSpanish ? "Hora" : "Time"}
-                      </span>
-                      <span className="font-medium text-teal-900 dark:text-teal-100">
-                        {selectedTime && formatTimeDisplay(selectedTime)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-teal-700 dark:text-teal-300">
-                        {isSpanish ? "Modalidad" : "Type"}
-                      </span>
-                      <span className="font-medium text-teal-900 dark:text-teal-100">
-                        {type === "online" 
-                          ? (isSpanish ? "Online" : "Online") 
-                          : (isSpanish ? "Presencial" : "In-person")}
-                      </span>
-                    </div>
-                    <div className="border-t border-teal-200 dark:border-teal-700 pt-2 mt-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-teal-800 dark:text-teal-200">
-                          {isSpanish ? "Total" : "Total"}
-                        </span>
-                        <span className="text-xl font-bold text-teal-900 dark:text-teal-100">
-                          $45,000 CLP
+                {/* Step 2: Date & Time Selection */}
+                {step === 2 && (
+                  <div className="space-y-4 max-w-full mx-auto">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                      <div className="space-y-1 text-center md:text-left">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                          {isSpanish ? "Selecciona Fecha y Hora" : "Select Date & Time"}
+                        </h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">
+                          {isSpanish 
+                            ? "Consulta de 60 minutos aproximadamente."
+                            : "Approximately 60-minute consultation."}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 rounded-full border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div className={cn(
+                          "w-2 h-2 rounded-full animate-pulse",
+                          type === "online" ? "bg-teal-500" : "bg-indigo-500"
+                        )} />
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          {type === "online" ? (isSpanish ? "Telemedicina" : "Online") : (isSpanish ? "Presencial" : "In-person")}
                         </span>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {submitError && (
-                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                    {submitError}
-                  </p>
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4">
+                      {/* Calendar Section */}
+                      <div className="space-y-2">
+                        <div className="bg-card rounded-lg p-4 border border-border">
+                          {/* Decorative Glow */}
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 blur-3xl rounded-full transition-all group-hover:bg-teal-500/10" />
+                          <div className="relative z-10">
+                            {loadingAvailability ? (
+                              <div className="h-[340px] flex flex-col items-center justify-center space-y-4">
+                                <Loader2 className="h-10 w-10 animate-spin text-teal-600" />
+                                <p className="text-sm font-medium text-slate-500 animate-pulse">{isSpanish ? "Cargando disponibilidad..." : "Loading availability..."}</p>
+                              </div>
+                            ) : (
+                              <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setSelectedDate}
+                                disabled={isDateDisabled}
+                                className="p-0 border-none w-full"
+                                classNames={{
+                                  months: "w-full",
+                                  month: "w-full space-y-4",
+                                  caption: "flex justify-center pt-1 relative items-center mb-4",
+                                  caption_label: "text-lg font-black tracking-tight text-slate-900 dark:text-white capitalize",
+                                  nav: "space-x-1 flex items-center",
+                                  nav_button: "h-9 w-9 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors flex items-center justify-center text-slate-600 dark:text-slate-300",
+                                  nav_button_previous: "absolute left-1",
+                                  nav_button_next: "absolute right-1",
+                                  table: "w-full border-collapse space-y-1",
+                                  head_row: "flex w-full justify-between mb-2",
+                                  head_cell: "text-slate-400 dark:text-slate-500 font-bold text-[11px] uppercase tracking-widest w-full",
+                                  row: "flex w-full mt-2 justify-between",
+                                  cell: "relative p-0 text-center focus-within:relative focus-within:z-20 w-12 h-12 flex items-center justify-center",
+                                  day: "h-11 w-11 text-sm font-semibold rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-700 dark:text-slate-300 opacity-90 hover:opacity-100 hover:scale-105 active:scale-95",
+                                  day_selected: "bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-500/30 scale-110 font-bold custom-selected-day",
+                                  day_today: "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-bold",
+                                  day_outside: "text-slate-300 dark:text-slate-700 opacity-50",
+                                  day_disabled: "text-slate-300 dark:text-slate-700 opacity-30 hover:bg-transparent cursor-not-allowed hover:scale-100",
+                                  day_hidden: "invisible",
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Time Slots Section */}
+                      <div className="flex flex-col min-h-0">
+                        <div className="bg-card rounded-lg p-4 border border-border flex flex-col min-h-[200px]">
+                          <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-800/50">
+                            <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                              <Clock className="h-5 w-5 text-teal-600" /> 
+                              {isSpanish ? "Horas Libres" : "Time Slots"}
+                            </h4>
+                            {selectedDate && !loadingSlots && (
+                              <div className="flex items-center gap-2">
+                                <span className="relative flex h-3 w-3">
+                                  {availableSlotsCount > 0 && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>}
+                                  <span className={cn("relative inline-flex rounded-full h-3 w-3", availableSlotsCount > 0 ? "bg-teal-500" : "bg-slate-300 dark:bg-slate-700")}></span>
+                                </span>
+                                <span className="text-xs font-bold text-slate-500 tracking-wide uppercase">
+                                  {availableSlotsCount} {isSpanish ? "Disponibles" : "Available"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {!selectedDate ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 space-y-4 py-10">
+                              <div className="w-20 h-20 rounded-[2rem] bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm">
+                                <CalendarDays className="h-10 w-10 text-slate-300" />
+                              </div>
+                              <p className="text-sm font-medium max-w-[180px] text-center text-slate-500">
+                                {isSpanish 
+                                  ? "Selecciona un día en el calendario"
+                                  : "Pick a day on the calendar"}
+                              </p>
+                            </div>
+                          ) : loadingSlots ? (
+                            <div className="flex-1 flex flex-col items-center justify-center space-y-4">
+                              <div className="relative">
+                                <div className="absolute inset-0 rounded-full blur-xl bg-teal-500/20 animate-pulse" />
+                                <Loader2 className="h-10 w-10 animate-spin text-teal-600 relative z-10" />
+                              </div>
+                              <p className="text-sm font-bold text-slate-500 animate-pulse">{isSpanish ? "Sincronizando..." : "Syncing..."}</p>
+                            </div>
+                          ) : (professionalId ? prismaSlots : timeSlots).length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 space-y-4 py-6">
+                              <AlertTriangle className="h-10 w-10 text-amber-500" />
+                              <p className="text-sm font-medium text-center text-muted-foreground">
+                                {isSpanish ? "Sin disponibilidad. Elige otra fecha." : "No slots. Pick another date."}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto">
+                              {professionalId
+                                ? prismaSlots.map((slot) => (
+                                    <button
+                                      key={slot.id}
+                                      type="button"
+                                      onClick={() => setSelectedSlotId(slot.id === selectedSlotId ? null : slot.id)}
+                                      className={cn(
+                                        "py-3 px-3 rounded-lg text-sm font-medium transition-colors",
+                                        selectedSlotId === slot.id
+                                          ? "bg-teal-600 text-white"
+                                          : "bg-muted hover:bg-muted/80 text-foreground"
+                                      )}
+                                    >
+                                      {format(new Date(slot.startTime), "HH:mm")}
+                                    </button>
+                                  ))
+                                : timeSlots.map((slot) => (
+                                    <motion.button
+                                      key={slot.time}
+                                      type="button"
+                                      disabled={!slot.available}
+                                      onClick={() => slot.available && setSelectedTime(slot.time)}
+                                      className={cn(
+                                        "py-3 px-3 rounded-lg text-sm font-medium transition-colors",
+                                        selectedTime === slot.time ? "bg-teal-600 text-white" : "bg-muted hover:bg-muted/80 text-foreground",
+                                        !slot.available && "opacity-50 pointer-events-none"
+                                      )}
+                                    >
+                                      {slot.displayTime}
+                                    </motion.button>
+                                  ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
-              </div>
-            )}
 
-            {/* Step 4: Confirmation */}
-            {step === 4 && (
-              <div className="flex flex-col items-center justify-center text-center space-y-6 py-8 animate-in zoom-in-95 duration-500">
-                <div className="w-24 h-24 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <CheckCircle2 className="h-14 w-14 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
-                    {isSpanish ? "¡Cita Confirmada!" : "Appointment Confirmed!"}
-                  </h3>
-                  <p className="text-slate-500 dark:text-slate-400 max-w-sm">
-                    {isSpanish 
-                      ? `Tu cita con ${professionalName} está agendada para el ${confirmedAt?.date} a las ${confirmedAt?.time}.`
-                      : `Your session with ${professionalName} is scheduled for ${confirmedAt?.date} at ${confirmedAt?.time}.`}
-                  </p>
-                </div>
-                <div className="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl w-full max-w-md space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500 dark:text-slate-400">
-                      {isSpanish ? "Modalidad" : "Mode"}
-                    </span>
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {type === "online" 
-                        ? (isSpanish ? "Videollamada" : "Video Call") 
-                        : (isSpanish ? "Presencial" : "In-person")}
-                    </span>
+                {/* Step 3: Resumen y datos de contacto (Prisma) */}
+                {step === 3 && (
+                  <div className="max-w-md mx-auto space-y-5">
+                    <h3 className="text-lg font-bold text-foreground">
+                      {isSpanish ? "Resumen y datos de contacto" : "Review & contact details"}
+                    </h3>
+                    <div className="rounded-lg border border-border bg-card p-4 space-y-2 text-sm">
+                      <p><span className="text-muted-foreground">{isSpanish ? "Fecha" : "Date"}:</span> {selectedDate?.toLocaleDateString(isSpanish ? "es-ES" : "en-US", { day: "numeric", month: "long", year: "numeric" })}</p>
+                      <p><span className="text-muted-foreground">{isSpanish ? "Hora" : "Time"}:</span>{" "}
+                        {professionalId && selectedSlotId
+                          ? (() => { const s = prismaSlots.find((x) => x.id === selectedSlotId); return s ? format(new Date(s.startTime), "HH:mm") : ""; })()
+                          : selectedTime && formatTimeDisplay(selectedTime)}
+                      </p>
+                      <p><span className="text-muted-foreground">{isSpanish ? "Especialista" : "Specialist"}:</span> {professionalName}</p>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm">{isSpanish ? "Nombre" : "Name"}</Label>
+                        <Input value={patientName} onChange={(e) => setPatientName(e.target.value)} placeholder={isSpanish ? "Tu nombre" : "Your name"} className="mt-1 bg-background" />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Email</Label>
+                        <Input type="email" value={patientEmail} onChange={(e) => setPatientEmail(e.target.value)} placeholder="email@ejemplo.com" className="mt-1 bg-background" />
+                      </div>
+                      <div>
+                        <Label className="text-sm">{isSpanish ? "Teléfono" : "Phone"}</Label>
+                        <Input value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} placeholder="+56 9 1234 5678" className="mt-1 bg-background" />
+                      </div>
+                    </div>
+                    {submitError && (
+                      <p className="text-sm text-destructive flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        {submitError}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-500 dark:text-slate-400">
-                      {isSpanish ? "Referencia" : "Reference"}
-                    </span>
-                    <span className="font-mono font-semibold text-slate-900 dark:text-white">
-                      {createdRef || "—"}
-                    </span>
+                )}
+
+                {/* Step 4: Final Confirmation */}
+                {step === 4 && (
+                  <div className="max-w-md mx-auto flex flex-col items-center text-center space-y-8 py-10">
+                    <motion.div 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                      className="w-32 h-32 rounded-[2.5rem] bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shadow-xl shadow-emerald-500/10"
+                    >
+                      <CheckCircle2 className="h-16 w-16 text-emerald-600 dark:text-emerald-400" />
+                    </motion.div>
+                    
+                    <div className="space-y-3">
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white">
+                        {isSpanish ? "¡Todo listo!" : "Spot secured!"}
+                      </h3>
+                      <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
+                        {isSpanish 
+                          ? `Hemos agendado tu cita con ${professionalName}. Te enviamos los detalles a tu correo electrónico.`
+                          : `Successfully scheduled with ${professionalName}. We've sent the details to your email.`}
+                      </p>
+                    </div>
+
+                    <div className="w-full bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 space-y-4 shadow-sm">
+                      <div className="flex justify-between items-center px-2">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{isSpanish ? "Fecha y Hora" : "Date & Time"}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{confirmedAt?.date} - {confirmedAt?.time}</span>
+                      </div>
+                      <div className="flex justify-between items-center px-2">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{isSpanish ? "Referencia" : "Reference"}</span>
+                        <span className="font-mono font-bold text-teal-600 bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-lg text-sm">{createdRef || "NUR-4829"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 w-full">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 h-14 rounded-2xl bg-transparent border-slate-200 font-bold" 
+                        onClick={onClose}
+                      >
+                        {isSpanish ? "CerrarVentana" : "Close Window"}
+                      </Button>
+                      <Button 
+                        className="flex-1 h-14 rounded-2xl bg-slate-900 dark:bg-white dark:text-slate-900 hover:bg-slate-800 text-white font-bold" 
+                        asChild
+                      >
+                        <a href="/dashboard/patient/citas">
+                          {isSpanish ? "Ver Mis Citas" : "Manage Appointments"}
+                        </a>
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {isSpanish 
-                    ? "Recibirás un correo con los detalles y recordatorios."
-                    : "You'll receive an email with details and reminders."}
-                </p>
-                <div className="flex gap-4 w-full pt-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 rounded-xl bg-transparent" 
-                    onClick={onClose}
-                  >
-                    {isSpanish ? "Cerrar" : "Close"}
-                  </Button>
-                  <Button 
-                    className="flex-1 rounded-xl bg-teal-600 hover:bg-teal-700" 
-                    asChild
-                  >
-                    <a href="/dashboard/appointments">
-                      {isSpanish ? "Ver Mis Citas" : "View My Appointments"}
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            )}
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Footer Controls */}
           {step < 4 && (
-            <div className="p-6 sm:p-8 border-t border-slate-200 dark:border-slate-800 flex justify-between bg-white dark:bg-slate-950">
+            <div className="px-4 py-4 border-t border-border flex justify-between items-center bg-card">
               <Button 
                 variant="ghost" 
                 onClick={prevStep} 
                 disabled={step === 1 || isLoading} 
-                className="rounded-xl font-medium"
+                className="rounded-2xl h-12 px-6 font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
               >
+                <ChevronLeft className="h-5 w-5 mr-1" />
                 {isSpanish ? "Atrás" : "Back"}
               </Button>
-              <Button
-                onClick={step === 3 ? handleCompleteBooking : nextStep}
-                disabled={
-                  (step === 1 && !type) || 
-                  (step === 2 && !canConfirmStep2) || 
-                  (step === 3 && !canBookWithPayment) || 
-                  isLoading
-                }
-                className={cn(
-                  "px-8 rounded-xl font-semibold",
-                  "bg-teal-600 hover:bg-teal-700"
-                )}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : step === 3 ? (
-                  isSpanish ? "Confirmar y Pagar" : "Confirm & Pay"
-                ) : (
-                  isSpanish ? "Siguiente" : "Next"
-                )}
-              </Button>
+              
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={step === 3 ? handleCompleteBooking : nextStep}
+                  disabled={
+                    (step === 1 && !type) ||
+                    (step === 2 && !canConfirmStep2) ||
+                    (step === 3 && isLoading) ||
+                    isLoading
+                  }
+                  className={cn(
+                    "h-14 px-10 rounded-[1.5rem] font-black text-base shadow-xl transition-all duration-300",
+                    "bg-teal-600 hover:bg-teal-700 text-white shadow-teal-500/20 border-none",
+                    "disabled:opacity-50 disabled:grayscale disabled:scale-100"
+                  )}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {step === 3 
+                        ? (isSpanish ? "Confirmar Pago" : "Pay Now") 
+                        : (isSpanish ? "Continuar" : "Continue")}
+                      <ArrowRight className="h-5 w-5" />
+                    </div>
+                  )}
+                </Button>
+              </motion.div>
             </div>
           )}
         </div>

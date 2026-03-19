@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Conexión (url/directUrl) configurada en prisma.config.ts para Prisma 7.
+datasource db {
+  provider = "postgresql"
+}
+
+// Estados de cita: definir desde el inicio para evitar migraciones dolorosas.
+enum AppointmentStatus {
+  pending   // Creada pero aún no confirmada interacción
+  confirmed // Conversación iniciada
+  completed // Consulta realizada
+  cancelled // Cancelada por paciente o profesional
+  no_show   // Paciente no asistió
+}
+
+model Professional {
+  id                 String                 @id @default(cuid())
+  supabaseUserId     String?                @unique // Id del perfil Supabase para enlazar explore/chat
+  name               String
+  rut                String                 @unique
+  specialty          String
+  city               String
+  photoUrl           String?
+  priceRange         String?
+  description        String?
+  workDayStart       String
+  workDayEnd         String
+  slotDuration      Int
+  timezone           String                 @default("America/Santiago") // IANA; citas almacenadas en UTC
+  bufferMinutes      Int                     @default(0) // Minutos entre citas (opcional)
+  bookingAutoMessage String?                // Mensaje automático al paciente al confirmar reserva
+  slots              Slot[]
+  appointments       Appointment[]
+  reviews            Review[]
+  dayOffs            ProfessionalDayOff[]
+  timeOffs           ProfessionalTimeOff[]
+  createdAt          DateTime               @default(now())
+}
+
+model Slot {
+  id             String        @id @default(cuid())
+  professionalId String
+  startTime      DateTime
+  endTime        DateTime
+  durationMin    Int
+  isOnline       Boolean       @default(false)
+  isBooked       Boolean       @default(false)
+  professional   Professional  @relation(fields: [professionalId], references: [id])
+  appointment    Appointment?
+
+  @@unique([professionalId, startTime])
+}
+
+model Appointment {
+  id                  String            @id @default(cuid())
+  slotId              String            @unique
+  professionalId      String
+  patientId          String?           // Supabase auth id del paciente (si reservó logueado)
+  patientName        String
+  patientEmail       String
+  patientPhone       String
+  status             AppointmentStatus @default(confirmed)
+  autoMessageSentAt  DateTime?         // Evita reenviar mensaje automático
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  professional       Professional      @relation(fields: [professionalId], references: [id])
+  slot               Slot              @relation(fields: [slotId], references: [id])
+  review             Review?
+}
+
+model Review {
+  id             String        @id @default(cuid())
+  professionalId String
+  appointmentId  String?       @unique
+  rating         Int
+  comment        String?
+  createdAt      DateTime      @default(now())
+  professional   Professional  @relation(fields: [professionalId], references: [id])
+  appointment    Appointment?  @relation(fields: [appointmentId], references: [id])
+}
+
+model ProfessionalDayOff {
+  id             String       @id @default(cuid())
+  professionalId String
+  date           DateTime
+  reason         String?
+  professional   Professional @relation(fields: [professionalId], references: [id])
+  @@unique([professionalId, date])
+}
+
+model ProfessionalTimeOff {
+  id             String       @id @default(cuid())
+  professionalId String
+  startTime      DateTime
+  endTime        DateTime
+  reason         String?
+  professional   Professional @relation(fields: [professionalId], references: [id])
+}
+
+

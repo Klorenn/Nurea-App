@@ -40,10 +40,10 @@ export function HowItWorks() {
     {
       icon: CalendarCheck,
       step: isEs ? "Paso 2" : "Step 2",
-      title: isEs ? "Agenda tu cita" : "Book your appointment",
+      title: isEs ? "Contacta al especialista" : "Contact the specialist",
       description: isEs 
-        ? "Selecciona el día y hora que mejor te acomode. Recibirás confirmación inmediata por correo."
-        : "Select the day and time that works best for you. You'll receive instant confirmation by email.",
+        ? "Envía un mensaje por el chat. El profesional te indicará horarios, forma de pago e instrucciones para coordinar la consulta."
+        : "Send a message via chat. The professional will share availability, payment method, and instructions to coordinate your visit.",
     },
     {
       icon: Video,
@@ -79,8 +79,8 @@ export function HowItWorks() {
           </h2>
           <p className="text-gray-800/70 text-lg max-w-2xl mx-auto">
             {isEs 
-              ? "Agendar tu cita médica nunca fue tan fácil. Solo 3 pasos."
-              : "Booking your medical appointment has never been easier. Just 3 steps."
+              ? "NUREA conecta pacientes con profesionales de la salud. La coordinación y el pago de la consulta se realizan directamente con el especialista a través del chat seguro de la plataforma."
+              : "NUREA connects patients with healthcare professionals. Coordination and payment of the consultation are done directly with the specialist through the platform's secure chat."
             }
           </p>
         </motion.div>

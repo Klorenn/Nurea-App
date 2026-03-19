@@ -8,6 +8,8 @@ import { Toaster } from "sonner"
 import { AnalyticsClient } from "@/components/analytics-client"
 import "./globals.css"
 
+import { NuraChatDynamic } from "@/components/nura/nura-chat-wrapper"
+
 const GeistFont = Geist({
   subsets: ["latin"],
   display: "optional",
@@ -25,11 +27,11 @@ const LoraFont = Lora({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://nurea.app'),
   title: {
-    default: "NUREA - Healthcare Marketplace",
+    default: "NUREA - Tu Plataforma de Salud",
     template: "%s | NUREA"
   },
-  description: "Connect with trusted healthcare professionals in Chile. Book appointments, manage your health journey, and access quality healthcare services.",
-  keywords: ["healthcare", "medical appointments", "Chile", "health professionals", "telemedicine", "health marketplace", "doctors", "patients", "medical services"],
+  description: "Conecta con profesionales de la salud confiables en Chile. Reserva horas, gestiona tu salud y accede a servicios médicos de calidad.",
+  keywords: ["salud", "horas médicas", "Chile", "profesionales de la salud", "telemedicina", "reserva de horas", "doctores", "pacientes", "servicios médicos"],
   authors: [{ name: "NUREA" }],
   creator: "NUREA",
   publisher: "NUREA",
@@ -43,21 +45,21 @@ export const metadata: Metadata = {
     locale: "es_CL",
     url: "/",
     siteName: "NUREA",
-    title: "NUREA - Healthcare Marketplace",
-    description: "Connect with trusted healthcare professionals in Chile. Book appointments, manage your health journey, and access quality healthcare services.",
+    title: "NUREA - Tu Plataforma de Salud",
+    description: "Conecta con profesionales de la salud confiables en Chile. Reserva horas, gestiona tu salud y accede a servicios médicos de calidad.",
     images: [
       {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "NUREA - Healthcare Marketplace",
+        alt: "NUREA - Tu Plataforma de Salud",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "NUREA - Healthcare Marketplace",
-    description: "Connect with trusted healthcare professionals in Chile. Book appointments, manage your health journey.",
+    title: "NUREA - Tu Plataforma de Salud",
+    description: "Conecta con profesionales de la salud confiables en Chile. Reserva horas, gestiona tu salud y accede a servicios médicos de calidad.",
     images: ["/og-image.jpg"],
     creator: "@nurea",
   },
@@ -107,7 +109,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "NUREA",
-              "description": "Healthcare marketplace connecting patients with trusted healthcare professionals in Chile",
+              "description": "Plataforma que conecta pacientes con profesionales de la salud confiables en Chile",
               "url": siteUrl,
               "logo": `${siteUrl}/logo.png`,
               "sameAs": [
@@ -115,7 +117,7 @@ export default function RootLayout({
               ],
               "contactPoint": {
                 "@type": "ContactPoint",
-                "contactType": "Customer Service",
+                "contactType": "Atención al Cliente",
                 "areaServed": "CL",
                 "availableLanguage": ["es", "en"]
               }
@@ -130,7 +132,7 @@ export default function RootLayout({
               "@type": "WebSite",
               "name": "NUREA",
               "url": siteUrl,
-              "description": "Connect with trusted healthcare professionals in Chile",
+              "description": "Conecta con profesionales de la salud confiables en Chile",
               "potentialAction": {
                 "@type": "SearchAction",
                 "target": {
@@ -148,18 +150,18 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "MedicalBusiness",
-              "name": "NUREA Healthcare Marketplace",
-              "description": "Online platform for connecting patients with healthcare professionals in Chile",
+              "name": "NUREA - Tu Plataforma de Salud",
+              "description": "Plataforma online para conectar pacientes con profesionales de la salud en Chile",
               "url": siteUrl,
               "areaServed": {
                 "@type": "Country",
                 "name": "Chile"
               },
               "medicalSpecialty": [
-                "General Practice",
-                "Psychology",
-                "Cardiology",
-                "Dermatology"
+                "Medicina General",
+                "Psicología",
+                "Cardiología",
+                "Dermatología"
               ]
             })
           }}
@@ -172,6 +174,7 @@ export default function RootLayout({
               {children}
               <Toaster position="top-right" richColors closeButton />
               <AnalyticsClient />
+              <NuraChatDynamic />
             </LanguageProvider>
           </QueryProvider>
         </ThemeProvider>

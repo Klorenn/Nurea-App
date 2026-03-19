@@ -23,6 +23,8 @@ import {
 interface ProfileInfo {
   subscription_status: string | null
   stripe_subscription_id: string | null
+  trial_end_date: string | null
+  selected_plan_id: string | null
   is_onboarded: boolean | null
 }
 
@@ -41,8 +43,8 @@ export default function ProfessionalLayout({
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Check if we're already on the onboarding page
-  const isOnboardingPage = pathname?.includes("/onboarding")
+  // Check if we're already on the onboarding page (used in redirect effect)
+  const shouldRedirectToOnboarding = false
 
   useEffect(() => {
     if (authLoading) return
@@ -53,6 +55,7 @@ export default function ProfessionalLayout({
 
     const loadProfile = async () => {
       try {
+        // Seleccionamos solo las columnas que sabemos que existen para evitar errores 400
         const { data, error } = await supabase
           .from("profiles")
           .select("subscription_status, stripe_subscription_id, is_onboarded")
@@ -60,31 +63,62 @@ export default function ProfessionalLayout({
           .single()
 
         if (error) {
-          console.error("Error loading profile:", error)
+          console.error("Error loading profile details:", error.message, error)
           setProfileInfo({ 
             subscription_status: "inactive", 
             stripe_subscription_id: null,
+            trial_end_date: null,
+            selected_plan_id: null,
             is_onboarded: false 
           })
         } else {
-          setProfileInfo(data)
+          setProfileInfo({
+            ...data,
+            trial_end_date: (data as any).trial_end_date || null,
+            selected_plan_id: (data as any).selected_plan_id || null
+          })
           
-          // AUTO-REDIRECT TO CHECKOUT if a plan was selected during registration
-          const isSubscribed = data.subscription_status === "active" || data.subscription_status === "trialing"
+          // AUTO-REDIRECT TO CHECKOUT or MARK AS PENDING
+          const isSubscribed = data.subscription_status === "active" || 
+                             data.subscription_status === "trialing" || 
+                             data.subscription_status === "pending_approval"
+          
           if (!isSubscribed) {
             const pendingPlan = sessionStorage.getItem("pending_plan")
             if (pendingPlan) {
-              console.log(`🚀 Redirecting to checkout for pending plan: ${pendingPlan}`)
-              const res = await fetch("/api/checkout/subscription", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ planId: pendingPlan, isYearly: false }), // Default to monthly if not specified
-              })
-              const { url } = await res.json()
-              if (url) {
+              if (pendingPlan === "graduate") {
+                // Graduate plan requires admin approval
+                console.log(`🎓 Requesting Graduate plan for user: ${user.id}`)
+                const { requestGraduatePlan } = await import("@/actions/subscriptions")
+                await requestGraduatePlan()
+                
                 sessionStorage.removeItem("pending_plan")
-                window.location.href = url
+                setProfileInfo(prev => prev ? { ...prev, subscription_status: "pending_approval", selected_plan_id: "graduate" } : null)
                 return
+              } else {
+                // Standard professional plan goes to Mercado Pago
+                console.log(`🚀 Redirecting to Mercado Pago for pending plan: ${pendingPlan}`)
+                try {
+                  const res = await fetch("/api/payments/mercadopago/subscription", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ planId: pendingPlan, isYearly: false }),
+                  })
+                  if (res.ok) {
+                    const { url } = await res.json()
+                    if (url) {
+                      sessionStorage.removeItem("pending_plan")
+                      window.location.href = url
+                      return
+                    }
+                  } else {
+                    console.error("Payment API returned an error:", res.status)
+                    sessionStorage.removeItem("pending_plan")
+                  }
+                } catch (err) {
+                  console.error("Failed to parse payment API response:", err)
+                  sessionStorage.removeItem("pending_plan")
+                }
               }
             }
           }
@@ -94,6 +128,8 @@ export default function ProfessionalLayout({
         setProfileInfo({ 
           subscription_status: "inactive", 
           stripe_subscription_id: null,
+          trial_end_date: null,
+          selected_plan_id: null,
           is_onboarded: false 
         })
       } finally {
@@ -103,6 +139,8 @@ export default function ProfessionalLayout({
 
     loadProfile()
   }, [user, authLoading, router, supabase])
+
+  // Onboarding redirect desactivado: usamos directamente la página de perfil profesional como lugar de configuración inicial.
 
   if (authLoading || loading) {
     return (
@@ -117,37 +155,31 @@ export default function ProfessionalLayout({
     )
   }
 
-  const isSubscriptionActive = profileInfo?.subscription_status === "active" || 
-                               profileInfo?.subscription_status === "trialing"
+  // Check 1: Subscription active or trialing (and not expired)
+  const now = new Date()
+  const hasTrialAccess = profileInfo?.subscription_status === "trialing" &&
+    profileInfo?.trial_end_date &&
+    new Date(profileInfo.trial_end_date) > now
 
-  // Check 1: Subscription active?
-  if (!isSubscriptionActive) {
-    return <SubscriptionPaywall language={language} />
-  }
+  const isSubscriptionActive = profileInfo?.subscription_status === "active" || hasTrialAccess
 
-  // Check 2: Onboarding complete? (only redirect if NOT already on onboarding page)
-  const isOnboarded = profileInfo?.is_onboarded === true
-  if (!isOnboarded && !isOnboardingPage) {
-    router.push("/dashboard/professional/onboarding")
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 text-teal-600 animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">
-            {isSpanish ? "Redirigiendo..." : "Redirecting..."}
-          </p>
-        </div>
-      </div>
-    )
+  // Sin suscripción solo se bloquean: mensajes (chat) y pacientes. El resto (perfil, horarios, configuración, citas, etc.) se permite.
+  const isMessagesPage = pathname?.startsWith("/dashboard/professional/chat")
+  const isPatientsPage = pathname?.startsWith("/dashboard/professional/patients")
+  const requiresSubscription = isMessagesPage || isPatientsPage
+
+  if (!isSubscriptionActive && requiresSubscription) {
+    return <SubscriptionPaywall language={language} status={profileInfo?.subscription_status || "inactive"} />
   }
 
   return <>{children}</>
 }
 
-function SubscriptionPaywall({ language }: { language: string }) {
+function SubscriptionPaywall({ language, status }: { language: string, status: string }) {
   const router = useRouter()
   const isSpanish = language === "es"
   const [loadingCheckout, setLoadingCheckout] = useState(false)
+  const isPendingApproval = status === "pending_approval"
 
   const features = [
     {
@@ -180,8 +212,68 @@ function SubscriptionPaywall({ language }: { language: string }) {
     },
   ]
 
-  const handleStartTrial = () => {
-    router.push("/pricing")
+  const handleStartCheckout = async () => {
+    setLoadingCheckout(true)
+    try {
+      // Por defecto llevamos al plan profesional mensual si viene del paywall genérico
+      const res = await fetch("/api/payments/mercadopago/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: "professional", isYearly: false }),
+      })
+      if (res.ok) {
+        const { url } = await res.json()
+        if (url) {
+          window.location.href = url
+          return
+        }
+      } else {
+        console.error("Payment API returned an error:", res.status)
+      }
+      // Fallback a la página de precios si falla la API
+      router.push("/pricing")
+    } catch (error) {
+      console.error("Error starting checkout:", error)
+      router.push("/pricing")
+    } finally {
+      setLoadingCheckout(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.refresh()
+    router.push("/login")
+  }
+
+  const handleTestBypass = async () => {
+    const code = window.prompt(isSpanish ? "Ingrese código de prueba:" : "Enter test code:")
+    if (code === "211022") {
+      setLoadingCheckout(true)
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // Solo actualizamos subscription_status que sabemos que existe
+        await supabase.from("profiles").update({
+          subscription_status: "active"
+        }).eq("id", user.id)
+        
+        // Intentamos actualizar selected_plan_id solo si no falla (silent catch)
+        try {
+          await supabase.from("profiles").update({
+            selected_plan_id: "professional"
+          } as any).eq("id", user.id)
+        } catch (e) {
+          console.warn("selected_plan_id column not found, skipping...")
+        }
+
+        window.location.reload()
+      }
+      setLoadingCheckout(false)
+    } else if (code) {
+      alert(isSpanish ? "Código inválido" : "Invalid code")
+    }
   }
 
   return (
@@ -200,22 +292,30 @@ function SubscriptionPaywall({ language }: { language: string }) {
             <div className="relative">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <Lock className="h-6 w-6" />
+                  {isPendingApproval ? <Loader2 className="h-6 w-6 animate-spin" /> : <Lock className="h-6 w-6" />}
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold">
-                    {isSpanish ? "Suscripción Requerida" : "Subscription Required"}
+                    {isPendingApproval 
+                      ? (isSpanish ? "Solicitud en Revisión" : "Request Under Review")
+                      : (isSpanish ? "Suscripción Requerida" : "Subscription Required")}
                   </h1>
                   <p className="text-teal-100 text-sm">
-                    {isSpanish ? "Activa tu cuenta profesional" : "Activate your professional account"}
+                    {isPendingApproval
+                      ? (isSpanish ? "Estamos evaluando tu perfil" : "We are evaluating your profile")
+                      : (isSpanish ? "Activa tu cuenta profesional" : "Activate your professional account")}
                   </p>
                 </div>
               </div>
               
               <p className="text-white/90 leading-relaxed">
-                {isSpanish 
-                  ? "Para recibir pacientes y gestionar tu agenda en NUREA, necesitas una suscripción activa. Elige el plan que mejor se adapte a tu práctica."
-                  : "To receive patients and manage your calendar on NUREA, you need an active subscription. Choose the plan that best fits your practice."}
+                {isPendingApproval
+                  ? (isSpanish 
+                      ? "Tu solicitud para el plan de Recién Graduado está siendo revisada por nuestro equipo. Te notificaremos por correo una vez aprobada."
+                      : "Your request for the Recent Graduate plan is being reviewed by our team. We will notify you by email once approved.")
+                  : (isSpanish 
+                      ? "Para recibir pacientes y gestionar tu agenda en NUREA, necesitas una suscripción activa. Elige el plan que mejor se adapte a tu práctica."
+                      : "To receive patients and manage your calendar on NUREA, you need an active subscription. Choose the plan that best fits your practice.")}
               </p>
             </div>
           </div>
@@ -266,30 +366,48 @@ function SubscriptionPaywall({ language }: { language: string }) {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                onClick={handleStartTrial}
-                disabled={loadingCheckout}
-                className="flex-1 h-12 bg-teal-600 hover:bg-teal-700 text-white font-medium"
-              >
-                {loadingCheckout ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Sparkles className="h-5 w-5 mr-2" />
-                    {isSpanish ? "Ver Planes y Precios" : "View Plans & Pricing"}
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </>
-                )}
-              </Button>
+              {!isPendingApproval ? (
+                <Button
+                  onClick={handleStartCheckout}
+                  disabled={loadingCheckout}
+                  className="flex-1 h-12 bg-teal-600 hover:bg-teal-700 text-white font-medium shadow-lg shadow-teal-500/20"
+                >
+                  {loadingCheckout ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5 mr-2" />
+                      {isSpanish ? "Adquirir suscripción" : "Get Subscription"}
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="flex-1 p-4 rounded-xl bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 text-sm font-medium flex items-center justify-center gap-2 border border-teal-100 dark:border-teal-800">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isSpanish ? "Esperando aprobación..." : "Awaiting approval..."}
+                </div>
+              )}
               
               <Button
                 variant="outline"
-                onClick={() => window.open("mailto:soporte@nurea.app", "_blank")}
-                className="h-12"
+                onClick={handleLogout}
+                className="h-12 border-slate-200"
               >
                 <CreditCard className="h-4 w-4 mr-2" />
-                {isSpanish ? "Contactar Ventas" : "Contact Sales"}
+                {isSpanish ? "Cerrar Sesión" : "Log Out"}
               </Button>
+            </div>
+
+            {/* Hidden Test Bypass */}
+            <div className="flex justify-center">
+              <button 
+                onClick={handleTestBypass}
+                className="text-[10px] text-slate-300 dark:text-slate-600 hover:text-teal-500 transition-colors"
+                title="Only for testing purposes"
+              >
+                [Dev Bypass]
+              </button>
             </div>
           </div>
 

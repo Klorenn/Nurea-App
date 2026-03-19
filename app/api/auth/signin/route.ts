@@ -64,21 +64,21 @@ export async function POST(request: Request) {
     // Obtener el perfil para determinar el rol y redirección
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, date_of_birth')
+      .select('role, onboarding_completed')
       .eq('id', data.user.id)
       .single()
 
     const role = profile?.role || 'patient'
-    const profileComplete = !!profile?.date_of_birth
+    const onboardingCompleted = !!profile?.onboarding_completed
 
     // Determinar la ruta de redirección
     let redirectPath = '/dashboard'
     if (role === 'professional') {
-      redirectPath = profileComplete ? '/professional/dashboard' : '/complete-profile'
+      redirectPath = onboardingCompleted ? '/dashboard/professional' : '/onboarding'
     } else if (role === 'admin') {
       redirectPath = '/admin'
     } else {
-      redirectPath = profileComplete ? '/dashboard' : '/complete-profile'
+      redirectPath = onboardingCompleted ? '/dashboard/patient' : '/onboarding'
     }
 
     return NextResponse.json({ 

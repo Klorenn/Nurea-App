@@ -72,6 +72,8 @@ import { cn } from "@/lib/utils"
 import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
 import { PrescriptionDrawer } from "@/components/consultation/prescription-drawer"
 import { VideoCallButton } from "@/components/consultation/video-call-button"
+import { ReferralModal } from "@/components/consultation/referral-modal"
+import { Link as LinkIcon } from "lucide-react"
 
 interface Patient {
   id: string
@@ -123,6 +125,18 @@ interface HistoryRecord {
   is_signed: boolean
 }
 
+interface ReferralSummary {
+  id: string
+  reason: string
+  referring_doctor: string
+  original_record?: {
+    reason_for_visit: string
+    chief_complaint: string
+    diagnosis: string
+    treatment: string
+  }
+}
+
 interface PrescriptionItem {
   id: string
   name: string
@@ -168,8 +182,10 @@ export default function ConsultationPage() {
   const [loading, setLoading] = useState(true)
   const [appointment, setAppointment] = useState<Appointment | null>(null)
   const [history, setHistory] = useState<HistoryRecord[]>([])
+  const [activeReferral, setActiveReferral] = useState<ReferralSummary | null>(null)
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([])
   const [prescriptionOpen, setPrescriptionOpen] = useState(false)
+  const [referralOpen, setReferralOpen] = useState(false)
   
   // Form state
   const [recordId, setRecordId] = useState<string | null>(null)
@@ -251,6 +267,44 @@ export default function ConsultationPage() {
           setHistory(historyData as HistoryRecord[])
         }
 
+        // Load active and authorized referrals FOR this patient to this doctor
+        const { data: referralData } = await supabase
+          .from("referrals")
+          .select(`
+            id, reason, appointment_id,
+            referring_professional:professionals!referrals_referring_professional_id_fkey(
+              profiles!professionals_id_fkey(first_name, last_name)
+            )
+          `)
+          .eq("patient_id", (apt.patient as any).id)
+          .eq("clinical_summary_access", true)
+          // it could be strictly for this target professional, or any authorized
+          .eq("status", "authorized")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (referralData) {
+          const refSummary: ReferralSummary = {
+            id: referralData.id,
+            reason: referralData.reason,
+            referring_doctor: `${(referralData.referring_professional as any).profiles.first_name} ${(referralData.referring_professional as any).profiles.last_name}`
+          }
+
+          if (referralData.appointment_id) {
+            const { data: originalRecord } = await supabase
+              .from("medical_records")
+              .select("reason_for_visit, chief_complaint, diagnosis, treatment")
+              .eq("appointment_id", referralData.appointment_id)
+              .maybeSingle()
+            
+            if (originalRecord) {
+              refSummary.original_record = originalRecord as ReferralSummary["original_record"]
+            }
+          }
+          setActiveReferral(refSummary)
+        }
+
         // Load existing record for this appointment (if any)
         const { data: existingRecord } = await supabase
           .from("medical_records")
@@ -315,13 +369,13 @@ export default function ConsultationPage() {
     }
   }, [hasUnsavedChanges, loading])
 
-  const handleSave = useCallback(async (isAutoSave = false) => {
-    if (!appointment) return
-    
+  const handleSave = useCallback(async (isAutoSave = false): Promise<string | null> => {
+    if (!appointment) return null
+
     setIsSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) return null
 
       const recordData = {
         patient_id: appointment.patient.id,
@@ -337,6 +391,8 @@ export default function ConsultationPage() {
         is_draft: true,
         updated_at: new Date().toISOString(),
       }
+
+      let savedId: string | null = recordId
 
       if (recordId) {
         // Update existing record
@@ -357,6 +413,7 @@ export default function ConsultationPage() {
         if (error) throw error
         if (newRecord) {
           setRecordId(newRecord.id)
+          savedId = newRecord.id
         }
       }
 
@@ -368,21 +425,30 @@ export default function ConsultationPage() {
           icon: <Save className="h-4 w-4" />,
         })
       }
+
+      return savedId
     } catch (error) {
       console.error("Error saving record:", error)
       if (!isAutoSave) {
         toast.error(isSpanish ? "Error al guardar" : "Error saving")
       }
+      return null
     } finally {
       setIsSaving(false)
     }
   }, [appointment, appointmentId, anamnesis, examination, diagnosis, diagnosisCode, treatment, privateNotes, vitalSigns, recordId, supabase, isSpanish])
 
   const handleSign = async () => {
-    if (!recordId) {
-      await handleSave(false)
+    let currentRecordId = recordId
+    if (!currentRecordId) {
+      currentRecordId = await handleSave(false)
     }
-    
+
+    if (!currentRecordId) {
+      toast.error(isSpanish ? "Error al guardar antes de firmar" : "Error saving before signing")
+      return
+    }
+
     try {
       const { error } = await supabase
         .from("medical_records")
@@ -391,7 +457,7 @@ export default function ConsultationPage() {
           is_signed: true,
           signed_at: new Date().toISOString(),
         })
-        .eq("id", recordId)
+        .eq("id", currentRecordId)
 
       if (error) throw error
 
@@ -551,6 +617,15 @@ export default function ConsultationPage() {
               />
 
               <Button 
+                variant="outline"
+                className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+                onClick={() => setReferralOpen(true)}
+              >
+                <LinkIcon className="h-4 w-4" />
+                {isSpanish ? "Derivar Paciente" : "Refer Patient"}
+              </Button>
+
+              <Button 
                 onClick={handleSign}
                 className="gap-2 bg-emerald-600 hover:bg-emerald-700"
               >
@@ -561,6 +636,14 @@ export default function ConsultationPage() {
           </div>
         </div>
       </div>
+
+      <ReferralModal
+        isOpen={referralOpen}
+        onOpenChange={setReferralOpen}
+        patientId={appointment.patient.id}
+        appointmentId={appointmentId}
+        isSpanish={isSpanish}
+      />
 
       {/* Main Content - Dual Column Layout */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
@@ -612,6 +695,63 @@ export default function ConsultationPage() {
                 </Badge>
               </CardContent>
             </Card>
+
+            {/* Active Referral Section (if any) */}
+            {activeReferral && (
+              <Card className="border-indigo-200/60 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-950/20 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-2 opacity-10">
+                  <LinkIcon className="h-24 w-24" />
+                </div>
+                <CardHeader className="pb-3 border-b border-indigo-100 dark:border-indigo-800/50">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+                    <LinkIcon className="h-4 w-4" />
+                    📄 Antecedentes de Derivación
+                  </CardTitle>
+                  <CardDescription className="text-xs text-indigo-600/70 dark:text-indigo-400/70">
+                    Dr/a. {activeReferral.referring_doctor}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4 space-y-3 relative z-10 text-sm">
+                  <div>
+                    <span className="font-semibold text-indigo-900 dark:text-indigo-200">Motivo: </span>
+                    <span className="text-indigo-800 dark:text-indigo-300">{activeReferral.reason}</span>
+                  </div>
+                  {activeReferral.original_record ? (
+                    <div className="space-y-2 mt-2 bg-white/60 dark:bg-slate-900/60 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/30">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Notas Clínicas Adjuntas</p>
+                      {activeReferral.original_record.reason_for_visit && (
+                        <div>
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Anamnesis: </span>
+                          <span className="text-slate-600 dark:text-slate-400">{activeReferral.original_record.reason_for_visit}</span>
+                        </div>
+                      )}
+                      {activeReferral.original_record.chief_complaint && (
+                        <div>
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Examen: </span>
+                          <span className="text-slate-600 dark:text-slate-400">{activeReferral.original_record.chief_complaint}</span>
+                        </div>
+                      )}
+                      {activeReferral.original_record.diagnosis && (
+                        <div>
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Diagnóstico: </span>
+                          <span className="text-slate-600 dark:text-slate-400">{activeReferral.original_record.diagnosis}</span>
+                        </div>
+                      )}
+                      {activeReferral.original_record.treatment && (
+                        <div>
+                          <span className="font-medium text-slate-700 dark:text-slate-300">Tratamiento: </span>
+                          <span className="text-slate-600 dark:text-slate-400">{activeReferral.original_record.treatment}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-indigo-600/70 dark:text-indigo-400/70">
+                      No se adjuntaron notas clínicas adicionales.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* History Timeline */}
             <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm">

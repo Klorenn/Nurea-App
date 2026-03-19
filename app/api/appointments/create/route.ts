@@ -5,7 +5,7 @@ import { normalizeAvailability, getAvailabilityForType, hasAnyAvailability } fro
 
 export async function POST(request: Request) {
   try {
-    const { professionalId, appointmentDate, appointmentTime, type, duration = 60 } = await request.json()
+    const { professionalId, appointmentDate, appointmentTime, type, duration = 60, consultationReason, isFirstVisit } = await request.json()
 
     if (!professionalId || !appointmentDate || !appointmentTime || !type) {
       return NextResponse.json(
@@ -67,15 +67,25 @@ export async function POST(request: Request) {
     // Obtener información completa del profesional
     const { data: professional, error: profError } = await supabase
       .from('professionals')
-      .select('consultation_price, online_price, in_person_price, consultation_type, availability, specialty, bio, bank_account, bank_name, registration_number, registration_institution')
+      .select('consultation_price, online_price, in_person_price, consultation_type, availability, specialty, bio, registration_number, registration_institution')
       .eq('id', professionalId)
       .single()
 
-    if (profError || !professional) {
+    if (profError) {
+      // Si Supabase falla (ej. por schema/columnas), no corresponde mostrar
+      // "no se encontró": es un problema técnico del backend.
+      console.error("Appointments create: professional lookup error:", profError)
       return NextResponse.json(
-        { 
-          error: 'professional_not_found',
-          message: 'No se encontró el profesional seleccionado.'
+        { error: "professional_lookup_failed", message: "Error al cargar el profesional." },
+        { status: 500 }
+      )
+    }
+
+    if (!professional) {
+      return NextResponse.json(
+        {
+          error: "professional_not_found",
+          message: "No se encontró el profesional seleccionado."
         },
         { status: 404 }
       )
@@ -94,35 +104,36 @@ export async function POST(request: Request) {
       missingFields.push('consultation_type')
     }
     
-    const consultationType = professional.consultation_type || 'both'
-    if (consultationType === 'online' || consultationType === 'both') {
-      if (!professional.online_price || professional.online_price === 0) {
-        missingFields.push('online_price')
+    // Solo validar precios del tipo de consulta solicitado.
+    // Esto evita bloquear reservas cuando el profesional ofrece "both" pero aún no completó
+    // el precio del tipo que el paciente NO está solicitando.
+    if (type === 'online') {
+      const consultationType = professional.consultation_type || 'both'
+      if (consultationType === 'online' || consultationType === 'both') {
+        if (!professional.online_price || Number(professional.online_price) === 0) {
+          missingFields.push('online_price')
+        }
       }
     }
-    if (consultationType === 'in-person' || consultationType === 'both') {
-      if (!professional.in_person_price || professional.in_person_price === 0) {
-        missingFields.push('in_person_price')
+
+    if (type === 'in-person') {
+      const consultationType = professional.consultation_type || 'both'
+      if (consultationType === 'in-person' || consultationType === 'both') {
+        if (!professional.in_person_price || Number(professional.in_person_price) === 0) {
+          missingFields.push('in_person_price')
+        }
       }
     }
     
     // Verificar disponibilidad usando helper (soporta formato antiguo y nuevo)
-    if (!hasAnyAvailability(professional.availability, professional.consultation_type || 'both')) {
+    if (!hasAnyAvailability(professional.availability, type)) {
       missingFields.push('availability')
     }
     
-    if (!professional.bank_account || professional.bank_account.trim() === '') {
-      missingFields.push('bank_account')
-    }
-    if (!professional.bank_name || professional.bank_name.trim() === '') {
-      missingFields.push('bank_name')
-    }
-    if (!professional.registration_number || professional.registration_number.trim() === '') {
-      missingFields.push('registration_number')
-    }
-    if (!professional.registration_institution || professional.registration_institution.trim() === '') {
-      missingFields.push('registration_institution')
-    }
+    // Para agendar no bloqueamos por datos bancarios/registro.
+    // Esos datos pueden ser requeridos para cobros/verificación, pero no deberían
+    // impedir que el paciente elija un horario si el profesional ya configuró
+    // especialidad, bio, modalidad y disponibilidad.
 
     if (missingFields.length > 0) {
       return NextResponse.json(
@@ -263,6 +274,19 @@ export async function POST(request: Request) {
       price = professional.in_person_price
     }
 
+    const normalizedConsultationReason =
+      typeof consultationReason === "string" ? consultationReason.trim() : ""
+    const normalizedIsFirstVisit: boolean | null =
+      typeof isFirstVisit === "boolean"
+        ? isFirstVisit
+        : typeof isFirstVisit === "string"
+          ? isFirstVisit === "true"
+            ? true
+            : isFirstVisit === "false"
+              ? false
+              : null
+          : null
+
     // Crear la cita
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
@@ -282,6 +306,16 @@ export async function POST(request: Request) {
 
     if (appointmentError) {
       console.error('Error creating appointment:', appointmentError)
+      const pgCode = (appointmentError as any)?.code as string | undefined
+      if (pgCode === '23505' || pgCode === '23P01') {
+        return NextResponse.json(
+          {
+            error: 'time_conflict',
+            message: 'Este horario ya está ocupado. Por favor, selecciona otro horario.',
+          },
+          { status: 409 }
+        )
+      }
       return NextResponse.json(
         { 
           error: 'creation_failed',
@@ -354,6 +388,12 @@ export async function POST(request: Request) {
     })
     const formattedTime = appointmentTime
     const typeLabel = type === 'online' ? 'Online' : 'Presencial'
+    const firstVisitLabel =
+      normalizedIsFirstVisit === null
+        ? "No especificado"
+        : normalizedIsFirstVisit
+          ? "Sí (primera vez)"
+          : "No"
 
     // Crear mensaje predefinido en el chat
     // IMPORTANTE: El mensaje se crea DESPUÉS de intentar crear el meeting para incluir el link solo si existe
@@ -363,6 +403,11 @@ export async function POST(request: Request) {
 🕐 Hora: ${formattedTime}
 💻 Tipo: ${typeLabel}
 👨‍⚕️ Profesional: ${professionalName}`
+
+    if (normalizedConsultationReason) {
+      messageContent += `\n\n📝 Motivo de consulta: ${normalizedConsultationReason}`
+    }
+    messageContent += `\n\n🏁 Primera vez: ${firstVisitLabel}`
 
     // Agregar meeting link solo si es online y el link fue creado exitosamente
     if (type === 'online') {
@@ -393,6 +438,38 @@ export async function POST(request: Request) {
     if (messageError) {
       console.error('Error creating message:', messageError)
       // No fallar la creación de la cita si el mensaje falla
+    }
+
+    // Enviar también los datos de la consulta como primer mensaje al sistema de chat moderno
+    // (conversaciones + chat_messages), para que el especialista lo vea al aceptar.
+    try {
+      const { data: conversationId } = await supabase.rpc("get_or_create_conversation", {
+        p_user_a: user.id,
+        p_user_b: professionalId,
+        p_professional_id: professionalId,
+      })
+
+      if (conversationId) {
+        const systemContent =
+          `Motivo de consulta: ${normalizedConsultationReason || "No especificado"}\n` +
+          `Primera vez con el especialista: ${firstVisitLabel}`
+
+        const { error: chatInsertError } = await supabase
+          .from("chat_messages")
+          .insert({
+            conversation_id: conversationId,
+            sender_id: user.id,
+            content: systemContent,
+            message_type: "system",
+            status: "sent",
+          })
+
+        if (chatInsertError) {
+          console.error("Error inserting into chat_messages:", chatInsertError)
+        }
+      }
+    } catch (chatConvError) {
+      console.error("Error creating chat conversation/message:", chatConvError)
     }
 
     // Enviar email de confirmación

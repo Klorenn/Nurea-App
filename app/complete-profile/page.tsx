@@ -55,8 +55,18 @@ function CompleteProfileContent() {
       if (data.profile?.date_of_birth) {
         // Profile is complete, redirect based on role
         const userRole = data.profile?.role || 'patient'
-        const redirectPath = userRole === 'professional' ? '/professional/onboarding' : '/dashboard'
+        let redirectPath = '/dashboard'
+        
+        if (userRole === 'professional') {
+          redirectPath = '/dashboard/professional'
+        } else if (userRole === 'admin') {
+          redirectPath = '/dashboard/admin'
+        } else {
+          redirectPath = '/dashboard/patient'
+        }
+        
         router.push(redirectPath)
+
       }
     } catch (err) {
       console.error("Error checking profile:", err)

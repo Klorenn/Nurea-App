@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion, type Variants } from "framer-motion"
@@ -32,6 +32,7 @@ import {
   CalendarCheck,
   Star,
   Sparkles,
+  Camera,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -57,8 +58,10 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { format, parseISO, isToday, isTomorrow, differenceInHours, isPast } from "date-fns"
 import { es, enUS } from "date-fns/locale"
+import { mutate } from "swr"
 import { toast } from "sonner"
 import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
+import { Link as LinkIcon } from "lucide-react"
 
 interface Appointment {
   id: string
@@ -93,6 +96,30 @@ interface MedicalRecord {
   professional: {
     first_name: string
     last_name: string
+  }
+}
+
+interface Referral {
+  id: string
+  created_at: string
+  reason: string
+  status: string
+  clinical_summary_access: boolean
+  referring_professional: {
+    profiles: {
+      first_name: string
+      last_name: string
+    }
+  }
+  target_specialty?: {
+    name_es: string
+    name_en: string
+  }
+  target_professional?: {
+    profiles: {
+      first_name: string
+      last_name: string
+    }
   }
 }
 
@@ -144,10 +171,14 @@ export default function PatientDashboard() {
   const [pastAppointments, setPastAppointments] = useState<Appointment[]>([])
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([])
+  const [allReferrals, setAllReferrals] = useState<Referral[]>([])
+  const [pendingReferrals, setPendingReferrals] = useState<Referral[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
   const [editedPhone, setEditedPhone] = useState("")
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -260,6 +291,28 @@ export default function PatientDashboard() {
           setMedicalRecords(typedRecords as MedicalRecord[])
         }
 
+        // Load all referrals
+        const { data: referralsData } = await supabase
+          .from("referrals")
+          .select(`
+            id, created_at, reason, status, clinical_summary_access,
+            referring_professional:professionals!referrals_referring_professional_id_fkey(
+              profiles!professionals_id_fkey(first_name, last_name)
+            ),
+            target_specialty:specialties(name_es, name_en),
+            target_professional:professionals!referrals_target_professional_id_fkey(
+              profiles!professionals_id_fkey(first_name, last_name)
+            )
+          `)
+          .eq("patient_id", user.id)
+          .order("created_at", { ascending: false })
+
+        if (referralsData) {
+          const refs = referralsData as unknown as Referral[]
+          setAllReferrals(refs)
+          setPendingReferrals(refs.filter(r => r.status === "pending" || !r.clinical_summary_access))
+        }
+
       } catch (error) {
         console.error("Error loading dashboard data:", error)
       } finally {
@@ -269,6 +322,44 @@ export default function PatientDashboard() {
 
     loadData()
   }, [user, supabase])
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(isSpanish ? "La imagen es muy grande. Máximo 5MB." : "Image too large. Max 5MB.")
+      return
+    }
+    setUploadingAvatar(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `avatars/${user.id}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      
+      // 1. Update profiles table
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+      
+      // 2. Update auth metadata so the global header / navbar refreshes
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      })
+      
+      // 3. Update local state
+      setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : null)
+      toast.success(isSpanish ? "Foto actualizada ✓" : "Photo updated ✓")
+      // Invalidate the unified profile key
+      mutate(["profile", user?.id])
+    } catch (err) {
+      console.error(err)
+      toast.error(isSpanish ? "Error al subir la foto" : "Error uploading photo")
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
 
   const handleSaveProfile = async () => {
     if (!user) return
@@ -299,6 +390,26 @@ export default function PatientDashboard() {
     }
   }
 
+  const authorizeReferral = async (referralId: string) => {
+    try {
+      const { error } = await supabase
+        .from("referrals")
+        .update({ 
+          clinical_summary_access: true,
+          status: 'authorized'
+        })
+        .eq("id", referralId)
+      
+      if (error) throw error
+      
+      toast.success(isSpanish ? "Acceso autorizado exitosamente" : "Access authorized successfully")
+      setPendingReferrals(prev => prev.filter(r => r.id !== referralId))
+    } catch (error) {
+      console.error("Error authorizing referral:", error)
+      toast.error(isSpanish ? "Error al autorizar" : "Error authorizing")
+    }
+  }
+
   const formatDate = (dateString: string) => {
     const date = parseISO(dateString)
     if (isToday(date)) return isSpanish ? "Hoy" : "Today"
@@ -317,6 +428,8 @@ export default function PatientDashboard() {
     e.preventDefault()
     if (searchQuery.trim()) {
       router.push(`/explore?q=${encodeURIComponent(searchQuery)}`)
+    } else {
+      router.push("/explore")
     }
   }
 
@@ -507,18 +620,23 @@ export default function PatientDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleSearch}>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  placeholder={
-                    isSpanish
-                      ? "Buscar por especialidad, nombre o síntoma..."
-                      : "Search by specialty, name, or symptom..."
-                  }
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 h-12 rounded-xl text-base bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:border-teal-500"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Input
+                    placeholder={
+                      isSpanish
+                        ? "Buscar por especialidad, nombre o síntoma..."
+                        : "Search by specialty, name, or symptom..."
+                    }
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-12 h-12 rounded-xl text-base bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:border-teal-500"
+                  />
+                </div>
+                <Button type="submit" className="h-12 rounded-xl px-5 bg-teal-600 hover:bg-teal-700 text-white shrink-0">
+                  {isSpanish ? "Buscar" : "Search"}
+                </Button>
               </div>
             </form>
 
@@ -544,6 +662,55 @@ export default function PatientDashboard() {
         </Card>
       </motion.div>
 
+      {/* Pending Referrals (Derivaciones) */}
+      {pendingReferrals.length > 0 && (
+        <motion.div variants={itemVariants}>
+          <Card className="border-indigo-200/60 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-950/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+                <LinkIcon className="h-5 w-5" />
+                {isSpanish ? "Derivaciones Pendientes" : "Pending Referrals"}
+              </CardTitle>
+              <CardDescription>
+                {isSpanish ? "Tienes nuevas derivaciones de tus doctores. Autoriza el acceso a tu ficha." : "You have new referrals. Authorize access to your medical record."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {pendingReferrals.map((ref) => (
+                <div key={ref.id} className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="border-indigo-200 text-indigo-700">
+                        Dr. {ref.referring_professional.profiles.first_name} {ref.referring_professional.profiles.last_name}
+                      </Badge>
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                      <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-300">
+                        {ref.target_specialty 
+                          ? (isSpanish ? ref.target_specialty.name_es : ref.target_specialty.name_en) 
+                          : "Especialista"}{ref.target_professional ? ` - Dr. ${ref.target_professional.profiles.first_name} ${ref.target_professional.profiles.last_name}` : ""}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                      <strong>Motivo:</strong> {ref.reason}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {formatDate(ref.created_at)}
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={() => authorizeReferral(ref.id)}
+                    className="shrink-0 gap-2 bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    <Shield className="h-4 w-4" />
+                    {isSpanish ? "Autorizar acceso a mi ficha" : "Authorize record access"}
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Two Column Layout for Documents and History */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
@@ -568,9 +735,9 @@ export default function PatientDashboard() {
               </Button>
             </CardHeader>
             <CardContent>
-              {medicalRecords.length > 0 ? (
+              {medicalRecords.length > 0 || allReferrals.length > 0 ? (
                 <div className="space-y-3">
-                  {medicalRecords.slice(0, 4).map((record) => (
+                  {medicalRecords.slice(0, 3).map((record) => (
                     <div
                       key={record.id}
                       className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group"
@@ -583,10 +750,10 @@ export default function PatientDashboard() {
                           <p className="font-medium text-slate-900 dark:text-white text-sm">
                             Dr. {record.professional?.first_name} {record.professional?.last_name}
                           </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                             {format(parseISO(record.created_at), "d MMM yyyy", { locale })}
                             {record.diagnosis_code && (
-                              <Badge variant="outline" className="ml-2 text-[10px] h-4">
+                              <Badge variant="outline" className="text-[10px] h-4">
                                 {record.diagnosis_code}
                               </Badge>
                             )}
@@ -600,6 +767,42 @@ export default function PatientDashboard() {
                         asChild
                       >
                         <Link href={`/api/documents/prescription/${record.id}`} target="_blank">
+                          <Download className="h-4 w-4" />
+                          PDF
+                        </Link>
+                      </Button>
+                    </div>
+                  ))}
+
+                  {/* Referrals */}
+                  {allReferrals.slice(0, 2).map((ref) => (
+                    <div
+                      key={ref.id}
+                      className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+                          <LinkIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900 dark:text-white text-sm">
+                            Interconsulta
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {formatDate(ref.created_at)}
+                            <Badge variant="outline" className="ml-2 text-[10px] h-4 border-indigo-200 text-indigo-700">
+                              Dr. {ref.referring_professional.profiles.first_name} {ref.referring_professional.profiles.last_name}
+                            </Badge>
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        asChild
+                      >
+                        <Link href={`/api/documents/referral/${ref.id}`} target="_blank">
                           <Download className="h-4 w-4" />
                           PDF
                         </Link>
@@ -758,12 +961,28 @@ export default function PatientDashboard() {
           <CardContent>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50">
               <div className="flex items-center gap-4">
-                <Avatar className="h-14 w-14 border-2 border-teal-500/20">
-                  <AvatarImage src={profile?.avatar_url} />
-                  <AvatarFallback className="bg-teal-100 text-teal-700 text-lg">
-                    {profile?.first_name?.[0]}{profile?.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative group/avatar cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
+                  <Avatar className="h-14 w-14 border-2 border-teal-500/20">
+                    <AvatarImage src={profile?.avatar_url} />
+                    <AvatarFallback className="bg-teal-100 text-teal-700 text-lg">
+                      {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
+                    {uploadingAvatar ? (
+                      <Loader2 className="h-5 w-5 text-white animate-spin" />
+                    ) : (
+                      <Camera className="h-5 w-5 text-white" />
+                    )}
+                  </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
+                </div>
                 <div>
                   <p className="font-semibold text-slate-900 dark:text-white">
                     {profile?.first_name || user?.user_metadata?.first_name} {profile?.last_name || user?.user_metadata?.last_name}
@@ -859,7 +1078,7 @@ export default function PatientDashboard() {
                   : "Find verified specialists and book your appointment in minutes"}
               </p>
               <Button size="lg" className="bg-teal-600 hover:bg-teal-700 gap-2 rounded-xl h-12 px-6" asChild>
-                <Link href="/explore">
+                <Link href="/search">
                   <Search className="h-5 w-5" />
                   {isSpanish ? "Buscar Especialista" : "Find a Specialist"}
                 </Link>

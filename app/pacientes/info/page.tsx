@@ -142,8 +142,8 @@ export default function PacientesInfoPage() {
                       </CardHeader>
                       <CardContent className="space-y-2 text-muted-foreground">
                         <p>{isSpanish 
-                          ? "El pago se realiza antes de la cita a través de Stripe o MercadoPago. NUREA actúa como intermediario tecnológico y gestiona el pago de forma segura."
-                          : "Payment is made before the appointment through Stripe or MercadoPago. NUREA acts as a technology intermediary and manages payment securely."}</p>
+                          ? "La coordinación y el pago de la consulta se realizan directamente con el especialista a través del chat seguro de la plataforma."
+                          : "Appointment coordination and payment are done directly with the specialist through the platform's secure chat."}</p>
                       </CardContent>
                     </Card>
 

@@ -12,7 +12,9 @@ import {
   Download,
   Search,
   Filter,
-  Loader2
+  Loader2,
+  Link as LinkIcon,
+  Unlink
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -40,6 +42,7 @@ export default function ProfessionalPaymentsPage() {
   
   const [loading, setLoading] = useState(true)
   const [transactions, setTransactions] = useState<any[]>([])
+  const [profile, setProfile] = useState<any>(null)
   const [stats, setStats] = useState({
     available: 0,
     escrow: 0,
@@ -64,6 +67,15 @@ export default function ProfessionalPaymentsPage() {
         if (error) throw error
 
         setTransactions(data || [])
+
+        // Fetch profile for MP config
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("mp_user_id")
+          .eq("id", user.id)
+          .single()
+        
+        setProfile(profileData)
 
         // Calculate stats
         const available = data
@@ -118,6 +130,66 @@ export default function ProfessionalPaymentsPage() {
             : "Manage your income and withdrawals. At NUREA, you receive 100% of what your patients pay."}
         </p>
       </div>
+
+      {/* Marketplace Integration Card */}
+      <Card className="border-blue-100 bg-white dark:bg-slate-900 shadow-sm">
+        <CardHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-blue-500" />
+            {isSpanish ? "Integración Mercado Pago" : "Mercado Pago Integration"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white">
+                {isSpanish ? "Recibe pagos directos (Split Payments)" : "Receive direct payments (Split Payments)"}
+              </h3>
+              <p className="text-sm text-slate-500 mt-1 max-w-2xl">
+                {isSpanish 
+                  ? "Conecta tu cuenta de Mercado Pago para que los pagos de tus pacientes vayan directamente a tu cuenta. NUREA debitará automáticamente un 5% de comisión por cada cita." 
+                  : "Connect your Mercado Pago account so patients' payments go directly to your account. NUREA will automatically deduct a 5% fee for each appointment."}
+              </p>
+            </div>
+            
+            <div className="shrink-0 flex items-center gap-3">
+              {profile?.mp_user_id ? (
+                <>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 px-3 py-1">
+                    <CheckCircle2 className="w-4 h-4" /> 
+                    {isSpanish ? "Conectado" : "Connected"}
+                  </Badge>
+                  <Button 
+                    variant="outline" 
+                    className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                    onClick={async () => {
+                      if(confirm(isSpanish ? '¿Estás seguro de desconectar tu cuenta?' : 'Are you sure to disconnect?')){
+                        await supabase.from('profiles').update({ mp_access_token: null, mp_refresh_token: null, mp_user_id: null, mp_public_key: null }).eq('id', user?.id)
+                        setProfile({...profile, mp_user_id: null})
+                      }
+                    }}
+                  >
+                    <Unlink className="w-4 h-4 mr-2" />
+                    {isSpanish ? "Desvincular" : "Disconnect"}
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  onClick={() => {
+                    const clientId = process.env.NEXT_PUBLIC_MP_CLIENT_ID || '';
+                    const redirectUri = `${window.location.origin}/api/auth/mercadopago`;
+                    window.location.href = `https://auth.mercadopago.com/authorization?client_id=${clientId}&response_type=code&platform_id=mp&redirect_uri=${redirectUri}`;
+                  }}
+                >
+                  <LinkIcon className="w-4 h-4 mr-2" />
+                  {isSpanish ? "Conectar Cuenta" : "Connect Account"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid gap-6 md:grid-cols-3">

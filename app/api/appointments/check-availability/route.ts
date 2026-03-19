@@ -14,12 +14,24 @@ export async function GET(request: Request) {
     const date = searchParams.get('date')
     const time = searchParams.get('time')
     const type = searchParams.get('type') as 'online' | 'in-person' | null // Tipo de consulta solicitada
+    const durationParam = searchParams.get('duration')
+    const duration = durationParam ? Number(durationParam) : 60
 
     if (!professionalId || !date || !time) {
       return NextResponse.json(
         { 
           error: 'missing_fields',
           message: 'Por favor, proporciona professionalId, date y time.'
+        },
+        { status: 400 }
+      )
+    }
+    
+    if (!Number.isFinite(duration) || duration <= 0 || duration > 24 * 60) {
+      return NextResponse.json(
+        {
+          error: 'invalid_duration',
+          message: 'Duración inválida.',
         },
         { status: 400 }
       )
@@ -66,35 +78,32 @@ export async function GET(request: Request) {
       missingFields.push('consultation_type')
     }
     
-    const consultationType = professional.consultation_type || 'both'
-    if (consultationType === 'online' || consultationType === 'both') {
-      if (!professional.online_price || professional.online_price === 0) {
-        missingFields.push('online_price')
+    // Solo validar precios del tipo solicitado
+    if (type === 'online') {
+      const consultationType = professional.consultation_type || 'both'
+      if (consultationType === 'online' || consultationType === 'both') {
+        if (!professional.online_price || Number(professional.online_price) === 0) {
+          missingFields.push('online_price')
+        }
       }
     }
-    if (consultationType === 'in-person' || consultationType === 'both') {
-      if (!professional.in_person_price || professional.in_person_price === 0) {
-        missingFields.push('in_person_price')
+
+    if (type === 'in-person') {
+      const consultationType = professional.consultation_type || 'both'
+      if (consultationType === 'in-person' || consultationType === 'both') {
+        if (!professional.in_person_price || Number(professional.in_person_price) === 0) {
+          missingFields.push('in_person_price')
+        }
       }
     }
     
     // Verificar disponibilidad usando helper (soporta formato antiguo y nuevo)
-    if (!hasAnyAvailability(professional.availability, professional.consultation_type || 'both')) {
+    if (!hasAnyAvailability(professional.availability, type || 'online')) {
       missingFields.push('availability')
     }
     
-    if (!professional.bank_account || professional.bank_account.trim() === '') {
-      missingFields.push('bank_account')
-    }
-    if (!professional.bank_name || professional.bank_name.trim() === '') {
-      missingFields.push('bank_name')
-    }
-    if (!professional.registration_number || professional.registration_number.trim() === '') {
-      missingFields.push('registration_number')
-    }
-    if (!professional.registration_institution || professional.registration_institution.trim() === '') {
-      missingFields.push('registration_institution')
-    }
+    // Para agendar no bloqueamos por datos bancarios/registro.
+    // Se validan specialty/bio/modalidad y disponibilidad según el tipo solicitado.
 
     if (missingFields.length > 0) {
       return NextResponse.json({
@@ -182,7 +191,6 @@ export async function GET(request: Request) {
     // Verificar si hay conflicto de horarios
     if (existingAppointments && existingAppointments.length > 0) {
       const appointmentTimeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
-      const duration = 60 // Duración por defecto
 
       for (const existing of existingAppointments) {
         const existingTimeParts = existing.appointment_time.split(':')

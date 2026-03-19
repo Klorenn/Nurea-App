@@ -17,7 +17,7 @@ export function PatientToolbar() {
       id: 1,
       label: t.dashboard.overview,
       icon: <LayoutDashboard className="h-4 w-4" />,
-      href: "/dashboard",
+      href: "/dashboard/patient",
       content: (
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">{t.dashboard.overview}</h3>
@@ -27,11 +27,11 @@ export function PatientToolbar() {
               : "View your health summary and upcoming appointments"}
           </p>
           <Button 
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/dashboard/patient")}
             className="w-full mt-2"
             size="sm"
           >
-            {language === "es" ? "Ir al Dashboard" : "Go to Dashboard"}
+            {language === "es" ? "Ver resumen" : "View Summary"}
           </Button>
         </div>
       ),
@@ -40,7 +40,7 @@ export function PatientToolbar() {
       id: 2,
       label: t.dashboard.appointments,
       icon: <Calendar className="h-4 w-4" />,
-      href: "/dashboard/appointments",
+      href: "/dashboard/patient/citas",
       content: (
         <div className="space-y-2">
           <h3 className="font-semibold text-foreground">{t.dashboard.appointments}</h3>
@@ -50,7 +50,7 @@ export function PatientToolbar() {
               : "Manage your scheduled appointments"}
           </p>
           <Button 
-            onClick={() => router.push("/dashboard/appointments")}
+            onClick={() => router.push("/dashboard/patient/citas")}
             className="w-full mt-2"
             size="sm"
           >

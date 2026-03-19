@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
+import { cn } from "@/lib/utils"
+import { GoogleAddressInput } from "@/components/ui/google-address-input"
 import { RouteGuard } from "@/components/auth/route-guard"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,11 +27,17 @@ import {
   DollarSign,
   FileText,
   X,
+  Ticket,
+  ChevronRight,
+  ShieldCheck,
+  Crown
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { normalizeAvailability } from "@/lib/utils/availability-helpers"
+import { trackEvent } from "@/lib/utils/analytics"
+import { toast } from "sonner"
 
 const TOTAL_STEPS = 6
 
@@ -42,12 +51,108 @@ export default function ProfessionalOnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedData, setSavedData] = useState<any>(null)
+  const [inviteCode, setInviteCode] = useState("")
+  const [isInviteValid, setIsInviteValid] = useState(false)
+  const [isValidatingInvite, setIsValidatingInvite] = useState(false)
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null)
+  
+  // Hard Gate State
+  const [accessGranted, setAccessGranted] = useState(false)
+  const [hardGateCode, setHardGateCode] = useState("")
+  const [isVerifyingGate, setIsVerifyingGate] = useState(false)
+  const [gateError, setGateError] = useState<string | null>(null)
+  
+  // Waitlist State
+  const [showWaitlist, setShowWaitlist] = useState(false)
+  const [waitlistEmail, setWaitlistEmail] = useState("")
+  const [isJoiningWaitlist, setIsJoiningWaitlist] = useState(false)
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false)
 
   // Step 1: Basic Info
   const [specialty, setSpecialty] = useState("")
   const [bio, setBio] = useState("")
   const [yearsExperience, setYearsExperience] = useState("")
   const [location, setLocation] = useState("")
+
+  const validateInvite = async () => {
+    if (!inviteCode) return
+    setIsValidatingInvite(true)
+    setInviteMessage(null)
+    try {
+      const response = await fetch("/api/auth/verify-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: inviteCode }),
+      })
+      const data = await response.json()
+      if (data.valid) {
+        setIsInviteValid(true)
+        setInviteMessage(data.message)
+      } else {
+        setIsInviteValid(false)
+        setInviteMessage(data.message)
+      }
+    } catch (err) {
+      setInviteMessage(isSpanish ? "Error al validar el código" : "Error validating code")
+    } finally {
+      setIsValidatingInvite(false)
+    }
+  }
+
+  const handleVerifyHardGate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!hardGateCode) return
+    
+    setIsVerifyingGate(true)
+    setGateError(null)
+    
+    try {
+      const response = await fetch("/api/auth/verify-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: hardGateCode }),
+      })
+      
+      const data = await response.json()
+      
+      if (data.valid) {
+        setAccessGranted(true)
+        setInviteCode(hardGateCode)
+        setIsInviteValid(true)
+        setInviteMessage(data.message)
+        trackEvent('hard_gate_success', { code: hardGateCode })
+      } else {
+        setGateError(data.message)
+      }
+    } catch (err) {
+      setGateError(isSpanish ? "Error de conexión" : "Connection error")
+    } finally {
+      setIsVerifyingGate(false)
+    }
+  }
+
+  const handleJoinWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!waitlistEmail) return
+    
+    setIsJoiningWaitlist(true)
+    try {
+      const response = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: waitlistEmail }),
+      })
+      
+      if (response.ok) {
+        setWaitlistSuccess(true)
+        toast.success(isSpanish ? "¡Te has unido a la lista de espera!" : "Joined waitlist!")
+      }
+    } catch (err) {
+      toast.error(isSpanish ? "Error al unirse" : "Error joining")
+    } finally {
+      setIsJoiningWaitlist(false)
+    }
+  }
 
   // Step 2: Services & Languages
   const [services, setServices] = useState<string[]>([])
@@ -160,6 +265,8 @@ export default function ProfessionalOnboardingPage() {
           bankName,
           registrationNumber,
           registrationInstitution,
+          referralCodeUsed: isInviteValid ? inviteCode : undefined,
+          isVip: isInviteValid,
         }),
       })
 
@@ -170,7 +277,12 @@ export default function ProfessionalOnboardingPage() {
       }
 
       if (finalStep && data.isComplete) {
-        // Onboarding complete, redirect to dashboard
+        // Onboarding complete, track and redirect
+        trackEvent('professional_registration_success', {
+          invite_code: isInviteValid ? inviteCode : null,
+          is_vip: isInviteValid,
+          specialty
+        })
         router.push("/professional/dashboard")
       } else if (finalStep && !data.isComplete) {
         setError(isSpanish 
@@ -213,6 +325,10 @@ export default function ProfessionalOnboardingPage() {
         }
         if (!bio.trim()) {
           setError(isSpanish ? "La biografía es requerida" : "Bio is required")
+          return false
+        }
+        if (!isInviteValid) {
+          setError(isSpanish ? "Debes validar un código de invitación VIP" : "You must validate a VIP invitation code")
           return false
         }
         return true
@@ -364,10 +480,146 @@ export default function ProfessionalOnboardingPage() {
 
   return (
     <RouteGuard requiredRole="professional">
-      <div className="min-h-screen bg-background py-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Progress Header */}
-          <Card className="mb-6">
+      <div className="min-h-screen bg-background py-8 px-4 relative overflow-hidden">
+        {/* Decorative Background */}
+        <div className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-40">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500 rounded-full blur-[120px]" />
+        </div>
+
+        <div className="max-w-4xl mx-auto relative z-10">
+          {!accessGranted && !savedData?.isComplete ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-8"
+            >
+              <div className="relative">
+                <div className="w-20 h-20 rounded-[2rem] bg-slate-950 flex items-center justify-center shadow-2xl border border-white/10 ring-8 ring-slate-100 dark:ring-slate-800">
+                  <ShieldCheck className="h-10 w-10 text-teal-400" />
+                </div>
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900">
+                  <Crown className="h-3 w-3 text-white" />
+                </div>
+              </div>
+
+              <div className="space-y-3 max-w-md">
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  {isSpanish ? "Acceso Exclusivo NUREA" : "NUREA Exclusive Access"}
+                </h1>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {isSpanish 
+                    ? "NUREA se encuentra actualmente en fase privada. Introduce tu código de acceso exclusivo para continuar al onboarding profesional."
+                    : "NUREA is currently in private phase. Enter your exclusive access code to proceed to professional onboarding."}
+                </p>
+              </div>
+
+              {!showWaitlist ? (
+                <form onSubmit={handleVerifyHardGate} className="w-full max-w-sm space-y-4">
+                  <div className="relative group">
+                    <Input
+                      type="text"
+                      placeholder="ESCRIBE TU CÓDIGO AQUÍ"
+                      value={hardGateCode}
+                      onChange={(e) => setHardGateCode(e.target.value.toUpperCase())}
+                      className="h-14 bg-white dark:bg-slate-950 border-2 border-slate-200 dark:border-slate-800 focus:border-teal-500 focus:ring-teal-500 rounded-2xl text-center font-mono text-xl tracking-widest uppercase transition-all shadow-inner"
+                      disabled={isVerifyingGate}
+                    />
+                    <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 opacity-50 group-focus-within:text-teal-500 transition-colors" />
+                  </div>
+                  
+                  {gateError && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm font-medium text-red-500 bg-red-50 dark:bg-red-500/10 py-2 rounded-lg inline-block px-4"
+                    >
+                      {gateError}
+                    </motion.p>
+                  )}
+
+                  <Button 
+                    type="submit" 
+                    disabled={!hardGateCode || isVerifyingGate}
+                    className="w-full h-14 bg-slate-950 hover:bg-slate-900 text-white rounded-2xl text-lg font-bold shadow-xl shadow-teal-500/10 group overflow-hidden relative"
+                  >
+                    {isVerifyingGate ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                          {isSpanish ? "Desbloquear Acceso" : "Unlock Access"}
+                          <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-teal-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </>
+                    )}
+                  </Button>
+
+                  <div className="pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowWaitlist(true)}
+                      className="text-sm font-medium text-slate-500 hover:text-teal-600 transition-colors underline underline-offset-4"
+                    >
+                      {isSpanish ? "¿No tienes un código? Únete a la lista de espera" : "Don't have a code? Join the waitlist"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="w-full max-w-sm space-y-4"
+                >
+                  {waitlistSuccess ? (
+                    <div className="p-6 bg-teal-50 dark:bg-teal-500/10 rounded-2xl border border-teal-200 dark:border-teal-500/20 text-teal-700 dark:text-teal-300">
+                      <CheckCircle2 className="h-10 w-10 mx-auto mb-4" />
+                      <h3 className="font-bold mb-1">{isSpanish ? "¡Estás en la lista!" : "You're on the list!"}</h3>
+                      <p className="text-sm opacity-80">
+                        {isSpanish ? "Te avisaremos en cuanto abramos más cupos para especialistas." : "We'll let you know as soon as we open more spots for specialists."}
+                      </p>
+                      <Button variant="ghost" onClick={() => setShowWaitlist(false)} className="mt-4 text-xs">
+                        {isSpanish ? "Volver" : "Back"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleJoinWaitlist} className="space-y-4">
+                      <div className="space-y-1 text-left">
+                        <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 px-2">
+                          Email corporativo / profesional
+                        </Label>
+                        <Input
+                          type="email"
+                          placeholder="doctor@ejemplo.com"
+                          value={waitlistEmail}
+                          onChange={(e) => setWaitlistEmail(e.target.value)}
+                          className="h-12 rounded-xl focus:ring-teal-500"
+                          disabled={isJoiningWaitlist}
+                        />
+                      </div>
+                      <Button 
+                        disabled={!waitlistEmail || isJoiningWaitlist}
+                        className="w-full h-12 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold"
+                      >
+                        {isJoiningWaitlist ? <Loader2 className="h-4 w-4 animate-spin" /> : (isSpanish ? "Solicitar Acceso" : "Request Access")}
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => setShowWaitlist(false)}
+                        className="text-xs text-slate-500 hover:underline"
+                      >
+                        {isSpanish ? "Tengo un código" : "I have a code"}
+                      </button>
+                    </form>
+                  )}
+                </motion.div>
+              )}
+            </motion.div>
+          ) : (
+            <>
+              {/* Progress Header */}
+              <Card className="mb-6 overflow-hidden border-none shadow-xl shadow-slate-200/50 dark:shadow-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
             <CardHeader>
               <CardTitle className="text-2xl">
                 {isSpanish ? "Configuración de Perfil Profesional" : "Professional Profile Setup"}
@@ -436,6 +688,81 @@ export default function ProfessionalOnboardingPage() {
                       placeholder={isSpanish ? "Ej: Psicólogo Clínico" : "E.g: Clinical Psychologist"}
                     />
                   </div>
+
+                  {/* VIP Invitation Block */}
+                  <div className="p-6 rounded-[2rem] border-2 border-dashed border-teal-500/30 bg-teal-500/5 relative overflow-hidden group">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center">
+                        <Ticket className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                      </div>
+                      <div>
+                        <Label className="text-base font-bold text-slate-900 dark:text-white">
+                          {isSpanish ? "Código de Invitación VIP" : "VIP Invitation Code"} *
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {isSpanish ? "Requerido para el lanzamiento privado" : "Required for private launch"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Input
+                        value={inviteCode}
+                        onChange={(e) => {
+                          setInviteCode(e.target.value.toUpperCase())
+                          setIsInviteValid(false)
+                          setInviteMessage(null)
+                        }}
+                        placeholder="NUREA50"
+                        className={cn(
+                          "font-mono text-lg tracking-widest h-12 bg-white dark:bg-slate-950",
+                          isInviteValid && "border-teal-500 ring-teal-500 bg-teal-50/50"
+                        )}
+                        disabled={isInviteValid || isValidatingInvite}
+                      />
+                      {!isInviteValid ? (
+                        <Button 
+                          type="button" 
+                          onClick={validateInvite}
+                          disabled={!inviteCode || isValidatingInvite}
+                          className="h-12 px-6 bg-teal-600 hover:bg-teal-700 text-white"
+                        >
+                          {isValidatingInvite ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            isSpanish ? "Validar" : "Validate"
+                          )}
+                        </Button>
+                      ) : (
+                        <div className="h-12 px-4 flex items-center justify-center rounded-xl bg-teal-500 text-white shadow-lg shadow-teal-500/20">
+                          <ShieldCheck className="h-6 w-6" />
+                        </div>
+                      )}
+                    </div>
+
+                    {inviteMessage && (
+                      <motion.p 
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={cn(
+                          "mt-3 text-sm font-medium flex items-center gap-2",
+                          isInviteValid ? "text-teal-600 dark:text-teal-400" : "text-red-500"
+                        )}
+                      >
+                        {isInviteValid ? <Crown className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                        {inviteMessage}
+                      </motion.p>
+                    )}
+                    
+                    {isInviteValid && (
+                      <div className="absolute top-2 right-2 flex items-center gap-1">
+                        <Badge className="bg-amber-500 text-white border-none animate-pulse">
+                          FOUNDER VIP
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <Label htmlFor="bio">
                       {isSpanish ? "Biografía" : "Biography"} *
@@ -616,12 +943,12 @@ export default function ProfessionalOnboardingPage() {
                         <Label htmlFor="clinicAddress">
                           {isSpanish ? "Dirección de la Clínica" : "Clinic Address"} *
                         </Label>
-                        <Textarea
-                          id="clinicAddress"
+                        <GoogleAddressInput
                           value={clinicAddress}
-                          onChange={(e) => setClinicAddress(e.target.value)}
-                          placeholder={isSpanish ? "Dirección completa..." : "Full address..."}
-                          rows={3}
+                          onChange={(val) => setClinicAddress(val)}
+                          placeholder={isSpanish ? "Busca la dirección de tu clínica..." : "Search your clinic address..."}
+                          className="rounded-xl"
+                          language={isSpanish ? "es" : "en"}
                         />
                       </div>
                     </>
@@ -785,7 +1112,7 @@ export default function ProfessionalOnboardingPage() {
                   <Button
                     type="button"
                     onClick={handleNext}
-                    disabled={saving}
+                    disabled={saving || (currentStep === 1 && !isInviteValid)}
                   >
                     {isSpanish ? "Siguiente" : "Next"}
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -812,6 +1139,8 @@ export default function ProfessionalOnboardingPage() {
               </div>
             </CardContent>
           </Card>
+            </>
+          )}
         </div>
       </div>
     </RouteGuard>

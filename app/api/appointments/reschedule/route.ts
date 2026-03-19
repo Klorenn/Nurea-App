@@ -66,21 +66,29 @@ export async function POST(request: Request) {
     }
 
     // Verificar que la cita existe y pertenece al usuario
-    // Incluir campos necesarios para manejo de meeting rooms si es online
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .select('*, type, meeting_room_id, meeting_link, appointment_date, appointment_time')
       .eq('id', appointmentId)
-      .eq('patient_id', user.id)
       .single()
 
     if (appointmentError || !appointment) {
       return NextResponse.json(
         { 
           error: 'appointment_not_found',
-          message: 'No se encontró la cita o no tienes permiso para modificarla.'
+          message: 'No se encontró la cita.'
         },
         { status: 404 }
+      )
+    }
+
+    if (appointment.patient_id !== user.id && appointment.professional_id !== user.id) {
+       return NextResponse.json(
+        { 
+          error: 'unauthorized',
+          message: 'No tienes permiso para modificar esta cita.'
+        },
+        { status: 403 }
       )
     }
 

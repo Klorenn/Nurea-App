@@ -1,7 +1,8 @@
 import { Metadata, ResolvingMetadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
-import ProfessionalProfileClient from './ProfessionalProfileClient'
+import { SpecialistProfileConversionPage } from '@/components/specialist-profile'
 import { notFound } from 'next/navigation'
+import { genderizeSpecialtyLabel } from '@/lib/utils/genderize-specialty'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -19,7 +20,8 @@ async function getProfessionalData(id: string) {
       .from('professionals')
       .select(`
         *,
-        profile:profiles!professionals_id_fkey(*)
+        profile:profiles!professionals_id_fkey(*),
+        specialty_data:specialties(*)
       `)
       .eq('id', id)
       .maybeSingle()
@@ -33,7 +35,8 @@ async function getProfessionalData(id: string) {
       .from('professionals')
       .select(`
         *,
-        profile:profiles!professionals_id_fkey(*)
+        profile:profiles!professionals_id_fkey(*),
+        specialty_data:specialties(*)
       `)
       .eq('slug', id)
       .maybeSingle()
@@ -49,52 +52,119 @@ async function getProfessionalData(id: string) {
   const { data: reviewsData } = await supabase
     .from('reviews')
     .select('*, patient:profiles(*)')
-    .eq('professional_id', professional.id)
+    .eq('doctor_id', professional.id)
     .order('created_at', { ascending: false })
 
   const reviewsCount = reviewsData?.length || 0
   const averageRating = reviewsData && reviewsData.length > 0
     ? reviewsData.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewsData.length
-    : 4.8
+    : 0
 
-  // Format professional for the client
+  // Fetch verified credentials
+  const { data: verifiedCredentials } = await supabase
+    .from('professional_credentials')
+    .select('*')
+    .eq('professional_id', professional.id)
+    .eq('status', 'verified')
+    .order('year', { ascending: false })
+
+  const resolvedSpecialty =
+    professional.specialty_data?.name_es ||
+    professional.specialty_data?.name_en ||
+    professional.specialty ||
+    'Profesional de salud'
+
+  const gender = professional.profile?.gender as "M" | "F" | undefined
+  const genderedSpecialty = genderizeSpecialtyLabel(resolvedSpecialty, gender)
+
+  // Format professional for the conversion profile page (trust + booking focus)
   const formattedProfessional = {
     ...professional,
     id: professional.id,
     slug: professional.slug,
-    name: `${professional.profile?.first_name || ''} ${professional.profile?.last_name || ''}`.trim(),
-    specialty: professional.specialty,
+    name: `${professional.profile?.first_name || ''} ${professional.profile?.last_name || ''}`.trim() || 'Profesional',
+    specialty: genderedSpecialty,
     rating: averageRating,
     reviewsCount: reviewsCount,
-    imageUrl: professional.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',
-    consultationTypes: professional.consultation_type === 'both' ? ['online', 'in-person'] : [professional.consultation_type],
-    consultationPrice: professional.consultation_price,
+    imageUrl: professional.profile?.avatar_url || '',
+    consultationTypes:
+      professional.consultation_type === 'both'
+        ? ['online', 'in-person']
+        : professional.consultation_type
+          ? [professional.consultation_type]
+          : ['online'],
+    consultationPrice: professional.consultation_price ?? 0,
+    slotDuration: professional.slot_duration ?? 60,
     languages: professional.languages || ['Español'],
     verified: professional.verified || false,
-    location: professional.location,
-    bio: professional.bio,
-    bioExtended: professional.bio_extended,
+    // Usar ciudad/dirección clínica si existen para reflejar correctamente la atención presencial.
+    city:
+      (professional as any).clinic_city ||
+      professional.city ||
+      professional.location,
+    location:
+      (professional as any).clinic_address ||
+      professional.location ||
+      professional.city ||
+      (professional as any).clinic_city,
+    bio: professional.bio || professional.bio_extended || '',
+    bio_extended: professional.bio_extended || professional.bio || '',
     services: professional.services || [],
-    availableToday: true, // This would need actual logic but for initial SSR it's okay
-    patientsServed: 0,
+    education: professional.education || [],
+    awards_and_courses: professional.awards_and_courses || [],
+    verified_credentials: verifiedCredentials || [],
+    yearsExperience: professional.years_experience ?? undefined,
+    patientsCount: professional.patients_count ?? undefined,
+    availableToday: true,
+    registration_number: professional.registration_number,
     professionalRegistration: {
       number: professional.registration_number,
       institution: professional.registration_institution,
       verified: professional.verified
-    }
+    },
+    availability: professional.availability || null,
   }
 
-  // Format reviews for client
-  const formattedReviews = (reviewsData || []).slice(0, 5).map(r => ({
+  // Format reviews for conversion page
+  const formattedReviews = (reviewsData || []).slice(0, 10).map((r: { id: string; patient?: { first_name?: string; last_name?: string; avatar_url?: string }; rating: number; comment?: string; created_at?: string }) => ({
     id: r.id,
     name: `${r.patient?.first_name || 'Paciente'} ${r.patient?.last_name || ''}`.trim(),
     rating: r.rating,
     comment: r.comment,
     createdAt: r.created_at,
+    created_at: r.created_at,
     src: r.patient?.avatar_url
   }))
 
-  return { professional: formattedProfessional, reviews: formattedReviews }
+  // Determine if the professional has any availability configured
+  const availability = (professional as any).availability as Record<string, any> | null | undefined
+  let noAvailability = true
+
+  if (availability && typeof availability === "object") {
+    for (const value of Object.values(availability)) {
+      if (value && typeof value === "object") {
+        const v = value as any
+
+        // New format: { online: { available, hours }, 'in-person': { available, hours }, slotDuration }
+        const hasOnline =
+          v.online && typeof v.online === "object" && v.online.available === true
+        const hasInPerson =
+          v["in-person"] &&
+          typeof v["in-person"] === "object" &&
+          v["in-person"].available === true
+
+        // Legacy format: { enabled, available, hours, ... }
+        const hasLegacyEnabled = v.enabled === true || v.available === true
+
+        if (hasOnline || hasInPerson || hasLegacyEnabled) {
+          noAvailability = false
+          break
+        }
+      }
+    }
+  }
+
+  return { professional: formattedProfessional, reviews: formattedReviews, noAvailability }
 }
 
 export async function generateMetadata(
@@ -162,10 +232,11 @@ export default async function Page({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProfessionalProfileClient 
-        professionalId={data.professional.id} 
+      <SpecialistProfileConversionPage
+        professionalId={data.professional.id}
         initialProfessional={data.professional}
         initialReviews={data.reviews}
+        noAvailability={data.noAvailability}
       />
     </>
   )

@@ -15,6 +15,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { sanitizeMessage } from "@/lib/utils/sanitize"
 
+const supabase = createClient()
+
 interface ChatMessage {
   id: string
   sender_id: string
@@ -48,6 +50,8 @@ interface HealthChatProps {
   contacts: Contact[]
   role: "patient" | "professional"
   onContactSelect?: (contactId: string) => void
+  /** Abrir conversación con este contacto al cargar (ej. desde explorar "Contactar") */
+  initialContactId?: string | null
   className?: string
 }
 
@@ -58,6 +62,7 @@ export function HealthChat({
   contacts,
   role,
   onContactSelect,
+  initialContactId,
   className,
 }: HealthChatProps) {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(contacts[0] || null)
@@ -69,11 +74,22 @@ export function HealthChat({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const appliedInitialContactRef = useRef<string | null>(null)
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const supabase = createClient()
 
   const isSpanish = language === "es"
+
+  // Abrir conversación con el contacto indicado solo una vez (evita bucle con presencia/contacts)
+  useEffect(() => {
+    if (!initialContactId || contacts.length === 0) return
+    if (appliedInitialContactRef.current === initialContactId) return
+    const contact = contacts.find((c) => c.id === initialContactId)
+    if (contact) {
+      appliedInitialContactRef.current = initialContactId
+      setSelectedContact(contact)
+    }
+  }, [initialContactId, contacts])
 
   // Load messages when contact changes
   useEffect(() => {
@@ -204,7 +220,7 @@ export function HealthChat({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [selectedContact, currentUserId, currentUserName, supabase])
+  }, [selectedContact, currentUserId, currentUserName])
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -301,14 +317,17 @@ export function HealthChat({
 
       if (error) throw error
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          ...data,
-          sender_name: currentUserName,
-          sender_avatar: currentUserAvatar,
-        },
-      ])
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === data.id)) return prev
+        return [
+          ...prev,
+          {
+            ...data,
+            sender_name: currentUserName,
+            sender_avatar: currentUserAvatar,
+          },
+        ]
+      })
 
       setNewMessage("")
       setSelectedFile(null)
@@ -362,7 +381,7 @@ export function HealthChat({
   }
 
   return (
-    <div className={cn("flex h-screen gap-6", className)}>
+    <div className={cn("flex h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)] gap-6", className)}>
       {/* Contacts Sidebar */}
       <div className="w-80 shrink-0 flex flex-col gap-4">
         <div className="relative">
@@ -451,25 +470,6 @@ export function HealthChat({
       {/* Chat Window */}
       {selectedContact ? (
         <div className="flex-1 flex flex-col border border-border/40 rounded-[2.5rem] overflow-hidden bg-card shadow-lg">
-          {/* Emergency Banner - Solo para pacientes */}
-          {role === "patient" && (
-            <Card className="m-4 mb-0 border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/20">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm text-orange-900 dark:text-orange-200 mb-1">
-                      {t.chat.notEmergency}
-                    </p>
-                    <p className="text-xs text-orange-800 dark:text-orange-300">
-                      {t.chat.notEmergencyDesc}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Chat Header */}
           <div className="p-6 border-b border-border/40 flex justify-between items-center bg-accent/5">
             <div className="flex items-center gap-4">
@@ -514,23 +514,25 @@ export function HealthChat({
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-8 bg-accent/5 h-full">
-            <div className="pr-4">
+          <ScrollArea className="flex-1 p-6 sm:p-8 bg-accent/5 h-full">
+            <div className="pr-2 sm:pr-4">
             {loading ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-muted-foreground">{t.chat.loadingMessages}</p>
               </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full space-y-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-8 w-8 text-primary" />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <FileText className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
                 </div>
-                <div className="text-center space-y-2">
-                  <p className="font-medium text-muted-foreground">{t.chat.noMessages}</p>
-                  <p className="text-sm text-muted-foreground max-w-md">
+                <div className="text-center space-y-3 max-w-md">
+                  <p className="font-semibold text-foreground text-base sm:text-lg">
+                    {t.chat.noMessages}
+                  </p>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                     {isSpanish 
-                      ? "Este es un espacio seguro para comunicarte con tu profesional. Puedes hacer preguntas, compartir información o coordinar tu atención."
-                      : "This is a safe space to communicate with your professional. You can ask questions, share information, or coordinate your care."}
+                      ? "Usa este espacio para comunicarte con tu profesional de forma clara y respetuosa. Puedes hacer preguntas, compartir información o coordinar tu atención."
+                      : "Use this space to communicate clearly and respectfully with your professional. You can ask questions, share information, or coordinate your care."}
                   </p>
                 </div>
               </div>

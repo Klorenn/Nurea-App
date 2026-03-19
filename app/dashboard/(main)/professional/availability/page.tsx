@@ -10,12 +10,14 @@ import {
   Calendar,
   Info,
   AlertCircle,
+  MessageSquare,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -95,6 +97,9 @@ export default function AvailabilityPage() {
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [originalSchedule, setOriginalSchedule] = useState<WeeklySchedule | null>(null)
+  const [bookingAutoMessage, setBookingAutoMessage] = useState("")
+  const [bookingMessageSaving, setBookingMessageSaving] = useState(false)
+  const [bookingMessageLoaded, setBookingMessageLoaded] = useState(false)
 
   // Load existing schedule
   useEffect(() => {
@@ -157,6 +162,24 @@ export default function AvailabilityPage() {
 
     loadSchedule()
   }, [user?.id, supabase])
+
+  // Load booking auto-message (Prisma)
+  useEffect(() => {
+    const loadBookingMessage = async () => {
+      try {
+        const res = await fetch("/api/professional/booking-settings")
+        if (res.ok) {
+          const data = await res.json()
+          setBookingAutoMessage(data.bookingAutoMessage ?? "")
+        }
+      } catch {
+        // ignore
+      } finally {
+        setBookingMessageLoaded(true)
+      }
+    }
+    if (user?.id) loadBookingMessage()
+  }, [user?.id])
 
   // Check for changes
   useEffect(() => {
@@ -232,6 +255,25 @@ export default function AvailabilityPage() {
     }
   }
 
+  const handleSaveBookingMessage = async () => {
+    setBookingMessageSaving(true)
+    try {
+      const res = await fetch("/api/professional/booking-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingAutoMessage: bookingAutoMessage.trim() || null }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setBookingAutoMessage(data.bookingAutoMessage ?? "")
+      toast.success(isSpanish ? "Mensaje guardado" : "Message saved")
+    } catch {
+      toast.error(isSpanish ? "Error al guardar" : "Error saving")
+    } finally {
+      setBookingMessageSaving(false)
+    }
+  }
+
   const enabledDaysCount = Object.values(schedule).filter(day => day.enabled).length
 
   if (loading) {
@@ -271,6 +313,53 @@ export default function AvailabilityPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Mensaje automático al agendar */}
+      {bookingMessageLoaded && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="border-slate-200/60 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <MessageSquare className="h-5 w-5 text-teal-600" />
+                {isSpanish ? "Mensaje automático al agendar" : "Auto-message when patient books"}
+              </CardTitle>
+              <CardDescription>
+                {isSpanish
+                  ? "Este mensaje se envía al paciente por chat cuando confirma una cita. Puedes indicar cómo coordinar el pago (transferencia, bono, etc.)."
+                  : "This message is sent to the patient via chat when they confirm an appointment. You can explain how to coordinate payment."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                value={bookingAutoMessage}
+                onChange={(e) => setBookingAutoMessage(e.target.value)}
+                placeholder={
+                  isSpanish
+                    ? "Ej: Hola, gracias por agendar conmigo. El pago de la consulta se coordina directamente por este chat (transferencia, bono u otro medio que acordemos)."
+                    : "E.g. Hello, thanks for booking. Payment is coordinated directly via this chat (transfer, voucher, etc.)."
+                }
+                className="min-h-[120px] resize-y"
+                maxLength={500}
+              />
+              <Button
+                onClick={handleSaveBookingMessage}
+                disabled={bookingMessageSaving}
+                variant="secondary"
+                size="sm"
+              >
+                {bookingMessageSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                {isSpanish ? "Guardar mensaje" : "Save message"}
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Summary Alert */}
       <Alert className="border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30">

@@ -18,6 +18,8 @@ function LoginContent() {
   const error = searchParams.get('error')
   const email = searchParams.get('email')
   const message = searchParams.get('message')
+  const callbackUrl = searchParams.get('callbackUrl')
+  const isBookingRedirect = callbackUrl && (callbackUrl.includes('/explore') || callbackUrl.includes('/professionals') || callbackUrl.includes('/public/professional'))
 
   const getErrorAlert = () => {
     if (!error) return null
@@ -72,7 +74,7 @@ function LoginContent() {
   const alertData = getErrorAlert()
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-cyan-50/30 dark:bg-transparent">
+    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden dark:bg-transparent">
       <AuthPageBackground />
 
       <div className="absolute top-4 left-4 right-4 sm:top-8 sm:left-8 sm:right-8 z-50 flex items-center justify-between pointer-events-none">
@@ -136,6 +138,13 @@ function LoginContent() {
           </div>
         )}
 
+        {isBookingRedirect && (
+          <p className="text-sm text-slate-600 dark:text-slate-400 text-center max-w-sm -mt-2">
+            {language === "es"
+              ? "Inicia sesión o regístrate para agendar tu cita con el especialista."
+              : "Sign in or register to book your appointment with the specialist."}
+          </p>
+        )}
         <LoginForm />
       </div>
     </main>

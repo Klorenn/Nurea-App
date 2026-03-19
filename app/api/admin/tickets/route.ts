@@ -212,7 +212,7 @@ export async function PUT(request: Request) {
       updateData.admin_response = response
       updateData.status = 'in_progress'
     } else if (action === 'close') {
-      updateData.status = 'closed'
+      updateData.status = 'resolved'
       updateData.resolved_at = new Date().toISOString()
     } else if (action === 'resolve') {
       updateData.status = 'resolved'

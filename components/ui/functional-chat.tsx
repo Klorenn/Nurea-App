@@ -11,6 +11,8 @@ import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 
+const supabase = createClient()
+
 interface ChatMessage {
   id: string
   sender_id: string
@@ -57,7 +59,6 @@ export function FunctionalChat({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const { language } = useLanguage()
-  const supabase = createClient()
 
   const t = {
     placeholder: language === "es" ? "Escribe un mensaje..." : "Type a message...",
@@ -186,7 +187,7 @@ export function FunctionalChat({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [selectedContact, currentUserId, currentUserName, supabase])
+  }, [selectedContact, currentUserId, currentUserName])
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -211,14 +212,17 @@ export function FunctionalChat({
 
       if (error) throw error
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          ...data,
-          sender_name: currentUserName,
-          sender_avatar: currentUserAvatar,
-        },
-      ])
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === data.id)) return prev
+        return [
+          ...prev,
+          {
+            ...data,
+            sender_name: currentUserName,
+            sender_avatar: currentUserAvatar,
+          },
+        ]
+      })
 
       setNewMessage("")
       if (onContactSelect) {

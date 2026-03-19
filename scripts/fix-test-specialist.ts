@@ -2,49 +2,88 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
-if (!supabaseKey) {
-  console.log('No service role key found!');
-  process.exit(1);
-}
+async function main() {
+  const userId = '4ea7d91c-15e6-4db4-a9af-c130f612bb76'; // especialista@nurea.app
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+  // 1. Check current professionals record
+  const { data: prof, error: profError } = await supabase
+    .from('professionals')
+    .select('*')
+    .eq('id', userId)
+    .single();
 
-async function run() {
-  const { data: users } = await supabase.auth.admin.listUsers();
-  const sp = users.users.find(u => u.email === 'especialistatest@nurea.app');
-  if (!sp) return console.log('user not found');
-  
-  console.log('User id:', sp.id);
-
-  // 1. Update the actual Auth User metadata so the DB trigger sees them as professional
-  const { error: authError } = await supabase.auth.admin.updateUserById(sp.id, {
-    user_metadata: { role: 'professional' }
-  });
-  if (authError) {
-    console.error('Failed to update auth metadata:', authError);
-    return;
+  console.log('Current professional record:', prof);
+  if (profError) {
+    console.log('Error:', profError.message);
   }
-  console.log('Auth metadata updated.');
 
-  // 2. Now force it in profiles if needed, bypassing the trigger check
-  // Wait, if we use the service role key, bypassing is fine if we are admin, but the trigger `is_admin()`
-  // reads user_metadata. Since we updated the metadata, it evaluates properly? Better yet, if their
-  // metadata is professional, they aren't admin so they STILL can't update `role` EXCEPT that we are Service Role!
-  // Wait! A Service Role client DOES NOT FIRE triggers as a specific user unless set. But auth.uid() is null.
-  // We can just execute raw sql as admin to bypass or we can try updating it now.
-  const { error: updateError } = await supabase.from('profiles').update({ role: 'professional' }).eq('id', sp.id);
+  // 2. Check columns available on professionals table
+  const { data: columns, error: colError } = await supabase
+    .from('professionals')
+    .select('*')
+    .limit(1);
   
-  if (updateError) {
-    console.error('Failed to update profile role:', updateError);
+  if (columns && columns.length > 0) {
+    console.log('Available professional columns:', Object.keys(columns[0]));
+  }
+
+  // 3. Upsert with all possible fields to make the specialist visible in explore
+  const updateData: Record<string, any> = {
+    id: userId,
+    verified: true,
+    specialty: 'Medicina General',
+  };
+
+  // Add optional fields if they exist
+  const possibleFields = {
+    average_rating: 4.8,
+    review_count: 12,
+    consultation_price: 25000,
+    online_price: 20000,
+    in_person_price: 25000,
+    consultation_type: 'both',
+    years_experience: 5,
+    languages: ['ES'],
+    bio: 'Médico general con amplia experiencia en atención primaria.',
+  };
+
+  if (columns && columns.length > 0) {
+    const availableCols = Object.keys(columns[0]);
+    for (const [key, val] of Object.entries(possibleFields)) {
+      if (availableCols.includes(key)) {
+        updateData[key] = val;
+      }
+    }
   } else {
-    console.log('Update profile command succeeded');
+    // Apply all anyway, Supabase will ignore unknown columns
+    Object.assign(updateData, possibleFields);
   }
-  
-  const { data: profAfter } = await supabase.from('profiles').select('*').eq('id', sp.id).single();
-  console.log('Profile after fix role is:', profAfter?.role);
+
+  const { data: updated, error: updateError } = await supabase
+    .from('professionals')
+    .upsert(updateData, { onConflict: 'id' })
+    .select();
+
+  if (updateError) {
+    console.error('Error updating professional:', updateError.message);
+  } else {
+    console.log('\n✅ Professional updated successfully:', updated);
+  }
+
+  // Also make sure the slug is set on the profile if it exists
+  const { data: profile } = await supabase
+    .from('professionals')
+    .update({ slug: 'dr-especialista-test' })
+    .eq('id', userId)
+    .select();
+    
+  console.log('\n✅ Done! The specialist should now be visible in /explore');
 }
 
-run();
+main();

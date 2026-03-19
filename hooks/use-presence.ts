@@ -4,6 +4,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+const supabase = createClient()
+
 interface PresenceState {
   [userId: string]: {
     online: boolean
@@ -13,7 +15,6 @@ interface PresenceState {
 
 export function usePresence(userIds: string[]) {
   const [presence, setPresence] = useState<PresenceState>({})
-  const supabase = createClient()
   const channelRef = useRef<any>(null)
 
   useEffect(() => {
@@ -108,7 +109,7 @@ export function usePresence(userIds: string[]) {
         supabase.removeChannel(channelRef.current)
       }
     }
-  }, [userIds, supabase])
+  }, [userIds])
 
   // Función helper para verificar si un usuario está online
   const isOnline = (userId: string): boolean => {

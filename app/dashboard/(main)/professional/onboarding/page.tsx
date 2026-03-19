@@ -13,8 +13,11 @@ import {
   Stethoscope,
   FileText,
   User,
+  Ticket,
+  Crown,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -37,9 +40,10 @@ import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { trackEvent } from "@/lib/utils/analytics"
 
 const SPECIALTIES = [
-  { value: "psicologia", label: "Psicología Clínica", labelEn: "Clinical Psychology" },
+  { value: "psicologia", label: "Psicología", labelEn: "Psychology" },
   { value: "psiquiatria", label: "Psiquiatría", labelEn: "Psychiatry" },
   { value: "medicina-general", label: "Medicina General", labelEn: "General Medicine" },
   { value: "nutricion", label: "Nutrición y Dietética", labelEn: "Nutrition & Dietetics" },
@@ -66,6 +70,12 @@ export default function ProfessionalOnboardingPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isSpanish = language === "es"
 
+  // Onboarding flow deprecated: redirect directly to new profile editor
+  useEffect(() => {
+    if (!user) return
+    router.replace("/dashboard/professional/profile")
+  }, [user, router])
+
   // Form state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -75,6 +85,9 @@ export default function ProfessionalOnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [firstName, setFirstName] = useState("")
+  const [referralCode, setReferralCode] = useState("")
+  const [isVip, setIsVip] = useState(false)
+  const [checkingCode, setCheckingCode] = useState(false)
 
   // Load existing data
   useEffect(() => {
@@ -110,6 +123,35 @@ export default function ProfessionalOnboardingPage() {
 
     loadProfile()
   }, [user?.id, supabase])
+
+  const validateCode = async (code: string) => {
+    if (!code || code.length < 3) return
+    setCheckingCode(true)
+    try {
+      const { data, error } = await supabase
+        .from('referral_codes')
+        .select('*')
+        .eq('code', code.toUpperCase())
+        .eq('is_active', true)
+        .single()
+      
+      if (data && data.uses_count < data.max_uses) {
+        setIsVip(true)
+        toast.success(
+          isSpanish 
+            ? "¡Código VIP activado! Bienvenido/a a la élite fundadora." 
+            : "VIP Code activated! Welcome to the founding elite.",
+          { icon: <Crown className="h-5 w-5 text-amber-500" /> }
+        )
+      } else {
+        setIsVip(false)
+      }
+    } catch (e) {
+      setIsVip(false)
+    } finally {
+      setCheckingCode(false)
+    }
+  }
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click()
@@ -230,6 +272,7 @@ export default function ProfessionalOnboardingPage() {
           .eq("id", user.id)
 
         if (proError) throw proError
+        if (proError) throw proError
       } else {
         // Create new professional record
         const { error: proError } = await supabase
@@ -239,21 +282,38 @@ export default function ProfessionalOnboardingPage() {
             specialty: specialtyLabel,
             registration_number: rnpiNumber.trim(),
             bio: bio.trim(),
+            referral_code_used: isVip ? referralCode.toUpperCase() : null,
+            is_vip: isVip,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
 
         if (proError) throw proError
+        
+        // Update code usage count
+        if (isVip) {
+          await supabase.rpc('increment_referral_usage', { code_param: referralCode.toUpperCase() })
+        }
       }
+
+      trackEvent('onboarding_finish', { 
+        specialty: specialtyLabel,
+        is_vip: isVip,
+        referral_code: isVip ? referralCode.toUpperCase() : null
+      })
 
       // Success!
       toast.success(
-        isSpanish 
-          ? `¡Perfil configurado con éxito! Bienvenido/a a bordo, Dr/a. ${firstName}` 
-          : `Profile setup complete! Welcome aboard, Dr. ${firstName}`,
+        isVip 
+          ? (isSpanish 
+              ? `¡Bienvenido Doctor/a Pionero/a! Gracias por confiar en la salud del futuro.` 
+              : `Welcome Pioneer Doctor! Thank you for trusting in the future of health.`)
+          : (isSpanish 
+              ? `¡Perfil configurado con éxito! Bienvenido/a a bordo, Dr/a. ${firstName}` 
+              : `Profile setup complete! Welcome aboard, Dr. ${firstName}`),
         {
-          icon: <Sparkles className="h-5 w-5 text-teal-500" />,
-          duration: 5000,
+          icon: isVip ? <Crown className="h-5 w-5 text-amber-500" /> : <Sparkles className="h-5 w-5 text-teal-500" />,
+          duration: 6000,
         }
       )
 
@@ -432,6 +492,66 @@ export default function ProfessionalOnboardingPage() {
                 onChange={(e) => setRnpiNumber(e.target.value)}
                 className="h-12 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-teal-500"
               />
+            </div>
+
+            {/* Referral Code (Gamification) */}
+            <div className="space-y-4 p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 relative overflow-hidden group">
+              {isVip && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 bg-amber-500/5 pointer-events-none"
+                />
+              )}
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-2">
+                  <Ticket className={cn("h-5 w-5", isVip ? "text-amber-500" : "text-slate-400")} />
+                  <Label htmlFor="referral" className="text-sm font-semibold">
+                    {isSpanish ? "¿Tienes un código de invitación?" : "Do you have an invitation code?"}
+                  </Label>
+                </div>
+                {isVip && (
+                  <Badge className="bg-amber-500 text-white border-none animate-pulse">
+                    VIP FOUNDER
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2 relative z-10">
+                <Input
+                  id="referral"
+                  placeholder="NUREA50"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  className={cn(
+                    "font-mono tracking-widest uppercase transition-all",
+                    isVip ? "border-amber-500 ring-amber-500 bg-amber-50/50" : ""
+                  )}
+                  disabled={isVip}
+                />
+                {!isVip && (
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    disabled={!referralCode || checkingCode}
+                    onClick={() => validateCode(referralCode)}
+                  >
+                    {checkingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : (isSpanish ? "Validar" : "Validate")}
+                  </Button>
+                )}
+              </div>
+              {isVip ? (
+                <p className="text-xs text-amber-600 font-medium">
+                  {isSpanish 
+                    ? "¡Acceso Exclusivo Activado! Tu perfil tendrá prioridad en las búsquedas." 
+                    : "Exclusive Access Activated! Your profile will have search priority."}
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  {isSpanish 
+                    ? "Los códigos VIP son entregados a la red de fundadores seleccionados."
+                    : "VIP codes are given to the selected founder network."}
+                </p>
+              )}
             </div>
 
             {/* Bio Textarea */}

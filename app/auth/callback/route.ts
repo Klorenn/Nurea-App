@@ -68,7 +68,7 @@ export async function GET(request: Request) {
     const roleDashboard = role === 'professional'
       ? '/dashboard/professional'
       : role === 'admin'
-        ? '/admin'
+        ? '/dashboard/admin'
         : '/dashboard/patient'
 
     // Normalizar next: asegurar que sea un path seguro con / al inicio
@@ -82,8 +82,9 @@ export async function GET(request: Request) {
       '/verify-email',
       '/dashboard',
       '/dashboard/patient',
+      '/dashboard/patient/citas',
       '/dashboard/professional',
-      '/admin',
+      '/dashboard/admin',
       '/dashboard/appointments',
       '/dashboard/profile',
       '/dashboard/settings',

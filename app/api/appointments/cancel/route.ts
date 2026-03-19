@@ -1,16 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import Stripe from 'stripe'
-
-function getStripeClient() {
-  const key = process.env.STRIPE_SECRET_KEY
-  if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured")
-  }
-  return new Stripe(key, {
-    apiVersion: "2024-12-18.acacia",
-  })
-}
 
 export async function POST(request: Request) {
   try {
@@ -231,42 +220,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Process Stripe refund if applicable
-    if (refundAmount > 0 && appointment.payment_status === 'paid') {
-      try {
-        const stripe = getStripeClient()
-        
-        // Find the payment intent for this appointment by searching recent payments
-        // In production, you'd store the payment_intent_id on the appointment
-        const sessions = await stripe.checkout.sessions.list({
-          limit: 100,
-          expand: ['data.payment_intent'],
-        })
-        
-        const session = sessions.data.find(
-          (s) => s.metadata?.appointmentId === appointmentId
-        )
-        
-        if (session?.payment_intent) {
-          const paymentIntentId = typeof session.payment_intent === 'string' 
-            ? session.payment_intent 
-            : session.payment_intent.id
-          
-          const refund = await stripe.refunds.create({
-            payment_intent: paymentIntentId,
-            amount: Math.round(refundAmount),
-            reason: 'requested_by_customer',
-          })
-          
-          console.log(`Stripe refund processed: ${refund.id} for ${refundAmount} CLP`)
-        } else {
-          console.warn(`No Stripe session found for appointment ${appointmentId}`)
-        }
-      } catch (stripeError) {
-        console.error('Error processing Stripe refund:', stripeError)
-        // Don't fail the cancellation if refund fails - log for manual processing
-      }
-    }
+    // El pago de la consulta se coordina directamente con el profesional; no hay reembolso vía plataforma.
 
     return NextResponse.json({
       success: true,
