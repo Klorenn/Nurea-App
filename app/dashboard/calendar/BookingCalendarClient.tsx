@@ -61,7 +61,7 @@ export function BookingCalendarClient() {
   const [isPending, startTransition] = useTransition();
   const [bookingSuccess, setBookingSuccess] = useState<{ chatRedirect: string | null; appointmentId: string } | null>(null);
 
-  const bookingType: "online" | "in-person" = info?.consultationType === "online" ? "online" : "in-person";
+  const [bookingType, setBookingType] = useState<"online" | "in-person">("online");
 
   useEffect(() => {
     if (!professionalId) {
@@ -85,6 +85,18 @@ export function BookingCalendarClient() {
       .catch(() => setInfo(null))
       .finally(() => setLoadingProfessional(false));
   }, [professionalId]);
+
+  useEffect(() => {
+    if (!info?.consultationType) return;
+    if (info.consultationType === "online") setBookingType("online");
+    else if (info.consultationType === "in-person") setBookingType("in-person");
+    else setBookingType("online"); // default when "both"
+  }, [info?.consultationType]);
+
+  useEffect(() => {
+    // Avoid keeping a slot chosen for another modality.
+    setSelectedSlotId(null);
+  }, [bookingType]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -155,7 +167,10 @@ export function BookingCalendarClient() {
 
         const data = await res.json();
         if (!res.ok) {
-          toast.error(data.message || data.error || "Error al reservar");
+          const missing = Array.isArray(data?.missingFields) && data.missingFields.length > 0
+            ? ` (${data.missingFields.join(", ")})`
+            : "";
+          toast.error(data.message || data.error || `Error al reservar${missing}`);
           return;
         }
 
@@ -296,6 +311,28 @@ export function BookingCalendarClient() {
                   <Clock className="h-4 w-4" />
                   Horarios disponibles · {format(selectedDate, "EEEE d MMMM", { locale: es })}
                 </p>
+
+                {info.consultationType === "both" && (
+                  <div className="mb-4 flex flex-col sm:flex-row gap-2">
+                    <Button
+                      type="button"
+                      variant={bookingType === "online" ? "default" : "outline"}
+                      className="rounded-xl"
+                      onClick={() => setBookingType("online")}
+                    >
+                      Online
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={bookingType === "in-person" ? "default" : "outline"}
+                      className="rounded-xl"
+                      onClick={() => setBookingType("in-person")}
+                    >
+                      Presencial
+                    </Button>
+                  </div>
+                )}
+
                 {slots.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No hay horarios disponibles este día. Elige otra fecha.

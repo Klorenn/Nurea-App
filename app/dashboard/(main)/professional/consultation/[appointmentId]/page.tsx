@@ -369,13 +369,13 @@ export default function ConsultationPage() {
     }
   }, [hasUnsavedChanges, loading])
 
-  const handleSave = useCallback(async (isAutoSave = false) => {
-    if (!appointment) return
-    
+  const handleSave = useCallback(async (isAutoSave = false): Promise<string | null> => {
+    if (!appointment) return null
+
     setIsSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) return null
 
       const recordData = {
         patient_id: appointment.patient.id,
@@ -391,6 +391,8 @@ export default function ConsultationPage() {
         is_draft: true,
         updated_at: new Date().toISOString(),
       }
+
+      let savedId: string | null = recordId
 
       if (recordId) {
         // Update existing record
@@ -411,6 +413,7 @@ export default function ConsultationPage() {
         if (error) throw error
         if (newRecord) {
           setRecordId(newRecord.id)
+          savedId = newRecord.id
         }
       }
 
@@ -422,21 +425,30 @@ export default function ConsultationPage() {
           icon: <Save className="h-4 w-4" />,
         })
       }
+
+      return savedId
     } catch (error) {
       console.error("Error saving record:", error)
       if (!isAutoSave) {
         toast.error(isSpanish ? "Error al guardar" : "Error saving")
       }
+      return null
     } finally {
       setIsSaving(false)
     }
   }, [appointment, appointmentId, anamnesis, examination, diagnosis, diagnosisCode, treatment, privateNotes, vitalSigns, recordId, supabase, isSpanish])
 
   const handleSign = async () => {
-    if (!recordId) {
-      await handleSave(false)
+    let currentRecordId = recordId
+    if (!currentRecordId) {
+      currentRecordId = await handleSave(false)
     }
-    
+
+    if (!currentRecordId) {
+      toast.error(isSpanish ? "Error al guardar antes de firmar" : "Error saving before signing")
+      return
+    }
+
     try {
       const { error } = await supabase
         .from("medical_records")
@@ -445,7 +457,7 @@ export default function ConsultationPage() {
           is_signed: true,
           signed_at: new Date().toISOString(),
         })
-        .eq("id", recordId)
+        .eq("id", currentRecordId)
 
       if (error) throw error
 

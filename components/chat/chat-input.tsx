@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 interface ChatInputProps {
-  onSendMessage: (message: string) => void
+  onSendMessage: (message: string) => Promise<void>
   placeholder?: string
   disabled?: boolean
   businessHours?: string
@@ -26,14 +26,23 @@ export function ChatInput({
   businessHours,
 }: ChatInputProps) {
   const [message, setMessage] = useState("")
+  const [isSending, setIsSending] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const handleSend = () => {
-    if (message.trim() && !disabled) {
-      onSendMessage(message.trim())
+  const handleSend = async () => {
+    if (message.trim() && !disabled && !isSending) {
+      const content = message.trim()
       setMessage("")
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto"
+      }
+      setIsSending(true)
+      try {
+        await onSendMessage(content)
+      } catch {
+        setMessage(content)
+      } finally {
+        setIsSending(false)
       }
     }
   }
@@ -41,7 +50,7 @@ export function ChatInput({
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+      void handleSend()
     }
   }
 
@@ -99,8 +108,8 @@ export function ChatInput({
 
         {message.trim() ? (
           <Button
-            onClick={handleSend}
-            disabled={disabled}
+            onClick={() => void handleSend()}
+            disabled={disabled || isSending}
             size="icon"
             className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 shrink-0 shadow-sm"
           >

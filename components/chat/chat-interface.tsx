@@ -61,7 +61,8 @@ export function ChatInterface({ backHref = "/dashboard", role = "patient" }: Cha
 
   const handleSendMessage = async (content: string) => {
     if (!selectedConversation) return
-    await sendMessage({ conversationId: selectedConversation.id, content })
+    const result = await sendMessage({ conversationId: selectedConversation.id, content })
+    if (!result) throw new Error("No se pudo enviar el mensaje")
   }
 
   const handleSelectConversation = (conversation: ConversationListItem) => {

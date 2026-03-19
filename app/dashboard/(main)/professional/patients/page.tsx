@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Search,
@@ -488,42 +488,80 @@ export default function ProfessionalPatientsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [patients, setPatients] = useState<Patient[]>([])
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
+  const selectedPatientIdRef = useRef<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [addPatientOpen, setAddPatientOpen] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<any | null>(null)
 
-  useMemo(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await fetch('/api/professional/patients')
-        const data = await response.json()
-        if (data.success && data.patients) {
-          const mappedPatients: Patient[] = data.patients.map((p: any) => ({
-            id: p.id,
-            name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Desconocido',
-            rut: 'N/A', // We'll assume RUT isn't straight from this API or use what's available
-            email: p.email || '',
-            phone: p.phone || '',
-            birthDate: p.date_of_birth || '',
-            gender: p.gender === "F" ? "F" : "M",
-            avatarUrl: p.avatar_url || '',
-            lastVisit: p.lastAppointment || '',
-            hasAppointmentToday: false, // We can compute this if needed
-            medicalHistory: [], // Real history not in basic API response for now
-            files: [], // Real files not in API response for now
-            privateNotes: '' // Real notes not in API response for now
-          }))
-          setPatients(mappedPatients)
-          if (mappedPatients.length > 0) {
-            setSelectedPatientId(mappedPatients[0].id)
-          }
+  const fetchPatients = async () => {
+    try {
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000)
+      const response = await fetch('/api/professional/patients', { signal: controller.signal })
+      window.clearTimeout(timeoutId)
+      const data = await response.json()
+      if (data?.success && data?.patients) {
+        const mappedPatients: Patient[] = data.patients.map((p: any) => ({
+          id: p.id,
+          name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Desconocido',
+          rut: 'N/A',
+          email: p.email || '',
+          phone: p.phone || '',
+          birthDate: p.date_of_birth || '',
+          gender: p.gender === "F" ? "F" : "M",
+          avatarUrl: p.avatar_url || '',
+          lastVisit: p.lastAppointment || '',
+          hasAppointmentToday: false,
+          medicalHistory: [],
+          files: [],
+          privateNotes: ''
+        }))
+
+        setPatients(mappedPatients)
+        setDebugInfo(data?.debug ?? null)
+        if (mappedPatients.length > 0 && !mappedPatients.some((p) => p.id === selectedPatientIdRef.current)) {
+          selectedPatientIdRef.current = mappedPatients[0].id
+          setSelectedPatientId(mappedPatients[0].id)
         }
-      } catch (err) {
-        console.error("Failed to load patients", err)
-      } finally {
-        setLoading(false)
+      } else {
+        setDebugInfo(data?.debug ?? null)
+        console.error('Failed to load /api/professional/patients:', {
+          status: response.status,
+          data,
+        })
       }
+    } catch (err) {
+      console.error("Failed to load patients", err)
+      setDebugInfo(null)
+    } finally {
+      setLoading(false)
     }
-    fetchPatients()
+  }
+
+  // Polling corto para que el "paciente nuevo" aparezca aunque el profesional ya esté en esta página.
+  useEffect(() => {
+    let isMounted = true
+
+    const initialLoad = async () => {
+      if (!isMounted) return
+      setLoading(true)
+      await fetchPatients()
+    }
+
+    const poll = async () => {
+      if (!isMounted) return
+      // Silent refresh — don't show spinner
+      await fetchPatients()
+    }
+
+    initialLoad()
+    const interval = window.setInterval(() => poll(), 15000)
+
+    return () => {
+      isMounted = false
+      window.clearInterval(interval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const filteredPatients = useMemo(() => {
@@ -578,7 +616,7 @@ export default function ProfessionalPatientsPage() {
                       key={patient.id}
                       patient={patient}
                       isSelected={patient.id === selectedPatientId}
-                      onClick={() => setSelectedPatientId(patient.id)}
+                      onClick={() => { selectedPatientIdRef.current = patient.id; setSelectedPatientId(patient.id) }}
                       isSpanish={isSpanish}
                     />
                   ))}
@@ -589,6 +627,27 @@ export default function ProfessionalPatientsPage() {
                     <p className="text-sm text-slate-500">
                       {isSpanish ? "No se encontraron pacientes" : "No patients found"}
                     </p>
+                    {debugInfo?.uniquePatientIdsCount !== undefined ? (
+                      <div className="mt-4 text-left text-[12px] text-muted-foreground space-y-1 max-w-[260px] mx-auto">
+                        <p>
+                          {isSpanish ? "Debug:" : "Debug:"} {debugInfo.uniquePatientIdsCount}{" "}
+                          {isSpanish ? "IDs" : "IDs"}
+                        </p>
+                        {typeof debugInfo.patientsFoundCount === "number" ? (
+                          <p>
+                            {isSpanish ? "Perfiles encontrados:" : "Profiles found:"} {debugInfo.patientsFoundCount}
+                          </p>
+                        ) : null}
+                        {debugInfo?.sources ? (
+                          <>
+                            <p>appointments: {debugInfo.sources.appointments ?? 0}</p>
+                            <p>messages: {debugInfo.sources.messages ?? 0}</p>
+                            <p>conversations: {debugInfo.sources.conversations ?? 0}</p>
+                            <p>created: {debugInfo.sources.created ?? 0}</p>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -625,36 +684,6 @@ export default function ProfessionalPatientsPage() {
         open={addPatientOpen}
         onOpenChange={setAddPatientOpen}
         onSuccess={() => {
-          // Re-fetch patients list
-          const fetchPatients = async () => {
-             setLoading(true)
-             try {
-                const response = await fetch('/api/professional/patients')
-                const data = await response.json()
-                if (data.success && data.patients) {
-                  const mappedPatients: Patient[] = data.patients.map((p: any) => ({
-                    id: p.id,
-                    name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Desconocido',
-                    rut: 'N/A',
-                    email: p.email || '',
-                    phone: p.phone || '',
-                    birthDate: p.date_of_birth || '',
-                    gender: p.gender === "F" ? "F" : "M",
-                    avatarUrl: p.avatar_url || '',
-                    lastVisit: p.lastAppointment || '',
-                    hasAppointmentToday: false,
-                    medicalHistory: [],
-                    files: [],
-                    privateNotes: ''
-                  }))
-                  setPatients(mappedPatients)
-                }
-             } catch (err) {
-                console.error("Failed to reload patients", err)
-             } finally {
-                setLoading(false)
-             }
-          }
           fetchPatients()
         }}
       />
