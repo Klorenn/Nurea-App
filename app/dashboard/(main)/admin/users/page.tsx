@@ -78,7 +78,7 @@ interface User {
   email: string
   role: "patient" | "professional" | "admin"
   avatar_url?: string
-  blocked: boolean
+  blocked?: boolean
   account_status: AccountStatus
   warning_message?: string
   subscription_status?: string | null
@@ -372,7 +372,7 @@ export default function AdminUsersPage() {
   }
 
   const getStatusBadge = (user: User) => {
-    if (user.account_status === "suspended" || user.blocked) {
+    if (user.account_status === "suspended" || user.blocked === true) {
       return (
         <Badge variant="destructive" className="gap-1">
           <Ban className="h-3 w-3" />

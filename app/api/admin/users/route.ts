@@ -59,8 +59,8 @@ export async function GET(request: Request) {
   const blocked = searchParams.get('blocked')
   const accountStatus = searchParams.get('account_status')
 
-  // Base columns that always exist
-  const baseSelect = `id, first_name, last_name, email, role, blocked, account_status, email_verified, avatar_url, phone, date_of_birth, created_at, updated_at`
+  // Base columns — only columns confirmed to exist in profiles
+  const baseSelect = `id, first_name, last_name, email, role, account_status, email_verified, avatar_url, phone, date_of_birth, created_at, updated_at`
 
   let profilesQuery = adminSupabase
     .from('profiles')
@@ -68,8 +68,6 @@ export async function GET(request: Request) {
     .order('created_at', { ascending: false })
 
   if (role && role !== 'all') profilesQuery = profilesQuery.eq('role', role)
-  if (blocked === 'true') profilesQuery = profilesQuery.eq('blocked', true)
-  else if (blocked === 'false') profilesQuery = profilesQuery.eq('blocked', false)
   if (accountStatus) profilesQuery = profilesQuery.eq('account_status', accountStatus)
 
   const { data: profiles, error: profilesError } = await profilesQuery
