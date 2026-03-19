@@ -44,7 +44,16 @@ export async function GET(request: Request) {
     const accountStatus = searchParams.get('account_status')
 
     // Usar cliente admin para bypassear RLS y ver todos los perfiles
-    const adminSupabase = createAdminClient()
+    let adminSupabase: ReturnType<typeof createAdminClient>
+    try {
+      adminSupabase = createAdminClient()
+    } catch (e) {
+      console.error('[admin/users] createAdminClient failed (missing SUPABASE_SERVICE_ROLE_KEY?):', e)
+      return NextResponse.json(
+        { error: 'admin_client_unavailable', message: 'Falta SUPABASE_SERVICE_ROLE_KEY en el servidor.' },
+        { status: 500 }
+      )
+    }
 
     // Obtener usuarios con datos extendidos
     let query = adminSupabase

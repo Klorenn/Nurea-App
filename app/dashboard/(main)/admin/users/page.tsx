@@ -30,6 +30,7 @@ import {
   Stethoscope,
   FileText,
   X,
+  RefreshCw,
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useToast } from "@/hooks/use-toast"
@@ -80,6 +81,9 @@ interface User {
   blocked: boolean
   account_status: AccountStatus
   warning_message?: string
+  subscription_status?: string | null
+  trial_end_date?: string | null
+  selected_plan_id?: string | null
   created_at: string
   email_verified?: boolean
   phone?: string
@@ -97,6 +101,7 @@ export default function AdminUsersPage() {
   
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState("all")
   
@@ -112,24 +117,39 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     loadUsers()
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => loadUsers(true), 30000)
+    return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadUsers = async () => {
-    setLoading(true)
+  const loadUsers = async (silent = false) => {
+    if (!silent) setLoading(true)
+    setError(null)
     try {
       const response = await fetch("/api/admin/users")
       const data = await response.json()
 
       if (data.success) {
         setUsers(data.users || [])
+      } else {
+        const msg = data.message || (isSpanish ? "No se pudieron cargar los usuarios" : "Could not load users")
+        setError(msg)
+        if (!silent) {
+          toast({
+            title: isSpanish ? "Error" : "Error",
+            description: msg,
+            variant: "destructive",
+          })
+        }
       }
-    } catch (error) {
-      console.error("Error loading users:", error)
-      toast({
-        title: isSpanish ? "Error" : "Error",
-        description: isSpanish ? "No se pudieron cargar los usuarios" : "Could not load users",
-        variant: "destructive",
-      })
+    } catch (err) {
+      console.error("Error loading users:", err)
+      const msg = isSpanish ? "No se pudieron cargar los usuarios" : "Could not load users"
+      setError(msg)
+      if (!silent) {
+        toast({ title: "Error", description: msg, variant: "destructive" })
+      }
     } finally {
       setLoading(false)
     }
@@ -405,12 +425,30 @@ export default function AdminUsersPage() {
                 {isSpanish ? "Moderación y Alertas" : "Moderation & Alerts"}
               </h1>
               <p className="text-muted-foreground mt-1">
-                {isSpanish 
+                {isSpanish
                   ? "Gestiona usuarios, verificaciones y acciones disciplinarias"
                   : "Manage users, verifications and disciplinary actions"}
               </p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadUsers()}
+              disabled={loading}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              {isSpanish ? "Actualizar" : "Refresh"}
+            </Button>
           </div>
+
+          {/* Error banner */}
+          {error && (
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
 
           {/* Search and Tabs */}
           <div className="space-y-4">
