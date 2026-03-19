@@ -96,8 +96,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [maintenanceMode, setMaintenanceMode] = useState(false)
   const [stats, setStats] = useState({
-    totalRevenue: 0,
-    nureaCommission: 0,
+    mrr: 0,
+    activeSubscriptions: 0,
     openTickets: 0,
     pendingDoctors: 0,
     pendingSubscriptions: 0,
@@ -112,28 +112,25 @@ export default function AdminPage() {
       setLoading(true)
       try {
         // Parallel fetch for speed
-        const [credRes, docsRes, reviewsRes, appointmentsRes, ticketsRes, subsRes] = await Promise.all([
+        const [credRes, docsRes, reviewsRes, appointmentsRes, ticketsRes, subsRes, activeSubsRes] = await Promise.all([
           supabase.from("professional_credentials").select("*", { count: "exact", head: true }).eq("status", "pending"),
           supabase.from("professional_credentials").select(`*, profiles:professional_id(first_name, last_name, avatar_url)`).eq("status", "pending").limit(5),
           supabase.from("reviews").select(`*, profiles:patient_id(first_name, avatar_url)`).order('created_at', { ascending: false }).limit(3),
-          supabase.from("appointments").select("price, status"),
+          supabase.from("appointments").select("status"),
           supabase.from("support_tickets").select("*", { count: "exact", head: true }).eq("status", "open"),
-          supabase.from("profiles").select("*").eq("subscription_status", "pending_approval")
+          supabase.from("profiles").select("*").eq("subscription_status", "pending_approval"),
+          supabase.from("profiles").select("id", { count: "exact", head: true }).eq("subscription_status", "active"),
         ])
 
         const appointments = appointmentsRes.data || []
-        
-        // Calculate real-time stats
-        const realRevenue = appointments
-          .filter(a => a.status === 'confirmed' || a.status === 'completed')
-          .reduce((acc, a) => acc + Number(a.price || 0), 0)
-        
-        const realCommission = realRevenue * 0.05 // 5% as per UI labels
         const activeCount = appointments.filter(a => a.status === 'confirmed' || a.status === 'pending').length
+        const activeSubs = activeSubsRes.count || 0
+        const PRO_PRICE = 29990
+        const mrr = activeSubs * PRO_PRICE
 
         setStats({
-          totalRevenue: realRevenue,
-          nureaCommission: realCommission,
+          mrr,
+          activeSubscriptions: activeSubs,
           openTickets: ticketsRes.count || 0,
           pendingDoctors: (credRes.count || 0) + (subsRes.data?.length || 0),
           pendingSubscriptions: subsRes.data?.length || 0,
@@ -246,24 +243,24 @@ export default function AdminPage() {
           {/* KPI Grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[
-              { 
-                label: "Ingresos Totales", 
-                val: `$${stats.totalRevenue.toLocaleString()}`, 
-                detail: "Ventas brutas del mes",
-                icon: CreditCard, 
-                color: "text-slate-900", 
-                bg: "bg-slate-100",
-                trend: "+15.2%",
+              {
+                label: "MRR (Ingresos Recurrentes)",
+                val: `$${stats.mrr.toLocaleString("es-CL")}`,
+                detail: `${stats.activeSubscriptions} suscripciones Pro activas`,
+                icon: TrendingUp,
+                color: "text-teal-600",
+                bg: "bg-teal-50",
+                trend: `${stats.activeSubscriptions} activas`,
                 positive: true
               },
-              { 
-                label: "Comisiones NUREA (5%)", 
-                val: `$${stats.nureaCommission.toLocaleString()}`, 
-                detail: "Ganancia neta plataforma",
-                icon: DollarSign, 
-                color: "text-emerald-600", 
+              {
+                label: "Suscripciones Pro",
+                val: stats.activeSubscriptions,
+                detail: "Doctores con plan Pro activo",
+                icon: DollarSign,
+                color: "text-emerald-600",
                 bg: "bg-emerald-50",
-                trend: "+4.1%",
+                trend: "+0",
                 positive: true
               },
               { 
@@ -588,32 +585,32 @@ export default function AdminPage() {
             <TabsContent value="finances">
                <Card className="border-border/40 bg-white shadow-xl shadow-slate-200/40 rounded-[40px] overflow-hidden">
                   <CardHeader className="p-8 border-b border-slate-50">
-                     <CardTitle className="text-2xl font-black text-slate-900">Liquidaciones de Mercado</CardTitle>
-                     <CardDescription className="text-slate-500 font-medium">Suscripciones y métricas de la plataforma</CardDescription>
+                     <CardTitle className="text-2xl font-black text-slate-900">Ingresos de Suscripciones</CardTitle>
+                     <CardDescription className="text-slate-500 font-medium">MRR basado en suscripciones Pro activas a NUREA</CardDescription>
                   </CardHeader>
                   <CardContent className="p-8">
                      <div className="grid md:grid-cols-2 gap-8">
                         <div className="space-y-6">
                            <div className="p-8 rounded-[32px] bg-slate-50 border border-slate-100">
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Suscripciones</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">MRR Actual</p>
                               <div className="flex items-baseline gap-2">
-                                 <h2 className="text-5xl font-black text-teal-600 tracking-tighter">${Math.round(stats.nureaCommission).toLocaleString()}</h2>
+                                 <h2 className="text-5xl font-black text-teal-600 tracking-tighter">${stats.mrr.toLocaleString("es-CL")}</h2>
                                  <span className="text-sm font-black text-slate-400">CLP</span>
                               </div>
                               <p className="text-xs text-slate-500 mt-4 font-medium flex items-center gap-2">
                                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                 El 5% de cada transacción se retiene automáticamente.
+                                 {stats.activeSubscriptions} doctores × $29.990 CLP/mes
                               </p>
                            </div>
 
                            <div className="grid grid-cols-2 gap-4">
                               <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-sm">
-                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pagado a Doctores</p>
-                                 <h4 className="text-xl font-black text-slate-900">${Math.round(stats.totalRevenue - stats.nureaCommission).toLocaleString()}</h4>
+                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Suscripciones Activas</p>
+                                 <h4 className="text-xl font-black text-slate-900">{stats.activeSubscriptions}</h4>
                               </div>
                               <div className="p-6 rounded-3xl bg-white border border-slate-100 shadow-sm">
-                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Impuestos (IVA)</p>
-                                 <h4 className="text-xl font-black text-slate-900">${Math.round(stats.totalRevenue * 0.19).toLocaleString()}</h4>
+                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ARR Estimado</p>
+                                 <h4 className="text-xl font-black text-slate-900">${(stats.mrr * 12).toLocaleString("es-CL")}</h4>
                               </div>
                            </div>
                         </div>
@@ -623,20 +620,20 @@ export default function AdminPage() {
                               <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
                                  <TrendingUp className="h-6 w-6 text-teal-400" />
                               </div>
-                              <h3 className="text-2xl font-black">Proyección de Cierre</h3>
-                              <p className="text-slate-400 mt-2 font-medium">Estimado de comisiones al finalizar el mes según tendencia actual.</p>
+                              <h3 className="text-2xl font-black">Proyección de Crecimiento</h3>
+                              <p className="text-slate-400 mt-2 font-medium">Estimado de MRR basado en crecimiento de suscriptores.</p>
                            </div>
                            <div className="mt-12 space-y-4">
                               <div className="flex justify-between items-end border-b border-white/10 pb-4">
-                                 <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Optimista</span>
-                                 <span className="text-2xl font-black text-emerald-400">+$8.4M</span>
+                                 <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">100 Doctores</span>
+                                 <span className="text-2xl font-black text-emerald-400">$3.0M</span>
                               </div>
                               <div className="flex justify-between items-end border-b border-white/10 pb-4">
-                                 <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Conservador</span>
-                                 <span className="text-2xl font-black text-white">+$5.1M</span>
+                                 <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">50 Doctores</span>
+                                 <span className="text-2xl font-black text-white">$1.5M</span>
                               </div>
-                              <Button className="w-full h-14 rounded-2xl bg-teal-500 hover:bg-teal-600 text-slate-900 font-black text-sm mt-4">
-                                 Solicitar Reporte de Tesorería
+                              <Button asChild className="w-full h-14 rounded-2xl bg-teal-500 hover:bg-teal-600 text-slate-900 font-black text-sm mt-4">
+                                 <a href="/dashboard/admin/users?role=professional">Ver Suscriptores</a>
                               </Button>
                            </div>
                         </div>

@@ -299,7 +299,9 @@ export function BookingSidebar({
         </Button>
 
         <p className="text-center text-xs text-slate-500 dark:text-slate-400">
-          {isSpanish ? 'Reserva segura. Puedes cancelar sin costo.' : 'Secure booking. You can cancel for free.'}
+          {isSpanish
+            ? 'El pago de la consulta lo coordinas directamente con el especialista.'
+            : 'Payment is coordinated directly with the specialist.'}
         </p>
       </div>
     </aside>
