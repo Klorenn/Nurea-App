@@ -2,319 +2,299 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { 
-  CreditCard, 
-  DollarSign, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Clock, 
-  CheckCircle2, 
-  Download,
-  Search,
-  Filter,
+import {
+  CreditCard,
+  CheckCircle2,
   Loader2,
-  Link as LinkIcon,
-  Unlink
+  Zap,
+  Calendar,
+  AlertCircle,
+  ArrowRight,
+  Star,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table"
 import { useLanguage } from "@/contexts/language-context"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/hooks/use-auth"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
+import { cn } from "@/lib/utils"
 
-export default function ProfessionalPaymentsPage() {
+type SubscriptionStatus = "inactive" | "trialing" | "active" | "past_due" | "canceled" | null
+
+interface SubscriptionInfo {
+  status: SubscriptionStatus
+  trial_end_date: string | null
+  selected_plan_id: string | null
+}
+
+const PRO_PRICE_CLP = 29990
+
+export default function ProfessionalSubscriptionPage() {
   const { language } = useLanguage()
   const { user } = useAuth()
   const isSpanish = language === "es"
   const supabase = createClient()
-  
+
   const [loading, setLoading] = useState(true)
-  const [transactions, setTransactions] = useState<any[]>([])
-  const [profile, setProfile] = useState<any>(null)
-  const [stats, setStats] = useState({
-    available: 0,
-    escrow: 0,
-    totalEarned: 0
+  const [sub, setSub] = useState<SubscriptionInfo>({
+    status: null,
+    trial_end_date: null,
+    selected_plan_id: null,
   })
 
   useEffect(() => {
-    const loadFinances = async () => {
+    const loadSubscription = async () => {
       if (!user?.id) return
-      
       try {
-        const { data, error } = await supabase
-          .from("financial_transactions")
-          .select(`
-            *,
-            patient:profiles!financial_transactions_patient_id_fkey(first_name, last_name, avatar_url),
-            appointment:appointments(appointment_date, appointment_time, type)
-          `)
-          .eq("professional_id", user.id)
-          .order("created_at", { ascending: false })
-
-        if (error) throw error
-
-        setTransactions(data || [])
-
-        // Fetch profile for MP config
-        const { data: profileData } = await supabase
+        const { data } = await supabase
           .from("profiles")
-          .select("mp_user_id")
+          .select("subscription_status, trial_end_date, selected_plan_id")
           .eq("id", user.id)
           .single()
-        
-        setProfile(profileData)
-
-        // Calculate stats
-        const available = data
-          ?.filter(t => t.status === "available")
-          .reduce((acc, curr) => acc + Number(curr.professional_net), 0) || 0
-        
-        const escrow = data
-          ?.filter(t => t.status === "escrow")
-          .reduce((acc, curr) => acc + Number(curr.professional_net), 0) || 0
-        
-        const total = data
-          ?.filter(t => ["available", "paid_out", "payout_pending"].includes(t.status))
-          .reduce((acc, curr) => acc + Number(curr.professional_net), 0) || 0
-
-        setStats({ available, escrow, totalEarned: total })
+        if (data) {
+          setSub({
+            status: (data.subscription_status as SubscriptionStatus) ?? "inactive",
+            trial_end_date: data.trial_end_date ?? null,
+            selected_plan_id: data.selected_plan_id ?? null,
+          })
+        }
       } catch (err) {
-        console.error("Error loading finances:", err)
+        console.error("Error loading subscription:", err)
       } finally {
         setLoading(false)
       }
     }
+    loadSubscription()
+  }, [user?.id])
 
-    loadFinances()
-  }, [user?.id, supabase])
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "escrow":
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1"><Clock className="w-3 h-3"/> Escrow</Badge>
-      case "available":
-        return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1"><CheckCircle2 className="w-3 h-3"/> {isSpanish ? "Disponible" : "Available"}</Badge>
-      case "paid_out":
-        return <Badge variant="secondary">{isSpanish ? "Pagado" : "Paid Out"}</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
+  const handleUpgrade = () => {
+    const preApprovalUrl = process.env.NEXT_PUBLIC_MP_PRO_PREAPPROVAL_URL
+    if (preApprovalUrl) {
+      window.location.href = preApprovalUrl
+    } else {
+      console.warn("NEXT_PUBLIC_MP_PRO_PREAPPROVAL_URL is not configured")
     }
   }
 
+  const isActive = sub.status === "active" || sub.status === "trialing"
+  const isTrialing = sub.status === "trialing"
+  const isPastDue = sub.status === "past_due"
+  const trialEndFormatted = sub.trial_end_date
+    ? format(new Date(sub.trial_end_date), "dd 'de' MMMM, yyyy", { locale: isSpanish ? es : enUS })
+    : null
+
   if (loading) {
-     return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="animate-spin h-8 w-8 text-teal-600"/></div>
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin h-8 w-8 text-teal-600" />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="max-w-3xl mx-auto space-y-8 pb-10">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {isSpanish ? "Mis Finanzas" : "My Finances"}
+          {isSpanish ? "Mi Suscripción NUREA" : "My NUREA Subscription"}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 mt-1">
-          {isSpanish 
-            ? "Gestiona tus ingresos y retiros. En NUREA, recibes el 100% de lo que tus pacientes pagan." 
-            : "Manage your income and withdrawals. At NUREA, you receive 100% of what your patients pay."}
+          {isSpanish
+            ? "Gestiona tu plan y accede a todas las herramientas profesionales."
+            : "Manage your plan and access all professional tools."}
         </p>
       </div>
 
-      {/* Marketplace Integration Card */}
-      <Card className="border-blue-100 bg-white dark:bg-slate-900 shadow-sm">
-        <CardHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-blue-500" />
-            {isSpanish ? "Integración Mercado Pago" : "Mercado Pago Integration"}
-          </CardTitle>
+      {/* Status Card */}
+      <Card
+        className={cn(
+          "border shadow-sm overflow-hidden",
+          isActive ? "border-teal-200 bg-teal-50/40 dark:border-teal-800 dark:bg-teal-950/20" : "border-slate-200 bg-white dark:bg-slate-900",
+          isPastDue && "border-amber-300 bg-amber-50/40 dark:border-amber-700 dark:bg-amber-950/20"
+        )}
+      >
+        <CardHeader className="pb-4 border-b border-inherit">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-teal-600" />
+              {isSpanish ? "Estado del Plan" : "Plan Status"}
+            </CardTitle>
+            <StatusBadge status={sub.status} isSpanish={isSpanish} />
+          </div>
         </CardHeader>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white">
-                {isSpanish ? "Recibe pagos directos (Split Payments)" : "Receive direct payments (Split Payments)"}
-              </h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-2xl">
-                {isSpanish 
-                  ? "Conecta tu cuenta de Mercado Pago para que los pagos de tus pacientes vayan directamente a tu cuenta. NUREA debitará automáticamente un 5% de comisión por cada cita." 
-                  : "Connect your Mercado Pago account so patients' payments go directly to your account. NUREA will automatically deduct a 5% fee for each appointment."}
+        <CardContent className="pt-6 space-y-4">
+          {isTrialing && trialEndFormatted && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-teal-100/60 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
+              <Calendar className="h-5 w-5 text-teal-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-teal-800 dark:text-teal-300">
+                  {isSpanish ? "Período de prueba activo" : "Active trial period"}
+                </p>
+                <p className="text-xs text-teal-700 dark:text-teal-400 mt-0.5">
+                  {isSpanish
+                    ? `Tu período gratuito vence el ${trialEndFormatted}.`
+                    : `Your free trial ends on ${trialEndFormatted}.`}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {sub.status === "active" && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-teal-100/60 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800">
+              <CheckCircle2 className="h-5 w-5 text-teal-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-teal-800 dark:text-teal-300">
+                  {isSpanish ? "Plan Pro activo" : "Pro plan active"}
+                </p>
+                <p className="text-xs text-teal-700 dark:text-teal-400 mt-0.5">
+                  {isSpanish
+                    ? "Tienes acceso completo a todas las funcionalidades de NUREA Pro."
+                    : "You have full access to all NUREA Pro features."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isPastDue && (
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-100/60 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                  {isSpanish ? "Pago pendiente" : "Payment pending"}
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                  {isSpanish
+                    ? "Tu suscripción tiene un pago pendiente. Actualiza tu método de pago para continuar."
+                    : "Your subscription has a pending payment. Update your payment method to continue."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!isActive && !isPastDue && (
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              {isSpanish
+                ? "Actualmente no tienes una suscripción activa. Activa NUREA Pro para desbloquear todas las herramientas."
+                : "You don't have an active subscription. Activate NUREA Pro to unlock all tools."}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pro Plan Features */}
+      {!isActive && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="border-slate-200 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+            <CardHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-teal-600 flex items-center justify-center">
+                  <Zap className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-bold">NUREA Pro</CardTitle>
+                  <CardDescription>
+                    {isSpanish
+                      ? `$${PRO_PRICE_CLP.toLocaleString("es-CL")} CLP / mes`
+                      : `$${PRO_PRICE_CLP.toLocaleString("es-CL")} CLP / month`}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <ul className="space-y-3 mb-8">
+                {(isSpanish ? [
+                  "Perfil profesional verificado y visible en la plataforma",
+                  "Agenda online ilimitada con gestión de disponibilidad",
+                  "Historial clínico digital y fichas de pacientes",
+                  "Teleconsulta por videollamada segura",
+                  "Recordatorios automáticos para pacientes",
+                  "Soporte prioritario NUREA",
+                ] : [
+                  "Verified professional profile visible on the platform",
+                  "Unlimited online scheduling with availability management",
+                  "Digital clinical records and patient files",
+                  "Teleconsultation via secure video call",
+                  "Automatic patient reminders",
+                  "Priority NUREA support",
+                ]).map((feature, i) => (
+                  <li key={i} className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <CheckCircle2 className="h-4 w-4 text-teal-600 shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                onClick={handleUpgrade}
+                className="w-full h-12 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-base font-semibold shadow-sm"
+              >
+                <Star className="mr-2 h-5 w-5" />
+                {isSpanish ? "Mejorar a Pro" : "Upgrade to Pro"}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+
+              <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-3">
+                {isSpanish
+                  ? "Pago seguro con MercadoPago. Cancela cuando quieras."
+                  : "Secure payment with MercadoPago. Cancel anytime."}
               </p>
-            </div>
-            
-            <div className="shrink-0 flex items-center gap-3">
-              {profile?.mp_user_id ? (
-                <>
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 px-3 py-1">
-                    <CheckCircle2 className="w-4 h-4" /> 
-                    {isSpanish ? "Conectado" : "Connected"}
-                  </Badge>
-                  <Button 
-                    variant="outline" 
-                    className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-                    onClick={async () => {
-                      if(confirm(isSpanish ? '¿Estás seguro de desconectar tu cuenta?' : 'Are you sure to disconnect?')){
-                        await supabase.from('profiles').update({ mp_access_token: null, mp_refresh_token: null, mp_user_id: null, mp_public_key: null }).eq('id', user?.id)
-                        setProfile({...profile, mp_user_id: null})
-                      }
-                    }}
-                  >
-                    <Unlink className="w-4 h-4 mr-2" />
-                    {isSpanish ? "Desvincular" : "Disconnect"}
-                  </Button>
-                </>
-              ) : (
-                <Button 
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
-                  onClick={() => {
-                    const clientId = process.env.NEXT_PUBLIC_MP_CLIENT_ID || '';
-                    const redirectUri = `${window.location.origin}/api/auth/mercadopago`;
-                    window.location.href = `https://auth.mercadopago.com/authorization?client_id=${clientId}&response_type=code&platform_id=mp&redirect_uri=${redirectUri}`;
-                  }}
-                >
-                  <LinkIcon className="w-4 h-4 mr-2" />
-                  {isSpanish ? "Conectar Cuenta" : "Connect Account"}
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="border-teal-100 bg-teal-50/30 dark:bg-teal-950/10 hover:shadow-md transition-all">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-teal-700 dark:text-teal-400 uppercase tracking-wider">
-              {isSpanish ? "Disponible para Retiro" : "Available for Payout"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-teal-900 dark:text-teal-50">${stats.available.toLocaleString()}</div>
-            <p className="text-xs text-teal-600 dark:text-teal-500 mt-1 flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" /> {isSpanish ? "Consultas completadas" : "Completed consultations"}
-            </p>
-            <Button className="w-full mt-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl">
-              {isSpanish ? "Retirar Fondos" : "Withdraw Funds"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 bg-white dark:bg-slate-900 hover:shadow-md transition-all">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500 uppercase tracking-wider">
-              {isSpanish ? "En Garantía (Escrow)" : "In Escrow"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">${stats.escrow.toLocaleString()}</div>
-            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <Clock className="h-3 w-3" /> {isSpanish ? "Citas confirmadas por realizar" : "Upcoming confirmed appointments"}
+      {/* Already Pro — manage section */}
+      {isActive && (
+        <Card className="border-slate-200 bg-white dark:bg-slate-900 shadow-sm">
+          <CardContent className="pt-6 pb-6">
+            <p className="text-sm text-slate-500 dark:text-slate-400 text-center">
+              {isSpanish
+                ? "Para modificar o cancelar tu suscripción, contacta a soporte NUREA."
+                : "To modify or cancel your subscription, contact NUREA support."}
             </p>
           </CardContent>
         </Card>
-
-        <Card className="border-slate-200 bg-white dark:bg-slate-900 hover:shadow-md transition-all">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500 uppercase tracking-wider">
-              {isSpanish ? "Total Generado" : "Total Earned"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">${stats.totalEarned.toLocaleString()}</div>
-            <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1 font-medium">
-              <ArrowUpRight className="h-3 w-3" /> {isSpanish ? "100% Retención para ti" : "100% Retention for you"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Transactions Table */}
-      <Card className="border-slate-200 bg-white dark:bg-slate-900 overflow-hidden">
-        <CardHeader className="border-b border-slate-100 p-6 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg font-bold">
-            {isSpanish ? "Historial de Transacciones" : "Transaction History"}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input placeholder={isSpanish ? "Buscar..." : "Search..."} className="pl-9 h-9 w-[200px] rounded-lg" />
-            </div>
-            <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg">
-              <Filter className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-slate-50 dark:bg-slate-800/50">
-              <TableRow>
-                <TableHead className="font-bold">{isSpanish ? "Fecha" : "Date"}</TableHead>
-                <TableHead className="font-bold">{isSpanish ? "Paciente" : "Patient"}</TableHead>
-                <TableHead className="font-bold">{isSpanish ? "Cita" : "Appointment"}</TableHead>
-                <TableHead className="font-bold">{isSpanish ? "Estado" : "Status"}</TableHead>
-                <TableHead className="text-right font-bold">{isSpanish ? "Monto" : "Amount"}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center text-slate-500">
-                    {isSpanish ? "No se encontraron transacciones." : "No transactions found."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                transactions.map((t) => (
-                  <TableRow key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <TableCell className="text-sm font-medium">
-                      {format(new Date(t.created_at), "dd MMM, yyyy", { locale: isSpanish ? es : enUS })}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
-                          {t.patient?.avatar_url ? (
-                            <img src={t.patient.avatar_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] font-bold text-slate-400">
-                              {t.patient?.first_name?.[0]}{t.patient?.last_name?.[0]}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-sm font-bold">{t.patient?.first_name} {t.patient?.last_name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs">
-                        <p className="font-medium">{t.appointment?.type === 'online' ? (isSpanish ? 'Teleconsulta' : 'Video') : (isSpanish ? 'Presencial' : 'Clinic')}</p>
-                        <p className="text-slate-500">{t.appointment?.appointment_date}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(t.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="font-bold text-slate-900 dark:text-white">
-                        +${Number(t.professional_net).toLocaleString()}
-                      </div>
-                      <div className="text-[10px] text-teal-600 font-bold uppercase tracking-tight">
-                        100% {isSpanish ? "PARA TI" : "FOR YOU"}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      )}
     </div>
   )
+}
+
+function StatusBadge({ status, isSpanish }: { status: SubscriptionStatus; isSpanish: boolean }) {
+  switch (status) {
+    case "active":
+      return (
+        <Badge className="bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/40 dark:text-teal-300 font-semibold gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          {isSpanish ? "Pro Activo" : "Pro Active"}
+        </Badge>
+      )
+    case "trialing":
+      return (
+        <Badge className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 font-semibold gap-1">
+          <Calendar className="h-3 w-3" />
+          {isSpanish ? "En Prueba" : "Trial"}
+        </Badge>
+      )
+    case "past_due":
+      return (
+        <Badge className="bg-amber-100 text-amber-700 border-amber-200 font-semibold gap-1">
+          <AlertCircle className="h-3 w-3" />
+          {isSpanish ? "Pago Pendiente" : "Past Due"}
+        </Badge>
+      )
+    case "canceled":
+      return (
+        <Badge variant="secondary" className="font-semibold">
+          {isSpanish ? "Cancelado" : "Canceled"}
+        </Badge>
+      )
+    default:
+      return (
+        <Badge variant="outline" className="text-slate-500 font-semibold">
+          {isSpanish ? "Inactivo" : "Inactive"}
+        </Badge>
+      )
+  }
 }
