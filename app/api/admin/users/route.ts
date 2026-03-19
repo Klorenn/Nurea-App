@@ -27,179 +27,84 @@ async function verifyAdmin(supabase: any) {
  * Obtiene todos los usuarios con datos extendidos (solo admin)
  */
 export async function GET(request: Request) {
+  // ── 1. Auth ──────────────────────────────────────────────────────────────
+  let supabase: any
   try {
-    const supabase = await createClient()
-    
-    const auth = await verifyAdmin(supabase)
-    if ('error' in auth) {
-      return NextResponse.json(
-        { error: auth.error, message: auth.error === 'unauthorized' ? 'Por favor, inicia sesión.' : 'Solo administradores.' },
-        { status: auth.status }
-      )
-    }
+    supabase = await createClient()
+  } catch (e: any) {
+    console.error('[admin/users] createClient threw:', e)
+    return NextResponse.json({ error: 'client_init_failed', message: e?.message }, { status: 500 })
+  }
 
-    const { searchParams } = new URL(request.url)
-    const role = searchParams.get('role')
-    const blocked = searchParams.get('blocked')
-    const accountStatus = searchParams.get('account_status')
-
-    // Usar cliente admin para bypassear RLS y ver todos los perfiles
-    let adminSupabase: ReturnType<typeof createAdminClient>
-    try {
-      adminSupabase = createAdminClient()
-    } catch (e) {
-      console.error('[admin/users] createAdminClient failed (missing SUPABASE_SERVICE_ROLE_KEY?):', e)
-      return NextResponse.json(
-        { error: 'admin_client_unavailable', message: 'Falta SUPABASE_SERVICE_ROLE_KEY en el servidor.' },
-        { status: 500 }
-      )
-    }
-
-    // Obtener usuarios con datos extendidos
-    let query = adminSupabase
-      .from('profiles')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        role,
-        blocked,
-        blocked_at,
-        account_status,
-        subscription_status,
-        trial_end_date,
-        selected_plan_id,
-        warning_message,
-        warned_at,
-        email_verified,
-        avatar_url,
-        phone,
-        date_of_birth,
-        created_at,
-        updated_at
-      `)
-      .order('created_at', { ascending: false })
-
-    // Aplicar filtros
-    if (role && role !== 'all') {
-      query = query.eq('role', role)
-    }
-
-    if (blocked === 'true') {
-      query = query.eq('blocked', true)
-    } else if (blocked === 'false') {
-      query = query.eq('blocked', false)
-    }
-
-    if (accountStatus) {
-      query = query.eq('account_status', accountStatus)
-    }
-
-    let profiles: any[] = []
-    try {
-      const { data, error } = await query
-      if (error) throw error
-      profiles = data || []
-    } catch (profilesError: any) {
-      // Si algunos campos premium no existen en este entorno, hacemos fallback para que el admin no se rompa.
-      console.error('Error fetching profiles (with premium fields):', profilesError)
-
-      const fallbackQuery = adminSupabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          email,
-          role,
-          blocked,
-          blocked_at,
-          account_status,
-          warning_message,
-          warned_at,
-          email_verified,
-          avatar_url,
-          phone,
-          date_of_birth,
-          created_at,
-          updated_at
-        `)
-        .order('created_at', { ascending: false })
-
-      let filteredFallbackQuery = fallbackQuery
-      if (role && role !== 'all') {
-        filteredFallbackQuery = filteredFallbackQuery.eq('role', role)
-      }
-      if (blocked === 'true') {
-        filteredFallbackQuery = filteredFallbackQuery.eq('blocked', true)
-      } else if (blocked === 'false') {
-        filteredFallbackQuery = filteredFallbackQuery.eq('blocked', false)
-      }
-      if (accountStatus) {
-        filteredFallbackQuery = filteredFallbackQuery.eq('account_status', accountStatus)
-      }
-
-      const { data: fallbackProfiles, error: fallbackError } = await filteredFallbackQuery
-      if (fallbackError) {
-        console.error('Error fetching profiles (fallback):', fallbackError)
-        return NextResponse.json(
-          { error: 'fetch_failed', message: 'No pudimos obtener los usuarios.' },
-          { status: 500 }
-        )
-      }
-
-      profiles = (fallbackProfiles || []).map((p: any) => ({
-        ...p,
-        subscription_status: null,
-        trial_end_date: null,
-        selected_plan_id: null,
-      }))
-    }
-
-    // Obtener datos de profesionales para los que tienen rol 'professional'
-    const professionalIds = (profiles || [])
-      .filter((p: any) => p.role === 'professional')
-      .map((p: any) => p.id)
-
-    let professionalsMap: Record<string, any> = {}
-
-    if (professionalIds.length > 0) {
-      const { data: professionals } = await adminSupabase
-        .from('professionals')
-        .select('id, specialty, license_number, verified, location')
-        .in('id', professionalIds)
-
-      if (professionals) {
-        professionals.forEach((p: any) => {
-          professionalsMap[p.id] = p
-        })
-      }
-    }
-
-    // Combinar datos
-    const users = (profiles || []).map((profile: any) => ({
-      ...profile,
-      ...(professionalsMap[profile.id] || {}),
-      account_status: profile.account_status || 'active'
-    }))
-
-    return NextResponse.json({
-      success: true,
-      users,
-      count: users.length
-    })
-  } catch (error: any) {
-    console.error('Get users error:', error)
+  const auth = await verifyAdmin(supabase)
+  if ('error' in auth) {
     return NextResponse.json(
-      {
-        error: 'server_error',
-        message: error?.message || 'Algo salió mal.',
-        detail: process.env.NODE_ENV !== 'production' ? String(error) : undefined,
-      },
+      { error: auth.error, message: auth.error === 'unauthorized' ? 'Por favor, inicia sesión.' : 'Solo administradores.' },
+      { status: auth.status }
+    )
+  }
+
+  // ── 2. Admin client ───────────────────────────────────────────────────────
+  let adminSupabase: ReturnType<typeof createAdminClient>
+  try {
+    adminSupabase = createAdminClient()
+  } catch (e: any) {
+    console.error('[admin/users] createAdminClient threw:', e)
+    return NextResponse.json({ error: 'admin_client_failed', message: e?.message }, { status: 500 })
+  }
+
+  // ── 3. Query profiles (minimal columns first, premium fields optional) ────
+  const { searchParams } = new URL(request.url)
+  const role = searchParams.get('role')
+  const blocked = searchParams.get('blocked')
+  const accountStatus = searchParams.get('account_status')
+
+  // Base columns that always exist
+  const baseSelect = `id, first_name, last_name, email, role, blocked, account_status, email_verified, avatar_url, phone, date_of_birth, created_at, updated_at`
+
+  let profilesQuery = adminSupabase
+    .from('profiles')
+    .select(baseSelect)
+    .order('created_at', { ascending: false })
+
+  if (role && role !== 'all') profilesQuery = profilesQuery.eq('role', role)
+  if (blocked === 'true') profilesQuery = profilesQuery.eq('blocked', true)
+  else if (blocked === 'false') profilesQuery = profilesQuery.eq('blocked', false)
+  if (accountStatus) profilesQuery = profilesQuery.eq('account_status', accountStatus)
+
+  const { data: profiles, error: profilesError } = await profilesQuery
+
+  if (profilesError) {
+    console.error('[admin/users] profiles query error:', profilesError)
+    return NextResponse.json(
+      { error: 'profiles_query_failed', message: profilesError.message, detail: profilesError },
       { status: 500 }
     )
   }
+
+  // ── 4. Optional: enrich professionals ────────────────────────────────────
+  const professionalIds = (profiles || [])
+    .filter((p: any) => p.role === 'professional')
+    .map((p: any) => p.id)
+
+  let professionalsMap: Record<string, any> = {}
+  if (professionalIds.length > 0) {
+    const { data: professionals } = await adminSupabase
+      .from('professionals')
+      .select('id, specialty, license_number, verified, location')
+      .in('id', professionalIds)
+    ;(professionals || []).forEach((p: any) => { professionalsMap[p.id] = p })
+  }
+
+  // ── 5. Combine & return ───────────────────────────────────────────────────
+  const users = (profiles || []).map((profile: any) => ({
+    ...profile,
+    ...(professionalsMap[profile.id] || {}),
+    account_status: profile.account_status || 'active',
+    subscription_status: profile.subscription_status ?? null,
+  }))
+
+  return NextResponse.json({ success: true, users, count: users.length })
 }
 
 /**
