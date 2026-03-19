@@ -189,10 +189,14 @@ export async function GET(request: Request) {
       users,
       count: users.length
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get users error:', error)
     return NextResponse.json(
-      { error: 'server_error', message: 'Algo salió mal.' },
+      {
+        error: 'server_error',
+        message: error?.message || 'Algo salió mal.',
+        detail: process.env.NODE_ENV !== 'production' ? String(error) : undefined,
+      },
       { status: 500 }
     )
   }

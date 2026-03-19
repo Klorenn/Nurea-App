@@ -133,7 +133,7 @@ export default function AdminUsersPage() {
       if (data.success) {
         setUsers(data.users || [])
       } else {
-        const msg = data.message || (isSpanish ? "No se pudieron cargar los usuarios" : "Could not load users")
+        const msg = [data.message, data.detail].filter(Boolean).join(' — ') || (isSpanish ? "No se pudieron cargar los usuarios" : "Could not load users")
         setError(msg)
         if (!silent) {
           toast({
