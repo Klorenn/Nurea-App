@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 async function verifyAdmin(supabase: any) {
@@ -42,8 +43,11 @@ export async function GET(request: Request) {
     const blocked = searchParams.get('blocked')
     const accountStatus = searchParams.get('account_status')
 
+    // Usar cliente admin para bypassear RLS y ver todos los perfiles
+    const adminSupabase = createAdminClient()
+
     // Obtener usuarios con datos extendidos
-    let query = supabase
+    let query = adminSupabase
       .from('profiles')
       .select(`
         id,
@@ -54,6 +58,9 @@ export async function GET(request: Request) {
         blocked,
         blocked_at,
         account_status,
+        subscription_status,
+        trial_end_date,
+        selected_plan_id,
         warning_message,
         warned_at,
         email_verified,
@@ -80,14 +87,65 @@ export async function GET(request: Request) {
       query = query.eq('account_status', accountStatus)
     }
 
-    const { data: profiles, error: profilesError } = await query
+    let profiles: any[] = []
+    try {
+      const { data, error } = await query
+      if (error) throw error
+      profiles = data || []
+    } catch (profilesError: any) {
+      // Si algunos campos premium no existen en este entorno, hacemos fallback para que el admin no se rompa.
+      console.error('Error fetching profiles (with premium fields):', profilesError)
 
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError)
-      return NextResponse.json(
-        { error: 'fetch_failed', message: 'No pudimos obtener los usuarios.' },
-        { status: 500 }
-      )
+      const fallbackQuery = adminSupabase
+        .from('profiles')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          email,
+          role,
+          blocked,
+          blocked_at,
+          account_status,
+          warning_message,
+          warned_at,
+          email_verified,
+          avatar_url,
+          phone,
+          date_of_birth,
+          created_at,
+          updated_at
+        `)
+        .order('created_at', { ascending: false })
+
+      let filteredFallbackQuery = fallbackQuery
+      if (role && role !== 'all') {
+        filteredFallbackQuery = filteredFallbackQuery.eq('role', role)
+      }
+      if (blocked === 'true') {
+        filteredFallbackQuery = filteredFallbackQuery.eq('blocked', true)
+      } else if (blocked === 'false') {
+        filteredFallbackQuery = filteredFallbackQuery.eq('blocked', false)
+      }
+      if (accountStatus) {
+        filteredFallbackQuery = filteredFallbackQuery.eq('account_status', accountStatus)
+      }
+
+      const { data: fallbackProfiles, error: fallbackError } = await filteredFallbackQuery
+      if (fallbackError) {
+        console.error('Error fetching profiles (fallback):', fallbackError)
+        return NextResponse.json(
+          { error: 'fetch_failed', message: 'No pudimos obtener los usuarios.' },
+          { status: 500 }
+        )
+      }
+
+      profiles = (fallbackProfiles || []).map((p: any) => ({
+        ...p,
+        subscription_status: null,
+        trial_end_date: null,
+        selected_plan_id: null,
+      }))
     }
 
     // Obtener datos de profesionales para los que tienen rol 'professional'
@@ -98,7 +156,7 @@ export async function GET(request: Request) {
     let professionalsMap: Record<string, any> = {}
 
     if (professionalIds.length > 0) {
-      const { data: professionals } = await supabase
+      const { data: professionals } = await adminSupabase
         .from('professionals')
         .select('id, specialty, license_number, verified, location')
         .in('id', professionalIds)
@@ -148,7 +206,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { userId, role, blocked, account_status, warning_message } = body
+    const { userId, role, blocked, account_status, warning_message, subscription_status, trial_end_date, selected_plan_id } = body
 
     if (!userId) {
       return NextResponse.json(
@@ -190,6 +248,37 @@ export async function PUT(request: Request) {
         updateData.blocked = true
         updateData.blocked_at = new Date().toISOString()
       }
+    }
+
+    // Premium (suscripción): admin puede activar/poner trial con fecha.
+    if (subscription_status) {
+      const allowedSubscriptionStatuses = [
+        'inactive',
+        'active',
+        'past_due',
+        'canceled',
+        'trialing',
+        'unpaid',
+        'pending_approval',
+      ]
+
+      if (!allowedSubscriptionStatuses.includes(subscription_status)) {
+        return NextResponse.json(
+          { error: 'invalid_subscription_status', message: `Estado de suscripción inválido: ${subscription_status}` },
+          { status: 400 }
+        )
+      }
+
+      updateData.subscription_status = subscription_status
+    }
+
+    if (typeof trial_end_date !== 'undefined') {
+      // Permite null para activar 'active' sin fecha de término.
+      updateData.trial_end_date = trial_end_date ? new Date(trial_end_date).toISOString() : null
+    }
+
+    if (typeof selected_plan_id !== 'undefined') {
+      updateData.selected_plan_id = selected_plan_id || null
     }
 
     // Si se proporciona warning_message sin account_status, asumir status 'warning'
