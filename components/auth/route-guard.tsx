@@ -123,8 +123,50 @@ export function RouteGuard({
     }
   }, [user, authLoading, requiredRole, requireEmailVerification, requireProfileComplete, router, redirectTo, supabase])
 
-  // Mostrar loading mientras se verifica
-  if (authLoading || profileLoading || onboardingComplete === null) {
+  // Compute the redirect target after profile loads (null = no redirect needed)
+  const postLoadRedirect = (() => {
+    if (authLoading || profileLoading || onboardingComplete === null || !user) return null
+
+    if (requireEmailVerification) {
+      const emailVerified = user.email_confirmed_at !== null || profile?.email_verified
+      if (!emailVerified) return "/verify-email"
+    }
+
+    if (requireProfileComplete) {
+      const emailVerified = user.email_confirmed_at !== null || profile?.email_verified
+      const profileComplete = !!profile?.date_of_birth && emailVerified
+      if (!profileComplete) return "/complete-profile"
+    }
+
+    if (requiredRole) {
+      const userRole =
+        profile?.role ||
+        (user.user_metadata as unknown as { role?: string } | null)?.role ||
+        null
+      const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
+
+      if (!userRole) return redirectTo || "/dashboard"
+
+      if (!roles.includes(userRole as any)) {
+        const defaultRedirect =
+          userRole === "professional" ? "/professional/dashboard" :
+          userRole === "admin" ? "/admin" :
+          "/dashboard"
+        return redirectTo || defaultRedirect
+      }
+    }
+
+    return null
+  })()
+
+  useEffect(() => {
+    if (postLoadRedirect) {
+      router.push(postLoadRedirect)
+    }
+  }, [postLoadRedirect, router])
+
+  // Mostrar loading mientras se verifica o mientras se redirige
+  if (authLoading || profileLoading || onboardingComplete === null || postLoadRedirect) {
     return (
       <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">
         <div className="text-center space-y-4">
@@ -135,56 +177,9 @@ export function RouteGuard({
     )
   }
 
-  // Si no hay usuario, no renderizar nada (ya se redirigió)
+  // Si no hay usuario, no renderizar nada (ya se redirigió en el useEffect de arriba)
   if (!user) {
     return null
-  }
-
-  // Verificar email verificado
-  if (requireEmailVerification) {
-    const emailVerified = user.email_confirmed_at !== null || profile?.email_verified
-    if (!emailVerified) {
-      router.push("/verify-email")
-      return null
-    }
-  }
-
-  // Verificar perfil completo
-  if (requireProfileComplete) {
-    const emailVerified = user.email_confirmed_at !== null || profile?.email_verified
-    const profileComplete = !!profile?.date_of_birth && emailVerified
-    if (!profileComplete) {
-      router.push("/complete-profile")
-      return null
-    }
-  }
-
-  // Verificar rol
-  if (requiredRole) {
-    // Si falla la carga de `profiles`, no asumimos "patient" (eso rompe dashboards admin).
-    // Intentamos tomar el rol desde `user_metadata`; si tampoco existe, no redirigimos.
-    const userRole =
-      profile?.role ||
-      (user.user_metadata as unknown as { role?: string } | null)?.role ||
-      null
-
-    const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
-
-    // Si no podemos determinar el rol, redirigimos (evita que se muestre admin si el rol no está claro).
-    if (!userRole) {
-      router.push(redirectTo || "/dashboard")
-      return null
-    }
-
-    if (!roles.includes(userRole as any)) {
-      // Redirigir según el rol del usuario
-      const defaultRedirect = 
-        userRole === "professional" ? "/professional/dashboard" :
-        userRole === "admin" ? "/admin" :
-        "/dashboard"
-      router.push(redirectTo || defaultRedirect)
-      return null
-    }
   }
 
   // Todo verificado, renderizar children
