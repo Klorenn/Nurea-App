@@ -439,6 +439,10 @@ export default function ProfessionalProfilePage() {
           .eq("id", user.id)
         if (profileError) console.error("Error updating professional gender:", profileError)
       }
+      
+      // Invalidar cache del perfil
+      await mutateProfile()
+      
       toast.success("Información general actualizada")
       generalForm.reset(values)
     } catch (err) {
@@ -501,6 +505,10 @@ export default function ProfessionalProfilePage() {
         .eq('id', user.id)
 
       if (error) throw error
+      
+      // Invalidar cache del perfil
+      await mutateProfile()
+      
       toast.success("Información clínica actualizada")
       clinicalForm.reset(values)
     } catch (err) {
@@ -566,6 +574,10 @@ export default function ProfessionalProfilePage() {
         .eq('id', user.id)
 
       if (error) throw error
+      
+      // Invalidar cache del perfil
+      await mutateProfile()
+      
       toast.success("Historial educativo actualizado")
       educationForm.reset(values)
     } catch (err) {
@@ -587,6 +599,10 @@ export default function ProfessionalProfilePage() {
         .eq('id', user.id)
 
       if (error) throw error
+      
+      // Invalidar cache del perfil
+      await mutateProfile()
+      
       toast.success("Galería actualizada")
       galleryForm.reset(values)
     } catch (err) {

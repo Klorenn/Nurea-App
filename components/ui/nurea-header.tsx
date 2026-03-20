@@ -217,11 +217,11 @@ export function NureaHeader() {
 					: 'border-transparent bg-transparent'
 			)}
 		>
-			<nav className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+			<nav className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
 				{/* Logo */}
 				<Link 
 					href="/" 
-					className="flex items-center gap-2 rounded-md p-1.5 transition-colors hover:bg-accent/50"
+					className="flex shrink-0 items-center gap-2 rounded-md p-1.5 transition-colors hover:bg-accent/50"
 				>
 					<Image
 						src="/logo.png"
@@ -235,8 +235,8 @@ export function NureaHeader() {
 					<span className="text-xs text-muted-foreground">.app</span>
 				</Link>
 
-				{/* Desktop Navigation */}
-				<div className="hidden items-center gap-1 lg:flex">
+				{/* Desktop Navigation — centrado; acciones quedan al borde derecho */}
+				<div className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex">
 					<NavigationMenu>
 						<NavigationMenuList>
 							{/* Para Pacientes */}
@@ -302,8 +302,11 @@ export function NureaHeader() {
 					</NavigationMenu>
 				</div>
 
-				{/* Desktop Actions */}
-				<div className="hidden items-center gap-1 lg:flex">
+				{/* Desktop Actions: idioma → tema → (sep) → perfil / CTAs (perfil en la esquina derecha) */}
+				<div className="hidden shrink-0 items-center gap-2 lg:flex">
+					<LanguageSelector />
+					<ThemeSwitch />
+					<div className="mx-0.5 h-5 w-px shrink-0 bg-border/50" aria-hidden />
 					{loading ? (
 						<div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
 					) : user ? (
@@ -320,25 +323,19 @@ export function NureaHeader() {
 							}}
 						/>
 					) : (
-						<>
+						<div className="flex items-center gap-2">
 							<Button variant="ghost" size="sm" className="text-sm font-medium" asChild>
 								<Link href="/login">{t.nav.signIn}</Link>
 							</Button>
-							<Button size="sm" className="rounded-full px-5 bg-teal-600 hover:bg-teal-700 text-white shadow-sm" asChild>
+							<Button size="sm" className="rounded-full bg-teal-600 px-5 text-white shadow-sm hover:bg-teal-700" asChild>
 								<Link href="/login">{t.nav.getStarted}</Link>
 							</Button>
-						</>
+						</div>
 					)}
-					
-					{/* Thin separator */}
-					<div className="h-5 w-px bg-border/50 mx-1" />
-					
-					<LanguageSelector />
-					<ThemeSwitch />
 				</div>
 
-				{/* Mobile Actions */}
-				<div className="flex items-center gap-2 lg:hidden">
+				{/* Mobile: mismo orden — idioma, tema, menú (perfil en drawer / abajo) */}
+				<div className="ml-auto flex items-center gap-2 lg:hidden">
 					<LanguageSelector />
 					<ThemeSwitch />
 					<Button

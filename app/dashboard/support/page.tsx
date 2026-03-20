@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useTranslations } from "@/lib/i18n"
+import { toast } from "sonner"
 
 export default function PatientSupportPage() {
   const { language } = useLanguage()
@@ -92,10 +93,10 @@ export default function PatientSupportPage() {
       await loadTickets()
       setCreateDialogOpen(false)
       setNewTicket({ subject: "", message: "", category: "other", priority: "medium" })
-      alert(isSpanish ? "Ticket creado exitosamente" : "Ticket created successfully")
+      toast.success(isSpanish ? "Ticket creado exitosamente" : "Ticket created successfully")
     } catch (error) {
       console.error("Error creating ticket:", error)
-      alert(error instanceof Error ? error.message : (isSpanish 
+      toast.error(error instanceof Error ? error.message : (isSpanish
         ? "No se pudo crear el ticket"
         : "Could not create ticket"))
     } finally {

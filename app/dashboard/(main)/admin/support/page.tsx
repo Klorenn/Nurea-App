@@ -7,12 +7,8 @@ import {
   CheckCircle2, 
   Clock, 
   User, 
-  AlertCircle,
-  MoreVertical,
-  Filter,
   Check,
   Loader2,
-  ChevronRight,
   Mail,
   ArrowRight
 } from 'lucide-react'
@@ -36,11 +32,13 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 
+type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
+
 interface Ticket {
   id: string
   subject: string
   message: string
-  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  status: TicketStatus | string
   priority: 'low' | 'medium' | 'high' | 'urgent'
   created_at: string
   user_id: string
@@ -142,16 +140,20 @@ export default function AdminSupportPage() {
     }
   }
 
-  const filteredTickets = tickets.filter(t => 
+  // Normalizar status: 'closed' → 'resolved'
+  const normalizeStatus = (status: string) => status === 'closed' ? 'resolved' : status
+  const normalizedTickets = tickets.map(t => ({ ...t, status: normalizeStatus(t.status) }))
+
+  const filteredTickets = normalizedTickets.filter(t => 
     t.subject.toLowerCase().includes(search.toLowerCase()) ||
     t.user?.email.toLowerCase().includes(search.toLowerCase()) ||
     (`${t.user?.first_name} ${t.user?.last_name}`).toLowerCase().includes(search.toLowerCase())
   )
 
   const stats = {
-    total: tickets.length,
-    open: tickets.filter(t => t.status !== 'resolved' && t.status !== 'closed').length,
-    resolved: tickets.filter(t => t.status === 'resolved').length
+    total: normalizedTickets.length,
+    open: normalizedTickets.filter(t => t.status === 'open' || t.status === 'in_progress').length,
+    resolved: normalizedTickets.filter(t => t.status === 'resolved').length
   }
 
   return (
@@ -233,7 +235,7 @@ export default function AdminSupportPage() {
                   key={ticket.id}
                   className={cn(
                     "group transition-all duration-300 hover:shadow-xl hover:border-teal-500/20 rounded-2xl border-slate-200 dark:border-slate-800 overflow-hidden",
-                    (ticket.status === 'resolved' || ticket.status === 'closed') && "opacity-75"
+                    ticket.status === 'resolved' && "opacity-75"
                   )}
                 >
                   <CardContent className="p-0">
@@ -295,7 +297,7 @@ export default function AdminSupportPage() {
 
                       {/* Right Column: Actions */}
                       <div className="md:w-64 bg-slate-50/50 dark:bg-slate-900/30 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 p-8 flex flex-col justify-center items-center gap-4">
-                        {ticket.status === 'resolved' || ticket.status === 'closed' ? (
+                        {ticket.status === 'resolved' ? (
                           <div className="flex flex-col items-center gap-2 text-emerald-600">
                             <div className="bg-emerald-100 dark:bg-emerald-900/30 rounded-full p-2">
                               <Check className="h-6 w-6" />

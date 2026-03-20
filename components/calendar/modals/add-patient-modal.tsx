@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
 import { toast } from "sonner"
 import { Loader2, UserPlus, Mail, Phone, Calendar as CalendarIcon, Plus } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 
 const formSchema = z.object({
   firstName: z.string().min(2, "El nombre es obligatorio"),
@@ -44,6 +45,7 @@ export function AddPatientModal({ open, onOpenChange, onSuccess }: AddPatientMod
   const { language } = useLanguage()
   const isSpanish = language === "es"
   const [loading, setLoading] = React.useState(false)
+  const queryClient = useQueryClient()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,6 +71,11 @@ export function AddPatientModal({ open, onOpenChange, onSuccess }: AddPatientMod
       if (!response.ok) throw new Error(data.message || "Error al crear paciente")
 
       toast.success(isSpanish ? "Paciente creado correctamente" : "Patient created successfully")
+      
+      // Invalidar cache para actualizar lista de pacientes inmediatamente
+      queryClient.invalidateQueries({ queryKey: ['/api/professional/patients'] })
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
+      
       onSuccess(data.patientId)
       onOpenChange(false)
       form.reset()

@@ -7,7 +7,7 @@ import { AlertCircle, Bird, Calendar, CheckCircle2, Loader2, Phone, User } from 
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useForm } from "react-hook-form"
-import { SmokeyBackground } from "@/components/smokey-login"
+import { AuthPageBackground } from "@/components/ui/login-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -1160,16 +1160,14 @@ function OnboardingContent() {
               "specialty_id, registration_number, years_experience, consultation_type, professional_slogan, nura_ai_tone",
             )
             .eq("id", user.id)
-            .single()
-
-          if (profRes.error) throw profRes.error
+            .maybeSingle()
 
           setInitialProfessional({
             specialty_id: profRes.data?.specialty_id || null,
             registration_number: profRes.data?.registration_number || null,
             years_experience: profRes.data?.years_experience ?? null,
             consultation_type: profRes.data?.consultation_type || null,
-            professional_slogan: profRes.data?.professional_slogan || profRes.data?.bio || null,
+            professional_slogan: profRes.data?.professional_slogan || (profRes.data as any)?.bio || null,
             nura_ai_tone: profRes.data?.nura_ai_tone || null,
             avatar_url: profile?.avatar_url || null,
           })
@@ -1177,6 +1175,16 @@ function OnboardingContent() {
       } catch (e) {
         // If something fails, keep the wizard accessible and default to patient.
         setRole("patient")
+        setInitialPatient({
+          date_of_birth: null,
+          gender: null,
+          phone: null,
+          allergies: null,
+          chronic_diseases: null,
+          current_medications: null,
+          patient_goal: null,
+          avatar_url: null,
+        })
       } finally {
         setLoading(false)
       }
@@ -1186,12 +1194,12 @@ function OnboardingContent() {
   }, [user, authLoading, supabase, router])
 
   const cardClass =
-    "relative w-full bg-white rounded-2xl shadow-xl border border-slate-200 p-6 md:p-8"
+    "relative w-full bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl shadow-slate-900/10 border border-slate-200/60 p-6 md:p-10"
 
   if (authLoading || loading) {
     return (
       <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-        <SmokeyBackground backdropBlurAmount="md" color="#14B8A6" />
+        <AuthPageBackground />
         <div className="relative z-10">
           <Loader2 className="h-8 w-8 animate-spin text-teal-700" />
         </div>
@@ -1202,7 +1210,7 @@ function OnboardingContent() {
   if (!role || onboardingComplete) {
     return (
       <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-        <SmokeyBackground backdropBlurAmount="md" color="#14B8A6" />
+        <AuthPageBackground />
         <div className="relative z-10 text-slate-700 text-sm font-semibold">{isSpanish ? "Cargando..." : "Loading..."}</div>
       </main>
     )
@@ -1210,23 +1218,29 @@ function OnboardingContent() {
 
   return (
     <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-      <SmokeyBackground backdropBlurAmount="md" color="#14B8A6" />
+      <AuthPageBackground />
       <div className="relative z-10 w-full max-w-3xl">
         <div className={cardClass}>
-          <div className="space-y-2">
+          <div className="space-y-2 mb-8">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center shadow-lg shadow-teal-600/20">
+                <Bird className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xs font-black uppercase tracking-widest text-teal-600">NUREA</span>
+            </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900">
               {role === "professional"
                 ? isSpanish
-                  ? "Onboarding Profesional"
-                  : "Professional Onboarding"
+                  ? "Configura tu perfil profesional"
+                  : "Set up your professional profile"
                 : isSpanish
-                  ? "Onboarding del Paciente"
-                  : "Patient Onboarding"}
+                  ? "Bienvenido a NUREA"
+                  : "Welcome to NUREA"}
             </h1>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-500">
               {isSpanish
-                ? "Completa tu perfil al 100% para comenzar a usar NUREA."
-                : "Complete your profile 100% to start using NUREA."}
+                ? "Completa los siguientes pasos para comenzar a usar la plataforma."
+                : "Complete the following steps to start using the platform."}
             </p>
           </div>
 
@@ -1258,8 +1272,10 @@ export default function OnboardingPage() {
     <Suspense
       fallback={
         <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
-          <SmokeyBackground backdropBlurAmount="md" color="#14B8A6" />
-          <div className="relative z-10 text-white">Cargando...</div>
+          <AuthPageBackground />
+          <div className="relative z-10">
+            <Loader2 className="h-8 w-8 animate-spin text-teal-700" />
+          </div>
         </main>
       }
     >

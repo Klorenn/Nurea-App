@@ -104,8 +104,8 @@ export async function createPreapproval(data: {
       ...data,
       auto_recurring: {
         frequency: 1,
-        frequency_type: "months", // Default for now
-        transaction_amount: 0, // Should be defined by plan
+        frequency_type: "months",
+        transaction_amount: 0, // Defined by the plan
         currency_id: "CLP",
       },
     }),
@@ -117,4 +117,49 @@ export async function createPreapproval(data: {
   }
 
   return await response.json();
+}
+
+/**
+ * Create a dynamic subscription with a custom price (used for referral code discounts).
+ * Does not require a preapproval_plan_id — price is set directly.
+ * Returns an object with `init_point` to redirect the user to checkout.
+ */
+export async function createDynamicSubscription(data: {
+  payer_email: string;
+  back_url: string;
+  reason: string;
+  transaction_amount: number;
+  frequency: number;
+  frequency_type: "days" | "months";
+  external_reference: string;
+  metadata?: Record<string, string>;
+}) {
+  const response = await fetch("https://api.mercadopago.com/preapproval", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      reason: data.reason,
+      payer_email: data.payer_email,
+      back_url: data.back_url,
+      external_reference: data.external_reference,
+      status: "pending",
+      auto_recurring: {
+        frequency: data.frequency,
+        frequency_type: data.frequency_type,
+        transaction_amount: data.transaction_amount,
+        currency_id: "CLP",
+      },
+      ...(data.metadata ? { metadata: data.metadata } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Mercado Pago Dynamic Subscription Error: ${JSON.stringify(error)}`);
+  }
+
+  return await response.json() as { id: string; init_point: string; status: string };
 }

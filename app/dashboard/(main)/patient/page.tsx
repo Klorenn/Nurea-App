@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, ChangeEvent, FormEvent } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion, type Variants } from "framer-motion"
@@ -10,7 +10,6 @@ import {
   Search,
   Heart,
   FileText,
-  FlaskConical,
   PillIcon,
   Video,
   MapPin,
@@ -25,14 +24,13 @@ import {
   XCircle,
   User,
   Phone,
-  AlertCircle,
   Loader2,
   Settings,
   Shield,
   CalendarCheck,
-  Star,
   Sparkles,
   Camera,
+  Link as LinkIcon,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -40,8 +38,6 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
@@ -56,12 +52,11 @@ import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
-import { format, parseISO, isToday, isTomorrow, differenceInHours, isPast } from "date-fns"
+import { format, parseISO, isToday, isTomorrow, differenceInHours } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 import { mutate } from "swr"
 import { toast } from "sonner"
 import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
-import { Link as LinkIcon } from "lucide-react"
 
 interface Appointment {
   id: string
@@ -79,13 +74,6 @@ interface Appointment {
       avatar_url?: string
     }
   }
-}
-
-interface Prescription {
-  id: string
-  created_at: string
-  professional_name: string
-  medication_count: number
 }
 
 interface MedicalRecord {
@@ -169,7 +157,6 @@ export default function PatientDashboard() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
   const [pastAppointments, setPastAppointments] = useState<Appointment[]>([])
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([])
   const [allReferrals, setAllReferrals] = useState<Referral[]>([])
   const [pendingReferrals, setPendingReferrals] = useState<Referral[]>([])
@@ -323,7 +310,7 @@ export default function PatientDashboard() {
     loadData()
   }, [user, supabase])
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
     if (file.size > 5 * 1024 * 1024) {
@@ -424,7 +411,7 @@ export default function PatientDashboard() {
     return `${hour12}:${minutes.toString().padStart(2, "0")} ${period}`
   }
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: FormEvent) => {
     e.preventDefault()
     if (searchQuery.trim()) {
       router.push(`/explore?q=${encodeURIComponent(searchQuery)}`)

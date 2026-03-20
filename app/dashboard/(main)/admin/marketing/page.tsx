@@ -1,30 +1,31 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, FormEvent } from "react"
 import { RouteGuard } from "@/components/auth/route-guard"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Ticket, 
-  Plus, 
-  Trash2, 
-  Users, 
-  Copy, 
-  CheckCircle2, 
-  Loader2, 
+import {
+  Ticket,
+  Plus,
+  Trash2,
+  Users,
+  Copy,
+  CheckCircle2,
+  Loader2,
   TrendingUp,
   UserPlus,
-  Crown
+  Crown,
+  Shuffle
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 interface ReferralCode {
@@ -72,7 +73,13 @@ export default function AdminMarketingPage() {
     setLoading(false)
   }
 
-  const handleCreateCode = async (e: React.FormEvent) => {
+  const generateRandomCode = () => {
+    const prefix = ["VIP", "PRO", "ALFA", "NUREA", "DOC"][Math.floor(Math.random() * 5)]
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase()
+    setNewCode(`${prefix}${suffix}`)
+  }
+
+  const handleCreateCode = async (e: FormEvent) => {
     e.preventDefault()
     if (!newCode) return
 
@@ -87,7 +94,12 @@ export default function AdminMarketingPage() {
       })
 
     if (error) {
-      toast.error(isSpanish ? "Error al crear (el código podría ya existir)" : "Error creating (code might already exist)")
+      if (error.code === '23505') {
+        toast.error(isSpanish ? `El código "${newCode.toUpperCase()}" ya existe. Prueba con otro.` : `Code "${newCode.toUpperCase()}" already exists. Try another.`)
+      } else {
+        toast.error(isSpanish ? "Error al crear el código" : "Error creating code")
+        console.error("referral_codes insert error:", error)
+      }
     } else {
       toast.success(isSpanish ? "Código VIP generado" : "VIP Code generated")
       setNewCode("")
@@ -118,6 +130,8 @@ export default function AdminMarketingPage() {
   }
 
   const totalUsages = codes.reduce((acc, c) => acc + c.uses_count, 0)
+  const totalMaxUses = codes.reduce((acc, c) => acc + (c.max_uses || 0), 0)
+  const efficiency = totalMaxUses > 0 ? Math.round((totalUsages / totalMaxUses) * 100) : 0
 
   return (
     <RouteGuard requiredRole="admin">
@@ -185,7 +199,7 @@ export default function AdminMarketingPage() {
                       {isSpanish ? "Eficiencia" : "Efficiency"}
                     </p>
                     <h3 className="text-3xl font-bold mt-1">
-                      {codes.length > 0 ? Math.round((totalUsages / codes.reduce((acc, c) => acc + c.max_uses, 0)) * 100) : 0}%
+                      {efficiency}%
                     </h3>
                   </div>
                   <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
@@ -214,13 +228,25 @@ export default function AdminMarketingPage() {
                   <form onSubmit={handleCreateCode} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="code">{isSpanish ? "Código VIP" : "VIP Code"}</Label>
-                      <Input 
-                        id="code"
-                        placeholder="EJ: ALFA100"
-                        value={newCode}
-                        onChange={(e) => setNewCode(e.target.value.toUpperCase())}
-                        className="font-mono font-bold text-center tracking-widest text-lg h-12"
-                      />
+                      <div className="flex gap-2">
+                        <Input
+                          id="code"
+                          placeholder="EJ: ALFA100"
+                          value={newCode}
+                          onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+                          className="font-mono font-bold text-center tracking-widest text-lg h-12"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-12 w-12 shrink-0"
+                          onClick={generateRandomCode}
+                          title={isSpanish ? "Generar código aleatorio" : "Generate random code"}
+                        >
+                          <Shuffle className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="desc">{isSpanish ? "Descripción" : "Description"}</Label>

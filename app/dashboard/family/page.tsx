@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -42,18 +42,17 @@ type Dependent = {
   idDocumentName?: string
 }
 
-const MOCK_DEPENDENTS: Dependent[] = [
-  {
-    id: "1",
-    firstName: "Ana",
-    lastName: "García",
-    relation: "Hija",
-    dateOfBirth: "2015-03-12",
-    rut: "22.333.444-5",
-    verified: true,
-    idDocumentName: "carnet_ana.jpg",
-  },
-]
+type ApiDependent = {
+  id: string
+  first_name: string
+  last_name: string
+  relationship: string
+  dob: string | null
+  rut: string
+  verified: boolean
+  document_url: string | null
+}
+
 
 // --- RUT Validation (Chile) ---
 function formatRut(rut: string): string {
@@ -85,8 +84,32 @@ export default function FamilyPage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
   const isSpanish = language === "es"
-  const [dependents, setDependents] = useState<Dependent[]>(MOCK_DEPENDENTS)
+  const [dependents, setDependents] = useState<Dependent[]>([])
+  const [loadingList, setLoadingList] = useState(true)
   const [showForm, setShowForm] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/patient/dependents")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.dependents) {
+          setDependents(
+            data.dependents.map((d: ApiDependent) => ({
+              id: d.id,
+              firstName: d.first_name,
+              lastName: d.last_name,
+              relation: d.relationship,
+              dateOfBirth: d.dob || "",
+              rut: d.rut,
+              verified: d.verified,
+              idDocumentName: d.document_url ? "Documento adjunto" : undefined,
+            }))
+          )
+        }
+      })
+      .catch((err) => console.error("Error loading dependents:", err))
+      .finally(() => setLoadingList(false))
+  }, [])
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -130,47 +153,88 @@ export default function FamilyPage() {
     e.preventDefault()
     if (!formData.firstName.trim() || !formData.lastName.trim()) return
 
-    // Validate RUT
     if (!formData.rut || !validateRut(formData.rut)) {
       setRutError("Ingresa un RUT válido para el familiar.")
       return
     }
 
-    // Require ID document
     if (!idFile) {
       setIdFileError("Debes adjuntar el carnet de identidad o documento de autorización.")
       return
     }
 
-    // Simulate verification
     setVerifyingId(true)
-    await new Promise((res) => setTimeout(res, 1200))
-    setVerifyingId(false)
+    try {
+      // Paso 1: Subir documento de identidad via /api/documents/upload (bucket 'documents')
+      const uploadForm = new FormData()
+      uploadForm.append("file", idFile)
+      uploadForm.append("name", `CI_${formData.firstName.trim()}_${formData.lastName.trim()}`)
+      uploadForm.append("category", "identity")
+      uploadForm.append("description", `Documento de identidad de dependiente: ${formData.firstName.trim()} ${formData.lastName.trim()}`)
 
-    setDependents((prev) => [
-      ...prev,
-      {
-        id: String(Date.now()),
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        relation: formData.relation || (isSpanish ? "Familiar" : "Dependent"),
-        dateOfBirth: formData.dateOfBirth,
-        rut: formData.rut,
-        verified: true,
-        idDocumentName: idFile.name,
-      },
-    ])
-    setFormData({ firstName: "", lastName: "", relation: "", dateOfBirth: "", rut: "" })
-    setIdFile(null)
-    setRutError("")
-    setIdFileError("")
-    setShowForm(false)
-    toast.success(isSpanish ? "Familiar agregado y verificado ✓" : "Family member added and verified ✓")
+      const uploadRes = await fetch("/api/documents/upload", {
+        method: "POST",
+        body: uploadForm,
+      })
+      const uploadData = await uploadRes.json()
+      if (!uploadRes.ok) throw new Error(uploadData.message || "Error al subir el documento de identidad")
+
+      const documentUrl = uploadData.document?.url || uploadData.url || null
+
+      // Paso 2: Crear el dependiente con la URL del documento
+      const res = await fetch("/api/patient/dependents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: formData.firstName.trim(),
+          last_name: formData.lastName.trim(),
+          relationship: formData.relation || (isSpanish ? "Familiar" : "Dependent"),
+          dob: formData.dateOfBirth || null,
+          rut: formData.rut,
+          document_url: documentUrl,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error al agregar familiar")
+
+      const d = data.dependent
+      setDependents((prev) => [
+        ...prev,
+        {
+          id: d.id,
+          firstName: d.first_name,
+          lastName: d.last_name,
+          relation: d.relationship,
+          dateOfBirth: d.dob || "",
+          rut: d.rut,
+          verified: d.verified,
+          idDocumentName: idFile.name,
+        },
+      ])
+      setFormData({ firstName: "", lastName: "", relation: "", dateOfBirth: "", rut: "" })
+      setIdFile(null)
+      setRutError("")
+      setIdFileError("")
+      setShowForm(false)
+      toast.success(isSpanish ? "Familiar agregado correctamente." : "Family member added successfully.")
+    } catch (err: any) {
+      console.error("Error adding dependent:", err)
+      toast.error(err.message || (isSpanish ? "No se pudo agregar el familiar." : "Could not add family member."))
+    } finally {
+      setVerifyingId(false)
+    }
   }
 
-  const handleRemove = (id: string) => {
-    setDependents((prev) => prev.filter((d) => d.id !== id))
-    toast.success(isSpanish ? "Familiar eliminado" : "Family member removed")
+  const handleRemove = async (id: string) => {
+    try {
+      const res = await fetch(`/api/patient/dependents?id=${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      setDependents((prev) => prev.filter((d) => d.id !== id))
+      toast.success(isSpanish ? "Familiar eliminado" : "Family member removed")
+    } catch (err) {
+      console.error("Error removing dependent:", err)
+      toast.error(isSpanish ? "No se pudo eliminar el familiar." : "Could not remove family member.")
+    }
   }
 
   const formatDate = (dateStr: string) => {
@@ -435,7 +499,11 @@ export default function FamilyPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {dependents.length > 0 ? (
+            {loadingList ? (
+              <div className="flex items-center justify-center py-10">
+                <Shield className="h-6 w-6 text-muted-foreground animate-pulse" />
+              </div>
+            ) : dependents.length > 0 ? (
               <ul className="divide-y divide-border/40">
                 {dependents.map((d) => (
                   <li

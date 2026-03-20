@@ -572,14 +572,44 @@ export function ProfessionalCalendar({
     // Availability-based blocking: if outside configured hours, mark as blocked
     if (availability) {
       const weekday = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
-      const dayConfig = availability[weekday]
-      if (!dayConfig || !dayConfig.enabled) {
+      const rawDay = availability[weekday]
+      if (!rawDay) {
+        return { time, status: "blocked" }
+      }
+
+      // Normalize: support both simple format {enabled, startTime, endTime}
+      // and nested format {online: {available, hours}, 'in-person': ...}
+      let enabled: boolean
+      let startTimeStr: string
+      let endTimeStr: string
+
+      if (rawDay.enabled !== undefined) {
+        // Simple format
+        enabled = rawDay.enabled
+        startTimeStr = rawDay.startTime ?? "00:00"
+        endTimeStr = rawDay.endTime ?? "23:59"
+      } else {
+        // New nested format
+        const nested = rawDay.online || rawDay["in-person"]
+        enabled = nested?.available ?? false
+        const hours: string | null | undefined = nested?.hours
+        if (hours && hours.includes(" - ")) {
+          const parts = hours.split(" - ")
+          startTimeStr = parts[0] ?? "00:00"
+          endTimeStr = parts[1] ?? "23:59"
+        } else {
+          startTimeStr = "00:00"
+          endTimeStr = "23:59"
+        }
+      }
+
+      if (!enabled) {
         return { time, status: "blocked" }
       }
 
       const [slotHour, slotMin] = time.split(":").map(Number)
-      const [startHour, startMin] = dayConfig.startTime.split(":").map(Number)
-      const [endHour, endMin] = dayConfig.endTime.split(":").map(Number)
+      const [startHour, startMin] = startTimeStr.split(":").map(Number)
+      const [endHour, endMin] = endTimeStr.split(":").map(Number)
 
       const slotMinutes = slotHour * 60 + slotMin
       const startMinutes = startHour * 60 + startMin
@@ -618,6 +648,21 @@ export function ProfessionalCalendar({
       }
     }
   }
+
+  const recentPatients = useMemo(() => {
+    const seen = new Set<string>()
+    const result: { id: string; name: string }[] = []
+    for (const apt of [...appointments].reverse()) {
+      const p = apt.patient
+      if (!p?.id || seen.has(p.id)) continue
+      const name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim()
+      if (!name) continue
+      seen.add(p.id)
+      result.push({ id: p.id, name })
+      if (result.length >= 5) break
+    }
+    return result
+  }, [appointments])
 
   const dateRangeText = useMemo(() => {
     if (viewMode === "monthly") {
@@ -782,27 +827,29 @@ export function ProfessionalCalendar({
                   isSpanish={isSpanish}
                 />
 
-                <div className="mt-4 px-4 space-y-4">
-                  <div>
-                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                      {isSpanish ? "Pacientes Recientes" : "Recent Patients"}
-                    </h3>
-                    <div className="space-y-1">
-                      {["María González", "Carlos Rodríguez", "Ana Martínez"].map((name) => (
-                        <div key={name} className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 cursor-pointer group">
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-[10px] bg-teal-100 text-teal-700 uppercase">
-                              {name[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm text-slate-600 dark:text-slate-400 group-hover:text-teal-600 transition-colors">
-                            {name}
-                          </span>
-                        </div>
-                      ))}
+                {recentPatients.length > 0 && (
+                  <div className="mt-4 px-4 space-y-4">
+                    <div>
+                      <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                        {isSpanish ? "Pacientes Recientes" : "Recent Patients"}
+                      </h3>
+                      <div className="space-y-1">
+                        {recentPatients.map((patient) => (
+                          <div key={patient.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 cursor-pointer group">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback className="text-[10px] bg-teal-100 text-teal-700 uppercase">
+                                {patient.name[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-slate-600 dark:text-slate-400 group-hover:text-teal-600 transition-colors truncate">
+                              {patient.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </motion.aside>
             )}
           </AnimatePresence>

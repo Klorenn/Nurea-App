@@ -1,6 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { canAccessRoute } from '@/lib/auth/utils'
 import { validateRouteAccess } from '@/lib/auth/auth-logic'
 
 export async function updateSession(request: NextRequest) {
@@ -94,7 +93,7 @@ export async function updateSession(request: NextRequest) {
     // Obtener el rol del usuario desde el perfil con fallback al JWT
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, blocked, date_of_birth, email_verified')
+      .select('role, blocked, date_of_birth, email_verified, onboarding_completed')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -127,11 +126,6 @@ export async function updateSession(request: NextRequest) {
     if (!routeValidation.allowed) {
       const redirectPath = routeValidation.redirectTo ||
         (userRole === 'professional' ? '/dashboard/professional' : (userRole === 'admin' ? '/dashboard/admin' : '/dashboard/patient'))
-      return redirectWithCookies(redirectPath)
-    }
-
-    if (!canAccessRoute(userRole, pathname)) {
-      const redirectPath = userRole === 'professional' ? '/dashboard/professional' : (userRole === 'admin' ? '/dashboard/admin' : '/dashboard/patient')
       return redirectWithCookies(redirectPath)
     }
 

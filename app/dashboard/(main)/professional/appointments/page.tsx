@@ -1,12 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Sheet,
@@ -111,7 +108,6 @@ export default function ProfessionalAppointmentsPage() {
   const { language } = useLanguage()
   const isSpanish = language === "es"
   const supabase = createClient()
-  const locale = isSpanish ? es : enUS
 
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [patients, setPatients] = useState<any[]>([])
@@ -135,8 +131,10 @@ export default function ProfessionalAppointmentsPage() {
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false)
   const [newDate, setNewDate] = useState("")
   const [newTime, setNewTime] = useState("")
+  const [loadError, setLoadError] = useState(false)
 
   const loadAppointments = useCallback(async () => {
+    setLoadError(false)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -162,7 +160,8 @@ export default function ProfessionalAppointmentsPage() {
             first_name,
             last_name,
             avatar_url,
-            phone
+            phone,
+            email
           )
         `)
         .eq("professional_id", user.id)
@@ -173,12 +172,14 @@ export default function ProfessionalAppointmentsPage() {
 
       if (error) {
         console.error("Error loading appointments:", error.message || error)
+        setLoadError(true)
         return
       }
 
       setAppointments((data || []) as unknown as Appointment[])
     } catch (error) {
       console.error("Error:", error)
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -217,8 +218,8 @@ export default function ProfessionalAppointmentsPage() {
       if (data.success) {
         setPatients(data.patients)
       }
-    } catch (err) {
-      console.error("Error loading patients:", err)
+    } catch (e) {
+      console.error("Error loading patients:", e)
     }
   }, [])
 
@@ -240,6 +241,27 @@ export default function ProfessionalAppointmentsPage() {
   }, [loadAppointments, loadAvailability, loadPatients, supabase])
 
   // --- Handlers ---
+  const handleConfirm = async () => {
+    if (!selectedAppointment) return
+    setActionLoading(selectedAppointment.id)
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "confirmed", updated_at: new Date().toISOString() })
+        .eq("id", selectedAppointment.id)
+
+      if (error) throw error
+      toast.success(isSpanish ? "Cita confirmada" : "Appointment confirmed")
+      setSelectedAppointment(null)
+      loadAppointments()
+    } catch (err) {
+      console.error("[appointments] handleConfirm error:", err)
+      toast.error(isSpanish ? "Error al confirmar la cita" : "Error confirming appointment")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   const handleComplete = async () => {
     if (!selectedAppointment) return
     setActionLoading(selectedAppointment.id)
@@ -255,7 +277,8 @@ export default function ProfessionalAppointmentsPage() {
       setSelectedAppointment(null)
       loadAppointments()
     } catch (err) {
-      toast.error("Error")
+      console.error("[appointments] handleComplete error:", err)
+      toast.error(isSpanish ? "Error al completar la cita" : "Error completing appointment")
     } finally {
       setActionLoading(null)
     }
@@ -277,7 +300,8 @@ export default function ProfessionalAppointmentsPage() {
       setSelectedAppointment(null)
       loadAppointments()
     } catch (err) {
-      toast.error("Error")
+      console.error("[appointments] handleCancel error:", err)
+      toast.error(isSpanish ? "Error al cancelar la cita" : "Error cancelling appointment")
     } finally {
       setActionLoading(null)
     }
@@ -299,14 +323,27 @@ export default function ProfessionalAppointmentsPage() {
       setSelectedAppointment(null)
       loadAppointments()
     } catch (err) {
-      toast.error("Error")
+      console.error("[appointments] handleReschedule error:", err)
+      toast.error(isSpanish ? "Error al reagendar la cita" : "Error rescheduling appointment")
     } finally {
       setActionLoading(null)
     }
   }
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto pb-10 h-[calc(100vh-10rem)] flex flex-col scale-[0.98] origin-top">
+    <div className="space-y-8 max-w-[1600px] mx-auto pb-10 h-[calc(100vh-10rem)] flex flex-col">
+      {loadError && (
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="flex-1">
+            {isSpanish ? "Error al cargar las citas. Verifica tu conexión." : "Error loading appointments. Check your connection."}
+          </span>
+          <Button size="sm" variant="outline" className="h-7 text-xs border-red-300 hover:bg-red-100" onClick={() => loadAppointments()}>
+            <RefreshCw className="h-3 w-3 mr-1" />
+            {isSpanish ? "Reintentar" : "Retry"}
+          </Button>
+        </div>
+      )}
       <div className="flex-1 min-h-0 bg-white dark:bg-slate-950 rounded-2xl overflow-hidden shadow-2xl">
         <ProfessionalCalendar
           appointments={appointments}
@@ -317,7 +354,7 @@ export default function ProfessionalAppointmentsPage() {
           onViewChange={(v) => setViewMode(v as CalendarViewMode)}
           onAppointmentClick={(apt) => setSelectedAppointment(apt)}
           availability={availability ?? undefined}
-          onAddAppointment={(date, time) => {
+          onAddAppointment={(date, _time) => {
             setAppointmentInitialDate(date)
             setAddAppointmentOpen(true)
           }}
@@ -345,6 +382,9 @@ export default function ProfessionalAppointmentsPage() {
       {/* Existing Appointment Detail Sheet & Dialogs Adapted */}
       <Sheet open={!!selectedAppointment} onOpenChange={(open) => !open && setSelectedAppointment(null)}>
         <SheetContent className="sm:max-w-md bg-white dark:bg-slate-950 p-0 overflow-hidden rounded-l-[2rem] border-none shadow-2xl">
+          <SheetTitle className="sr-only">
+            {selectedAppointment ? `${selectedAppointment.patient?.first_name} ${selectedAppointment.patient?.last_name} - ${isSpanish ? 'Cita' : 'Appointment'}` : ''}
+          </SheetTitle>
           {selectedAppointment && (
             <div className="flex flex-col h-full">
                <div className={cn(
@@ -404,17 +444,33 @@ export default function ProfessionalAppointmentsPage() {
                   </div>
 
                   <div className="space-y-3 pt-6">
+                     {selectedAppointment.status === 'pending' && (
+                       <Button
+                         onClick={handleConfirm}
+                         disabled={!!actionLoading}
+                         className="w-full h-14 rounded-2xl bg-teal-600 hover:bg-teal-700 font-bold shadow-lg shadow-teal-500/20 gap-3"
+                       >
+                         {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-5 w-5" />}
+                         {isSpanish ? "Aceptar Solicitud" : "Accept Request"}
+                       </Button>
+                     )}
+
                      {selectedAppointment.status === 'confirmed' && (
                        <>
-                         <Button 
-                           onClick={() => window.open(selectedAppointment.meeting_link || '#', '_blank')}
-                           className="w-full h-14 rounded-2xl bg-teal-600 hover:bg-teal-700 font-bold shadow-lg shadow-teal-500/20 gap-3"
+                         <Button
+                           onClick={() => {
+                             if (selectedAppointment.meeting_link) {
+                               window.open(selectedAppointment.meeting_link, '_blank', 'noopener,noreferrer')
+                             }
+                           }}
+                           disabled={!selectedAppointment.meeting_link}
+                           className="w-full h-14 rounded-2xl bg-teal-600 hover:bg-teal-700 font-bold shadow-lg shadow-teal-500/20 gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                          >
-                           <Video className="h-5 w-5" />
+                           <Video className="h-5 w-5" aria-hidden="true" />
                            {isSpanish ? "Iniciar Tele-consulta" : "Start Video Call"}
-                           <ArrowRight className="h-4 w-4 ml-auto" />
+                           <ArrowRight className="h-4 w-4 ml-auto" aria-hidden="true" />
                          </Button>
-                         <Button 
+                         <Button
                            onClick={() => setCompleteDialogOpen(true)}
                            variant="outline"
                            className="w-full h-14 rounded-2xl border-slate-200 font-bold hover:bg-teal-50 gap-3"
@@ -424,12 +480,12 @@ export default function ProfessionalAppointmentsPage() {
                          </Button>
                        </>
                      )}
-                     
-                     <div className="grid grid-cols-2 gap-3">
-                        <Button variant="ghost" className="rounded-xl font-bold h-11 hover:bg-red-50 text-red-500 col-span-2" onClick={() => setCancelDialogOpen(true)}>
-                          {isSpanish ? "Cancelar Cita" : "Cancel Appointment"}
-                        </Button>
-                     </div>
+
+                     {(selectedAppointment.status === 'pending' || selectedAppointment.status === 'confirmed') && (
+                       <Button variant="ghost" className="w-full rounded-xl font-bold h-11 hover:bg-red-50 text-red-500" onClick={() => setCancelDialogOpen(true)}>
+                         {isSpanish ? "Cancelar Cita" : "Cancel Appointment"}
+                       </Button>
+                     )}
                   </div>
                </div>
             </div>

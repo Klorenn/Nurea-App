@@ -38,3 +38,9 @@ skills-lock.json
 tmp-dashboard-template/
 my_project/
 /lib/generated/prisma
+
+# rust build artifacts
+contracts/**/target/
+
+# archived scripts
+scripts/archive/

@@ -9,8 +9,6 @@ import {
   CheckCircle2,
   Loader2,
   ArrowRight,
-  DollarSign,
-  AlertTriangle,
   MessageSquare,
   Power,
   Heart,
@@ -20,6 +18,10 @@ import {
   RefreshCw,
   Users,
   Banknote,
+  Link2,
+  Copy,
+  ExternalLink,
+  CreditCard,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -36,8 +38,16 @@ import {
 } from "recharts"
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { format, subDays, startOfMonth, startOfDay, parseISO } from "date-fns"
+import { format, subDays, startOfMonth, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 
 const PRO_PRICE = 29990
 
@@ -58,6 +68,7 @@ interface SubPayment {
   status: string
   payer_email: string | null
   created_at: string
+  profile_id: string | null
   profiles?: { first_name: string | null; last_name: string | null; avatar_url: string | null } | null
 }
 
@@ -91,6 +102,16 @@ export default function AdminPage() {
   const [recentReviews, setRecentReviews] = useState<any[]>([])
   const [chartData, setChartData] = useState<ChartPoint[]>([])
   const [recentPayments, setRecentPayments] = useState<SubPayment[]>([])
+
+  // Payment link dialog
+  const [paymentLinkDialog, setPaymentLinkDialog] = useState<{
+    open: boolean
+    loading: boolean
+    url: string | null
+    email: string | null
+    amount: number | null
+    isYearly: boolean
+  }>({ open: false, loading: false, url: null, email: null, amount: null, isYearly: false })
 
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -163,7 +184,9 @@ export default function AdminPage() {
         try {
           const d = format(parseISO(raw.slice(0, 10)), "dd/MM")
           if (dayMap.has(d)) dayMap.set(d, (dayMap.get(d) ?? 0) + 1)
-        } catch {}
+        } catch {
+          // Ignore parse errors for invalid dates
+        }
       })
       const chart: ChartPoint[] = Array.from(dayMap.entries()).map(([name, citas]) => ({ name, citas }))
       setChartData(chart)
@@ -185,7 +208,7 @@ export default function AdminPage() {
       }
       const enrichedPayments = paymentsList.map(p => ({
         ...p,
-        profiles: profileMap[p.profile_id] ?? null,
+        profiles: p.profile_id ? profileMap[p.profile_id] ?? null : null,
       }))
 
       setStats({
@@ -242,6 +265,39 @@ export default function AdminPage() {
     } catch {
       toast.error(isSpanish ? "Error al aprobar suscripción" : "Error approving subscription")
     }
+  }
+
+  const generatePaymentLink = async (profileId: string, isYearly = false) => {
+    setPaymentLinkDialog({ open: true, loading: true, url: null, email: null, amount: null, isYearly })
+    try {
+      const res = await fetch("/api/admin/subscriptions/payment-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId, isYearly }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error generando link")
+      setPaymentLinkDialog({
+        open: true,
+        loading: false,
+        url: data.url,
+        email: data.professionalEmail,
+        amount: data.amount,
+        isYearly,
+      })
+      // Remove from pending list — now waiting for payment
+      setPendingSubscriptionsTable(prev => prev.filter(p => p.id !== profileId))
+      setStats(prev => ({ ...prev, pendingSubscriptions: Math.max(0, prev.pendingSubscriptions - 1) }))
+    } catch (err: any) {
+      setPaymentLinkDialog({ open: false, loading: false, url: null, email: null, amount: null, isYearly: false })
+      toast.error(err.message ?? "Error al generar el link de pago")
+    }
+  }
+
+  const copyPaymentLink = () => {
+    if (!paymentLinkDialog.url) return
+    navigator.clipboard.writeText(paymentLinkDialog.url)
+    toast.success("Link copiado al portapapeles")
   }
 
   // Real elapsed time
@@ -671,17 +727,31 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-2">
-                              <Button variant="outline" size="sm" onClick={() => approveSubscription(profile.id, 0)}
-                                className="rounded-xl font-bold text-[10px] border-slate-200 hover:text-teal-600">
-                                Aprobar
+                              {/* Primary: Generate real payment link */}
+                              <Button
+                                size="sm"
+                                onClick={() => generatePaymentLink(profile.id, false)}
+                                className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-[10px] gap-1 shadow-lg shadow-violet-500/20"
+                              >
+                                <CreditCard className="h-3 w-3" />
+                                Link de Cobro
                               </Button>
-                              <Button size="sm" onClick={() => approveSubscription(profile.id, 1)}
-                                className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-[10px]">
-                                +1 Mes Gratis
+                              <Button
+                                size="sm"
+                                onClick={() => generatePaymentLink(profile.id, true)}
+                                className="bg-violet-900 hover:bg-violet-800 text-white rounded-xl font-bold text-[10px] gap-1"
+                              >
+                                <CreditCard className="h-3 w-3" />
+                                Link Anual
                               </Button>
-                              <Button size="sm" onClick={() => approveSubscription(profile.id, 3)}
-                                className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-[10px]">
-                                +3 Meses Gratis
+                              {/* Secondary: Free access grants */}
+                              <Button variant="outline" size="sm" onClick={() => approveSubscription(profile.id, 1)}
+                                className="rounded-xl font-bold text-[10px] border-slate-200 text-slate-500 hover:text-teal-600">
+                                1 Mes Gratis
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => approveSubscription(profile.id, 3)}
+                                className="rounded-xl font-bold text-[10px] border-slate-200 text-slate-500 hover:text-slate-700">
+                                3 Meses Gratis
                               </Button>
                             </div>
                           </TableCell>
@@ -814,6 +884,106 @@ export default function AdminPage() {
         </Tabs>
 
       </motion.div>
+
+      {/* Payment Link Dialog */}
+      <Dialog
+        open={paymentLinkDialog.open}
+        onOpenChange={(open) => {
+          if (!paymentLinkDialog.loading) setPaymentLinkDialog(s => ({ ...s, open }))
+        }}
+      >
+        <DialogContent className="max-w-lg rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-xl font-black">
+              <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
+                <Link2 className="h-5 w-5 text-violet-600" />
+              </div>
+              Link de Pago MercadoPago
+            </DialogTitle>
+            <DialogDescription>
+              Comparte este link con el profesional para que complete el pago de su suscripción.
+              La cuenta se activará automáticamente al confirmar el pago.
+            </DialogDescription>
+          </DialogHeader>
+
+          {paymentLinkDialog.loading ? (
+            <div className="flex flex-col items-center gap-4 py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">
+                Generando link en MercadoPago...
+              </p>
+            </div>
+          ) : paymentLinkDialog.url ? (
+            <div className="space-y-5 pt-2">
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Destinatario</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                    {paymentLinkDialog.email ?? "—"}
+                  </p>
+                </div>
+                <div className="p-4 rounded-2xl bg-violet-50 dark:bg-violet-950/30">
+                  <p className="text-[10px] font-black text-violet-400 uppercase tracking-widest mb-1">Monto</p>
+                  <p className="text-xl font-black text-violet-700 dark:text-violet-300">
+                    ${paymentLinkDialog.amount?.toLocaleString("es-CL")} CLP
+                  </p>
+                  <p className="text-[10px] text-violet-500">
+                    {paymentLinkDialog.isYearly ? "Anual" : "Mensual"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Link */}
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Link de pago</p>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value={paymentLinkDialog.url}
+                    className="rounded-xl text-xs font-mono bg-slate-50 border-slate-200"
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={copyPaymentLink}
+                    className="rounded-xl shrink-0 border-slate-200"
+                    title="Copiar link"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold gap-2"
+                  onClick={copyPaymentLink}
+                >
+                  <Copy className="h-4 w-4" />
+                  Copiar Link
+                </Button>
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-slate-200 gap-2"
+                  asChild
+                >
+                  <a href={paymentLinkDialog.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                    Abrir
+                  </a>
+                </Button>
+              </div>
+
+              <p className="text-xs text-slate-400 text-center">
+                El link es único para este profesional. La suscripción se activará automáticamente cuando MercadoPago confirme el pago.
+              </p>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
     </RouteGuard>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, User, MapPin, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ export default function PatientBuscarPage() {
   const { language } = useLanguage();
   const isSpanish = language === "es";
   const [q, setQ] = useState("");
-  const [specialty, setSpecialty] = useState("");
+  const [specialty] = useState("");
   const [city, setCity] = useState("");
   const [professionals, setProfessionals] = useState<ProfessionalItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +104,13 @@ export default function PatientBuscarPage() {
               <div className="flex gap-4">
                 <div className="h-14 w-14 shrink-0 rounded-full bg-muted flex items-center justify-center overflow-hidden">
                   {p.photoUrl ? (
-                    <img src={p.photoUrl} alt="" className="h-full w-full object-cover" />
+                    <Image 
+                      src={p.photoUrl} 
+                      alt="" 
+                      width={56} 
+                      height={56} 
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <User className="h-7 w-7 text-muted-foreground" />
                   )}

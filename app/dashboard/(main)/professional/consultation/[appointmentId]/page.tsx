@@ -95,27 +95,6 @@ interface Appointment {
   patient: Patient
 }
 
-interface MedicalRecord {
-  id: string
-  reason_for_visit: string
-  chief_complaint: string
-  diagnosis: string
-  diagnosis_code: string
-  treatment: string
-  prescription: string
-  private_notes: string
-  vital_signs: {
-    blood_pressure?: string
-    heart_rate?: string
-    temperature?: string
-    weight?: string
-    height?: string
-  } | null
-  is_draft: boolean
-  is_signed: boolean
-  created_at: string
-}
-
 interface HistoryRecord {
   id: string
   reason_for_visit: string
@@ -207,7 +186,7 @@ export default function ConsultationPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [icdOpen, setIcdOpen] = useState(false)
   const [icdSearch, setIcdSearch] = useState("")
 
@@ -781,7 +760,7 @@ export default function ConsultationPage() {
                       <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-slate-200 dark:bg-slate-700" />
                       
                       <div className="space-y-4">
-                        {history.map((record, index) => (
+                        {history.map((record) => (
                           <div key={record.id} className="relative pl-6">
                             {/* Timeline dot */}
                             <div className={cn(

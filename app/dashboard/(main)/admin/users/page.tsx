@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { RouteGuard } from "@/components/auth/route-guard"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +29,6 @@ import {
   Calendar,
   Stethoscope,
   FileText,
-  X,
   RefreshCw,
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
@@ -53,7 +52,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
@@ -120,7 +118,6 @@ export default function AdminUsersPage() {
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => loadUsers(true), 30000)
     return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadUsers = async (silent = false) => {
@@ -202,7 +199,7 @@ export default function AdminUsersPage() {
       const response = await fetch("/api/admin/professionals", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ professionalId: user.id, verified: true }),
+        body: JSON.stringify({ professionalId: user.id, verificationStatus: 'verified' }),
       })
 
       if (!response.ok) throw new Error("Failed to approve")
@@ -215,7 +212,7 @@ export default function AdminUsersPage() {
       })
       
       await loadUsers()
-    } catch (error) {
+    } catch {
       toast({
         title: isSpanish ? "Error" : "Error",
         description: isSpanish ? "No se pudo aprobar el perfil" : "Could not approve profile",
@@ -254,7 +251,7 @@ export default function AdminUsersPage() {
       setWarningMessage("")
       setSelectedUser(null)
       await loadUsers()
-    } catch (error) {
+    } catch {
       toast({
         title: isSpanish ? "Error" : "Error",
         description: isSpanish ? "No se pudo enviar la advertencia" : "Could not send warning",
@@ -292,7 +289,7 @@ export default function AdminUsersPage() {
       setSuspendDialogOpen(false)
       setSelectedUser(null)
       await loadUsers()
-    } catch (error) {
+    } catch {
       toast({
         title: isSpanish ? "Error" : "Error",
         description: isSpanish ? "No se pudo suspender la cuenta" : "Could not suspend account",
@@ -325,7 +322,7 @@ export default function AdminUsersPage() {
       setDeleteDialogOpen(false)
       setSelectedUser(null)
       await loadUsers()
-    } catch (error) {
+    } catch {
       toast({
         title: isSpanish ? "Error" : "Error",
         description: isSpanish ? "No se pudo eliminar el usuario" : "Could not delete user",
@@ -360,7 +357,7 @@ export default function AdminUsersPage() {
       })
       
       await loadUsers()
-    } catch (error) {
+    } catch {
       toast({
         title: isSpanish ? "Error" : "Error",
         description: isSpanish ? "No se pudo reactivar la cuenta" : "Could not reactivate account",
@@ -485,8 +482,9 @@ export default function AdminUsersPage() {
 
           {/* Users Table */}
           {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex items-center justify-center py-24" role="status" aria-live="polite">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+              <span className="sr-only">{isSpanish ? "Cargando usuarios..." : "Loading users..."}</span>
             </div>
           ) : (
             <Card className="border-border/40 overflow-hidden">
@@ -571,8 +569,13 @@ export default function AdminUsersPage() {
                           <td className="p-4 text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  aria-label={isSpanish ? `Acciones para ${user.first_name} ${user.last_name}` : `Actions for ${user.first_name} ${user.last_name}`}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-56">

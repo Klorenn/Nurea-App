@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function createReview(formData: FormData) {
@@ -18,35 +18,48 @@ export async function createReview(formData: FormData) {
     throw new Error("La valoración debe ser entre 1 y 5.");
   }
 
-  const appt = await prisma.appointment.findUnique({
-    where: { id: appointmentId },
-  });
+  const supabase = await createClient();
 
-  if (!appt || appt.professionalId !== professionalId) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado.");
+
+  const { data: appt, error: apptError } = await supabase
+    .from("appointments")
+    .select("id, status, professional_id, patient_id")
+    .eq("id", appointmentId)
+    .single();
+
+  if (apptError || !appt || appt.professional_id !== professionalId) {
     throw new Error("Cita no encontrada para este profesional.");
+  }
+
+  if (appt.patient_id !== user.id) {
+    throw new Error("Solo puedes valorar tus propias citas.");
   }
 
   if (appt.status !== "completed") {
     throw new Error("Solo puedes valorar citas completadas.");
   }
 
-  const existing = await prisma.review.findFirst({
-    where: { appointmentId },
-  });
+  const { data: existing } = await supabase
+    .from("reviews")
+    .select("id")
+    .eq("appointment_id", appointmentId)
+    .maybeSingle();
 
   if (existing) {
     throw new Error("Ya has valorado esta cita.");
   }
 
-  await prisma.review.create({
-    data: {
-      professionalId,
-      appointmentId,
-      rating,
-      comment: comment ?? undefined,
-    },
+  const { error } = await supabase.from("reviews").insert({
+    professional_id: professionalId,
+    appointment_id: appointmentId,
+    rating,
+    comment: comment ?? null,
   });
 
-  revalidatePath(`/profesionales/${professionalId}`);
+  if (error) throw new Error("No se pudo guardar la reseña.");
+
+  revalidatePath(`/professionals/${professionalId}`);
   revalidatePath(`/dashboard/patient`);
 }

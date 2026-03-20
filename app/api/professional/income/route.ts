@@ -62,12 +62,18 @@ export async function GET(request: Request) {
     // Aplicar filtros de fecha según el período
     const now = new Date()
     if (period === 'month') {
-      const startOfMonth = month 
-        ? new Date(`${month}-01`)
+      const startOfMonth = month
+        ? new Date(`${month}-01T00:00:00`)
         : new Date(now.getFullYear(), now.getMonth(), 1)
+      
+      // Parsear correctamente el mes específico para endOfMonth
       const endOfMonth = month
-        ? new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        : new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        ? (() => {
+            const [year, monthNum] = month.split('-').map(Number)
+            // Día 0 del mes siguiente = último día del mes especificado
+            return new Date(year, monthNum, 0, 23, 59, 59)
+          })()
+        : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
       
       query = query.gte('appointment_date', startOfMonth.toISOString().split('T')[0])
       query = query.lte('appointment_date', endOfMonth.toISOString().split('T')[0])

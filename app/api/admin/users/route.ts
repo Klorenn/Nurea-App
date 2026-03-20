@@ -4,16 +4,19 @@ import { NextResponse } from 'next/server'
 
 async function verifyAdmin(supabase: any) {
   const { data: { user }, error: userError } = await supabase.auth.getUser()
-  
+
   if (userError || !user) {
     return { error: 'unauthorized', status: 401 }
   }
 
-  const { data: profile } = await supabase
+  // Use admin client to bypass RLS when reading the role — prevents privilege escalation
+  // if a user manipulates their own profile via RLS-bypassing exploits.
+  const adminClient = createAdminClient()
+  const { data: profile } = await adminClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!profile || profile.role !== 'admin') {
     return { error: 'forbidden', status: 403 }
@@ -60,7 +63,7 @@ export async function GET(request: Request) {
   const accountStatus = searchParams.get('account_status')
 
   // Base columns — only columns confirmed to exist in profiles
-  const baseSelect = `id, first_name, last_name, email, role, account_status, email_verified, avatar_url, phone, date_of_birth, created_at, updated_at`
+  const baseSelect = `id, first_name, last_name, email, role, account_status, email_verified, avatar_url, phone, date_of_birth, created_at, updated_at, subscription_status`
 
   let profilesQuery = adminSupabase
     .from('profiles')
@@ -277,26 +280,18 @@ export async function DELETE(request: Request) {
       )
     }
 
-    // Primero eliminar datos relacionados manualmente si es necesario
-    // (dependiendo de la configuración de cascada en la BD)
-    
-    // Eliminar de professionals si existe
-    await supabase.from('professionals').delete().eq('id', userId)
-    
-    // Eliminar citas
-    await supabase.from('appointments').delete().or(`patient_id.eq.${userId},professional_id.eq.${userId}`)
-    
-    // Eliminar documentos
-    await supabase.from('documents').delete().eq('user_id', userId)
-    
-    // Eliminar el perfil
-    await supabase.from('profiles').delete().eq('id', userId)
+    // Use admin client (service role) for all cascading deletes — the RLS client
+    // cannot delete other users' data or call auth.admin.deleteUser.
+    const adminClient = createAdminClient()
 
-    // Intentar eliminar el usuario de auth (requiere service_role key)
-    try {
-      await supabase.auth.admin.deleteUser(userId)
-    } catch (authDeleteError) {
-      console.warn('Could not delete from auth.users (may need service_role):', authDeleteError)
+    await adminClient.from('professionals').delete().eq('id', userId)
+    await adminClient.from('appointments').delete().or(`patient_id.eq.${userId},professional_id.eq.${userId}`)
+    await adminClient.from('documents').delete().eq('user_id', userId)
+    await adminClient.from('profiles').delete().eq('id', userId)
+
+    const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(userId)
+    if (authDeleteError) {
+      console.warn('Could not delete from auth.users:', authDeleteError)
     }
 
     return NextResponse.json({

@@ -8,15 +8,11 @@ import {
   Clock,
   Video,
   MapPin,
-  Star,
   Search,
   CalendarX,
   CalendarCheck,
   History,
-  AlertTriangle,
   RefreshCcw,
-  MessageSquare,
-  ChevronRight,
   X,
   Loader2,
 } from "lucide-react"
@@ -25,6 +21,17 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { VerifiedBadge } from "@/components/verified-badge"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
@@ -34,87 +41,7 @@ import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
 import { ReviewModal } from "@/components/reviews/ReviewModal"
 import { useSearchParams } from "next/navigation"
-
-type AppointmentStatus = "confirmed" | "pending" | "completed" | "cancelled"
-type AppointmentType = "online" | "in_person"
-
-interface Appointment {
-  id: string
-  doctorName: string
-  doctorAvatar?: string
-  specialty: string
-  date: string
-  time: string
-  type: AppointmentType
-  status: AppointmentStatus
-  isPaid: boolean
-  isVerified: boolean
-  price: number
-  hasReview?: boolean
-  cancellationReason?: string
-}
-
-const today = new Date()
-const tomorrow = new Date(today)
-tomorrow.setDate(tomorrow.getDate() + 1)
-
-const mockAppointments: Appointment[] = [
-  {
-    id: "1",
-    doctorName: "Dra. María Fernández González",
-    doctorAvatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop&crop=face",
-    specialty: "Psicóloga Clínica",
-    date: tomorrow.toISOString().split("T")[0],
-    time: "15:30",
-    type: "online",
-    status: "confirmed",
-    isPaid: true,
-    isVerified: true,
-    price: 25000,
-  },
-  {
-    id: "2",
-    doctorName: "Dr. Carlos Andrés Muñoz",
-    doctorAvatar: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop&crop=face",
-    specialty: "Médico General",
-    date: "2026-03-05",
-    time: "10:00",
-    type: "online",
-    status: "completed",
-    isPaid: true,
-    isVerified: true,
-    price: 20000,
-    hasReview: false,
-  },
-  {
-    id: "3",
-    doctorName: "Dra. Ana Lucía Herrera",
-    doctorAvatar: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop&crop=face",
-    specialty: "Pediatra",
-    date: "2026-02-20",
-    time: "11:30",
-    type: "in_person",
-    status: "completed",
-    isPaid: true,
-    isVerified: true,
-    price: 30000,
-    hasReview: true,
-  },
-  {
-    id: "4",
-    doctorName: "Dr. Roberto Silva",
-    doctorAvatar: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=200&h=200&fit=crop&crop=face",
-    specialty: "Nutricionista",
-    date: "2026-02-10",
-    time: "09:00",
-    type: "online",
-    status: "cancelled",
-    isPaid: false,
-    isVerified: true,
-    price: 22000,
-    cancellationReason: "Cancelado por el paciente",
-  },
-]
+import { toast } from "sonner"
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -231,16 +158,59 @@ function UpcomingAppointmentCard({
   appointment,
   isSpanish,
   isMain = false,
+  onCancelled,
 }: {
   appointment: any
   isSpanish: boolean
   isMain?: boolean
+  onCancelled?: () => void
 }) {
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [cancelling, setCancelling] = useState(false)
+
   const dateText = formatDate(appointment.appointment_date, isSpanish)
   const isToday = dateText === (isSpanish ? "Hoy" : "Today")
   const isTomorrow = dateText === (isSpanish ? "Mañana" : "Tomorrow")
 
   const doctor = appointment.professional?.profile || {}
+
+  // Calcular horas hasta la cita para mostrar política de reembolso
+  const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
+  const hoursUntil = (appointmentDateTime.getTime() - Date.now()) / (1000 * 60 * 60)
+  const refundPolicy = hoursUntil > 24
+    ? isSpanish ? "Reembolso completo (>24 hrs)" : "Full refund (>24 hrs)"
+    : hoursUntil > 12
+    ? isSpanish ? "Reembolso 50% (12-24 hrs)" : "50% refund (12-24 hrs)"
+    : isSpanish ? "Sin reembolso (<12 hrs)" : "No refund (<12 hrs)"
+
+  const handleCancel = async () => {
+    setCancelling(true)
+    try {
+      const res = await fetch("/api/appointments/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appointmentId: appointment.id,
+          reason: cancelReason.trim() || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || "Error al cancelar")
+      toast.success(data.message || (isSpanish ? "Cita cancelada exitosamente" : "Appointment cancelled"))
+      setShowCancelDialog(false)
+      onCancelled?.()
+    } catch (err: any) {
+      toast.error(err.message || (isSpanish ? "No se pudo cancelar la cita" : "Could not cancel appointment"))
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  // URL de videollamada: usar meeting_url de la cita (Jitsi) si existe
+  const videoCallUrl = appointment.meeting_url || appointment.meeting_room_id
+    ? (appointment.meeting_url || `https://meet.jit.si/${appointment.meeting_room_id}`)
+    : null
 
   return (
     <motion.div variants={itemVariants}>
@@ -360,19 +330,29 @@ function UpcomingAppointmentCard({
 
           {/* Actions */}
           <div className="px-6 pb-6 space-y-4">
-            {/* Main Action Button */}
+            {/* Main Action Button — Videollamada */}
             {appointment.type === "online" && appointment.status === 'confirmed' && (
               <div className="space-y-2">
-                <Button
-                  size="lg"
-                  className="w-full h-14 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-base font-semibold shadow-lg shadow-teal-600/20"
-                  asChild
-                >
-                  <Link href={`/dashboard/patient/consultation/${appointment.id}`}>
+                {videoCallUrl ? (
+                  <Button
+                    size="lg"
+                    className="w-full h-14 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-base font-semibold shadow-lg shadow-teal-600/20"
+                    onClick={() => window.open(videoCallUrl, "_blank", "noopener,noreferrer")}
+                  >
                     <Video className="h-5 w-5 mr-2" />
                     {isSpanish ? "Unirse a la Videollamada" : "Join Video Call"}
-                  </Link>
-                </Button>
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="w-full h-14 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-base font-semibold cursor-not-allowed"
+                    disabled
+                    title={isSpanish ? "El enlace de videollamada estará disponible próximamente" : "Video call link will be available soon"}
+                  >
+                    <Video className="h-5 w-5 mr-2" />
+                    {isSpanish ? "Enlace de videollamada próximamente" : "Video call link coming soon"}
+                  </Button>
+                )}
               </div>
             )}
 
@@ -380,17 +360,17 @@ function UpcomingAppointmentCard({
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                className="flex-1 rounded-xl h-10"
-                asChild
+                className="flex-1 rounded-xl h-10 opacity-50 cursor-not-allowed"
+                disabled
+                title={isSpanish ? "La reprogramación estará disponible próximamente" : "Rescheduling coming soon"}
               >
-                <Link href={`/appointments/${appointment.id}/reschedule`}>
-                  <RefreshCcw className="h-4 w-4 mr-2" />
-                  {isSpanish ? "Reprogramar" : "Reschedule"}
-                </Link>
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                {isSpanish ? "Reprogramar" : "Reschedule"}
               </Button>
               <Button
                 variant="ghost"
                 className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl h-10"
+                onClick={() => setShowCancelDialog(true)}
               >
                 <X className="h-4 w-4 mr-2" />
                 {isSpanish ? "Cancelar Cita" : "Cancel"}
@@ -399,6 +379,62 @@ function UpcomingAppointmentCard({
           </div>
         </CardContent>
       </Card>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isSpanish ? "¿Cancelar esta cita?" : "Cancel this appointment?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  {isSpanish
+                    ? `Cita con Dr. ${doctor.first_name} ${doctor.last_name} el ${dateText} a las ${appointment.appointment_time?.slice(0, 5)} hrs.`
+                    : `Appointment with Dr. ${doctor.first_name} ${doctor.last_name} on ${dateText} at ${appointment.appointment_time?.slice(0, 5)}.`}
+                </p>
+                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                  {isSpanish ? "Política de reembolso:" : "Refund policy:"} {refundPolicy}
+                </p>
+                <div className="space-y-1.5">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    {isSpanish ? "Motivo de cancelación (opcional):" : "Cancellation reason (optional):"}
+                  </p>
+                  <Textarea
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder={isSpanish ? "Ej. Tengo un imprevisto..." : "e.g. Something came up..."}
+                    className="h-20 resize-none rounded-xl text-sm"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>
+              {isSpanish ? "No cancelar" : "Keep appointment"}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleCancel()
+              }}
+              disabled={cancelling}
+              className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
+            >
+              {cancelling ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {isSpanish ? "Cancelando..." : "Cancelling..."}
+                </>
+              ) : (
+                isSpanish ? "Sí, cancelar cita" : "Yes, cancel"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   )
 }
@@ -406,11 +442,9 @@ function UpcomingAppointmentCard({
 function PastAppointmentCard({
   appointment,
   isSpanish,
-  onLeaveReview,
 }: {
   appointment: any
   isSpanish: boolean
-  onLeaveReview: (apt: any) => void
 }) {
   const date = parseISO(appointment.appointment_date)
   const formattedDate = format(date, "d 'de' MMM, yyyy", { locale: es })
@@ -451,17 +485,6 @@ function PastAppointmentCard({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {(!appointment.reviews || appointment.reviews.length === 0) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onLeaveReview(appointment)}
-                  className="rounded-lg text-xs border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-700 dark:hover:bg-amber-950/30"
-                >
-                  <Star className="h-3 w-3 mr-1" />
-                  {isSpanish ? "Dejar Reseña" : "Leave Review"}
-                </Button>
-              )}
               <Button
                 size="sm"
                 variant="ghost"
@@ -485,10 +508,12 @@ function CancelledAppointmentCard({
   appointment,
   isSpanish,
 }: {
-  appointment: Appointment
+  appointment: any
   isSpanish: boolean
 }) {
-  const date = new Date(appointment.date)
+  const doctor = appointment.professional?.profile || {}
+  const dateStr = appointment.appointment_date || appointment.date
+  const date = new Date(dateStr)
   const formattedDate = date.toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
     day: "numeric",
     month: "short",
@@ -501,19 +526,18 @@ function CancelledAppointmentCard({
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12 rounded-xl border border-slate-100 dark:border-slate-700 opacity-60">
-              <AvatarImage src={appointment.doctorAvatar} className="object-cover" />
+              <AvatarImage src={doctor.avatar_url} className="object-cover" />
               <AvatarFallback className="rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400">
-                {appointment.doctorName.split(" ")[0][0]}
-                {appointment.doctorName.split(" ")[1]?.[0]}
+                {doctor.first_name?.[0]}{doctor.last_name?.[0]}
               </AvatarFallback>
             </Avatar>
 
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-slate-600 dark:text-slate-400 truncate">
-                {appointment.doctorName}
+                Dr. {doctor.first_name} {doctor.last_name}
               </h4>
               <Badge variant="secondary" className="text-[10px] p-0 font-bold text-violet-600 uppercase bg-transparent">
-                {appointment.specialty}
+                {appointment.professional?.specialty}
               </Badge>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline" className="text-[10px] text-red-500 border-red-200 dark:border-red-800">
@@ -524,9 +548,9 @@ function CancelledAppointmentCard({
                   {formattedDate}
                 </span>
               </div>
-              {appointment.cancellationReason && (
+              {appointment.cancellation_reason && (
                 <p className="text-xs text-slate-400 mt-1 italic">
-                  {appointment.cancellationReason}
+                  {appointment.cancellation_reason}
                 </p>
               )}
             </div>
@@ -537,8 +561,8 @@ function CancelledAppointmentCard({
               className="rounded-lg text-xs shrink-0"
               asChild
             >
-              <Link href={`/booking/${appointment.id}`}>
-                {isSpanish ? "Reagendar" : "Rebook"}
+              <Link href={`/professionals/${appointment.professional_id}`}>
+                {isSpanish ? "Volver a agendar" : "Book Again"}
               </Link>
             </Button>
           </div>
@@ -589,8 +613,9 @@ export default function PatientAppointmentsPage() {
   }
 
   useEffect(() => {
-    loadAppointments()
-  }, [])
+    if (user) loadAppointments()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
 
   // Handle auto-open review from URL
   useEffect(() => {
@@ -609,11 +634,6 @@ export default function PatientAppointmentsPage() {
   )
   const pastAppointments = appointments.filter((a) => a.status === "completed")
   const cancelledAppointments = appointments.filter((a) => a.status === "cancelled")
-
-  const handleLeaveReview = (apt: any) => {
-    setSelectedAppointment(apt)
-    setIsReviewModalOpen(true)
-  }
 
   if (loading && appointments.length === 0) {
     return (
@@ -709,6 +729,7 @@ export default function PatientAppointmentsPage() {
                       appointment={appointment}
                       isSpanish={isSpanish}
                       isMain={index === 0}
+                      onCancelled={loadAppointments}
                     />
                   ))}
                 </motion.div>
@@ -734,7 +755,6 @@ export default function PatientAppointmentsPage() {
                       key={appointment.id}
                       appointment={appointment}
                       isSpanish={isSpanish}
-                      onLeaveReview={handleLeaveReview}
                     />
                   ))}
                 </motion.div>

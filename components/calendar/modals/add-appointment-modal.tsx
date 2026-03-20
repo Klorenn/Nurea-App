@@ -168,7 +168,7 @@ export function AddAppointmentModal({
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
                                 <AvatarImage src={p.avatar_url} />
-                                <AvatarFallback className="bg-teal-100 text-teal-700 text-[10px] font-black">{p.first_name[0]}{p.last_name[0]}</AvatarFallback>
+                                <AvatarFallback className="bg-teal-100 text-teal-700 text-[10px] font-black">{p.first_name?.[0] ?? ""}{p.last_name?.[0] ?? ""}</AvatarFallback>
                               </Avatar>
                               <div className="flex flex-col">
                                 <span className="font-bold text-sm leading-none">{p.first_name} {p.last_name}</span>

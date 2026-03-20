@@ -150,14 +150,6 @@ export default function DocumentsPage() {
               >
                 <Upload className="mr-2 h-4 w-4" /> {t.documents.upload}
               </Button>
-              <Button 
-                variant="outline"
-                className="rounded-xl font-bold"
-                onClick={() => setUploadDialogOpen(true)}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {isSpanish ? "Subir Examen" : "Upload Lab/Test"}
-              </Button>
             </div>
           </div>
         </div>

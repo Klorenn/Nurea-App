@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, Suspense } from "react"
+import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { CheckCircle2, Calendar, Clock, ArrowRight, Home } from "lucide-react"
+import { CheckCircle2, Calendar, ArrowRight, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { SmokeyBackground } from "@/components/smokey-login"

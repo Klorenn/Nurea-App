@@ -4,9 +4,7 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { createClient } from "@/lib/supabase/client"
 import { 
-  ShieldCheck, 
   Search, 
-  ExternalLink, 
   CheckCircle2, 
   XCircle, 
   Eye, 
@@ -18,10 +16,9 @@ import {
   Building2,
   Calendar,
   Clock,
-  User as UserIcon,
-  MessageCircle
+  User as UserIcon
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"

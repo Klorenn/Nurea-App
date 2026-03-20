@@ -44,31 +44,85 @@ export async function GET(request: Request) {
       .from('appointments')
       .select('patient_id')
       .eq('professional_id', user.id)
-      .not('patient_id', 'is', null)
+      // Filtramos patient_id en memoria para evitar diferencias de operadores
+      // entre entornos/schemas.
+
+    // Obtener IDs de pacientes desde el chat/mensajes (para que aparezca el paciente
+    // incluso si el appointment todavía no refleja todo en el UI, o por demoras de sincronización)
+    const { data: messages, error: messagesError } = await supabase
+      .from('messages')
+      .select('sender_id, receiver_id')
+      .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
 
     // Obtener IDs de pacientes creados por este profesional
     const { data: createdPatients, error: createdError } = await supabase
       .from('profiles')
       .select('id')
       .eq('created_by_professional_id', user.id)
-
-    if (appointmentsError || createdError) {
-      console.error('Error fetching patient IDs:', appointmentsError || createdError)
-      return NextResponse.json(
-        { 
-          error: 'fetch_failed',
-          message: 'No pudimos obtener tus pacientes. Por favor, intenta nuevamente.'
-        },
-        { status: 500 }
-      )
+    console.log('[patients API] createdPatients:', createdPatients, 'createdError:', createdError)
+    if (appointmentsError) {
+      console.error('Error fetching appointments patient IDs:', appointmentsError)
+    }
+    if (createdError) {
+      console.error('Error fetching created patient IDs:', createdError)
     }
 
-    // Obtener IDs únicos combinando ambos grupos
-    const patientIdsFromAppointments = appointments?.map(a => a.patient_id) || []
-    const patientIdsFromCreated = createdPatients?.map(p => p.id) || []
-    const uniquePatientIds = [...new Set([...patientIdsFromAppointments, ...patientIdsFromCreated])]
+    const patientIdsFromAppointments = (appointments || [])
+      .map((a: any) => a?.patient_id)
+      .filter(Boolean)
+    const patientIdsFromCreated = createdPatients?.map((p: any) => p.id) || []
+    console.log('[patients API] patientIdsFromCreated:', patientIdsFromCreated)
+
+    // Fallback/extra sync: traer el "otro participante" desde conversaciones de chat.
+    // Esto ayuda cuando el appointment se refleja con retraso en la UI,
+    // pero la conversación/mensajes ya existen.
+    let patientIdsFromConversations: string[] = []
+    try {
+      const { data: myConversations } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user.id)
+
+      const conversationIds = (myConversations || [])
+        .map((r: any) => r?.conversation_id)
+        .filter(Boolean)
+
+      if (conversationIds.length) {
+        const { data: otherParticipants } = await supabase
+          .from('conversation_participants')
+          .select('user_id')
+          .in('conversation_id', conversationIds)
+          .neq('user_id', user.id)
+
+        patientIdsFromConversations = (otherParticipants || [])
+          .map((r: any) => r?.user_id)
+          .filter(Boolean)
+      }
+    } catch (convError) {
+      console.error('Error fetching conversation participants:', convError)
+    }
+
+    const patientIdsFromMessages =
+      messagesError || !messages
+        ? []
+        : messages.reduce<string[]>((acc, m: any) => {
+            if (m?.sender_id && m.sender_id !== user.id) acc.push(m.sender_id)
+            if (m?.receiver_id && m.receiver_id !== user.id) acc.push(m.receiver_id)
+            return acc
+          }, [])
+
+    const uniquePatientIds = [
+      ...new Set([
+        ...patientIdsFromAppointments,
+        ...patientIdsFromCreated,
+        ...patientIdsFromMessages,
+        ...patientIdsFromConversations,
+      ]),
+    ]
+    console.log('[patients API] uniquePatientIds:', uniquePatientIds)
 
     if (uniquePatientIds.length === 0) {
+      console.log('[patients API] No uniquePatientIds, returning empty array')
       return NextResponse.json({
         success: true,
         patients: [],
@@ -77,66 +131,138 @@ export async function GET(request: Request) {
     }
 
     // Obtener información de los pacientes
-    const { data: patients, error: patientsError } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        avatar_url,
-        date_of_birth,
-        gender,
-        phone
-      `)
-      .in('id', uniquePatientIds)
-      .eq('role', 'patient')
-      .order('first_name', { ascending: true })
+    // Nota: hacemos JOIN desde `appointments` hacia `profiles` para asegurar que
+    // el paciente exista en el mismo esquema/relación que usa el dashboard.
+    let patients: any[] = []
+    try {
+      const { data: joined, error: joinedError } = await supabase
+        .from('appointments')
+        .select(`
+          patient_id,
+          patient:profiles!appointments_patient_id_fkey(
+            id,
+            first_name,
+            last_name,
+            email,
+            avatar_url,
+            phone,
+            date_of_birth,
+            gender
+          )
+        `)
+        .eq('professional_id', user.id)
+        .in('status', ['confirmed', 'pending'])
 
-    if (patientsError) {
-      console.error('Error fetching patients:', patientsError)
-      return NextResponse.json(
-        { 
-          error: 'fetch_failed',
-          message: 'No pudimos obtener la información de tus pacientes. Por favor, intenta nuevamente.'
-        },
-        { status: 500 }
-      )
+      if (!joinedError && joined) {
+        const mapped = (joined as any[])
+          .map((row) => row?.patient)
+          .filter(Boolean)
+
+        // Si encontramos por join, usamos eso (es lo más confiable).
+        if (mapped.length > 0) {
+          patients = mapped
+        }
+      }
+    } catch (e) {
+      console.error('Join fetch patients error:', e)
     }
 
-    // Para cada paciente, obtener estadísticas básicas
-    const patientsWithStats = await Promise.all(
-      (patients || []).map(async (patient) => {
-        // Contar citas totales
-        const { count: totalAppointments } = await supabase
-          .from('appointments')
-          .select('*', { count: 'exact', head: true })
-          .eq('professional_id', user.id)
-          .eq('patient_id', patient.id)
+    // Fallback: si el join no trajo nada, consultamos por IDs (con fallback de columnas).
+    if (patients.length === 0) {
+      try {
+        const r = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            email,
+            avatar_url,
+            date_of_birth,
+            gender,
+            phone
+          `)
+          .in('id', uniquePatientIds)
+          .order('first_name', { ascending: true })
+        patients = (r.data as any[]) || []
+      } catch (e) {
+        console.error('Error fetching patients (profiles columns):', e)
+        const r2 = await supabase
+          .from('profiles')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            email,
+            avatar_url,
+            phone
+          `)
+          .in('id', uniquePatientIds)
+          .order('first_name', { ascending: true })
+        patients = (r2.data as any[]) || []
+      }
+    }
+    console.log('[patients API] Final patients count:', patients.length, 'patients:', patients.map(p => p?.id))
 
-        // Obtener última cita
-        const { data: lastAppointment } = await supabase
-          .from('appointments')
-          .select('appointment_date, status')
-          .eq('professional_id', user.id)
-          .eq('patient_id', patient.id)
-          .order('appointment_date', { ascending: false })
-          .limit(1)
-          .single()
+    // Estadísticas: hacemos UNA query en vez de N (evita timeouts/hangs)
+    const patientIdsForStats = (patients || []).map((p: any) => p?.id).filter(Boolean)
+    let appointmentsForStats: any[] = []
+    if (patientIdsForStats.length > 0) {
+      const { data: appts, error: apptsError } = await supabase
+        .from('appointments')
+        .select('patient_id, appointment_date, status')
+        .eq('professional_id', user.id)
+        .in('patient_id', patientIdsForStats)
 
-        return {
-          ...patient,
-          totalAppointments: totalAppointments || 0,
-          lastAppointment: lastAppointment?.appointment_date || null,
-          lastAppointmentStatus: lastAppointment?.status || null,
-        }
-      })
-    )
+      if (!apptsError && appts) {
+        appointmentsForStats = appts as any[]
+      } else if (apptsError) {
+        console.error('appointmentsForStats query error:', apptsError)
+      }
+    }
+
+    const apptsByPatient = new Map<string, any[]>()
+    for (const a of appointmentsForStats) {
+      const pid = a?.patient_id
+      if (!pid) continue
+      if (!apptsByPatient.has(pid)) apptsByPatient.set(pid, [])
+      apptsByPatient.get(pid)!.push(a)
+    }
+
+    const patientsWithStats = (patients || []).map((patient: any) => {
+      const patientAppts = apptsByPatient.get(patient.id) || []
+      let lastAppointment: any = null
+      if (patientAppts.length > 0) {
+        lastAppointment = patientAppts
+          .slice()
+          .sort((x, y) => new Date(y.appointment_date).getTime() - new Date(x.appointment_date).getTime())[0]
+      }
+
+      return {
+        ...patient,
+        // Guarantee string fields so frontend can safely call .toLowerCase() etc.
+        first_name: patient.first_name ?? '',
+        last_name: patient.last_name ?? '',
+        email: patient.email ?? '',
+        avatar_url: patient.avatar_url ?? null,
+        phone: patient.phone ?? null,
+        date_of_birth: patient.date_of_birth ?? null,
+        gender: patient.gender ?? null,
+        totalAppointments: patientAppts.length,
+        lastAppointment: lastAppointment?.appointment_date ?? null,
+        lastAppointmentStatus: lastAppointment?.status ?? null,
+      }
+    })
 
     return NextResponse.json({
       success: true,
       patients: patientsWithStats,
-      count: patientsWithStats.length
+      count: patientsWithStats.length,
+      debug: {
+        uniquePatientIdsCount: uniquePatientIds.length,
+        patientIdsFromCreatedCount: patientIdsFromCreated.length,
+        patientIdsFromCreated: patientIdsFromCreated,
+      }
     })
   } catch (error) {
     console.error('Get professional patients error:', error)
@@ -181,6 +307,8 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const { firstName, lastName, email, phone, dateOfBirth } = body
+
+    console.log("[PATIENTS:CREATE]", { email, firstName })
 
     if (!firstName || !lastName || !email) {
       return NextResponse.json(

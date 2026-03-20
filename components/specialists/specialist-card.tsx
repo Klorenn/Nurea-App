@@ -66,6 +66,7 @@ export function SpecialistCard({
 
   return (
     <article
+      aria-label={specialist.name}
       className={cn(
         "relative flex flex-col bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden",
         "shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200"
@@ -89,20 +90,18 @@ export function SpecialistCard({
               {specialist.avatarUrl ? (
                 <img
                   src={specialist.avatarUrl}
-                  alt={specialist.name}
+                  alt=""
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xl font-semibold text-slate-500 dark:text-slate-400">
+                <div
+                  className="w-full h-full flex items-center justify-center text-xl font-semibold text-slate-500 dark:text-slate-400"
+                  aria-hidden="true"
+                >
                   {specialist.name.charAt(0)}
                 </div>
               )}
             </div>
-            {specialist.verified && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
-                <BadgeCheck className="h-3.5 w-3.5 text-teal-600" />
-              </div>
-            )}
           </div>
 
           {/* Nombre, especialidad, rating */}
@@ -114,6 +113,15 @@ export function SpecialistCard({
               {specialist.specialty}
             </p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+              {specialist.verified && (
+                <span
+                  className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm"
+                  title={lang === "es" ? "Profesional verificado" : "Verified professional"}
+                  aria-label={lang === "es" ? "Verificado" : "Verified"}
+                >
+                  <BadgeCheck className="h-3.5 w-3.5 text-teal-600" aria-hidden="true" />
+                </span>
+              )}
               <StarRating value={specialist.rating} size="sm" showValue />
               <span className="text-xs text-slate-400 dark:text-slate-500">
                 {specialist.reviewCount} {labels.reviews}
@@ -173,14 +181,14 @@ export function SpecialistCard({
             variant="outline"
             size="sm"
             onClick={onViewProfile}
-            className="rounded-lg border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+            className="rounded-lg border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-teal-500"
           >
             {labels.viewProfile}
           </Button>
           <Button
             size="sm"
             onClick={onBookAppointment}
-            className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium shadow-sm"
+            className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium shadow-sm transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
           >
             {labels.bookNow}
           </Button>

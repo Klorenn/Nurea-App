@@ -3,17 +3,12 @@
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { 
-  CreditCard, 
   TrendingUp, 
   Users, 
   ArrowUpRight, 
   ArrowDownRight, 
-  Building2, 
-  Calendar, 
-  Filter, 
   Download,
   Wallet,
-  PieChart as PieChartIcon,
   RefreshCcw,
   CheckCircle2,
   Clock
@@ -31,8 +26,7 @@ import {
   Tooltip, 
   ResponsiveContainer,
   LineChart,
-  Line,
-  Cell
+  Line
 } from "recharts"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -45,18 +39,12 @@ const containerVariants = {
   }
 }
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 }
-}
-
 export default function AdminFinancesPage() {
   const [stats, setStats] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [payoutList, setPayoutList] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState("Este Mes")
-  const [processingPayout, setProcessingPayout] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -76,13 +64,8 @@ export default function AdminFinancesPage() {
     fetchData()
   }, [])
 
-  const handleProcessPayout = (id: string, name: string) => {
-    setProcessingPayout(id)
-    setTimeout(() => {
-      setProcessingPayout(null)
-      setPayoutList(prev => prev.filter(p => p.id !== id))
-      toast.success(`Pago procesado con éxito para ${name}`)
-    }, 2000)
+  const handleProcessPayout = (_id: string, _name: string) => {
+    toast.info("Procesamiento de pagos requiere integración bancaria. Contacta al equipo técnico para activar transferencias automáticas.")
   }
 
   const formatCurrency = (val: number) => {
@@ -95,8 +78,9 @@ export default function AdminFinancesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <RefreshCcw className="h-8 w-8 animate-spin text-violet-600" />
+      <div className="flex items-center justify-center h-[60vh]" role="status" aria-live="polite">
+        <RefreshCcw className="h-8 w-8 animate-spin text-violet-600" aria-hidden="true" />
+        <span className="sr-only">Cargando datos financieros...</span>
       </div>
     )
   }
@@ -123,6 +107,7 @@ export default function AdminFinancesPage() {
                 key={p}
                 variant="ghost"
                 size="sm"
+                aria-pressed={period === p}
                 className={cn(
                   "rounded-lg px-4 text-xs font-bold transition-all",
                   period === p ? "bg-white dark:bg-slate-900 text-violet-600 shadow-sm" : "text-slate-500"
@@ -142,36 +127,28 @@ export default function AdminFinancesPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KpiCard 
-          title="Volumen Total (GMV)" 
-          value={formatCurrency(stats?.gmv || 0)} 
-          trend="+12.5%" 
-          trendUp={true}
+        <KpiCard
+          title="Volumen Total (GMV)"
+          value={formatCurrency(stats?.gmv || 0)}
           icon={Wallet}
           color="violet"
         />
-        <KpiCard 
-          title="Ingresos NUREA" 
-          value={formatCurrency(stats?.netRevenue || 0)} 
-          trend="+8.2%" 
-          trendUp={true}
+        <KpiCard
+          title="Ingresos NUREA"
+          value={formatCurrency(stats?.netRevenue || 0)}
           icon={TrendingUp}
           color="emerald"
         />
-        <KpiCard 
-          title="Suscripciones Activas" 
-          value={formatCurrency(stats?.mrr || 0)} 
-          trend="+5.1%" 
-          trendUp={true}
+        <KpiCard
+          title="Suscripciones Activas"
+          value={formatCurrency(stats?.mrr || 0)}
           icon={Users}
           subtext={`${stats?.activeSubs || 0} Doctores Activos`}
           color="blue"
         />
-        <KpiCard 
-          title="Pagos Pendientes" 
-          value={formatCurrency(stats?.pendingPayouts || 0)} 
-          trend="-2.4%" 
-          trendUp={false}
+        <KpiCard
+          title="Pagos Pendientes"
+          value={formatCurrency(stats?.pendingPayouts || 0)}
           icon={Clock}
           color="amber"
           warning={true}
@@ -323,20 +300,18 @@ export default function AdminFinancesPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button 
+                      <Button
                         size="sm"
                         onClick={() => handleProcessPayout(payout.id, payout.name)}
-                        disabled={(payout.amount || 0) < 100000 || processingPayout === payout.id}
+                        disabled={(payout.amount || 0) < 100000}
                         className={cn(
                           "rounded-xl font-black uppercase tracking-wider text-[10px] px-4",
-                          (payout.amount || 0) >= 100000 
-                            ? "bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-500/20" 
+                          (payout.amount || 0) >= 100000
+                            ? "bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-500/20"
                             : "bg-slate-100 text-slate-400"
                         )}
                       >
-                        {processingPayout === payout.id ? (
-                          <RefreshCcw className="h-3 w-3 animate-spin mr-1" />
-                        ) : "Procesar Pago"}
+                        Procesar Pago
                       </Button>
                     </td>
                   </tr>
@@ -365,13 +340,15 @@ function KpiCard({ title, value, trend, trendUp, icon: Icon, color, subtext, war
           <div className={cn("p-2.5 rounded-2xl", colorMap[color])}>
             <Icon className="h-5 w-5" />
           </div>
-          <div className={cn(
-            "flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full",
-            trendUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
-          )}>
-            {trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-            {trend}
-          </div>
+          {trend != null && (
+            <div className={cn(
+              "flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full",
+              trendUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+            )}>
+              {trendUp ? <ArrowUpRight className="h-3 w-3" aria-hidden="true" /> : <ArrowDownRight className="h-3 w-3" aria-hidden="true" />}
+              {trend}
+            </div>
+          )}
         </div>
         <div className="space-y-1">
           <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{title}</p>

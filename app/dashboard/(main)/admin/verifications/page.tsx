@@ -2,20 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-  ShieldCheck, 
-  Search, 
-  CheckCircle2, 
-  XCircle, 
-  FileText, 
-  ExternalLink, 
-  MoreVertical, 
-  Clock, 
-  AlertCircle,
+import {
+  ShieldCheck,
+  Search,
+  XCircle,
+  FileText,
+  ExternalLink,
+  Clock,
   RefreshCcw,
-  UserCheck
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -66,7 +62,7 @@ export default function AdminVerificationsPage() {
       } else {
         throw new Error("Failed to update")
       }
-    } catch (err) {
+    } catch {
       toast.error("Error al actualizar estado")
     } finally {
       setProcessingId(null)
@@ -102,24 +98,12 @@ export default function AdminVerificationsPage() {
       </div>
 
       {/* Stats Quick View */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard 
-          title="Nuevas Solicitudes" 
-          value={verifications.length.toString()} 
-          icon={Clock} 
-          color="amber" 
-        />
-        <StatCard 
-          title="Tasa de Aprobación" 
-          value="84%" 
-          icon={CheckCircle2} 
-          color="emerald" 
-        />
-        <StatCard 
-          title="Tiempo Promedio" 
-          value="4.5 hrs" 
-          icon={AlertCircle} 
-          color="blue" 
+      <div className="grid grid-cols-1 gap-6">
+        <StatCard
+          title="Nuevas Solicitudes"
+          value={verifications.length.toString()}
+          icon={Clock}
+          color="amber"
         />
       </div>
 
@@ -138,8 +122,8 @@ export default function AdminVerificationsPage() {
         </CardHeader>
         <CardContent className="p-0">
           {loading && verifications.length === 0 ? (
-            <div className="px-6 py-20 text-center">
-              <RefreshCcw className="h-10 w-10 animate-spin text-slate-300 mx-auto mb-4" />
+            <div className="px-6 py-20 text-center" role="status" aria-live="polite">
+              <RefreshCcw className="h-10 w-10 animate-spin text-slate-300 mx-auto mb-4" aria-hidden="true" />
               <p className="text-slate-400 font-medium">Buscando solicitudes...</p>
             </div>
           ) : filteredData.length > 0 ? (
@@ -231,22 +215,24 @@ export default function AdminVerificationsPage() {
                               <Search className="h-4 w-4 mr-1" />
                               Validar SIS
                             </Button>
-                            <Button 
+                            <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => handleUpdateStatus(v.id, `${v.first_name} ${v.last_name}`, 'rejected')}
                               disabled={processingId === v.id}
+                              aria-label={`Rechazar a ${v.first_name} ${v.last_name}`}
                               className="rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600"
                             >
-                              <XCircle className="h-5 w-5" />
+                              <XCircle className="h-5 w-5" aria-hidden="true" />
                             </Button>
-                            <Button 
+                            <Button
                               size="sm"
                               onClick={() => handleUpdateStatus(v.id, `${v.first_name} ${v.last_name}`, 'verified')}
                               disabled={processingId === v.id}
+                              aria-label={`Verificar a ${v.first_name} ${v.last_name}`}
                               className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white shadow-lg shadow-violet-500/20 px-4 font-black uppercase tracking-wider text-[10px]"
                             >
-                              {processingId === v.id ? <RefreshCcw className="h-4 w-4 animate-spin" /> : "Verificar"}
+                              {processingId === v.id ? <RefreshCcw className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Verificar"}
                             </Button>
                           </div>
                         </td>

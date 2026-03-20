@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { BarChart3, Users, CalendarCheck2, Eye } from "lucide-react"
+import { BarChart3, Users, CalendarCheck2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { createClient } from "@/lib/supabase/client"
@@ -73,9 +73,16 @@ export default function PayoutsPage() {
     const since30 = new Date()
     since30.setDate(now.getDate() - 29)
 
+    // Normalize appointment_date to "YYYY-MM-DD" regardless of whether Supabase
+    // returns a full ISO timestamp or a plain date string.
+    const normalizeDate = (d: string) => d.slice(0, 10)
+
+    const since30Str = since30.toISOString().slice(0, 10)
+    const nowStr = now.toISOString().slice(0, 10)
+
     const last30 = rows.filter((r) => {
-      const d = new Date(r.appointment_date)
-      return d >= since30 && d <= now
+      const d = normalizeDate(r.appointment_date)
+      return d >= since30Str && d <= nowStr
     })
 
     const last30Completed = last30.filter((r) => r.status === "completed").length
@@ -89,7 +96,8 @@ export default function PayoutsPage() {
     }
     last30.forEach((r) => {
       if (r.status === "completed") {
-        const key = r.appointment_date
+        // Use normalized key so lookup always matches the map's "YYYY-MM-DD" keys.
+        const key = normalizeDate(r.appointment_date)
         map.set(key, (map.get(key) || 0) + 1)
       }
     })
@@ -113,8 +121,7 @@ export default function PayoutsPage() {
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-4 w-80" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-32 w-full" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
         </div>
@@ -137,25 +144,7 @@ export default function PayoutsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardDescription className="flex items-center gap-2">
-              <Eye className="h-4 w-4 text-teal-500" />
-              Visitas a tu perfil
-            </CardDescription>
-            <CardTitle className="text-3xl font-bold flex items-baseline gap-2">
-              <span>—</span>
-              <span className="text-xs font-medium text-slate-400">Próximamente</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-slate-500">
-              Pronto podrás ver cuántas personas están mirando tu perfil profesional.
-            </p>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-2">

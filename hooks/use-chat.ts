@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useCallback, useRef } from "react"
+import { useEffect, useCallback, useRef, useState } from "react"
 import useSWR from "swr"
 import { createClient } from "@/lib/supabase/client"
 import { useProfile } from "@/hooks/use-profile"
+import { toast } from "sonner"
 import type {
   ChatMessageDB,
   ChatProfile,
@@ -219,6 +220,7 @@ export function useCurrentChatUser() {
 
 export function useConversations() {
   const { user } = useCurrentChatUser()
+  const [isConnected, setIsConnected] = useState(false)
 
   const { data, error, isLoading, mutate } = useSWR(
     user ? ["chat-conversations", user.id] : null,
@@ -242,16 +244,31 @@ export function useConversations() {
         { event: "UPDATE", schema: "public", table: "conversations" },
         () => { mutate() }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log(`[Chat] Conversations channel status: ${status}`)
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true)
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[Chat] Conversations channel error')
+          setIsConnected(false)
+          toast.error('Conexión de chat perdida. Reconectando...')
+        }
+        if (status === 'TIMED_OUT') {
+          console.warn('[Chat] Conversations channel timed out')
+          setIsConnected(false)
+        }
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [user, mutate])
 
-  return { conversations: data || [], isLoading, error, mutate }
+  return { conversations: data || [], isLoading, error, mutate, isConnected }
 }
 
 export function useMessages(conversationId: string | null) {
   const { user } = useCurrentChatUser()
+  const [isConnected, setIsConnected] = useState(false)
 
   const { data, error, isLoading, mutate } = useSWR(
     conversationId && user ? ["chat-messages", conversationId, user.id] : null,
@@ -273,6 +290,7 @@ export function useMessages(conversationId: string | null) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          console.log("[CHAT:REALTIME]", payload)
           const newMessage = payload.new as ChatMessageDB
           const chatMessage: ChatMessage = {
             id: newMessage.id,
@@ -310,7 +328,21 @@ export function useMessages(conversationId: string | null) {
           )
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log(`[Chat] Messages channel status: ${status}`)
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true)
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[Chat] Messages channel error')
+          setIsConnected(false)
+          toast.error('Conexión de chat perdida. Reconectando...')
+        }
+        if (status === 'TIMED_OUT') {
+          console.warn('[Chat] Messages channel timed out')
+          setIsConnected(false)
+        }
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [conversationId, user, mutate])
@@ -319,14 +351,26 @@ export function useMessages(conversationId: string | null) {
   useEffect(() => {
     if (!conversationId || !user) return
 
-    supabase
-      .from("conversation_participants")
-      .update({ last_read_at: new Date().toISOString() })
-      .eq("conversation_id", conversationId)
-      .eq("user_id", user.id)
-  }, [conversationId, user])
+    const markAsRead = async () => {
+      try {
+        const { error: readError } = await supabase
+          .from("conversation_participants")
+          .update({ last_read_at: new Date().toISOString() })
+          .eq("conversation_id", conversationId)
+          .eq("user_id", user.id)
+        
+        if (readError) {
+          console.error('[Chat] Error marking as read:', readError)
+        }
+      } catch (err) {
+        console.error('[Chat] Error in markAsRead:', err)
+      }
+    }
 
-  return { messages: data || [], isLoading, error, mutate }
+    markAsRead()
+  }, [conversationId, user, supabase])
+
+  return { messages: data || [], isLoading, error, mutate, isConnected }
 }
 
 export function useSendMessage() {
@@ -334,11 +378,28 @@ export function useSendMessage() {
   const sendingRef = useRef(false)
 
   const sendMessage = useCallback(
-    async (input: SendMessageInput) => {
+    async (input: SendMessageInput): Promise<ChatMessageDB | null> => {
       if (!user || sendingRef.current) return null
       sendingRef.current = true
 
       try {
+        // Primero asegurar que el usuario es participante de la conversación
+        const { error: participantError } = await supabase.rpc('ensure_chat_participant', {
+          p_conversation_id: input.conversationId,
+          p_user_id: user.id,
+        })
+
+        if (participantError) {
+          console.error('[Chat] Error ensuring participation:', participantError)
+          // Continuar de todas formas - la policy puede manejarlo
+        }
+
+        console.log("[CHAT:SEND]", {
+          conversationId: input.conversationId,
+          content: input.content,
+          userId: user.id,
+        })
+
         const { data, error } = await supabase
           .from("chat_messages")
           .insert({
@@ -354,7 +415,21 @@ export function useSendMessage() {
           .select()
           .single()
 
-        if (error) throw error
+        if (error) {
+          console.error("[CHAT:ERROR]", error)
+          
+          // Manejar errores específicos con mensajes amigables
+          if (error.code === '42501' || error.message?.includes('policy')) {
+            toast.error('No tienes permiso para enviar mensajes en esta conversación.')
+          } else if (error.code === '23503') {
+            toast.error('Error de referencia. La conversación no existe.')
+          } else {
+            toast.error('No se pudo enviar el mensaje. Intenta nuevamente.')
+          }
+          
+          sendingRef.current = false
+          return null
+        }
 
         // Simular entrega (en producción viene del receptor)
         setTimeout(async () => {
@@ -364,12 +439,16 @@ export function useSendMessage() {
             .eq("id", data.id)
         }, 800)
 
-        return data as ChatMessageDB
-      } finally {
         sendingRef.current = false
+        return data as ChatMessageDB
+      } catch (err: any) {
+        console.error("[CHAT:ERROR]", err)
+        sendingRef.current = false
+        toast.error('Error inesperado. Intenta nuevamente.')
+        return null
       }
     },
-    [user]
+    [user, supabase]
   )
 
   return { sendMessage }

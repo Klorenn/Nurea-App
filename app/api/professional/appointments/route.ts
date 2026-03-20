@@ -91,10 +91,31 @@ export async function GET(request: Request) {
       )
     }
 
+    // Normalize: guarantee patient is always an object (never null/array) with fallback fields
+    const normalized = (appointments || []).map((apt: any) => {
+      const patient = Array.isArray(apt.patient) ? apt.patient[0] : apt.patient
+      return {
+        ...apt,
+        appointment_time: apt.appointment_time ?? '00:00',
+        duration_minutes: apt.duration_minutes ?? 60,
+        price: apt.price ?? 0,
+        patient: patient
+          ? {
+              id: patient.id ?? '',
+              first_name: patient.first_name ?? '',
+              last_name: patient.last_name ?? '',
+              avatar_url: patient.avatar_url ?? null,
+              email: patient.email ?? '',
+              phone: patient.phone ?? null,
+            }
+          : { id: '', first_name: 'Paciente', last_name: '', avatar_url: null, email: '', phone: null },
+      }
+    })
+
     return NextResponse.json({
       success: true,
-      appointments: appointments || [],
-      count: appointments?.length || 0
+      appointments: normalized,
+      count: normalized.length
     })
   } catch (error) {
     console.error('Get professional appointments error:', error)

@@ -1,246 +1,299 @@
-"use client";
+"use client"
 
-import { useState, useTransition } from "react";
-import type { Appointment, Slot, Professional, Review } from "@prisma/client";
-import { cancelAppointment, rescheduleAppointment } from "@/actions/appointments";
-import { createReview } from "@/actions/reviews";
-import { format } from "date-fns";
+import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
+import {
+  Calendar,
+  Clock,
+  Video,
+  MapPin,
+  X,
+  Loader2,
+  CalendarX,
+  CalendarCheck,
+} from "lucide-react"
+import { CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useLanguage } from "@/contexts/language-context"
+import { useAuth } from "@/hooks/use-auth"
+import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
+import { format, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
+import { toast } from "sonner"
+import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
 
-type AppointmentWithRelations = Appointment & {
-  slot: Slot;
-  professional: Professional;
-  review: Review | null;
-};
-
-interface Props {
-  appointments: AppointmentWithRelations[];
-}
-
-interface SlotOption {
-  id: string;
-  startTime: string;
-  endTime: string;
-}
-
-export default function PatientAppointments({ appointments }: Props) {
-  const [isPending, startTransition] = useTransition();
-  const [rescheduleFor, setRescheduleFor] = useState<string | null>(null);
-  const [rescheduleDate, setRescheduleDate] = useState("");
-  const [slots, setSlots] = useState<SlotOption[]>([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [reviewError, setReviewError] = useState<string | null>(null);
-
-  const handleCancel = (apptId: string, professionalId: string) => {
-    startTransition(async () => {
-      try {
-        await cancelAppointment(apptId, professionalId);
-      } catch (e) {
-        console.error(e);
-        alert(e instanceof Error ? e.message : "Error al cancelar");
-      }
-    });
-  };
-
-  const openReschedule = (apptId: string) => {
-    setRescheduleFor(apptId);
-    setRescheduleDate("");
-    setSlots([]);
-  };
-
-  const fetchSlots = async (professionalId: string, dateStr: string) => {
-    if (!dateStr) return;
-    setLoadingSlots(true);
-    try {
-      const res = await fetch(
-        `/api/profesionales/${professionalId}/slots?date=${dateStr}`,
-      );
-      const data = await res.json();
-      setSlots(data.slots ?? []);
-    } finally {
-      setLoadingSlots(false);
+interface AppointmentData {
+  id: string
+  appointment_date: string
+  appointment_time: string
+  type: "online" | "in-person"
+  status: string
+  professional: {
+    id: string
+    specialty: string
+    profile: {
+      first_name: string
+      last_name: string
+      avatar_url?: string
     }
-  };
+  }
+  reviews?: { id: string }[]
+}
 
-  const handleReschedule = (
-    appointmentId: string,
-    professionalId: string,
-    newSlotId: string,
-  ) => {
-    startTransition(async () => {
+interface PatientAppointmentsProps {
+  initialAppointments?: AppointmentData[]
+  showAll?: boolean
+}
+
+export function PatientAppointments({ 
+  initialAppointments,
+  showAll = false 
+}: PatientAppointmentsProps) {
+  const { language } = useLanguage()
+  const isSpanish = language === "es"
+  const { user } = useAuth()
+  const supabase = createClient()
+
+  const [appointments, setAppointments] = useState<AppointmentData[]>(
+    initialAppointments || []
+  )
+  const [loading, setLoading] = useState(!initialAppointments)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user || initialAppointments) {
+      setLoading(false)
+      return
+    }
+
+    const loadAppointments = async () => {
       try {
-        await rescheduleAppointment(appointmentId, professionalId, newSlotId);
-        setRescheduleFor(null);
-      } catch (e) {
-        console.error(e);
-        alert(e instanceof Error ? e.message : "Error al reprogramar");
-      }
-    });
-  };
+        const { data } = await supabase
+          .from("appointments")
+          .select(`
+            id,
+            appointment_date,
+            appointment_time,
+            type,
+            status,
+            professional:professionals(
+              id,
+              specialty,
+              profile:profiles(first_name, last_name, avatar_url)
+            ),
+            reviews(id)
+          `)
+          .eq("patient_id", user.id)
+          .order("appointment_date", { ascending: false })
 
-  const handleReviewSubmit = (formData: FormData) => {
-    setReviewError(null);
-    startTransition(async () => {
-      try {
-        await createReview(formData);
-      } catch (e) {
-        setReviewError(e instanceof Error ? e.message : "Error al enviar reseña");
+        if (data) {
+          setAppointments(data as unknown as AppointmentData[])
+        }
+      } catch (err) {
+        console.error("Error loading appointments:", err)
+      } finally {
+        setLoading(false)
       }
-    });
-  };
+    }
 
-  if (!appointments.length) {
+    loadAppointments()
+  }, [user, supabase, initialAppointments])
+
+  const handleCancel = async (appointmentId: string) => {
+    setCancellingId(appointmentId)
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", appointmentId)
+
+      if (error) throw error
+
+      setAppointments(prev =>
+        prev.map(apt =>
+          apt.id === appointmentId ? { ...apt, status: "cancelled" } : apt
+        )
+      )
+      toast.success(
+        isSpanish ? "Cita cancelada exitosamente" : "Appointment cancelled successfully"
+      )
+    } catch (err) {
+      console.error("Error cancelling appointment:", err)
+      toast.error(
+        isSpanish ? "Error al cancelar la cita" : "Error cancelling appointment"
+      )
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
+  const openVideoCall = (appointmentId: string) => {
+    const meetingUrl = getJitsiMeetingUrl(appointmentId)
+    window.open(meetingUrl, "_blank")
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = parseISO(dateStr)
+    return format(date, "EEEE, d 'de' MMM", { locale: es })
+  }
+
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(":").map(Number)
+    const period = hours >= 12 ? "PM" : "AM"
+    const hour12 = hours % 12 || 12
+    return `${hour12}:${minutes.toString().padStart(2, "0")} ${period}`
+  }
+
+  const upcomingAppointments = appointments.filter(
+    a => a.status === "confirmed" || a.status === "pending"
+  )
+
+  const displayAppointments = showAll
+    ? appointments
+    : upcomingAppointments.slice(0, 5)
+
+  if (loading) {
     return (
-      <p className="text-sm text-muted-foreground">No tienes citas aún.</p>
-    );
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+      </div>
+    )
+  }
+
+  if (displayAppointments.length === 0) {
+    return (
+      <div className="text-center py-12 text-slate-500">
+        <Calendar className="h-12 w-12 mx-auto mb-4 opacity-30" />
+        <p className="font-medium">
+          {isSpanish ? "No tienes citas" : "No appointments"}
+        </p>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-4">
-      {appointments.map((appt) => (
-        <div
-          key={appt.id}
-          className="flex flex-col gap-2 rounded-lg border bg-card p-4 text-sm"
-        >
-          <div className="flex justify-between">
-            <div>
-              <p className="font-semibold">{appt.professional.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {format(new Date(appt.slot.startTime), "dd/MM/yyyy HH:mm")}
-              </p>
-            </div>
-            <span className="text-xs uppercase text-muted-foreground">
-              {appt.status}
-            </span>
-          </div>
+      {displayAppointments.map((apt) => {
+        const doctor = apt.professional?.profile || {}
+        const isOnline = apt.type === "online"
+        const isCancelled = apt.status === "cancelled"
 
-          {appt.status === "confirmed" && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                onClick={() => handleCancel(appt.id, appt.professionalId)}
-                disabled={isPending}
-                className="rounded border border-red-200 px-3 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => openReschedule(appt.id)}
-                disabled={isPending}
-                className="rounded border px-3 py-1 text-xs hover:bg-muted disabled:opacity-60"
-              >
-                Reprogramar
-              </button>
+        return (
+          <motion.div
+            key={apt.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={cn(
+              "rounded-2xl border transition-all",
+              isCancelled
+                ? "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50"
+                : "border-slate-200 dark:border-slate-800 hover:border-teal-300 dark:hover:border-teal-700"
+            )}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-12 w-12 rounded-xl">
+                  <AvatarImage src={doctor.avatar_url} />
+                  <AvatarFallback className="bg-teal-100 text-teal-700 font-bold">
+                    {doctor.first_name?.[0]}
+                    {doctor.last_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
 
-              {rescheduleFor === appt.id && (
-                <div className="mt-3 w-full rounded border bg-muted/30 p-3">
-                  <label className="mb-2 block text-xs font-medium">
-                    Elige nuevo día
-                  </label>
-                  <input
-                    type="date"
-                    value={rescheduleDate}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setRescheduleDate(v);
-                      fetchSlots(appt.professionalId, v);
-                    }}
-                    min={format(new Date(), "yyyy-MM-dd")}
-                    className="mb-2 rounded border px-2 py-1 text-xs"
-                  />
-                  {loadingSlots && (
-                    <p className="text-xs text-muted-foreground">
-                      Cargando horarios...
-                    </p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-900 dark:text-white truncate">
+                    Dr. {doctor.first_name} {doctor.last_name}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {apt.professional?.specialty}
+                  </p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {formatDate(apt.appointment_date)}
+                    </span>
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {formatTime(apt.appointment_time)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-2">
+                  <Badge
+                    className={cn(
+                      "text-xs",
+                      isOnline
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-amber-100 text-amber-700"
+                    )}
+                  >
+                    {isOnline ? (
+                      <Video className="h-3 w-3 mr-1" />
+                    ) : (
+                      <MapPin className="h-3 w-3 mr-1" />
+                    )}
+                    {isOnline
+                      ? isSpanish
+                        ? "Online"
+                        : "Online"
+                      : isSpanish
+                      ? "Presencial"
+                      : "In-person"}
+                  </Badge>
+
+                  {apt.status === "confirmed" && isOnline && (
+                    <Button
+                      size="sm"
+                      onClick={() => openVideoCall(apt.id)}
+                      className="h-8 rounded-lg bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      <Video className="h-4 w-4 mr-1" />
+                      {isSpanish ? "Unirse" : "Join"}
+                    </Button>
                   )}
-                  {!loadingSlots && slots.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {slots.map((slot) => (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          onClick={() =>
-                            handleReschedule(
-                              appt.id,
-                              appt.professionalId,
-                              slot.id,
-                            )
-                          }
-                          disabled={isPending}
-                          className="rounded border bg-background px-3 py-1 text-xs hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
-                        >
-                          {format(new Date(slot.startTime), "HH:mm")}
-                        </button>
-                      ))}
-                    </div>
+
+                  {apt.status === "confirmed" && !isCancelled && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleCancel(apt.id)}
+                      disabled={cancellingId === apt.id}
+                      className="h-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                    >
+                      {cancellingId === apt.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4 mr-1" />
+                      )}
+                      {isSpanish ? "Cancelar" : "Cancel"}
+                    </Button>
                   )}
-                  {!loadingSlots && rescheduleDate && slots.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      No hay horarios libres ese día.
-                    </p>
+
+                  {apt.status === "cancelled" && (
+                    <Badge className="bg-red-100 text-red-700 border-0">
+                      <CalendarX className="h-3 w-3 mr-1" />
+                      {isSpanish ? "Cancelada" : "Cancelled"}
+                    </Badge>
+                  )}
+
+                  {apt.status === "completed" && (
+                    <Badge className="bg-emerald-100 text-emerald-700 border-0">
+                      <CalendarCheck className="h-3 w-3 mr-1" />
+                      {isSpanish ? "Completada" : "Completed"}
+                    </Badge>
                   )}
                 </div>
-              )}
-            </div>
-          )}
-
-          {appt.status === "completed" && (
-            <div className="mt-2 border-t pt-2">
-              {appt.review ? (
-                <p className="text-xs text-muted-foreground">
-                  ★ Ya valoraste esta cita ({appt.review.rating}/5)
-                </p>
-              ) : (
-                <form
-                  action={handleReviewSubmit}
-                  className="flex flex-col gap-2 text-xs"
-                >
-                  <input
-                    type="hidden"
-                    name="professionalId"
-                    value={appt.professionalId}
-                  />
-                  <input
-                    type="hidden"
-                    name="appointmentId"
-                    value={appt.id}
-                  />
-                  <label className="flex items-center gap-2">
-                    <span>Valoración:</span>
-                    <select
-                      name="rating"
-                      className="rounded border px-2 py-1"
-                      defaultValue="5"
-                    >
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="3">3</option>
-                      <option value="4">4</option>
-                      <option value="5">5</option>
-                    </select>
-                  </label>
-                  <textarea
-                    name="comment"
-                    placeholder="Comentario (opcional)"
-                    className="min-h-[60px] rounded border px-2 py-1"
-                    rows={2}
-                  />
-                  {reviewError && (
-                    <p className="text-red-600 dark:text-red-400">
-                      {reviewError}
-                    </p>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={isPending}
-                    className="w-fit rounded bg-primary px-3 py-1 text-primary-foreground disabled:opacity-60"
-                  >
-                    Enviar reseña
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
+              </div>
+            </CardContent>
+          </motion.div>
+        )
+      })}
     </div>
-  );
+  )
 }
+
+export default PatientAppointments

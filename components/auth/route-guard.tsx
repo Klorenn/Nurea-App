@@ -51,13 +51,21 @@ export function RouteGuard({
         try {
           const { data, error } = await supabase
             .from("profiles")
-            .select("role, date_of_birth, email_verified, onboarding_completed")
+            // `onboarding_completed` puede no existir en entornos viejos; lo pedimos solo si hace falta.
+            .select("role, date_of_birth, email_verified")
             .eq("id", user.id)
-            .single()
+            .maybeSingle()
 
           if (error) {
-            console.error("Error loading profile:", error)
-            setProfileLoading(false)
+            if (process.env.NODE_ENV === "development") {
+              console.error("Error loading profile:", {
+                message: (error as any)?.message,
+                status: (error as any)?.status,
+                details: error,
+              })
+            }
+            setProfile(null)
+            setOnboardingComplete(true) // no bloquear por un problema técnico
             return
           }
 
@@ -67,19 +75,42 @@ export function RouteGuard({
           // If `onboarding_completed` is missing (older environments), we avoid blocking.
           if (data?.role === "professional" && typeof window !== "undefined") {
             const currentPath = window.location.pathname
-            const completed = data?.onboarding_completed
+            let completed: boolean | null = null
+
+            // Solo intentamos leer `onboarding_completed` cuando realmente necesitamos gatear.
             if (currentPath !== "/onboarding") {
+              try {
+                const { data: onboardingData } = await supabase
+                  .from("profiles")
+                  .select("onboarding_completed")
+                  .eq("id", user.id)
+                  .maybeSingle()
+
+                completed = onboardingData?.onboarding_completed ?? null
+              } catch {
+                // Si falla (columna inexistente / RLS), no bloqueamos.
+                completed = null
+              }
+
               if (completed === false) {
                 router.push("/onboarding")
                 return
               }
             }
+
             setOnboardingComplete(completed !== false)
           } else {
             setOnboardingComplete(true)
           }
         } catch (error) {
-          console.error("Error loading profile:", error)
+          if (process.env.NODE_ENV === "development") {
+            console.error("Error loading profile:", {
+              message: (error as any)?.message,
+              details: error,
+            })
+          }
+          setProfile(null)
+          setOnboardingComplete(true) // no bloquear por un problema técnico
         } finally {
           setProfileLoading(false)
         }
@@ -95,9 +126,9 @@ export function RouteGuard({
   // Mostrar loading mientras se verifica
   if (authLoading || profileLoading || onboardingComplete === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" aria-hidden="true"></div>
           <p className="text-muted-foreground">Verificando acceso...</p>
         </div>
       </div>
@@ -130,14 +161,26 @@ export function RouteGuard({
 
   // Verificar rol
   if (requiredRole) {
-    const userRole = profile?.role || "patient"
+    // Si falla la carga de `profiles`, no asumimos "patient" (eso rompe dashboards admin).
+    // Intentamos tomar el rol desde `user_metadata`; si tampoco existe, no redirigimos.
+    const userRole =
+      profile?.role ||
+      (user.user_metadata as unknown as { role?: string } | null)?.role ||
+      null
+
     const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole]
-    
-    if (!roles.includes(userRole)) {
+
+    // Si no podemos determinar el rol, redirigimos (evita que se muestre admin si el rol no está claro).
+    if (!userRole) {
+      router.push(redirectTo || "/dashboard")
+      return null
+    }
+
+    if (!roles.includes(userRole as any)) {
       // Redirigir según el rol del usuario
       const defaultRedirect = 
-        userRole === "professional" ? "/professional/dashboard" : 
-        userRole === "admin" ? "/admin" : 
+        userRole === "professional" ? "/professional/dashboard" :
+        userRole === "admin" ? "/admin" :
         "/dashboard"
       router.push(redirectTo || defaultRedirect)
       return null

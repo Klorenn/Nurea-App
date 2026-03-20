@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 import type { SpecialistCard, SpecialistSearchResult } from '@/types'
 
@@ -19,10 +20,11 @@ export async function GET(request: Request) {
     const availableToday = searchParams.get('available_today') === 'true'
     const priceMin = searchParams.get('price_min') ? Number(searchParams.get('price_min')) : null
     const priceMax = searchParams.get('price_max') ? Number(searchParams.get('price_max')) : null
-    // REGLA DE NEGOCIO: Por defecto solo profesionales verificados, 
-    // pero permitimos ver todos si estamos en desarrollo o se pide explícitamente
-    const verifiedOnly = searchParams.get('verified') === 'true' || 
-                        (searchParams.get('all') !== 'true' && process.env.NODE_ENV === 'production')
+    // REGLA DE NEGOCIO: En producción siempre solo verificados.
+    // En desarrollo se puede pasar ?all=true para ver todos.
+    const verifiedOnly = process.env.NODE_ENV === 'production'
+      ? true
+      : (searchParams.get('verified') === 'true' || searchParams.get('all') !== 'true')
     const language = searchParams.get('language') || null
     const location = searchParams.get('location') || null
     const search = searchParams.get('search') || null
@@ -75,8 +77,33 @@ export async function GET(request: Request) {
       ? Number(searchResults[0].total_count) 
       : 0
 
+    // Safety filter: nunca mostrar pacientes como si fueran especialistas.
+    // En algunos entornos puede haber datos inconsistentes (ej. registros en `professionals`),
+    // así que verificamos `profiles.role` en un paso extra.
+    const professionalIds = (searchResults || [])
+      .map((p: any) => p.id)
+      .filter(Boolean)
+
+    // Use admin client so we can always verify roles regardless of RLS policies.
+    const adminClient = createAdminClient()
+    const { data: rolesData } = professionalIds.length
+      ? await adminClient
+          .from("profiles")
+          .select("id, role")
+          .in("id", professionalIds)
+      : { data: [], error: null as any }
+
+    const allowedRoleById = new Map<string, string>()
+    ;(rolesData || []).forEach((r: any) => allowedRoleById.set(r.id, r.role))
+
+    const filteredSearchResults = (searchResults || []).filter((p: any) => {
+      // Si no encontramos el profile, lo descartamos por seguridad.
+      return allowedRoleById.get(p.id) === "professional"
+    })
+
     // Formatear resultados como SpecialistCard
-    const specialists: SpecialistCard[] = (searchResults || []).map((prof: any) => ({
+    const specialistsSource = filteredSearchResults || searchResults || []
+    const specialists: SpecialistCard[] = specialistsSource.map((prof: any) => ({
       id: prof.id,
       slug: prof.slug,
       name: `${prof.first_name || ''} ${prof.last_name || ''}`.trim() || 'Profesional',
@@ -207,6 +234,7 @@ async function fallbackSearch(
       profiles!inner (
         first_name,
         last_name,
+        role,
         avatar_url
       ),
       specialties (
@@ -293,10 +321,14 @@ async function fallbackSearch(
     )
   }
 
-  const specialists: SpecialistCard[] = (professionals || []).map((prof: any) => {
+  const specialists: SpecialistCard[] = (professionals || [])
+    .map((prof: any) => {
+    // Safety filter: nunca mostrar pacientes como si fueran especialistas.
+    if (prof?.profiles?.role !== "professional") return null
+
     const specialty = prof.specialties
     const category = specialty?.categories
-    
+
     return {
       id: prof.id,
       slug: prof.slug,
@@ -323,6 +355,7 @@ async function fallbackSearch(
       isAvailableToday: checkAvailability(prof.availability)
     }
   })
+    .filter(Boolean) as SpecialistCard[]
 
   return NextResponse.json({
     success: true,

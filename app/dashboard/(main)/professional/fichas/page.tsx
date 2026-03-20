@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Search,
@@ -58,6 +59,7 @@ interface PatientRecord {
 export default function ClinicalRecordsDashboard() {
   const { language } = useLanguage()
   const { user } = useAuth()
+  const router = useRouter()
   const isSpanish = language === "es"
   const supabase = createClient()
   const locale = isSpanish ? es : enUS
@@ -65,6 +67,7 @@ export default function ClinicalRecordsDashboard() {
   // --- State ---
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [records, setRecords] = useState<PatientRecord[]>([])
   const [kpis, setKpis] = useState({
     total: 0,
@@ -77,6 +80,7 @@ export default function ClinicalRecordsDashboard() {
   const loadRecords = useCallback(async () => {
     if (!user?.id) return
     
+    setLoadError(false)
     setLoading(true)
     try {
       // 1. Fetch Records with Patient details
@@ -120,6 +124,7 @@ export default function ClinicalRecordsDashboard() {
 
     } catch (error) {
       console.error("Error loading clinical records:", error)
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -138,6 +143,27 @@ export default function ClinicalRecordsDashboard() {
       (r.reason_for_visit && r.reason_for_visit.toLowerCase().includes(term))
     )
   }, [searchTerm, records])
+
+  const handleSignRecord = async (recordId: string) => {
+    try {
+      const { error } = await supabase
+        .from("medical_records")
+        .update({ is_signed: true, is_draft: false })
+        .eq("id", recordId)
+        .eq("professional_id", user!.id)
+
+      if (error) throw error
+
+      setRecords((prev) =>
+        prev.map((r) => r.id === recordId ? { ...r, is_signed: true, is_draft: false } : r)
+      )
+      setKpis((prev) => ({ ...prev, pending: Math.max(0, prev.pending - 1) }))
+      toast.success(isSpanish ? "Ficha firmada correctamente." : "Record signed successfully.")
+    } catch (err) {
+      console.error("Error signing record:", err)
+      toast.error(isSpanish ? "No se pudo firmar la ficha." : "Could not sign the record.")
+    }
+  }
 
   const handleReviewDrafts = () => {
     if (kpis.critical === 0) {
@@ -172,6 +198,27 @@ export default function ClinicalRecordsDashboard() {
   )
 
   if (!user) return null
+
+  if (loadError) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center p-10">
+        <div className="rounded-full bg-red-100 dark:bg-red-950/40 p-4">
+          <AlertCircle className="h-8 w-8 text-red-500" />
+        </div>
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200">
+            {isSpanish ? "Error al cargar las fichas" : "Error loading clinical records"}
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            {isSpanish ? "Verifica tu conexión e inténtalo de nuevo." : "Check your connection and try again."}
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => { setLoadError(false); loadRecords() }}>
+          {isSpanish ? "Reintentar" : "Retry"}
+        </Button>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 lg:p-10 space-y-8 max-w-[1600px] mx-auto font-sans">
@@ -329,7 +376,12 @@ export default function ClinicalRecordsDashboard() {
                           </td>
                           <td className="px-8 py-5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                               <Button variant="ghost" size="sm" className="h-9 px-3 rounded-xl font-bold text-teal-600 hover:bg-teal-50 gap-2">
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 className="h-9 px-3 rounded-xl font-bold text-teal-600 hover:bg-teal-50 gap-2"
+                                 onClick={() => router.push(`/dashboard/professional/fichas/${record.id}`)}
+                               >
                                  {record.is_draft ? (isSpanish ? 'Continuar' : 'Continue') : (isSpanish ? 'Ver' : 'View')}
                                </Button>
                                <DropdownMenu>
@@ -339,11 +391,17 @@ export default function ClinicalRecordsDashboard() {
                                    </Button>
                                  </DropdownMenuTrigger>
                                  <DropdownMenuContent align="end" className="rounded-xl p-2 w-48 shadow-xl">
-                                   <DropdownMenuItem className="rounded-lg gap-2 font-medium cursor-pointer">
+                                   <DropdownMenuItem
+                                     className="rounded-lg gap-2 font-medium cursor-pointer"
+                                     onClick={() => router.push(`/dashboard/patient/${record.patient_id}/history`)}
+                                   >
                                      <History className="h-4 w-4" /> {isSpanish ? 'Ver Historial' : 'View History'}
                                    </DropdownMenuItem>
                                    {!record.is_signed && (
-                                     <DropdownMenuItem className="rounded-lg gap-2 font-medium cursor-pointer">
+                                     <DropdownMenuItem
+                                       className="rounded-lg gap-2 font-medium cursor-pointer"
+                                       onClick={() => handleSignRecord(record.id)}
+                                     >
                                        <ClipboardCheck className="h-4 w-4" /> {isSpanish ? 'Firmar Ficha' : 'Sign Record'}
                                      </DropdownMenuItem>
                                    )}
@@ -398,7 +456,7 @@ export default function ClinicalRecordsDashboard() {
                       </div>
                       <div>
                         <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                          {note.patient.first_name} {note.patient.last_name[0]}.
+                          {note.patient.first_name} {note.patient.last_name?.[0] ?? ""}.
                         </p>
                         <p className="text-[10px] text-slate-400 uppercase font-black">{format(new Date(note.created_at), "HH:mm")}</p>
                       </div>

@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CreditCard, Search, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { createClient } from "@/lib/supabase/client"
 
 export default function AdminPaymentsPage() {
   const { language } = useLanguage()
@@ -17,7 +16,6 @@ export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const supabase = createClient()
 
   useEffect(() => {
     loadPayments()

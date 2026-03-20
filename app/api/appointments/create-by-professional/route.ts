@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         status: 'confirmed', // Appointments created by pro are auto-confirmed
         payment_status: 'paid', // Assuming professional handles payment or it's a private arrangement
         is_online: type === 'online',
-        meeting_link: type === 'online' ? `https://meet.jit.si/nurea-${Math.random().toString(36).substring(7)}` : null
+        meeting_link: null // Se asigna en el trigger post-insert usando el appointment.id
       })
       .select()
       .single()

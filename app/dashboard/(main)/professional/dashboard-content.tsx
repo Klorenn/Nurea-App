@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
   Calendar,
@@ -18,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
 import { ProfessionalCalendar } from "@/components/dashboard/professional-calendar"
+import { createClient } from "@/lib/supabase/client"
 
 interface ProfessionalProfile {
   id: string
@@ -29,7 +31,6 @@ interface ProfessionalProfile {
 interface ProfessionalDashboardContentProps {
   profile: ProfessionalProfile | null
   isVerified: boolean
-  userEmail?: string
 }
 
 const containerVariants = {
@@ -177,15 +178,54 @@ function VerificationPendingCard({ isSpanish }: { isSpanish: boolean }) {
 
 function VerifiedDashboard({
   profile,
-  isSpanish,
+  isSpanish: _isSpanish,
 }: {
   profile: ProfessionalProfile | null
   isSpanish: boolean
 }) {
+  const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  const [viewMode, setViewMode] = useState<"monthly" | "weekly" | "daily">("weekly")
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [loadingAppointments, setLoadingAppointments] = useState(false)
+
+  useEffect(() => {
+    if (!profile?.id) return
+    const supabase = createClient()
+    setLoadingAppointments(true)
+    supabase
+      .from("appointments")
+      .select(`
+        *,
+        patient:profiles!appointments_patient_id_fkey(
+          id, first_name, last_name, avatar_url
+        )
+      `)
+      .eq("professional_id", profile.id)
+      .in("status", ["confirmed", "pending"])
+      .order("appointment_date", { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data) setAppointments(data)
+        setLoadingAppointments(false)
+      })
+  }, [profile?.id])
+
   return (
     <>
       <motion.div variants={itemVariants} className="h-[calc(100vh-140px)] min-h-[600px]">
-        <ProfessionalCalendar />
+        {loadingAppointments && appointments.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+          </div>
+        ) : (
+          <ProfessionalCalendar
+            appointments={appointments}
+            currentDate={currentDate}
+            onDateChange={setCurrentDate}
+            viewMode={viewMode}
+            onViewChange={(v) => setViewMode(v as "monthly" | "weekly" | "daily")}
+            onAppointmentClick={() => {}}
+          />
+        )}
       </motion.div>
     </>
   )
@@ -194,7 +234,6 @@ function VerifiedDashboard({
 export function ProfessionalDashboardContent({
   profile,
   isVerified,
-  userEmail,
 }: ProfessionalDashboardContentProps) {
   const { language } = useLanguage()
   const isSpanish = language === "es"

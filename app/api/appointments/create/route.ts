@@ -2,10 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { isFutureDateTime, combineDateTime } from '@/lib/utils/date-helpers'
 import { normalizeAvailability, getAvailabilityForType, hasAnyAvailability } from '@/lib/utils/availability-helpers'
+import { sanitizeMessage } from '@/lib/utils/sanitize'
 
 export async function POST(request: Request) {
   try {
     const { professionalId, appointmentDate, appointmentTime, type, duration = 60, consultationReason, isFirstVisit } = await request.json()
+
+    console.log("[APPOINTMENTS:CREATE]", { professionalId, patientId: "(resolved after auth)", date: appointmentDate, time: appointmentTime, type, duration })
 
     if (!professionalId || !appointmentDate || !appointmentTime || !type) {
       return NextResponse.json(
@@ -91,63 +94,26 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar que el profesional tenga el perfil completo
-    const missingFields: string[] = []
-    
-    if (!professional.specialty || professional.specialty.trim() === '') {
-      missingFields.push('specialty')
-    }
-    if (!professional.bio || professional.bio.trim() === '') {
-      missingFields.push('bio')
-    }
-    if (!professional.consultation_type || professional.consultation_type === '') {
-      missingFields.push('consultation_type')
-    }
-    
-    // Solo validar precios del tipo de consulta solicitado.
-    // Esto evita bloquear reservas cuando el profesional ofrece "both" pero aún no completó
-    // el precio del tipo que el paciente NO está solicitando.
-    if (type === 'online') {
-      const consultationType = professional.consultation_type || 'both'
-      if (consultationType === 'online' || consultationType === 'both') {
-        if (!professional.online_price || Number(professional.online_price) === 0) {
-          missingFields.push('online_price')
-        }
-      }
-    }
-
-    if (type === 'in-person') {
-      const consultationType = professional.consultation_type || 'both'
-      if (consultationType === 'in-person' || consultationType === 'both') {
-        if (!professional.in_person_price || Number(professional.in_person_price) === 0) {
-          missingFields.push('in_person_price')
-        }
-      }
-    }
-    
-    // Verificar disponibilidad usando helper (soporta formato antiguo y nuevo)
+    // Para agendar NO bloqueamos por campos de perfil (bio/specialty/precios).
+    // La validación se centra en que el profesional tenga disponibilidad para el tipo elegido.
     if (!hasAnyAvailability(professional.availability, type)) {
-      missingFields.push('availability')
-    }
-    
-    // Para agendar no bloqueamos por datos bancarios/registro.
-    // Esos datos pueden ser requeridos para cobros/verificación, pero no deberían
-    // impedir que el paciente elija un horario si el profesional ya configuró
-    // especialidad, bio, modalidad y disponibilidad.
-
-    if (missingFields.length > 0) {
       return NextResponse.json(
-        { 
+        {
           error: 'professional_profile_incomplete',
-          message: 'El profesional aún no ha completado su configuración de perfil. Por favor, contacta al profesional o intenta más tarde.',
-          missingFields
+          message:
+            'El profesional aún no ha completado su configuración de perfil. Por favor, contacta al profesional o intenta más tarde.',
+          missingFields: ['availability']
         },
         { status: 400 }
       )
     }
 
-    // Verificar que el tipo de consulta esté disponible
-    if (type === 'online' && professional.consultation_type !== 'online' && professional.consultation_type !== 'both') {
+    // Verificar que el tipo de consulta esté disponible para el profesional.
+    // Si `consultation_type` viene vacío, lo tratamos como "both" para no bloquear agendamientos
+    // cuando el horario sí está configurado.
+    const consultationType = professional.consultation_type || 'both'
+
+    if (type === 'online' && consultationType !== 'online' && consultationType !== 'both') {
       return NextResponse.json(
         { 
           error: 'consultation_type_not_available',
@@ -157,7 +123,7 @@ export async function POST(request: Request) {
       )
     }
 
-    if (type === 'in-person' && professional.consultation_type !== 'in-person' && professional.consultation_type !== 'both') {
+    if (type === 'in-person' && consultationType !== 'in-person' && consultationType !== 'both') {
       return NextResponse.json(
         { 
           error: 'consultation_type_not_available',
@@ -225,47 +191,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Verificar conflictos con citas existentes
-    const { data: existingAppointments, error: appointmentsError } = await supabase
-      .from('appointments')
-      .select('id, appointment_date, appointment_time, duration_minutes, status')
-      .eq('professional_id', professionalId)
-      .eq('appointment_date', appointmentDate)
-      .in('status', ['pending', 'confirmed'])
-    
-    if (appointmentsError) {
-      console.error('Error checking existing appointments:', appointmentsError)
-    }
-
-    // Verificar si hay conflicto de horarios
-    if (existingAppointments && existingAppointments.length > 0) {
-      const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1])
-
-      for (const existing of existingAppointments) {
-        const existingTimeParts = existing.appointment_time.split(':')
-        const existingTimeMinutes = parseInt(existingTimeParts[0]) * 60 + parseInt(existingTimeParts[1])
-        const existingDuration = existing.duration_minutes || 60
-
-        // Verificar solapamiento
-        const appointmentEnd = appointmentTimeMinutes + duration
-        const existingEnd = existingTimeMinutes + existingDuration
-
-        if (
-          (appointmentTimeMinutes >= existingTimeMinutes && appointmentTimeMinutes < existingEnd) ||
-          (appointmentEnd > existingTimeMinutes && appointmentEnd <= existingEnd) ||
-          (appointmentTimeMinutes <= existingTimeMinutes && appointmentEnd >= existingEnd)
-        ) {
-          return NextResponse.json(
-            { 
-              error: 'time_conflict',
-              message: 'Este horario ya está ocupado. Por favor, selecciona otro horario.'
-            },
-            { status: 400 }
-          )
-        }
-      }
-    }
-
     // Obtener precio correcto según el tipo de consulta
     let price = professional.consultation_price || 0
     if (type === 'online' && professional.online_price) {
@@ -287,35 +212,22 @@ export async function POST(request: Request) {
               : null
           : null
 
-    // Crear la cita
-    const { data: appointment, error: appointmentError } = await supabase
-      .from('appointments')
-      .insert({
-        patient_id: user.id,
-        professional_id: professionalId,
-        appointment_date: appointmentDate,
-        appointment_time: appointmentTime,
-        duration_minutes: duration,
-        type: type,
-        status: 'pending',
-        price: price,
-        payment_status: 'pending',
-      })
-      .select()
-      .single()
+    // Usar función RPC atómica para crear la cita (previene race conditions)
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('create_appointment_atomic', {
+      p_professional_id: professionalId,
+      p_patient_id: user.id,
+      p_appointment_date: appointmentDate,
+      p_appointment_time: appointmentTime,
+      p_duration_minutes: duration,
+      p_status: 'pending',
+      p_is_online: type === 'online',
+      p_notes: normalizedConsultationReason || null,
+      p_price: price,
+      p_payment_status: 'pending',
+    })
 
-    if (appointmentError) {
-      console.error('Error creating appointment:', appointmentError)
-      const pgCode = (appointmentError as any)?.code as string | undefined
-      if (pgCode === '23505' || pgCode === '23P01') {
-        return NextResponse.json(
-          {
-            error: 'time_conflict',
-            message: 'Este horario ya está ocupado. Por favor, selecciona otro horario.',
-          },
-          { status: 409 }
-        )
-      }
+    if (rpcError) {
+      console.error('Error calling create_appointment_atomic RPC:', rpcError)
       return NextResponse.json(
         { 
           error: 'creation_failed',
@@ -324,6 +236,32 @@ export async function POST(request: Request) {
         { status: 500 }
       )
     }
+
+    // Verificar resultado de la función RPC
+    if (!rpcResult?.success) {
+      console.error('Appointment creation failed:', rpcResult)
+      
+      const errorCodeMap: Record<string, { status: number, message: string }> = {
+        'SAME_USER': { status: 400, message: 'No puedes agendar una cita contigo mismo.' },
+        'PAST_DATE': { status: 400, message: 'No se pueden crear citas en fechas pasadas.' },
+        'INVALID_DURATION': { status: 400, message: 'La duración debe ser entre 15 y 180 minutos.' },
+        'SLOT_OCCUPIED': { status: 409, message: 'Este horario ya está ocupado. Por favor, selecciona otro horario.' },
+        'INTERNAL_ERROR': { status: 500, message: 'Error interno. Por favor, intenta nuevamente.' },
+      }
+
+      const errorInfo = errorCodeMap[rpcResult?.error_code] || { status: 400, message: rpcResult?.error_message || 'Error al crear la cita.' }
+      
+      return NextResponse.json(
+        { 
+          error: rpcResult?.error_code || 'creation_failed',
+          message: errorInfo.message
+        },
+        { status: errorInfo.status }
+      )
+    }
+
+    // La cita fue creada exitosamente por la función RPC
+    const appointment = rpcResult.appointment
 
     // Formatear fecha y hora para el mensaje y la caducidad
     const appointmentDateObj = new Date(`${appointmentDate}T${appointmentTime}`)
@@ -423,7 +361,6 @@ export async function POST(request: Request) {
 
     // Crear mensaje en la tabla messages (del profesional al paciente)
     // Sanitizar contenido del mensaje antes de insertar
-    const { sanitizeMessage } = await import('@/lib/utils/sanitize')
     const sanitizedMessageContent = sanitizeMessage(messageContent)
 
     const { error: messageError } = await supabase
@@ -438,6 +375,28 @@ export async function POST(request: Request) {
     if (messageError) {
       console.error('Error creating message:', messageError)
       // No fallar la creación de la cita si el mensaje falla
+    }
+
+    // IMPORTANTE:
+    // Enviar también el "motivo de consulta" como MENSAJE hacia la doctora.
+    // Esto es lo que necesita ver el/la profesional en su inbox/chat cuando el paciente agenda.
+    if (normalizedConsultationReason) {
+      const patientToProfessionalContent = `📝 Motivo de consulta: ${normalizedConsultationReason}\n\n📅 Fecha: ${formattedDate}\n🕐 Hora: ${formattedTime}\n💻 Tipo: ${typeLabel}\n\n👨‍⚕️ Profesional: ${professionalName}\n\nPrimera vez: ${firstVisitLabel}`
+
+      const sanitizedPatientMessage = sanitizeMessage(patientToProfessionalContent)
+
+      const { error: patientMsgError } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id, // paciente -> profesional
+          receiver_id: professionalId,
+          content: sanitizedPatientMessage,
+          read: false,
+        })
+
+      if (patientMsgError) {
+        console.error('Error creating patient->professional consultation message:', patientMsgError)
+      }
     }
 
     // Enviar también los datos de la consulta como primer mensaje al sistema de chat moderno
@@ -493,11 +452,10 @@ export async function POST(request: Request) {
         })
         
         // Enviar email
-        const language = patientProfile.email?.includes('@') ? 'es' : 'es' // Determinar idioma si es posible
         const { success, error: emailError } = await sendAppointmentConfirmation(
           patientProfile.email,
           emailTemplate,
-          language
+          'es'
         )
         
         if (!success) {
@@ -525,10 +483,10 @@ export async function POST(request: Request) {
         ? 'Cita creada exitosamente. El enlace de la reunión se generará próximamente. Te enviaremos un recordatorio antes de la fecha.'
         : 'Cita creada exitosamente. Te enviaremos un recordatorio antes de la fecha.'
     })
-  } catch (error) {
-    console.error('Create appointment error:', error)
+  } catch (error: any) {
+    console.error("[APPOINTMENTS:CREATE:ERROR]", error?.message ?? error)
     return NextResponse.json(
-      { 
+      {
         error: 'server_error',
         message: 'Algo salió mal. Por favor, intenta nuevamente en unos momentos.'
       },

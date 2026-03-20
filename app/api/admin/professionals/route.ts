@@ -10,6 +10,8 @@ type VerificationStatus = 'pending' | 'under_review' | 'verified' | 'rejected'
  */
 async function requireAdmin() {
   const supabase = await createClient()
+  const adminClient = createAdminClient()
+
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 
   if (userError || !user) {
@@ -21,13 +23,35 @@ async function requireAdmin() {
     }
   }
 
-  const { data: profile } = await supabase
+  const jwtRole =
+    (user.app_metadata as any)?.role ||
+    (user.user_metadata as any)?.role ||
+    null
+
+  // Para evitar falsos negativos por RLS/columnas faltantes, leemos el rol con service role.
+  const { data: profile, error: profileError } = await adminClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
+
+  if (profileError) {
+    console.error('Admin requireAdmin: error reading profile role:', profileError)
+    if (jwtRole === 'admin') {
+      return { user }
+    }
+    return {
+      error: NextResponse.json(
+        { error: 'profile_role_lookup_failed', message: 'No pudimos validar el rol del admin.' },
+        { status: 500 }
+      )
+    }
+  }
 
   if (!profile || profile.role !== 'admin') {
+    // Fallback: algunos entornos pueden tener problemas con `profiles.role`.
+    if (jwtRole === 'admin') return { user }
+
     return {
       error: NextResponse.json(
         { error: 'forbidden', message: 'Solo los administradores pueden acceder a esta información.' },
@@ -37,6 +61,35 @@ async function requireAdmin() {
   }
 
   return { user }
+}
+
+/** Hydrates email + name fields from auth.users into the professionals array in-place. */
+async function hydrateAuthEmails(adminClient: ReturnType<typeof createAdminClient>, professionals: any[]) {
+  if (!professionals.length) return
+  const { data: { users: authUsers }, error } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+  if (error || !authUsers) {
+    console.error('Admin professionals: auth.admin.listUsers email hydration failed:', error)
+    return
+  }
+  const authUsersById = new Map<string, any>(authUsers.map((u: any) => [u.id, u]))
+  for (const p of professionals) {
+    const authUser = authUsersById.get(p.id)
+    const email = authUser?.email
+    const meta = authUser?.user_metadata || {}
+    const metaFirst = meta.first_name || null
+    const metaLast = meta.last_name || null
+    const fullName = meta.full_name || meta.fullName || null
+    const parts = typeof fullName === 'string' && fullName.trim() ? fullName.trim().split(/\s+/) : []
+    const derivedFirst = metaFirst || parts[0] || null
+    const derivedLast = metaLast || parts.slice(1).join(' ') || null
+
+    if (!p.profile) {
+      p.profile = { id: p.id, first_name: null, last_name: null, email: null, created_at: null }
+    }
+    p.profile.email = email ?? p.profile.email ?? null
+    p.profile.first_name = p.profile.first_name || derivedFirst
+    p.profile.last_name = p.profile.last_name || derivedLast
+  }
 }
 
 /**
@@ -66,8 +119,8 @@ export async function GET(request: Request) {
         verification_date,
         verification_notes,
         verified_by,
-        professional_license_number,
-        license_issuing_institution,
+        registration_number,
+        registration_institution,
         license_expiry_date,
         license_country,
         verification_document_url,
@@ -80,9 +133,11 @@ export async function GET(request: Request) {
           id,
           first_name,
           last_name,
-          email,
-          blocked,
-          created_at
+          created_at,
+          role,
+          subscription_status,
+          trial_end_date,
+          selected_plan_id
         )
       `)
       .order('created_at', { ascending: false })
@@ -100,18 +155,107 @@ export async function GET(request: Request) {
 
     const { data: professionals, error: professionalsError } = await query
 
-    if (professionalsError) {
-      console.error('Error fetching professionals:', professionalsError)
-      return NextResponse.json(
-        { error: 'fetch_failed', message: 'No pudimos obtener los profesionales. Por favor, intenta nuevamente.' },
-        { status: 500 }
-      )
+    // Fallback: si falla el select (columnas inexistentes / relación inexistente),
+    // hacemos un retry más robusto.
+    if (professionalsError || !professionals) {
+      console.error('Error fetching professionals (primary):', professionalsError)
+
+      // 1) Traer todo desde professionals con select('*') para evitar errores por columnas faltantes.
+      const { data: professionalsAll, error: professionalsAllError } = await adminClient
+        .from('professionals')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (professionalsAllError) {
+        console.error('Error fetching professionals (fallback):', professionalsAllError)
+        return NextResponse.json(
+          { error: 'fetch_failed', message: 'No pudimos obtener los profesionales. Por favor, intenta nuevamente.' },
+          { status: 500 }
+        )
+      }
+
+      // 2) Aplicar filtros en memoria (por si falla alguna columna en el query).
+      let filtered = professionalsAll as any[]
+      if (statusFilter) {
+        filtered = filtered.filter((p) => p.verification_status === statusFilter)
+      } else if (verifiedFilter === 'true') {
+        filtered = filtered.filter((p) => p.verified === true)
+      } else if (verifiedFilter === 'false') {
+        filtered = filtered.filter((p) => p.verification_status !== 'verified')
+      }
+
+      // 3) Traer perfiles y unir por id para que el frontend tenga `profile: {...}`
+      const ids = filtered.map((p) => p.id).filter(Boolean)
+      const { data: profiles, error: profilesError } = ids.length
+        ? await adminClient
+            .from('profiles')
+            // `blocked` puede no existir en todos los entornos; no es necesario para mostrar nombre/email.
+            .select('id, first_name, last_name, created_at, role, subscription_status, trial_end_date, selected_plan_id')
+            .in('id', ids)
+        : { data: [], error: null as any }
+
+      if (profilesError) {
+        console.error('Error fetching profiles for admin professionals:', profilesError)
+      }
+
+      const profilesById = new Map<string, any>((profiles || []).map((p: any) => [p.id, p]))
+      let merged = filtered.map((p: any) => ({
+        ...p,
+        profile: profilesById.get(p.id) || null,
+      }))
+
+      // Hard-safety: nunca mostrar pacientes como profesionales en el admin.
+      merged = merged.filter((p: any) => p?.profile?.role === 'professional')
+
+      // Email real desde auth.admin.listUsers (auth.users no está expuesto por PostgREST).
+      await hydrateAuthEmails(adminClient, merged)
+
+      return NextResponse.json({
+        success: true,
+        professionals: merged,
+        count: merged.length,
+      })
+    }
+
+    // Seguridad: forzamos el merge de `profiles` (first_name/last_name/email)
+    // para que el admin siempre vea nombres y correos, incluso si el join primario
+    // devuelve `profile: null` o campos vacíos.
+    const prosAny = (professionals || []) as any[]
+    const idsToHydrate = prosAny.map((p) => p?.id).filter(Boolean)
+    if (idsToHydrate.length) {
+      const { data: profilesHydrated, error: profilesHydratedError } = await adminClient
+        .from("profiles")
+        // `blocked` puede no existir en todos los entornos; no es necesario para mostrar nombre/email.
+        .select("id, first_name, last_name, created_at, role, subscription_status, trial_end_date, selected_plan_id")
+        .in("id", idsToHydrate)
+
+      if (!profilesHydratedError && profilesHydrated) {
+        const profilesById = new Map<string, any>((profilesHydrated as any[]).map((p: any) => [p.id, p]))
+        const merged = prosAny.map((p) => ({
+          ...p,
+          profile: profilesById.get(p.id) || p.profile || null,
+        }))
+
+        // Email real desde auth.admin.listUsers (auth.users no está expuesto por PostgREST).
+        await hydrateAuthEmails(adminClient, merged)
+
+        // Hard-safety: nunca mostrar pacientes como profesionales en el admin.
+        const mergedFiltered = merged.filter((p: any) => p?.profile?.role === 'professional')
+
+        return NextResponse.json({
+          success: true,
+          professionals: mergedFiltered,
+          count: mergedFiltered.length,
+        })
+      } else {
+        console.error("Admin professionals: profiles hydration failed:", profilesHydratedError)
+      }
     }
 
     return NextResponse.json({
       success: true,
       professionals: professionals || [],
-      count: professionals?.length || 0
+      count: (professionals as any[])?.length || 0,
     })
   } catch (error) {
     console.error('Get professionals error:', error)
@@ -161,51 +305,128 @@ export async function PUT(request: Request) {
       )
     }
 
-    const isVerified = verificationStatus === 'verified'
-    const now = new Date().toISOString()
+    // Usar el RPC de BD (más robusto ante diferencias de columnas/estructura).
+    // Firma: update_verification_status(p_professional_id, p_new_status, p_notes)
+    const supabase = await createClient()
 
-    const updateData: Record<string, any> = {
-      verification_status: verificationStatus,
-      // Sincronizar el campo legacy 'verified' (boolean)
-      verified: isVerified,
-      verified_at: isVerified ? now : null,
-      verified_by: isVerified ? authResult.user!.id : null,
-      verification_date: ['verified', 'rejected'].includes(verificationStatus) ? now : null,
-    }
+    const p_notes =
+      verificationStatus === 'rejected'
+        ? rejectionReason ?? notes ?? null
+        : notes ?? null
 
-    if (notes !== undefined) {
-      updateData.verification_notes = notes
-    }
+    const { data: ok, error: rpcError } = await supabase.rpc('update_verification_status', {
+      // Orden pensado para calzar con el overload que espera supabase-js.
+      p_new_status: verificationStatus,
+      p_notes,
+      p_professional_id: professionalId,
+    })
 
-    if (verificationStatus === 'rejected' && rejectionReason) {
-      updateData.rejection_reason = rejectionReason
-      updateData.verification_notes = rejectionReason
-    } else if (verificationStatus !== 'rejected') {
-      updateData.rejection_reason = null
-    }
+    if (rpcError) {
+      const rpcMessage = String(rpcError?.message || rpcError)
+      console.error('RPC update_verification_status error:', rpcError)
 
-    // Usamos el cliente admin (service role) para saltear RLS
-    const adminClient = createAdminClient()
+      // Fallback: si el RPC aún no existe en schema cache (o no está creado con la firma esperada),
+      // hacemos el update directo con el service role para destrabar el flujo del admin.
+      const rpcMessageLower = rpcMessage.toLowerCase()
+      if (rpcMessageLower.includes('could not find the function') && rpcMessageLower.includes('update_verification_status')) {
+        const adminClient = createAdminClient()
+        const adminId = authResult.user.id
 
-    const { data: updatedProfessional, error: updateError } = await adminClient
-      .from('professionals')
-      .update(updateData)
-      .eq('id', professionalId)
-      .select()
-      .single()
+        // Fallback "compat": en algunos entornos faltan columnas nuevas
+        // (verification_status/verification_date/verification_notes). En esos casos,
+        // actualizamos el modelo legacy basado en `verified` y `rejection_reason`.
+        const shouldVerify = verificationStatus === 'verified'
 
-    if (updateError) {
-      console.error('Error updating professional verification:', updateError)
+        // Primer intento: verified + (opcional) rejection_reason si aplica.
+        const updatePayload: Record<string, any> = {
+          verified: shouldVerify,
+        }
+
+        if (verificationStatus === 'verified') {
+          updatePayload.verified_by = adminId
+        }
+
+        if (verificationStatus === 'rejected') {
+          updatePayload.rejection_reason = p_notes
+        } else {
+          // Para evitar que quede marcada como rechazada desde un intento anterior.
+          updatePayload.rejection_reason = null
+        }
+
+        let { error: updateError } = await adminClient
+          .from('professionals')
+          .update(updatePayload)
+          .eq('id', professionalId)
+
+        // Segundo intento: si faltan columnas como `rejection_reason`, caemos a solo `verified`.
+        if (updateError) {
+          const fallbackPayloadOnlyVerified: Record<string, any> = {
+            verified: shouldVerify,
+          }
+          if (verificationStatus === 'verified') {
+            fallbackPayloadOnlyVerified.verified_by = adminId
+          }
+
+          const { error: updateError2 } = await adminClient
+            .from('professionals')
+            .update(fallbackPayloadOnlyVerified)
+            .eq('id', professionalId)
+
+          if (updateError2) {
+            return NextResponse.json(
+              {
+                error: 'update_failed',
+                message: `No se pudo actualizar la verificación (fallback UPDATE legacy): ${updateError2.message || 'error'}`,
+                details: updateError2,
+              },
+              { status: 500 }
+            )
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          professional: { id: professionalId, verification_status: verificationStatus },
+          message: getStatusMessage(verificationStatus),
+        })
+      }
+
       return NextResponse.json(
-        { error: 'update_failed', message: 'No se pudo actualizar la verificación. Por favor, intenta nuevamente.' },
+        {
+          error: 'update_failed',
+          message: `No se pudo actualizar la verificación: ${rpcError.message || 'error en RPC'}`,
+          details: rpcError,
+        },
         { status: 500 }
       )
     }
 
+    if (!ok) {
+      return NextResponse.json(
+        {
+          error: 'update_failed',
+          message: 'No se pudo actualizar la verificación (RPC no actualizó el registro).',
+        },
+        { status: 500 }
+      )
+    }
+
+    // Devolver el profesional actualizado para que el frontend sepa que cambió.
+    const { data: updatedProfessional, error: fetchError } = await supabase
+      .from('professionals')
+      .select('id, verification_status, verified, verified_at, verified_by, verification_date, verification_notes, rejection_reason')
+      .eq('id', professionalId)
+      .maybeSingle()
+
+    if (fetchError) {
+      // No bloqueamos si no se pueden traer todos los campos; solo devolvemos ok.
+      console.error('Fetch updated professional error:', fetchError)
+    }
+
     return NextResponse.json({
       success: true,
-      professional: updatedProfessional,
-      message: getStatusMessage(verificationStatus)
+      professional: updatedProfessional || { id: professionalId, verification_status: verificationStatus },
+      message: getStatusMessage(verificationStatus),
     })
   } catch (error) {
     console.error('Update professional error:', error)

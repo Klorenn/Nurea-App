@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { isTestProfessional, shouldUseMockData } from '@/lib/mock-data'
 
 /**
  * GET /api/favorites
@@ -34,6 +33,7 @@ export async function GET(request: Request) {
           id,
           specialty,
           consultation_price,
+          consultation_type,
           verified,
           location,
           profile:profiles!professionals_id_fkey(
@@ -41,7 +41,8 @@ export async function GET(request: Request) {
             first_name,
             last_name,
             avatar_url
-          )
+          ),
+          reviews(rating)
         )
       `)
       .eq('patient_id', user.id)
@@ -78,13 +79,19 @@ export async function GET(request: Request) {
       
       // El profesional de prueba ahora está en la BD, se maneja como cualquier otro
 
+      const reviewList = (prof as any)?.reviews || []
+      const reviewCount = reviewList.length
+      const avgRating = reviewCount > 0
+        ? reviewList.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewCount
+        : null
+
       return {
         id: fav.id,
         professionalId: prof?.id,
         name: `Dr. ${prof?.profile?.first_name || ''} ${prof?.profile?.last_name || ''}`.trim() || 'Profesional',
         specialty: prof?.specialty || '',
-        rating: 4.8, // TODO: calcular desde reviews
-        reviews: 0, // TODO: contar desde reviews
+        rating: avgRating ? Math.round(avgRating * 10) / 10 : null,
+        reviews: reviewCount,
         location: prof?.location || '',
         price: prof?.consultation_price || 0,
         image: prof?.profile?.avatar_url || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop',

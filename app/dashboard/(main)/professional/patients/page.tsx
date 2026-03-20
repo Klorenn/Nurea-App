@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Search,
@@ -22,6 +23,10 @@ import {
   NotebookPen,
   History,
   Paperclip,
+  MessageCircle,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -34,6 +39,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
 import { AddPatientModal } from "@/components/calendar/modals/add-patient-modal"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 interface MedicalEntry {
   id: string
@@ -337,9 +344,54 @@ function PatientRecord({
   patient: Patient
   isSpanish: boolean
 }) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState("history")
   const [notes, setNotes] = useState(patient.privateNotes)
+  const [savingNotes, setSavingNotes] = useState(false)
+  const [startingChat, setStartingChat] = useState(false)
   const age = calculateAge(patient.birthDate)
+
+  const handleSendMessage = async () => {
+    setStartingChat(true)
+    try {
+      const res = await fetch("/api/chat/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId: patient.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error")
+      router.push("/dashboard/professional/chat")
+    } catch (err: any) {
+      toast.error(isSpanish ? "No se pudo iniciar el chat" : "Could not start chat")
+    } finally {
+      setStartingChat(false)
+    }
+  }
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Not authenticated")
+
+      const { error } = await supabase
+        .from("professional_notes")
+        .upsert(
+          { professional_id: user.id, patient_id: patient.id, content: notes, updated_at: new Date().toISOString() },
+          { onConflict: "professional_id,patient_id" }
+        )
+
+      if (error) throw error
+      toast.success(isSpanish ? "Notas guardadas correctamente." : "Notes saved successfully.")
+    } catch (err) {
+      console.error("Error saving notes:", err)
+      toast.error(isSpanish ? "No se pudieron guardar las notas." : "Could not save notes.")
+    } finally {
+      setSavingNotes(false)
+    }
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -380,10 +432,23 @@ function PatientRecord({
               </div>
             </div>
           </div>
-          <Button className="rounded-xl bg-teal-600 hover:bg-teal-700 shadow-lg shadow-teal-600/20 shrink-0">
-            <Plus className="h-4 w-4 mr-2" />
-            {isSpanish ? "Añadir Evolución" : "Add Note"}
-          </Button>
+          <div className="flex flex-col gap-2 shrink-0">
+            <Button
+              className="rounded-xl bg-teal-600 hover:bg-teal-700 shadow-lg shadow-teal-600/20"
+              onClick={handleSendMessage}
+              disabled={startingChat}
+            >
+              {startingChat
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : <MessageCircle className="h-4 w-4 mr-2" />
+              }
+              {isSpanish ? "Enviar Mensaje" : "Send Message"}
+            </Button>
+            <Button variant="outline" className="rounded-xl">
+              <Plus className="h-4 w-4 mr-2" />
+              {isSpanish ? "Añadir Evolución" : "Add Note"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -463,8 +528,12 @@ function PatientRecord({
                 className="flex-1 min-h-[300px] rounded-xl resize-none bg-amber-50/50 dark:bg-amber-950/10 border-amber-200 dark:border-amber-800/50 focus:border-amber-400"
               />
               <div className="flex justify-end mt-3">
-                <Button className="rounded-xl bg-teal-600 hover:bg-teal-700">
-                  {isSpanish ? "Guardar Notas" : "Save Notes"}
+                <Button
+                  className="rounded-xl bg-teal-600 hover:bg-teal-700"
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                >
+                  {savingNotes ? (isSpanish ? "Guardando..." : "Saving...") : (isSpanish ? "Guardar Notas" : "Save Notes")}
                 </Button>
               </div>
             </div>
@@ -490,10 +559,12 @@ export default function ProfessionalPatientsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null)
   const selectedPatientIdRef = useRef<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [addPatientOpen, setAddPatientOpen] = useState(false)
   const [debugInfo, setDebugInfo] = useState<any | null>(null)
 
   const fetchPatients = async () => {
+    setFetchError(false)
     try {
       const controller = new AbortController()
       const timeoutId = window.setTimeout(() => controller.abort(), 10000)
@@ -532,6 +603,7 @@ export default function ProfessionalPatientsPage() {
       }
     } catch (err) {
       console.error("Failed to load patients", err)
+      setFetchError(true)
       setDebugInfo(null)
     } finally {
       setLoading(false)
@@ -577,7 +649,29 @@ export default function ProfessionalPatientsPage() {
   const selectedPatient = patients.find((p) => p.id === selectedPatientId)
 
   if (loading) {
-     return <div className="h-[calc(100vh-8rem)] flex items-center justify-center">Cargando pacientes...</div>
+    return <div className="h-[calc(100vh-8rem)] flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-teal-600" /></div>
+  }
+
+  if (fetchError) {
+    return (
+      <div className="h-[calc(100vh-8rem)] flex flex-col items-center justify-center gap-4 text-center">
+        <div className="rounded-full bg-red-100 dark:bg-red-950/40 p-4">
+          <AlertTriangle className="h-8 w-8 text-red-500" />
+        </div>
+        <div>
+          <p className="font-semibold text-slate-800 dark:text-slate-200">
+            {isSpanish ? "Error al cargar los pacientes" : "Error loading patients"}
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            {isSpanish ? "Verifica tu conexión e inténtalo de nuevo." : "Check your connection and try again."}
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => { setFetchError(false); setLoading(true); fetchPatients() }}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          {isSpanish ? "Reintentar" : "Retry"}
+        </Button>
+      </div>
+    )
   }
 
   return (

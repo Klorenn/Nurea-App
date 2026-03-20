@@ -107,11 +107,13 @@ export async function GET(
       console.error("Error in slots availability appointments query:", appointmentsError)
     }
 
-    const existing = (existingAppointments || []).map((apt: any) => {
-      const startMinutes = parseTimeToMinutes(apt.appointment_time)
-      const dur = Number(apt.duration_minutes) || 60
-      return { startMinutes, endMinutes: startMinutes + dur }
-    })
+    const existing = (existingAppointments || [])
+      .filter((apt: any) => typeof apt.appointment_time === 'string' && apt.appointment_time.length >= 5)
+      .map((apt: any) => {
+        const startMinutes = parseTimeToMinutes(apt.appointment_time)
+        const dur = Number(apt.duration_minutes) || 60
+        return { startMinutes, endMinutes: startMinutes + dur }
+      })
 
     const overlaps = (slotStart: number, slotEnd: number) => {
       return existing.some((a) => slotStart < a.endMinutes && slotEnd > a.startMinutes)

@@ -50,6 +50,14 @@ export async function POST(request: NextRequest) {
             stripe_subscription_id: `mp_${preapproval.id}`,
           })
           .eq("id", profileId)
+
+        // Si la suscripción se activó con un código de referido, incrementar uses_count
+        if (preapproval.status === "authorized") {
+          const referralCodeId: string | undefined = preapproval.metadata?.referral_code_id
+          if (referralCodeId) {
+            await supabase.rpc("increment_referral_uses", { p_code_id: referralCodeId })
+          }
+        }
       }
     }
 

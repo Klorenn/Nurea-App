@@ -9,14 +9,11 @@ import {
   CreditCard,
   Search,
   FileText,
-  List,
   MessageCircle,
   Settings,
   Users,
-  Video,
   BarChart3,
   Stethoscope,
-  ClipboardList,
   Heart,
   Shield,
   User,
@@ -24,12 +21,9 @@ import {
   LayoutDashboard,
   HeadphonesIcon,
   CloudUpload,
-  HelpCircle,
-  ChevronDown,
-  ExternalLink,
   Star,
   Megaphone,
-  Zap,
+  Bot,
   type LucideIcon,
 } from "lucide-react"
 import {
@@ -81,28 +75,52 @@ const adminNavigation: NavGroup[] = [
         href: "/dashboard/admin",
       },
       {
-        icon: Users,
-        label: "Gestión de Médicos",
-        labelEn: "Manage Doctors",
+        icon: Stethoscope,
+        label: "Médicos",
+        labelEn: "Doctors",
         href: "/dashboard/admin/professionals",
       },
       {
         icon: Users,
-        label: "Gestión de Pacientes",
-        labelEn: "Manage Patients",
+        label: "Pacientes",
+        labelEn: "Patients",
         href: "/dashboard/admin/users",
       },
       {
-        icon: CreditCard,
-        label: "Finanzas",
-        labelEn: "Finances",
-        href: "/dashboard/admin/finances",
+        icon: Calendar,
+        label: "Citas",
+        labelEn: "Appointments",
+        href: "/dashboard/admin/appointments",
       },
       {
         icon: UserCheck,
         label: "Verificaciones",
         labelEn: "Verifications",
         href: "/dashboard/admin/verifications",
+      },
+      {
+        icon: Shield,
+        label: "Credenciales",
+        labelEn: "Credentials",
+        href: "/dashboard/admin/credentials",
+      },
+    ],
+  },
+  {
+    title: "Finanzas",
+    titleEn: "Finances",
+    items: [
+      {
+        icon: CreditCard,
+        label: "Dashboard Financiero",
+        labelEn: "Financial Dashboard",
+        href: "/dashboard/admin/finances",
+      },
+      {
+        icon: BarChart3,
+        label: "Pagos",
+        labelEn: "Payments",
+        href: "/dashboard/admin/payments",
       },
     ],
   },
@@ -111,16 +129,35 @@ const adminNavigation: NavGroup[] = [
     titleEn: "System",
     items: [
       {
+        icon: Bot,
+        label: "Modo Teams",
+        labelEn: "Teams Mode",
+        href: "/dashboard/admin/teams",
+        isNew: true,
+      },
+      {
+        icon: HeadphonesIcon,
+        label: "Soporte",
+        labelEn: "Support",
+        href: "/dashboard/admin/support",
+      },
+      {
+        icon: Megaphone,
+        label: "Marketing",
+        labelEn: "Marketing",
+        href: "/dashboard/admin/marketing",
+      },
+      {
         icon: Settings,
-        label: "Configuración del Sistema",
-        labelEn: "System Settings",
+        label: "Configuración",
+        labelEn: "Settings",
         href: "/dashboard/admin/settings",
       },
     ],
   },
 ]
 
-// ── Professional Navigation (referencia: Editar perfil, Canales de reserva, Opiniones, etc.) ──
+// ── Professional Navigation ────────────────────────────────────────────────────
 const professionalNavigation: NavGroup[] = [
   {
     title: "Principal",
@@ -157,12 +194,6 @@ const professionalNavigation: NavGroup[] = [
         href: "/dashboard/professional/chat",
       },
       {
-        icon: List,
-        label: "Recursos",
-        labelEn: "Resources",
-        href: "/dashboard/professional/recursos",
-      },
-      {
         icon: CloudUpload,
         label: "Imágenes (PACS)",
         labelEn: "Images (PACS)",
@@ -171,26 +202,26 @@ const professionalNavigation: NavGroup[] = [
       },
       {
         icon: CreditCard,
-        label: "Pagos y Cobros",
-        labelEn: "Finances",
+        label: "Estadísticas",
+        labelEn: "Statistics",
         href: "/dashboard/professional/payouts",
       },
     ],
   },
   {
-    title: "Perfil y visibilidad",
-    titleEn: "Profile & visibility",
+    title: "Perfil",
+    titleEn: "Profile",
     items: [
       {
         icon: User,
-        label: "Editar perfil",
-        labelEn: "Edit profile",
+        label: "Editar Perfil",
+        labelEn: "Edit Profile",
         href: "/dashboard/professional/profile",
       },
       {
         icon: Calendar,
-        label: "Canales de reserva",
-        labelEn: "Booking channels",
+        label: "Disponibilidad",
+        labelEn: "Availability",
         href: "/dashboard/professional/availability",
       },
       {
@@ -200,43 +231,10 @@ const professionalNavigation: NavGroup[] = [
         href: "/dashboard/professional/reviews",
       },
       {
-        icon: Zap,
-        label: "First Class",
-        labelEn: "First Class",
-        href: "/dashboard/professional/profile",
-      },
-      {
-        icon: HelpCircle,
-        label: "Pregunta al Experto",
-        labelEn: "Ask the Expert",
+        icon: HeadphonesIcon,
+        label: "Soporte",
+        labelEn: "Support",
         href: "/dashboard/support",
-        expandable: true,
-      },
-      {
-        icon: Megaphone,
-        label: "Promoción de mi perfil",
-        labelEn: "Profile promotion",
-        href: "/dashboard/professional/profile#promotion",
-        expandable: true,
-      },
-      {
-        icon: ExternalLink,
-        label: "Mi perfil",
-        labelEn: "My profile",
-        href: "/dashboard/professional/profile",
-        isButton: true,
-      },
-    ],
-  },
-  {
-    title: "Configuración",
-    titleEn: "Settings",
-    items: [
-      {
-        icon: Settings,
-        label: "Mi Consultorio",
-        labelEn: "Practice Settings",
-        href: "/dashboard/professional/profile",
       },
     ],
   },
@@ -264,7 +262,13 @@ const patientNavigation: NavGroup[] = [
         icon: Calendar,
         label: "Mis Citas",
         labelEn: "My Appointments",
-        href: "/dashboard/patient/citas",
+        href: "/dashboard/appointments",
+      },
+      {
+        icon: MessageCircle,
+        label: "Mensajes",
+        labelEn: "Messages",
+        href: "/dashboard/chat",
       },
       {
         icon: Heart,
@@ -274,9 +278,27 @@ const patientNavigation: NavGroup[] = [
       },
       {
         icon: FileText,
-        label: "Documentos y Recetas",
-        labelEn: "Documents & Prescriptions",
+        label: "Documentos",
+        labelEn: "Documents",
         href: "/dashboard/documents",
+      },
+      {
+        icon: CreditCard,
+        label: "Pagos",
+        labelEn: "Payments",
+        href: "/dashboard/payments",
+      },
+    ],
+  },
+  {
+    title: "Cuenta",
+    titleEn: "Account",
+    items: [
+      {
+        icon: User,
+        label: "Mi Perfil",
+        labelEn: "My Profile",
+        href: "/dashboard/profile",
       },
       {
         icon: Users,
@@ -285,34 +307,10 @@ const patientNavigation: NavGroup[] = [
         href: "/dashboard/family",
       },
       {
-        icon: User,
-        label: "Mi Perfil",
-        labelEn: "My Profile",
-        href: "/dashboard/profile",
-      },
-      {
-        icon: MessageCircle,
-        label: "Mensajes",
-        labelEn: "Messages",
-        href: "/dashboard/chat",
-      },
-      {
-        icon: CreditCard,
-        label: "Pagos y Recibos",
-        labelEn: "Payments & Receipts",
-        href: "/dashboard/patient/payments",
-      },
-      {
         icon: HeadphonesIcon,
         label: "Soporte",
         labelEn: "Support",
         href: "/dashboard/support",
-      },
-      {
-        icon: HelpCircle,
-        label: "Ayuda",
-        labelEn: "Help",
-        href: "/dashboard/help",
       },
     ],
   },
@@ -352,117 +350,8 @@ export function DashboardSidebar({
   }
 
   const roleColor = role === "admin" ? "#7c3aed" : "#0f766e"
-
-  // Compact icon-only navigation for professionals (Doctoralia-style left rail)
-  const professionalIconTop = React.useMemo(
-    () =>
-      role !== "professional"
-        ? []
-        : [
-            professionalNavigation[0].items.find(
-              (item) => item.href === "/dashboard/professional"
-            ),
-            professionalNavigation[0].items.find(
-              (item) => item.href === "/dashboard/professional/appointments"
-            ),
-            professionalNavigation[0].items.find(
-              (item) => item.href === "/dashboard/professional/patients"
-            ),
-            professionalNavigation[0].items.find(
-              (item) => item.href === "/dashboard/professional/chat"
-            ),
-            professionalNavigation[0].items.find(
-              (item) => item.href === "/dashboard/professional/fichas"
-            ),
-            professionalNavigation[0].items.find(
-              (item) => item.href === "/dashboard/professional/payouts"
-            ),
-          ].filter(Boolean) as NavItem[],
-    [role]
-  )
-
-  const professionalIconBottom = React.useMemo(
-    () =>
-      role !== "professional"
-        ? []
-        : [
-            professionalNavigation[1].items.find(
-              (item) => item.href === "/dashboard/professional/profile"
-            ),
-            professionalNavigation[1].items.find(
-              (item) => item.href === "/dashboard/professional/reviews"
-            ),
-          ].filter(Boolean) as NavItem[],
-    [role]
-  )
-
-  const professionalIcons = React.useMemo(
-    () =>
-      role !== "professional"
-        ? []
-        : [...professionalIconTop, ...professionalIconBottom],
-    [role, professionalIconTop, professionalIconBottom]
-  )
-
-  // Compact icon-only navigation for patients (same design language as professionals)
-  const patientIconTop = React.useMemo(
-    () =>
-      role !== "patient"
-        ? []
-        : [
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/patient"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/explore"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/chat"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/patient/citas"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/favorites"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/family"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/documents"
-            ),
-          ].filter(Boolean) as NavItem[],
-    [role]
-  )
-
-  const patientIconBottom = React.useMemo(
-    () =>
-      role !== "patient"
-        ? []
-        : [
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/profile"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/patient/payments"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/support"
-            ),
-            patientNavigation[0].items.find(
-              (item) => item.href === "/dashboard/help"
-            ),
-          ].filter(Boolean) as NavItem[],
-    [role]
-  )
-
-  const patientIcons = React.useMemo(
-    () =>
-      role !== "patient"
-        ? []
-        : [...patientIconTop, ...patientIconBottom],
-    [role, patientIconTop, patientIconBottom]
-  )
+  const activeColor = role === "admin" ? "bg-violet-500/10 text-violet-600 dark:text-violet-400" : "bg-[#0f766e]/10 text-[#0f766e]"
+  const activeIconColor = role === "admin" ? "text-violet-600 dark:text-violet-400" : "text-[#0f766e]"
 
   return (
     <Sidebar
@@ -508,138 +397,54 @@ export function DashboardSidebar({
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="py-4 px-2">
-        {role === "professional" ? (
-          <div className="flex flex-col h-full">
-            <SidebarMenu className="space-y-1">
-              {professionalIcons.map((item) => {
-                const active = isActive(item.href)
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={isSpanish ? item.label : item.labelEn}
-                      size="icon"
-                      className={cn(
-                        "h-11 w-11 mx-auto my-1 rounded-2xl flex items-center justify-center",
-                        "hover:bg-accent/60 hover:text-foreground",
-                        active && "bg-[#0f766e]/10 text-[#0f766e] shadow-sm"
-                      )}
-                    >
-                      <Link href={item.href} className="flex items-center justify-center">
-                        <item.icon
-                          className={cn(
-                            "h-[20px] w-[20px] shrink-0 transition-colors",
-                            active ? "text-[#0f766e]" : "text-muted-foreground"
-                          )}
-                        />
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-
-          </div>
-        ) : role === "patient" ? (
-          <div className="flex flex-col h-full">
-            <SidebarMenu className="space-y-1">
-              {patientIcons.map((item) => {
-                const active = isActive(item.href)
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={isSpanish ? item.label : item.labelEn}
-                      size="icon"
-                      className={cn(
-                        "h-11 w-11 mx-auto my-1 rounded-2xl flex items-center justify-center",
-                        "hover:bg-accent/60 hover:text-foreground",
-                        active && "bg-[#0f766e]/10 text-[#0f766e] shadow-sm"
-                      )}
-                    >
-                      <Link href={item.href} className="flex items-center justify-center">
-                        <item.icon
-                          className={cn(
-                            "h-[20px] w-[20px] shrink-0 transition-colors",
-                            active ? "text-[#0f766e]" : "text-muted-foreground"
-                          )}
-                        />
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-
-          </div>
-        ) : (
-          navigation.map((group, groupIndex) => (
-            <SidebarGroup key={group.title}>
-              <SidebarGroupLabel className="px-3 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider mb-1">
+      {/*
+        Un solo SidebarGroup evita que flex-1 del SidebarContent reparta altura entre
+        varios grupos (hueco enorme en modo icono entre "Principal" y "Perfil").
+      */}
+      <SidebarContent className="flex flex-col items-stretch justify-start gap-0 py-3 px-2">
+        <SidebarGroup className="flex-none p-0">
+          {navigation.map((group, groupIndex) => (
+            <React.Fragment key={group.title}>
+              <SidebarGroupLabel className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70 group-data-[collapsible=icon]:hidden">
                 {isSpanish ? group.title : group.titleEn}
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {group.items.map((item) => {
                     const active = isActive(item.href)
-                    const isProfessionalProfileGroup = false
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
                           asChild
                           isActive={active}
                           tooltip={isSpanish ? item.label : item.labelEn}
-                          size={item.isButton ? "lg" : "default"}
-                          variant={item.isButton ? "outline" : "default"}
                           className={cn(
-                            "h-10 px-3 mx-0 rounded-xl transition-all duration-200",
+                            "h-10 rounded-xl px-3 transition-all duration-200",
                             "hover:bg-accent/60 hover:text-foreground",
-                            active &&
-                              role === "admin" &&
-                              "bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium shadow-sm",
-                            active &&
-                              role !== "admin" &&
-                              "bg-[#0f766e]/10 text-[#0f766e] font-medium shadow-sm",
-                            isProfessionalProfileGroup &&
-                              active &&
-                              "border-l-4 border-l-[#0f766e] pl-2.5 bg-slate-100 dark:bg-slate-800/60",
-                            item.isButton &&
-                              "rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/50 font-medium hover:bg-slate-200/80 dark:hover:bg-slate-700/50"
+                            active && activeColor,
+                            active && "font-medium shadow-sm",
                           )}
                         >
-                          <Link href={item.href} className="flex items-center gap-3 w-full">
+                          <Link href={item.href} className="flex w-full items-center gap-3">
                             <item.icon
                               className={cn(
                                 "h-[18px] w-[18px] shrink-0 transition-colors",
-                                active && role === "admin"
-                                  ? "text-violet-600 dark:text-violet-400"
-                                  : active
-                                  ? "text-[#0f766e]"
-                                  : "text-muted-foreground"
+                                active ? activeIconColor : "text-muted-foreground",
                               )}
                             />
-                            <span className="truncate text-[13px] flex-1 text-left">
+                            <span className="flex-1 truncate text-left text-[13px] group-data-[collapsible=icon]:hidden">
                               {isSpanish ? item.label : item.labelEn}
                             </span>
-                            {item.expandable && (
-                              <ChevronDown
-                                className="h-4 w-4 shrink-0 text-muted-foreground"
-                                aria-hidden
-                              />
-                            )}
-                            {item.isNew && !item.expandable && (
+                            {item.isNew && (
                               <span
-                                className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full text-white"
+                                className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white group-data-[collapsible=icon]:hidden"
                                 style={{ background: roleColor }}
                               >
                                 {isSpanish ? "Nuevo" : "New"}
                               </span>
                             )}
                             {item.badge !== undefined && item.badge > 0 && (
-                              <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                              <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive group-data-[collapsible=icon]:hidden">
                                 {item.badge}
                               </span>
                             )}
@@ -651,11 +456,11 @@ export function DashboardSidebar({
                 </SidebarMenu>
               </SidebarGroupContent>
               {groupIndex < navigation.length - 1 && (
-                <SidebarSeparator className="my-3 mx-3 bg-border/30" />
+                <SidebarSeparator className="mx-2 my-2 bg-border/30" />
               )}
-            </SidebarGroup>
-          ))
-        )}
+            </React.Fragment>
+          ))}
+        </SidebarGroup>
       </SidebarContent>
 
       {role === "admin" && (

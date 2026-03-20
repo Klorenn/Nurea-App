@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     // Obtener información del profesional
     const { data: professional, error: profError } = await supabase
       .from('professionals')
-      .select('availability, consultation_type, online_price, in_person_price, consultation_price, specialty, bio, bank_account, bank_name, registration_number, registration_institution')
+      .select('availability, consultation_type')
       .eq('id', professionalId)
       .single()
 
@@ -65,52 +65,14 @@ export async function GET(request: Request) {
       )
     }
 
-    // Verificar que el profesional tenga el perfil completo
-    const missingFields: string[] = []
-    
-    if (!professional.specialty || professional.specialty.trim() === '') {
-      missingFields.push('specialty')
-    }
-    if (!professional.bio || professional.bio.trim() === '') {
-      missingFields.push('bio')
-    }
-    if (!professional.consultation_type || professional.consultation_type === '') {
-      missingFields.push('consultation_type')
-    }
-    
-    // Solo validar precios del tipo solicitado
-    if (type === 'online') {
-      const consultationType = professional.consultation_type || 'both'
-      if (consultationType === 'online' || consultationType === 'both') {
-        if (!professional.online_price || Number(professional.online_price) === 0) {
-          missingFields.push('online_price')
-        }
-      }
-    }
-
-    if (type === 'in-person') {
-      const consultationType = professional.consultation_type || 'both'
-      if (consultationType === 'in-person' || consultationType === 'both') {
-        if (!professional.in_person_price || Number(professional.in_person_price) === 0) {
-          missingFields.push('in_person_price')
-        }
-      }
-    }
-    
-    // Verificar disponibilidad usando helper (soporta formato antiguo y nuevo)
-    if (!hasAnyAvailability(professional.availability, type || 'online')) {
-      missingFields.push('availability')
-    }
-    
-    // Para agendar no bloqueamos por datos bancarios/registro.
-    // Se validan specialty/bio/modalidad y disponibilidad según el tipo solicitado.
-
-    if (missingFields.length > 0) {
+    // Para agendar SOLO validamos disponibilidad para el tipo solicitado.
+    const consultationTypeRequested = type || 'online'
+    if (!hasAnyAvailability(professional.availability, consultationTypeRequested)) {
       return NextResponse.json({
         available: false,
         reason: 'professional_profile_incomplete',
         message: 'El profesional aún no ha completado su configuración de perfil.',
-        missingFields
+        missingFields: ['availability']
       })
     }
 
@@ -193,6 +155,7 @@ export async function GET(request: Request) {
       const appointmentTimeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1])
 
       for (const existing of existingAppointments) {
+        if (!existing.appointment_time) continue
         const existingTimeParts = existing.appointment_time.split(':')
         const existingTimeMinutes = parseInt(existingTimeParts[0]) * 60 + parseInt(existingTimeParts[1])
         const existingDuration = existing.duration_minutes || 60

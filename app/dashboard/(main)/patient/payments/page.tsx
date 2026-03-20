@@ -1,19 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
 import { 
   CreditCard, 
   Download, 
   Calendar, 
-  ExternalLink,
   Search,
   Filter,
-  ArrowUpDown,
-  FileText,
   Loader2
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"

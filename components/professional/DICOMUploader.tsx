@@ -71,17 +71,30 @@ export default function DICOMUploader() {
 
   const fetchPatients = async () => {
     if (!user) return;
-    
-    // In a real scenario we'd query distinct patients from appointments
-    // For this demonstration we will mock the query fetching the top 3 patients
-    const { data, error } = await supabase
+
+    // Obtener solo pacientes que tienen citas con este profesional
+    const { data: appointments } = await supabase
+      .from("appointments")
+      .select("patient_id")
+      .eq("professional_id", user.id)
+      .in("status", ["confirmed", "pending", "completed"]);
+
+    const uniqueIds = [...new Set(
+      (appointments || []).map((a: any) => a.patient_id).filter(Boolean)
+    )];
+
+    if (uniqueIds.length === 0) {
+      setPatients([]);
+      return;
+    }
+
+    const { data } = await supabase
       .from("profiles")
       .select("id, first_name, last_name")
-      .eq("role", "patient")
-      .limit(5);
+      .in("id", uniqueIds);
 
     if (data) {
-      setPatients(data.map(p => ({
+      setPatients(data.map((p: any) => ({
         id: p.id,
         name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Paciente Sin Nombre'
       })));
@@ -149,12 +162,12 @@ export default function DICOMUploader() {
 
       // 3. Notify Patient
       await supabase.from("notifications").insert({
-        profile_id: selectedPatient,
+        user_id: selectedPatient,
         type: "medical_records", // Or whatever valid type
         title: "Nuevo estudio de imagen",
         message: "Se ha cargado un nuevo estudio de imagen a tu ficha médica.",
-        link: `/dashboard/patient/records`,
-        is_read: false
+        action_url: `/dashboard/patient/records`,
+        read: false
       });
 
       setIsSuccess(true);
@@ -191,7 +204,12 @@ export default function DICOMUploader() {
   }
 
   if (isProfessional === null) {
-    return <div className="h-64 flex items-center justify-center"><RefreshCw className="animate-spin text-gray-400" /></div>;
+    return (
+      <div className="h-64 flex items-center justify-center" role="status" aria-live="polite">
+        <RefreshCw className="animate-spin text-gray-400" aria-hidden="true" />
+        <span className="sr-only">Cargando...</span>
+      </div>
+    );
   }
 
   return (
@@ -269,11 +287,15 @@ export default function DICOMUploader() {
           </div>
         ) : (
           <div className="flex flex-col h-full space-y-4">
-            <div 
-              {...getRootProps()} 
-              className={`flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-8 transition-colors ${
-                isDragActive 
-                  ? 'border-[#0f766e] bg-[#0f766e]/5 dark:bg-[#0f766e]/10' 
+            <div
+              {...getRootProps()}
+              role="button"
+              tabIndex={isUploading ? -1 : 0}
+              aria-label="Zona de carga DICOM. Arrastra y suelta archivos o haz clic para explorar."
+              aria-disabled={isUploading}
+              className={`flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-8 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f766e] focus-visible:ring-offset-2 ${
+                isDragActive
+                  ? 'border-[#0f766e] bg-[#0f766e]/5 dark:bg-[#0f766e]/10'
                   : 'border-gray-300 dark:border-slate-700 hover:border-[#0f766e]/50 hover:bg-gray-50 dark:hover:bg-[#1e293b]/50'
               } ${isUploading ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
             >

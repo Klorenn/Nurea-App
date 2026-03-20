@@ -143,6 +143,8 @@ export async function POST(request: Request) {
 
     const { subject, message, category, priority } = await request.json()
 
+    console.log("[SUPPORT:TICKET:CREATE]", { userId: user.id, subject })
+
     // Validar campos requeridos
     if (!subject || !message) {
       return NextResponse.json(
