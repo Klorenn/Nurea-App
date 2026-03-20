@@ -105,6 +105,7 @@ export async function GET(request: Request) {
             registrationInstitution: retryProfessional?.registration_institution || '',
             location: retryProfessional?.location || '',
             yearsExperience: retryProfessional?.years_experience || 0,
+            consultationTypes: retryProfessional?.consultation_types ?? [],
           },
         })
       }
@@ -155,6 +156,9 @@ export async function GET(request: Request) {
       // Metadatos
       location: professional.location || '',
       yearsExperience: professional.years_experience || 0,
+
+      // Tipos de consulta personalizados
+      consultationTypes: professional.consultation_types ?? [],
     }
 
     return NextResponse.json({
@@ -224,6 +228,7 @@ export async function PUT(request: Request) {
       specialties,
       languages,
       consultationType,
+      consultationTypes,
       onlinePrice,
       inPersonPrice,
       videoPlatform,
@@ -279,6 +284,7 @@ export async function PUT(request: Request) {
     if (specialties !== undefined && specialties !== null) professionalUpdate.services = Array.isArray(specialties) ? specialties : []
     if (languages !== undefined && languages !== null) professionalUpdate.languages = Array.isArray(languages) ? languages : []
     if (consultationType !== undefined && consultationType !== null) professionalUpdate.consultation_type = consultationType
+    if (consultationTypes !== undefined && consultationTypes !== null) professionalUpdate.consultation_types = Array.isArray(consultationTypes) ? consultationTypes : null
     if (onlinePrice !== undefined && onlinePrice !== null) professionalUpdate.online_price = typeof onlinePrice === 'number' ? onlinePrice : parseFloat(onlinePrice) || null
     if (inPersonPrice !== undefined && inPersonPrice !== null) professionalUpdate.in_person_price = typeof inPersonPrice === 'number' ? inPersonPrice : parseFloat(inPersonPrice) || null
     if (videoPlatform !== undefined && videoPlatform !== null) professionalUpdate.video_platform = videoPlatform.trim() || null

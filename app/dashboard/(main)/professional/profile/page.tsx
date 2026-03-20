@@ -8,12 +8,12 @@ import { GoogleAddressInput } from "@/components/ui/google-address-input"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useFieldArray } from "react-hook-form"
 import * as z from "zod"
-import { 
-  User, 
-  Stethoscope, 
-  GraduationCap, 
-  Camera, 
-  Save, 
+import {
+  User,
+  Stethoscope,
+  GraduationCap,
+  Camera,
+  Save,
   ExternalLink,
   Plus,
   Trash2,
@@ -35,7 +35,9 @@ import {
   History,
   Calendar,
   Clock,
-  Award
+  Award,
+  DollarSign,
+  Tag
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
@@ -168,6 +170,17 @@ const securitySchema = z.object({
   path: ["confirm_password"],
 })
 
+const pricingSchema = z.object({
+  consultationTypes: z.array(z.object({
+    id: z.string(),
+    name: z.string().min(1, "Nombre requerido"),
+    price: z.coerce.number().min(0, "El precio no puede ser negativo"),
+    duration_minutes: z.coerce.number().min(15).max(240),
+    modality: z.enum(['online', 'in-person', 'both']),
+    description: z.string().optional(),
+  }))
+})
+
 export default function ProfessionalProfilePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -250,6 +263,16 @@ export default function ProfessionalProfilePage() {
     defaultValues: { new_password: "", confirm_password: "" }
   })
 
+  const pricingForm = useForm<z.infer<typeof pricingSchema>>({
+    resolver: zodResolver(pricingSchema),
+    defaultValues: { consultationTypes: [] }
+  })
+
+  const { fields: pricingFields, append: appendPricing, remove: removePricing } = useFieldArray({
+    control: pricingForm.control,
+    name: "consultationTypes"
+  })
+
   // --- Load Data ---
   useEffect(() => {
     async function loadProfile() {
@@ -327,6 +350,9 @@ export default function ProfessionalProfilePage() {
           galleryForm.reset({
             clinic_images: professional.clinic_images || []
           })
+          pricingForm.reset({
+            consultationTypes: professional.consultation_types || []
+          })
 
           // Parse availability
           if (professional.availability && Object.keys(professional.availability).length > 0) {
@@ -367,7 +393,7 @@ export default function ProfessionalProfilePage() {
       }
     }
     loadProfile()
-  }, [user, supabase, generalForm, clinicalForm, educationForm, galleryForm])
+  }, [user, supabase, generalForm, clinicalForm, educationForm, galleryForm, pricingForm])
 
   // --- Manage Credentials ---
   const [credentials, setCredentials] = useState<any[]>([])
@@ -629,6 +655,32 @@ export default function ProfessionalProfilePage() {
     }
   }
 
+  const onSavePricing = async (data: z.infer<typeof pricingSchema>) => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/professional/consultation-types', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consultationTypes: data.consultationTypes })
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body?.error || 'Error al guardar los precios')
+      } else toast.success('Precios guardados correctamente')
+    } catch (err) {
+      toast.error('Error al guardar los precios')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addPresetConsultationType = (preset: { name: string; price: number; duration_minutes: number; modality: 'online' | 'in-person' | 'both'; description?: string }) => {
+    appendPricing({
+      id: crypto.randomUUID(),
+      ...preset,
+    })
+  }
+
   // --- Tag Management (conditions, patient groups, payment methods) ---
   const [tagInput, setTagInput] = useState("")
   const [patientsInput, setPatientsInput] = useState("")
@@ -815,7 +867,7 @@ export default function ProfessionalProfilePage() {
     ? `${profileName.first_name} ${profileName.last_name}`.trim() || "Tu perfil"
     : "Tu perfil"
 
-  const initialTab = (searchParams.get("tab") as "general" | "clinical" | "availability" | "studies" | "gallery" | "security" | "verification") || "general"
+  const initialTab = (searchParams.get("tab") as "general" | "clinical" | "availability" | "studies" | "gallery" | "security" | "verification" | "pricing") || "general"
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-12">
@@ -864,6 +916,7 @@ export default function ProfessionalProfilePage() {
             { value: "availability", label: "Horarios", icon: Calendar },
             { value: "studies", label: "Estudios", icon: GraduationCap },
             { value: "gallery", label: "Galería", icon: Camera },
+            { value: "pricing", label: "Precios", icon: DollarSign },
             { value: "security", label: "Seguridad", icon: Lock },
             { value: "verification", label: "Verificación", icon: ShieldCheck },
           ].map((tab) => (
@@ -1670,6 +1723,262 @@ export default function ProfessionalProfilePage() {
                   >
                     {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                     Guardar Cambios
+                  </Button>
+                </CardFooter>
+              </Card>
+            </form>
+          </Form>
+        </TabsContent>
+
+        {/* --- TAB: PRICING --- */}
+        <TabsContent value="pricing" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Form {...pricingForm}>
+            <form onSubmit={pricingForm.handleSubmit(onSavePricing)} className="space-y-6">
+              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-xl shadow-slate-200/30 dark:shadow-none rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-6">
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
+                      <DollarSign className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-black dark:text-slate-100">Precios y Servicios</CardTitle>
+                      <CardDescription className="text-sm font-medium dark:text-slate-400">
+                        Define los tipos de consulta que ofreces, su precio y duración. Esta información es visible en tu perfil público.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6 space-y-6">
+
+                  {/* Preset buttons */}
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Añadir servicio rápido</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { name: "Consulta General", price: 25000, duration_minutes: 60, modality: "both" as const },
+                        { name: "Primera Consulta", price: 35000, duration_minutes: 60, modality: "both" as const },
+                        { name: "Consulta de Seguimiento", price: 20000, duration_minutes: 30, modality: "both" as const },
+                        { name: "Atención de Urgencia", price: 45000, duration_minutes: 30, modality: "in-person" as const },
+                      ].map((preset) => (
+                        <Button
+                          key={preset.name}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addPresetConsultationType(preset)}
+                          className="rounded-xl h-9 px-4 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-400 hover:text-teal-700 dark:hover:border-teal-600 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-all text-xs font-bold gap-1.5"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          {preset.name}
+                        </Button>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addPresetConsultationType({ name: "", price: 0, duration_minutes: 60, modality: "both" })}
+                        className="rounded-xl h-9 px-4 border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-teal-400 hover:text-teal-700 dark:hover:border-teal-600 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition-all text-xs font-bold gap-1.5"
+                      >
+                        <Tag className="h-3.5 w-3.5" />
+                        Personalizado
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Empty state */}
+                  {pricingFields.length === 0 && (
+                    <div className="text-center py-16 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                      <div className="w-16 h-16 bg-white dark:bg-slate-950 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 dark:border-slate-800">
+                        <DollarSign className="h-8 w-8 text-slate-200 dark:text-slate-700" />
+                      </div>
+                      <p className="text-base font-bold text-slate-500 dark:text-slate-400 mb-1">Sin servicios configurados</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mb-5">Los pacientes verán tus precios directamente en tu perfil.</p>
+                      <Button
+                        type="button"
+                        onClick={() => addPresetConsultationType({ name: "Consulta General", price: 25000, duration_minutes: 60, modality: "both" })}
+                        className="rounded-xl bg-teal-600 hover:bg-teal-700 text-white h-10 px-6 font-bold text-sm gap-2 shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Añadir tu primer servicio
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Consultation type cards */}
+                  {pricingFields.length > 0 && (
+                    <div className="grid gap-4">
+                      {pricingFields.map((field, index) => {
+                        const modality = pricingForm.watch(`consultationTypes.${index}.modality`)
+                        const price = pricingForm.watch(`consultationTypes.${index}.price`)
+                        return (
+                          <div
+                            key={field.id}
+                            className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm overflow-hidden"
+                          >
+                            {/* Card top bar */}
+                            <div className="flex items-center justify-between px-5 py-3 bg-slate-50/60 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800">
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  className={cn(
+                                    "text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border-0",
+                                    modality === 'both'
+                                      ? "bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300"
+                                      : modality === 'online'
+                                      ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+                                      : "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300"
+                                  )}
+                                >
+                                  {modality === 'both' ? 'Online + Presencial' : modality === 'online' ? 'Online' : 'Presencial'}
+                                </Badge>
+                                <span className="text-sm font-black text-teal-700 dark:text-teal-400">
+                                  {price > 0 ? `$${price.toLocaleString('es-CL')} CLP` : '—'}
+                                </span>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removePricing(index)}
+                                className="h-8 w-8 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {/* Card body */}
+                            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {/* Name */}
+                              <FormField
+                                control={pricingForm.control}
+                                name={`consultationTypes.${index}.name`}
+                                render={({ field: f }: { field: any }) => (
+                                  <FormItem className="sm:col-span-2">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Nombre del servicio</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        {...f}
+                                        placeholder="Ej: Consulta General"
+                                        className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              {/* Price */}
+                              <FormField
+                                control={pricingForm.control}
+                                name={`consultationTypes.${index}.price`}
+                                render={({ field: f }: { field: any }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Precio</FormLabel>
+                                    <FormControl>
+                                      <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-sm font-bold select-none">$</span>
+                                        <Input
+                                          {...f}
+                                          type="number"
+                                          min={0}
+                                          step={500}
+                                          placeholder="25000"
+                                          className="rounded-xl h-10 pl-7 pr-14 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-xs font-black select-none">CLP</span>
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              {/* Duration */}
+                              <FormField
+                                control={pricingForm.control}
+                                name={`consultationTypes.${index}.duration_minutes`}
+                                render={({ field: f }: { field: any }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Duración</FormLabel>
+                                    <Select
+                                      onValueChange={(val) => f.onChange(Number(val))}
+                                      value={String(f.value)}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
+                                          <SelectValue placeholder="Selecciona" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        {[15, 30, 45, 60, 90, 120].map((min) => (
+                                          <SelectItem key={min} value={String(min)}>{min} min</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              {/* Modality */}
+                              <FormField
+                                control={pricingForm.control}
+                                name={`consultationTypes.${index}.modality`}
+                                render={({ field: f }: { field: any }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Modalidad</FormLabel>
+                                    <Select onValueChange={f.onChange} value={f.value}>
+                                      <FormControl>
+                                        <SelectTrigger className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
+                                          <SelectValue placeholder="Selecciona" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="online">Online</SelectItem>
+                                        <SelectItem value="in-person">Presencial</SelectItem>
+                                        <SelectItem value="both">Ambas</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              {/* Description (optional) */}
+                              <FormField
+                                control={pricingForm.control}
+                                name={`consultationTypes.${index}.description`}
+                                render={({ field: f }: { field: any }) => (
+                                  <FormItem className="sm:col-span-2">
+                                    <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                      Descripción <span className="normal-case text-slate-400 dark:text-slate-500 font-medium">(opcional)</span>
+                                    </FormLabel>
+                                    <FormControl>
+                                      <Textarea
+                                        {...f}
+                                        placeholder="Describe brevemente este servicio..."
+                                        rows={2}
+                                        className="rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-medium resize-none dark:text-slate-200"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-4 flex justify-end">
+                  <Button
+                    type="submit"
+                    disabled={saving}
+                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl h-10 px-6 font-bold text-sm gap-2 shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Guardar Precios
                   </Button>
                 </CardFooter>
               </Card>

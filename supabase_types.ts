@@ -1035,6 +1035,7 @@ export type Database = {
           consultation_format: string[] | null
           consultation_price: number | null
           consultation_type: string | null
+          consultation_types: Json | null
           created_at: string
           education: Json | null
           experience_years: number | null
@@ -1070,6 +1071,7 @@ export type Database = {
           consultation_format?: string[] | null
           consultation_price?: number | null
           consultation_type?: string | null
+          consultation_types?: Json | null
           created_at?: string
           education?: Json | null
           experience_years?: number | null
@@ -1105,6 +1107,7 @@ export type Database = {
           consultation_format?: string[] | null
           consultation_price?: number | null
           consultation_type?: string | null
+          consultation_types?: Json | null
           created_at?: string
           education?: Json | null
           experience_years?: number | null
@@ -1158,6 +1161,7 @@ export type Database = {
       profiles: {
         Row: {
           account_status: string | null
+          address: string | null
           admin_notes: string | null
           avatar_url: string | null
           bio: string | null
@@ -1196,6 +1200,7 @@ export type Database = {
         }
         Insert: {
           account_status?: string | null
+          address?: string | null
           admin_notes?: string | null
           avatar_url?: string | null
           bio?: string | null
@@ -1234,6 +1239,7 @@ export type Database = {
         }
         Update: {
           account_status?: string | null
+          address?: string | null
           admin_notes?: string | null
           avatar_url?: string | null
           bio?: string | null

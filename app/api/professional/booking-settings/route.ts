@@ -17,12 +17,13 @@ export async function GET() {
 
     const { data } = await supabase
       .from("professionals")
-      .select("booking_auto_message")
+      .select("booking_auto_message, consultation_types")
       .eq("id", user.id)
       .maybeSingle();
 
     return NextResponse.json({
       bookingAutoMessage: data?.booking_auto_message?.trim() || DEFAULT_MESSAGE,
+      consultationTypes: (data?.consultation_types as unknown[]) ?? [],
     });
   } catch (e) {
     console.error("Booking settings GET error:", e);
