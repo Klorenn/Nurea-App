@@ -67,9 +67,10 @@ export default function AdminSupportPage() {
   useEffect(() => {
     fetchTickets()
 
-    // Realtime subscription
+    // Realtime subscription — use a unique channel name to avoid conflicts on filter change
+    const channelName = `support_tickets_changes_${filter}_${Date.now()}`
     const channel = supabase
-      .channel('support_tickets_changes')
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => {
         fetchTickets()
       })

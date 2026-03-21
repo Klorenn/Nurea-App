@@ -19,16 +19,22 @@ import QRCode from "qrcode"
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
+
+    // 1. Auth + role check (must be before reading body to fail fast)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+    }
+
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (callerProfile?.role !== 'professional') {
+      return NextResponse.json({ error: "forbidden", message: "Solo los profesionales pueden finalizar consultas." }, { status: 403 })
+    }
+
     const { appointmentId, evolutions, prescriptionItems } = await request.json()
 
     if (!appointmentId) {
       return NextResponse.json({ error: "missing_id" }, { status: 400 })
-    }
-
-    // 1. Auth check
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 })
     }
 
     // 2. Fetch full context
@@ -47,6 +53,11 @@ export async function POST(request: NextRequest) {
 
     if (aptError || !appointment) {
       return NextResponse.json({ error: "appointment_not_found" }, { status: 404 })
+    }
+
+    // Verify caller is the professional on this appointment
+    if (appointment.professional_id !== user.id) {
+      return NextResponse.json({ error: "forbidden", message: "No eres el profesional de esta cita." }, { status: 403 })
     }
 
     // 3. Generate PDF

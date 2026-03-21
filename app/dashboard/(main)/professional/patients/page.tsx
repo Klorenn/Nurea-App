@@ -361,7 +361,7 @@ function PatientRecord({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Error")
-      router.push("/dashboard/professional/chat")
+      router.push(`/dashboard/professional/chat?conversation=${data.conversationId}`)
     } catch (err: any) {
       toast.error(isSpanish ? "No se pudo iniciar el chat" : "Could not start chat")
     } finally {

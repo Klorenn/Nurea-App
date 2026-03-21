@@ -25,9 +25,8 @@ export default function ConsultaPage() {
   const appointmentId = typeof params.appointmentId === "string" ? params.appointmentId : null
 
   useEffect(() => {
-    if (authLoading || !user) return
-    if (!user) {
-      router.replace("/login")
+    if (authLoading || !user) {
+      if (!authLoading && !user) router.replace("/login")
       return
     }
     if (!appointmentId) {

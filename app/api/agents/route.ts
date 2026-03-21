@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
 import { agentService, getAgentStats } from "@/lib/agents/service"
 import type { AgentRole, AgentTask } from "@/lib/agents/types"
+import { createClient } from "@/lib/supabase/server"
+
+async function requireAdmin() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) }
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+  if (profile?.role !== "admin") return { error: NextResponse.json({ error: "forbidden" }, { status: 403 }) }
+  return { user }
+}
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAdmin()
+  if (auth.error) return auth.error
+
   const { searchParams } = new URL(request.url)
   const action = searchParams.get("action")
-  
+
   try {
     switch (action) {
       case "agents": {
@@ -59,6 +72,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdmin()
+  if (auth.error) return auth.error
+
   try {
     const body = await request.json()
     const { action } = body
@@ -178,6 +194,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const auth = await requireAdmin()
+  if (auth.error) return auth.error
+
   try {
     const body = await request.json()
     const { agentId, status } = body

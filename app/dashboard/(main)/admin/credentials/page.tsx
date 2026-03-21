@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 
+import { RouteGuard } from "@/components/auth/route-guard"
+
 export default function AdminCredentialsPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
@@ -130,7 +132,7 @@ export default function AdminCredentialsPage() {
   }
 
   return (
-    <>
+    <RouteGuard requiredRole="admin">
       <div className="space-y-8 max-w-[1400px] mx-auto pb-20">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -177,7 +179,7 @@ export default function AdminCredentialsPage() {
             <CardContent className="p-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Verificados hoy</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Verificados</p>
                   <h3 className="text-3xl font-black text-slate-900">
                     {credentials.filter(c => c.status === 'verified').length}
                   </h3>
@@ -373,6 +375,6 @@ export default function AdminCredentialsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </RouteGuard>
   )
 }

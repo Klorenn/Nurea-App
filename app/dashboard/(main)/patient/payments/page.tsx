@@ -163,9 +163,23 @@ export default function PatientPaymentsPage() {
                     ${Number(payment.total_amount).toLocaleString('es-CL')}
                   </TableCell>
                   <TableCell>
-                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
-                      {isSpanish ? "Completado" : "Completed"}
-                    </Badge>
+                    {payment.status === 'completed' || payment.status === 'paid' ? (
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">
+                        {isSpanish ? "Completado" : "Completed"}
+                      </Badge>
+                    ) : payment.status === 'pending' ? (
+                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">
+                        {isSpanish ? "Pendiente" : "Pending"}
+                      </Badge>
+                    ) : payment.status === 'refunded' ? (
+                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none">
+                        {isSpanish ? "Reembolsado" : "Refunded"}
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-slate-100 text-slate-600 hover:bg-slate-100 border-none">
+                        {payment.status || (isSpanish ? "Desconocido" : "Unknown")}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button 

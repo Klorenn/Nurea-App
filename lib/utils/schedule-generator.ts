@@ -59,15 +59,20 @@ function generateTimeSlots(startTime: string, endTime: string): string[] {
 }
 
 /**
- * Verifica si un slot de tiempo está ocupado por una cita existente
+ * Verifica si un slot de tiempo está ocupado por una cita existente.
+ * @param slotDuration - Duration of this slot in minutes (matches the slot
+ *   generation interval). Defaults to 30 to align with generateTimeSlots which
+ *   uses 30-minute steps. Previously hardcoded to 60 which caused false
+ *   negatives for back-to-back 30-minute slots.
  */
 function isSlotOccupied(
   slotTime: string,
   date: string,
-  existingAppointments: ExistingAppointment[]
+  existingAppointments: ExistingAppointment[],
+  slotDuration: number = 30
 ): boolean {
   const slotMinutes = parseInt(slotTime.split(':')[0]) * 60 + parseInt(slotTime.split(':')[1])
-  const slotEndMinutes = slotMinutes + 60 // Duración por defecto de 60 minutos
+  const slotEndMinutes = slotMinutes + slotDuration
 
   for (const appointment of existingAppointments) {
     if (appointment.appointment_date !== date) continue

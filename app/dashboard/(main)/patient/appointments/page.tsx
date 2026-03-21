@@ -42,6 +42,7 @@ import { es } from "date-fns/locale"
 import { ReviewModal } from "@/components/reviews/ReviewModal"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
+import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -207,10 +208,10 @@ function UpcomingAppointmentCard({
     }
   }
 
-  // URL de videollamada: usar meeting_url de la cita (Jitsi) si existe
-  const videoCallUrl = appointment.meeting_url || appointment.meeting_room_id
-    ? (appointment.meeting_url || `https://meet.jit.si/${appointment.meeting_room_id}`)
-    : null
+  // URL de videollamada: usar meeting_url de la cita si existe, o generar URL Jitsi determinista
+  const videoCallUrl = appointment.meeting_url
+    || (appointment.meeting_room_id ? `https://meet.jit.si/${appointment.meeting_room_id}` : null)
+    || getJitsiMeetingUrl(appointment.id)
 
   return (
     <motion.div variants={itemVariants}>
@@ -333,26 +334,14 @@ function UpcomingAppointmentCard({
             {/* Main Action Button — Videollamada */}
             {appointment.type === "online" && appointment.status === 'confirmed' && (
               <div className="space-y-2">
-                {videoCallUrl ? (
-                  <Button
-                    size="lg"
-                    className="w-full h-14 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-base font-semibold shadow-lg shadow-teal-600/20"
-                    onClick={() => window.open(videoCallUrl, "_blank", "noopener,noreferrer")}
-                  >
-                    <Video className="h-5 w-5 mr-2" />
-                    {isSpanish ? "Unirse a la Videollamada" : "Join Video Call"}
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    className="w-full h-14 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-base font-semibold cursor-not-allowed"
-                    disabled
-                    title={isSpanish ? "El enlace de videollamada estará disponible próximamente" : "Video call link will be available soon"}
-                  >
-                    <Video className="h-5 w-5 mr-2" />
-                    {isSpanish ? "Enlace de videollamada próximamente" : "Video call link coming soon"}
-                  </Button>
-                )}
+                <Button
+                  size="lg"
+                  className="w-full h-14 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-base font-semibold shadow-lg shadow-teal-600/20"
+                  onClick={() => window.open(videoCallUrl, "_blank", "noopener,noreferrer")}
+                >
+                  <Video className="h-5 w-5 mr-2" />
+                  {isSpanish ? "Unirse a la Videollamada" : "Join Video Call"}
+                </Button>
               </div>
             )}
 

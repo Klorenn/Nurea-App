@@ -45,12 +45,12 @@ export async function GET(request: Request) {
       .from('professionals')
       .select('settings, notification_preferences, stellar_wallet')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (professionalError && professionalError.code !== 'PGRST116') {
+    if (professionalError) {
       console.error('Error fetching professional settings:', professionalError)
       return NextResponse.json(
-        { 
+        {
           error: 'fetch_failed',
           message: 'No pudimos obtener tu configuración. Por favor, intenta nuevamente.'
         },
@@ -186,7 +186,7 @@ export async function PUT(request: Request) {
       .update(updateData)
       .eq('id', user.id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (professionalError) {
       console.error('Error updating professional settings:', professionalError)
@@ -203,8 +203,8 @@ export async function PUT(request: Request) {
       success: true,
       message: 'Configuración actualizada exitosamente.',
       settings: {
-        notifications: updatedProfessional.notification_preferences || {},
-        ...(updatedProfessional.settings || {}),
+        notifications: updatedProfessional?.notification_preferences || {},
+        ...(updatedProfessional?.settings || {}),
       }
     })
   } catch (error) {

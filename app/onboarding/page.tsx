@@ -1125,7 +1125,7 @@ function OnboardingContent() {
             .single()
 
           if (fallback.error) throw fallback.error
-          profileRes.data = fallback.data
+          ;(profileRes as any).data = fallback.data
         }
 
         const profile = profileRes.data as any

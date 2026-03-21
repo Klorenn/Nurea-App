@@ -23,10 +23,7 @@ import {
   Building2,
   Monitor,
   CheckCircle2,
-  Globe,
   Info,
-  ChevronRight,
-  AlertCircle,
   ShieldCheck,
   Key,
   Lock,
@@ -42,14 +39,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { 
@@ -118,18 +113,6 @@ const getDefaultWeeklySchedule = (): WeeklySchedule => ({
   saturday: { ...DEFAULT_SCHEDULE },
   sunday: { ...DEFAULT_SCHEDULE },
 })
-
-function calculateSlots(startTime: string, endTime: string, duration: number): number {
-  const [startHour, startMin] = startTime.split(":").map(Number)
-  const [endHour, endMin] = endTime.split(":").map(Number)
-  
-  const startMinutes = startHour * 60 + startMin
-  const endMinutes = endHour * 60 + endMin
-  
-  if (endMinutes <= startMinutes) return 0
-  
-  return Math.floor((endMinutes - startMinutes) / duration)
-}
 
 // --- Schemas ---
 const generalSchema = z.object({
@@ -393,7 +376,8 @@ export default function ProfessionalProfilePage() {
       }
     }
     loadProfile()
-  }, [user, supabase, generalForm, clinicalForm, educationForm, galleryForm, pricingForm])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   // --- Manage Credentials ---
   const [credentials, setCredentials] = useState<any[]>([])
@@ -666,7 +650,15 @@ export default function ProfessionalProfilePage() {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         toast.error(body?.error || 'Error al guardar los precios')
-      } else toast.success('Precios guardados correctamente')
+      } else {
+        const body = await res.json().catch(() => ({}))
+        
+        // Invalidar cache del perfil para reflejar cambios
+        await mutateProfile()
+        
+        toast.success('Precios guardados correctamente')
+        pricingForm.reset(body?.consultationTypes ? { consultationTypes: body.consultationTypes } : data)
+      }
     } catch (err) {
       toast.error('Error al guardar los precios')
     } finally {
@@ -838,23 +830,33 @@ export default function ProfessionalProfilePage() {
   }, [supabase])
 
   // Calculate completeness (max 100)
+  // Subscribe to form changes via watch() callbacks instead of putting watch() in deps
   useEffect(() => {
-    const values = generalForm.getValues()
-    let score = 0
-    if (avatarUrl) score += 15
-    if (values.bio && values.bio.length >= 50) score += 20
-    if ((values.years_experience ?? 0) > 0) score += 8
-    if (values.registration_number) score += 10
-    if (values.registration_institution) score += 5
-    if (values.specialty_id) score += 10
-    const clinicalValues = clinicalForm.getValues()
-    if (clinicalValues.conditions_treated.length > 0) score += 10
-    const eduValues = educationForm.getValues()
-    if (eduValues.education.length > 0) score += 15
-    if (credentials.length > 0) score += 5
-    if (galleryForm.getValues("clinic_images").length > 0) score += 2
-    setCompleteness(Math.min(100, score))
-  }, [generalForm.watch(), clinicalForm.watch(), educationForm.watch(), avatarUrl, credentials.length])
+    function recalc() {
+      const values = generalForm.getValues()
+      let score = 0
+      if (avatarUrl) score += 15
+      if (values.bio && values.bio.length >= 50) score += 20
+      if ((values.years_experience ?? 0) > 0) score += 8
+      if (values.registration_number) score += 10
+      if (values.registration_institution) score += 5
+      if (values.specialty_id) score += 10
+      const clinicalValues = clinicalForm.getValues()
+      if (clinicalValues.conditions_treated.length > 0) score += 10
+      const eduValues = educationForm.getValues()
+      if (eduValues.education.length > 0) score += 15
+      if (credentials.length > 0) score += 5
+      if (galleryForm.getValues("clinic_images").length > 0) score += 2
+      setCompleteness(Math.min(100, score))
+    }
+    recalc()
+    const sub1 = generalForm.watch(() => recalc())
+    const sub2 = clinicalForm.watch(() => recalc())
+    const sub3 = educationForm.watch(() => recalc())
+    const sub4 = galleryForm.watch(() => recalc())
+    return () => { sub1.unsubscribe(); sub2.unsubscribe(); sub3.unsubscribe(); sub4.unsubscribe() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avatarUrl, credentials.length])
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -1474,7 +1476,6 @@ export default function ProfessionalProfilePage() {
             <CardContent className="p-6 space-y-4">
               {DAYS_OF_WEEK.map(({ key, labelEs, labelEn }) => {
                 const daySchedule = schedule[key as keyof WeeklySchedule]
-                const isWeekend = key === "saturday" || key === "sunday"
 
                 return (
                   <div key={key} className={cn(

@@ -16,14 +16,12 @@ function slugEntityId(id: string): string {
  * Remitente para todos los correos transaccionales de NUREA.
  * Dominio verificado: nurea.app (DNS TXT y MX configurados en Resend).
  */
-const SECURITY_FROM = process.env.SECURITY_EMAIL_FROM
-
-if (!SECURITY_FROM) {
+const SECURITY_FROM: string = process.env.SECURITY_EMAIL_FROM ?? (() => {
   throw new Error(
     "SECURITY_EMAIL_FROM no está configurado. Añade SECURITY_EMAIL_FROM en .env.local " +
     '(ej. SECURITY_EMAIL_FROM="NUREA <notificaciones@nurea.app>")'
   )
-}
+})()
 
 export type SendVerificationCodeParams = {
   to: string

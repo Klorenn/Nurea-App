@@ -116,7 +116,7 @@ export default function FavoritesPage() {
                     <Avatar className="h-20 w-20 rounded-2xl border-2 border-border/40">
                       <AvatarImage src={favorite.image} />
                       <AvatarFallback>
-                        {favorite.name.split(" ").map((n: string) => n[0]).join("")}
+                        {(favorite.name ?? "").split(" ").map((n: string) => n[0]).join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-3">
@@ -159,11 +159,11 @@ export default function FavoritesPage() {
                             {language === "es" ? "Desde:" : "From:"}
                           </span>
                           <span className="font-bold text-primary">
-                            ${favorite.price.toLocaleString()} {language === "es" ? "CLP" : "CLP"}
+                            ${(favorite.price ?? 0).toLocaleString()} {language === "es" ? "CLP" : "CLP"}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {favorite.consultationTypes.map((type: string) => (
+                          {(favorite.consultationTypes ?? []).map((type: string) => (
                             <Badge 
                               key={type}
                               variant="outline" 

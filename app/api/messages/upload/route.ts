@@ -89,14 +89,23 @@ export async function POST(request: Request) {
       )
     }
 
-    // Obtener URL pública
-    const { data: { publicUrl } } = supabase.storage
+    // Obtener URL firmada (1 año de validez para uso en mensajes)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('messages')
-      .getPublicUrl(filePath)
+      .createSignedUrl(filePath, 31536000)
+
+    if (signedUrlError || !signedUrlData) {
+      console.error('Error creating signed URL for message upload:', signedUrlError)
+      await supabase.storage.from('messages').remove([filePath]).catch(console.error)
+      return NextResponse.json(
+        { error: 'upload_failed', message: 'No se pudo generar el enlace del archivo.' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
+      url: signedUrlData.signedUrl,
       fileName: file.name,
       fileType: file.type,
       fileSize: file.size,

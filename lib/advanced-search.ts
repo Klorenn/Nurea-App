@@ -22,13 +22,14 @@ export interface AdvancedSearchResult {
 export async function buscarProfesionales(query: string, limit = 20) {
   const supabase = createClient()
 
-  const { data, error } = await supabase.rpc<AdvancedSearchResult>(
+  const { data, error } = await supabase.rpc(
     "buscar_profesionales",
     {
       p_query: query,
       p_limit: limit,
     } as any
   )
+  const typedData = data as AdvancedSearchResult[] | null
 
   if (error) {
     if (process.env.NODE_ENV === "development") {
@@ -37,6 +38,6 @@ export async function buscarProfesionales(query: string, limit = 20) {
     throw error
   }
 
-  return data ?? []
+  return typedData ?? []
 }
 

@@ -77,6 +77,54 @@ async function getProfessionalData(id: string) {
   const gender = professional.profile?.gender as "M" | "F" | undefined
   const genderedSpecialty = genderizeSpecialtyLabel(resolvedSpecialty, gender)
 
+  // Parse consultation_types array (nuevo formato) vs legacy fields
+  const consultationTypesArray = professional.consultation_types as Array<{
+    modality?: string;
+    price?: number;
+    duration_minutes?: number;
+  }> | null
+
+  // Extraer modalidades del array o usar legacy
+  let consultationTypes: string[] = []
+  let consultationPrice = 0
+  let slotDuration = 60
+
+  if (consultationTypesArray && consultationTypesArray.length > 0) {
+    // Usar el array nuevo
+    const modalities = new Set<string>()
+    let lowestPrice = Infinity
+
+    for (const ct of consultationTypesArray) {
+      if (ct.modality) {
+        if (ct.modality === 'both') {
+          modalities.add('online')
+          modalities.add('in-person')
+        } else {
+          modalities.add(ct.modality)
+        }
+      }
+      if (ct.price !== undefined && ct.price < lowestPrice) {
+        lowestPrice = ct.price
+      }
+      if (ct.duration_minutes && slotDuration === 60) {
+        slotDuration = ct.duration_minutes
+      }
+    }
+
+    consultationTypes = Array.from(modalities)
+    consultationPrice = lowestPrice === Infinity ? 0 : lowestPrice
+  } else {
+    // Fallback a campos legacy
+    consultationTypes =
+      professional.consultation_type === 'both'
+        ? ['online', 'in-person']
+        : professional.consultation_type
+          ? [professional.consultation_type]
+          : ['online']
+    consultationPrice = professional.consultation_price ?? 0
+    slotDuration = professional.slot_duration ?? 60
+  }
+
   // Format professional for the conversion profile page (trust + booking focus)
   const formattedProfessional = {
     ...professional,
@@ -87,14 +135,9 @@ async function getProfessionalData(id: string) {
     rating: averageRating,
     reviewsCount: reviewsCount,
     imageUrl: professional.profile?.avatar_url || '',
-    consultationTypes:
-      professional.consultation_type === 'both'
-        ? ['online', 'in-person']
-        : professional.consultation_type
-          ? [professional.consultation_type]
-          : ['online'],
-    consultationPrice: professional.consultation_price ?? 0,
-    slotDuration: professional.slot_duration ?? 60,
+    consultationTypes,
+    consultationPrice,
+    slotDuration,
     languages: professional.languages || ['Español'],
     verified: professional.verified || false,
     // Usar ciudad/dirección clínica si existen para reflejar correctamente la atención presencial.

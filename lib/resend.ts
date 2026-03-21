@@ -38,7 +38,7 @@ export async function sendSingleWithRetry(
   idempotencyKey: string
 ): Promise<ReturnType<Resend["emails"]["send"]>> {
   const key = idempotencyKey.slice(0, MAX_IDEMPOTENCY_KEY_LENGTH)
-  let lastResult: Awaited<ReturnType<Resend["emails"]["send"]>> = { data: null, error: null, headers: null }
+  let lastResult: Awaited<ReturnType<Resend["emails"]["send"]>> = { data: null, error: null as any, headers: null }
 
   for (let attempt = 0; attempt <= RETRY_MAX; attempt++) {
     lastResult = await resend.emails.send(payload, { idempotencyKey: key })

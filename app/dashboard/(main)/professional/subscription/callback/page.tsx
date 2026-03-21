@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { CheckCircle2, Loader2, Star, Sparkles, ArrowRight } from "lucide-react"
+import { CheckCircle2, Loader2, Star, Sparkles, ArrowRight, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
@@ -28,8 +28,7 @@ export default function SubscriptionCallbackPage() {
       } else if (statusParam === "pending") {
         setStatus("pending")
       } else {
-        // Fallback or error
-        setStatus("success") // Being optimistic for the "WOW" effect if they reached here
+        setStatus("error")
       }
     }
 
@@ -46,6 +45,33 @@ export default function SubscriptionCallbackPage() {
               {isSpanish ? "Verificando suscripción..." : "Verifying subscription..."}
             </h1>
           </div>
+        ) : status === "error" ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-6"
+          >
+            <div className="w-24 h-24 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto">
+              <XCircle className="h-12 w-12 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="space-y-3">
+              <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                {isSpanish ? "Pago no completado" : "Payment not completed"}
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 text-lg">
+                {isSpanish
+                  ? "El proceso de pago no fue completado. No se realizó ningún cargo."
+                  : "The payment process was not completed. No charge was made."}
+              </p>
+            </div>
+            <Button
+              onClick={() => router.push("/dashboard/professional")}
+              className="w-full h-14 bg-slate-900 hover:bg-slate-800 text-white font-bold text-lg rounded-2xl"
+            >
+              {isSpanish ? "Volver al Dashboard" : "Go back to Dashboard"}
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

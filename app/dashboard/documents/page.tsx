@@ -30,7 +30,8 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     loadDocuments()
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter])
 
   const loadDocuments = async () => {
     setLoading(true)

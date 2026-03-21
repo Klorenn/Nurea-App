@@ -6,8 +6,15 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
-    const { messages, userRole } = await req.json();
     const supabase = await createClient();
+
+    // Auth check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
+    const { messages, userRole } = await req.json();
 
     // Fetch specialties to provide context to Nura
     const { data: specialties } = await supabase

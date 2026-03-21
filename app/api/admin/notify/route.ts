@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import SecurityAlertEmail from "@/components/emails/SecurityAlertEmail"
+import { createClient } from "@/lib/supabase/server"
 
 // Initialize Resend (with a dummy key if not present)
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key")
@@ -8,6 +9,16 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "hola@nurea.cl"
 
 export async function POST(req: Request) {
   try {
+    // Auth + admin role check
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    if (profile?.role !== "admin") {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 })
+    }
+
     const { professionalId, doctorName } = await req.json()
     
     if (!professionalId || !doctorName) {

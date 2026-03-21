@@ -8,10 +8,16 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
-    
-    // Verificar autenticación (opcional, puede ser público para seeding)
+
+    // Verificar autenticación y rol admin
     const { data: { user } } = await supabase.auth.getUser()
-    
+    if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (callerProfile?.role !== 'admin') {
+      return NextResponse.json({ error: 'forbidden', message: 'Solo los administradores pueden ejecutar el seed.' }, { status: 403 })
+    }
+
     // ID fijo para el profesional de prueba
     const TEST_PROFESSIONAL_ID = 'nurea-doctor-test'
     

@@ -43,7 +43,7 @@ export function SpecialtyCombobox({
 
     Object.entries(grouped).forEach(([categorySlug, specs]) => {
       const filtered = specs.filter(s =>
-        s.name.toLowerCase().includes(searchLower)
+        (s.name ?? '').toLowerCase().includes(searchLower)
       )
       if (filtered.length > 0) {
         result[categorySlug] = filtered

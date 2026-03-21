@@ -11,9 +11,19 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  function escapeHtml(str: string | null | undefined): string {
+    if (!str) return ''
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
+
   try {
     const { id } = await params
-    
+
     if (!id) {
       return NextResponse.json(
         { error: "missing_id", message: "ID de documento requerido" },
@@ -87,7 +97,7 @@ export async function GET(
       .eq("id", (record.professional as any)?.id)
       .single()
 
-    const professional = record.professional as { first_name: string; last_name: string; email: string } | null
+    const professional = (Array.isArray(record.professional) ? record.professional[0] : record.professional) as { first_name: string; last_name: string; email: string } | null
     const professionalName = professional 
       ? `Dr. ${professional.first_name || ''} ${professional.last_name || ''}`.trim()
       : 'Profesional de Salud'
@@ -429,25 +439,25 @@ export async function GET(
       <div class="info-grid">
         <div class="info-item">
           <label>Nombre completo</label>
-          <p>${patientName}</p>
+          <p>${escapeHtml(patientName)}</p>
         </div>
         <div class="info-item">
           <label>Email</label>
-          <p>${patientProfile?.email || user.email}</p>
+          <p>${escapeHtml(patientProfile?.email || user.email)}</p>
         </div>
       </div>
     </div>
-    
+
     <div class="section">
       <h3 class="section-title">Profesional Tratante</h3>
       <div class="info-grid">
         <div class="info-item">
           <label>Nombre</label>
-          <p>${professionalName}</p>
+          <p>${escapeHtml(professionalName)}</p>
         </div>
         <div class="info-item">
           <label>RNPI (Registro Nacional)</label>
-          <p>${rnpi}</p>
+          <p>${escapeHtml(rnpi)}</p>
         </div>
       </div>
     </div>
@@ -456,49 +466,49 @@ export async function GET(
     <div class="section">
       <h3 class="section-title">Motivo de Consulta</h3>
       <div class="content-box">
-        <p>${record.reason_for_visit}</p>
+        <p>${escapeHtml(record.reason_for_visit)}</p>
       </div>
     </div>
     ` : ''}
-    
+
     ${record.diagnosis ? `
     <div class="section">
       <h3 class="section-title">Diagnóstico</h3>
       ${record.diagnosis_code ? `
       <div class="diagnosis-badge">
-        <code>${record.diagnosis_code}</code>
+        <code>${escapeHtml(record.diagnosis_code)}</code>
         <span>CIE-10</span>
       </div>
       ` : ''}
       <div class="content-box">
-        <p>${record.diagnosis}</p>
+        <p>${escapeHtml(record.diagnosis)}</p>
       </div>
     </div>
     ` : ''}
-    
+
     ${record.treatment ? `
     <div class="section">
       <h3 class="section-title">Plan de Tratamiento</h3>
       <div class="content-box">
-        <p>${record.treatment}</p>
+        <p>${escapeHtml(record.treatment)}</p>
       </div>
     </div>
     ` : ''}
-    
+
     ${record.prescription ? `
     <div class="section">
       <h3 class="section-title">💊 Prescripción Médica</h3>
       <div class="content-box">
-        <p>${record.prescription}</p>
+        <p>${escapeHtml(record.prescription)}</p>
       </div>
     </div>
     ` : ''}
-    
+
     ${record.follow_up_instructions ? `
     <div class="section">
       <h3 class="section-title">Indicaciones de Seguimiento</h3>
       <div class="content-box">
-        <p>${record.follow_up_instructions}</p>
+        <p>${escapeHtml(record.follow_up_instructions)}</p>
       </div>
     </div>
     ` : ''}
@@ -506,15 +516,15 @@ export async function GET(
     <div class="signature-section">
       <div class="signature-box">
         <div class="signature-line"></div>
-        <p class="signature-name">${professionalName}</p>
-        <p class="signature-rnpi">RNPI: ${rnpi}</p>
+        <p class="signature-name">${escapeHtml(professionalName)}</p>
+        <p class="signature-rnpi">RNPI: ${escapeHtml(rnpi)}</p>
         ${record.is_signed ? `
         <div class="signature-badge">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
             <polyline points="22 4 12 14.01 9 11.01"></polyline>
           </svg>
-          Firmado digitalmente el ${signedDate}
+          Firmado digitalmente el ${escapeHtml(signedDate)}
         </div>
         ` : ''}
       </div>

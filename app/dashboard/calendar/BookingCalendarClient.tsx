@@ -51,6 +51,7 @@ const sanitizeBioPreview = (bio: string) => {
 export function BookingCalendarClient() {
   const searchParams = useSearchParams();
   const professionalId = searchParams.get("professionalId");
+  const typeParam = searchParams.get("type") as "online" | "in-person" | null;
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [info, setInfo] = useState<ProfessionalInfo | null>(null);
@@ -61,7 +62,9 @@ export function BookingCalendarClient() {
   const [isPending, startTransition] = useTransition();
   const [bookingSuccess, setBookingSuccess] = useState<{ chatRedirect: string | null; appointmentId: string } | null>(null);
 
-  const [bookingType, setBookingType] = useState<"online" | "in-person">("online");
+  const [bookingType, setBookingType] = useState<"online" | "in-person">(
+    typeParam === "in-person" ? "in-person" : "online"
+  );
 
   useEffect(() => {
     if (!professionalId) {
@@ -90,8 +93,10 @@ export function BookingCalendarClient() {
     if (!info?.consultationType) return;
     if (info.consultationType === "online") setBookingType("online");
     else if (info.consultationType === "in-person") setBookingType("in-person");
-    else setBookingType("online"); // default when "both"
-  }, [info?.consultationType]);
+    // When "both", keep the type from URL params if valid, otherwise default to "online"
+    else if (typeParam === "in-person" || typeParam === "online") setBookingType(typeParam);
+    else setBookingType("online");
+  }, [info?.consultationType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // Avoid keeping a slot chosen for another modality.

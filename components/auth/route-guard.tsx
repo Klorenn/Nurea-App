@@ -98,7 +98,7 @@ export function RouteGuard({
               }
             }
 
-            setOnboardingComplete(completed !== false)
+            setOnboardingComplete(true) // false case already handled above with router.push + return
           } else {
             setOnboardingComplete(true)
           }
@@ -149,8 +149,8 @@ export function RouteGuard({
 
       if (!roles.includes(userRole as any)) {
         const defaultRedirect =
-          userRole === "professional" ? "/professional/dashboard" :
-          userRole === "admin" ? "/admin" :
+          userRole === "professional" ? "/dashboard/professional" :
+          userRole === "admin" ? "/dashboard/admin" :
           "/dashboard"
         return redirectTo || defaultRedirect
       }

@@ -1,13 +1,17 @@
 "use client"
 
 import { createClient } from '@/lib/supabase/client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import type { User } from '@supabase/supabase-js'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  // Stable client reference — createBrowserClient returns a new object on every
+  // call, so storing it in a ref prevents the useEffect from re-running (and
+  // re-subscribing) on every render.
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   useEffect(() => {
     // Get initial session
@@ -25,7 +29,8 @@ export function useAuth() {
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const signOut = async () => {
     try {

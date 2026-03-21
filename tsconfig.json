@@ -37,6 +37,7 @@
   ],
   "exclude": [
     "node_modules",
-    "tmp-dashboard-template"
+    "tmp-dashboard-template",
+    "supabase/functions"
   ]
 }

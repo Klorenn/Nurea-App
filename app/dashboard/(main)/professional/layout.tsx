@@ -43,9 +43,6 @@ export default function ProfessionalLayout({
   const [profileInfo, setProfileInfo] = useState<ProfileInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Check if we're already on the onboarding page (used in redirect effect)
-  const shouldRedirectToOnboarding = false
-
   useEffect(() => {
     if (authLoading) return
     if (!user) {
@@ -58,20 +55,27 @@ export default function ProfessionalLayout({
         // Seleccionamos solo las columnas que sabemos que existen para evitar errores 400
         const { data, error } = await supabase
           .from("profiles")
-          .select("subscription_status, stripe_subscription_id, is_onboarded")
+          .select("subscription_status, stripe_subscription_id, is_onboarded, role")
           .eq("id", user.id)
           .single()
 
         if (error) {
           console.error("Error loading profile details:", error.message, error)
-          setProfileInfo({ 
-            subscription_status: "inactive", 
+          setProfileInfo({
+            subscription_status: "inactive",
             stripe_subscription_id: null,
             trial_end_date: null,
             selected_plan_id: null,
-            is_onboarded: false 
+            is_onboarded: false
           })
         } else {
+          // Redirect non-professionals away from the professional dashboard
+          const userRole = (data as any).role || user.app_metadata?.role || user.user_metadata?.role
+          if (userRole && userRole !== 'professional') {
+            router.replace(userRole === 'admin' ? '/dashboard/admin' : '/dashboard/patient')
+            return
+          }
+
           setProfileInfo({
             ...data,
             trial_end_date: (data as any).trial_end_date || null,
@@ -247,35 +251,6 @@ function SubscriptionPaywall({ language, status }: { language: string, status: s
     router.push("/login")
   }
 
-  const handleTestBypass = async () => {
-    const code = window.prompt(isSpanish ? "Ingrese código de prueba:" : "Enter test code:")
-    if (code === "211022") {
-      setLoadingCheckout(true)
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // Solo actualizamos subscription_status que sabemos que existe
-        await supabase.from("profiles").update({
-          subscription_status: "active"
-        }).eq("id", user.id)
-        
-        // Intentamos actualizar selected_plan_id solo si no falla (silent catch)
-        try {
-          await supabase.from("profiles").update({
-            selected_plan_id: "professional"
-          } as any).eq("id", user.id)
-        } catch (e) {
-          console.warn("selected_plan_id column not found, skipping...")
-        }
-
-        window.location.reload()
-      }
-      setLoadingCheckout(false)
-    } else if (code) {
-      alert(isSpanish ? "Código inválido" : "Invalid code")
-    }
-  }
-
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
       <motion.div
@@ -399,16 +374,6 @@ function SubscriptionPaywall({ language, status }: { language: string, status: s
               </Button>
             </div>
 
-            {/* Hidden Test Bypass */}
-            <div className="flex justify-center">
-              <button 
-                onClick={handleTestBypass}
-                className="text-[10px] text-slate-300 dark:text-slate-600 hover:text-teal-500 transition-colors"
-                title="Only for testing purposes"
-              >
-                [Dev Bypass]
-              </button>
-            </div>
           </div>
 
           {/* Footer Note */}

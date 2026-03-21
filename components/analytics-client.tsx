@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic"
 
 const Analytics = dynamic(
-  () => import("@vercel/analytics/next").then((m) => m.Analytics ?? m.default),
+  () => import("@vercel/analytics/next").then((m) => m.Analytics),
   { ssr: false }
 )
 

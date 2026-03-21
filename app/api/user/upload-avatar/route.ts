@@ -31,12 +31,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validar tamaño (máximo 20MB)
-    if (file.size > 20 * 1024 * 1024) {
+    // Validar tamaño (máximo 5MB para avatares)
+    if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
-        { 
+        {
           error: 'file_too_large',
-          message: 'El archivo es demasiado grande. Máximo 20MB.'
+          message: 'El archivo es demasiado grande. Máximo 5MB.'
         },
         { status: 400 }
       )

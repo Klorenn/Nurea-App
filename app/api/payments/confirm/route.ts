@@ -60,12 +60,40 @@ export async function POST(request: Request) {
       )
     }
 
-    // TODO: Verificar con Stripe/MercadoPago que el pago fue exitoso
-    // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-    // const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
-    // if (paymentIntent.status !== 'succeeded') {
-    //   return NextResponse.json({ error: 'payment_failed' }, { status: 400 })
-    // }
+    // Verificar con MercadoPago que el pago fue realmente aprobado antes de marcar como pagado.
+    // Nota: El flujo principal de confirmación de pagos pasa por el webhook /api/webhooks/mercadopago.
+    // Este endpoint sólo debe usarse como confirmación manual cuando el paymentIntentId es un MP payment_id real.
+    if (paymentIntentId) {
+      const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN
+      if (!mpAccessToken) {
+        return NextResponse.json(
+          { error: 'configuration_error', message: 'Payment provider not configured.' },
+          { status: 503 }
+        )
+      }
+      const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentIntentId}`, {
+        headers: { Authorization: `Bearer ${mpAccessToken}` },
+      })
+      if (!mpRes.ok) {
+        return NextResponse.json(
+          { error: 'verification_failed', message: 'No se pudo verificar el pago con MercadoPago.' },
+          { status: 400 }
+        )
+      }
+      const mpPayment = await mpRes.json()
+      if (mpPayment.status !== 'approved') {
+        return NextResponse.json(
+          { error: 'payment_not_approved', message: 'El pago no fue aprobado por MercadoPago.' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // No paymentIntentId means we cannot verify — reject to prevent fraud.
+      return NextResponse.json(
+        { error: 'missing_payment_intent', message: 'Se requiere paymentIntentId para confirmar el pago.' },
+        { status: 400 }
+      )
+    }
 
     // Actualizar estado del pago
     const { data: updatedPayment, error: updateError } = await supabase

@@ -70,7 +70,7 @@ export async function POST(request: Request) {
             description: `Consulta médica reservada para NUREA`,
             quantity: 1,
             unit_price: price,
-            currency_id: "USD" // Note: Modify if the currency is different (e.g., MXN, ARS, etc.)
+            currency_id: "CLP"
           }
         ],
         marketplace_fee: marketplaceFee,

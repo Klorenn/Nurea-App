@@ -10,6 +10,8 @@ export interface SpecialistService {
   price: number
   currency?: string
   durationMinutes?: number
+  /** Modalidad del servicio: online, in-person, o both */
+  modality?: 'online' | 'in-person' | 'both'
 }
 
 export interface SpecialistReview {

@@ -30,7 +30,7 @@ export async function checkProfessionalAvailability(
     // Obtener información del profesional
     const { data: professional, error: profError } = await supabase
       .from('professionals')
-      .select('availability, consultation_type')
+      .select('availability, consultation_type, slot_duration')
       .eq('id', professionalId)
       .single()
 
@@ -113,8 +113,8 @@ export async function checkProfessionalAvailability(
       }
     }
 
-    // Calcular slots disponibles
-    const slotDuration = 60 // minutos por defecto
+    // Calcular slots disponibles usando la duración real del profesional
+    const slotDuration = (professional as any).slot_duration || 30
     const totalSlots = Math.floor((endMinutes - startMinutes) / slotDuration)
     
     // Contar slots ocupados

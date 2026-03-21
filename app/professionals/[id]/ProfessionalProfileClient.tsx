@@ -61,6 +61,7 @@ export default function ProfessionalProfileClient({
   const [reviews, setReviews] = useState<any[]>(initialReviews)
   const [loading, setLoading] = useState(!initialProfessional)
   const [error, setError] = useState<string | null>(null)
+  const [isBookingOpen, setIsBookingOpen] = useState(false)
   const isSpanish = language === "es"
 
   const handleOpenBooking = () => {
@@ -250,7 +251,7 @@ export default function ProfessionalProfileClient({
                         .split(" ")
                         .filter(Boolean)
                         .slice(0, 2)
-                        .map((part) => part[0])
+                        .map((part: string) => part[0])
                         .join("")
                         .toUpperCase()}
                     </span>

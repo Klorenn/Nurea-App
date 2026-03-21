@@ -23,13 +23,20 @@ import type { ConversationListItem } from "@/lib/types/chat"
 interface ChatInterfaceProps {
   backHref?: string
   role?: "patient" | "professional"
+  initialConversationId?: string
 }
 
-export function ChatInterface({ backHref = "/dashboard", role = "patient" }: ChatInterfaceProps) {
+export function ChatInterface({ backHref = "/dashboard", role = "patient", initialConversationId }: ChatInterfaceProps) {
   const { user } = useCurrentChatUser()
   const { conversations, isLoading: conversationsLoading } = useConversations()
   const [selectedConversation, setSelectedConversation] = useState<ConversationListItem | null>(null)
-  
+  const { messages, isLoading: messagesLoading } = useMessages(selectedConversation?.id || null)
+  const { sendMessage } = useSendMessage()
+  const { updateStatus: updateConvStatus } = useUpdateConversationStatus()
+
+  const [showSidebar, setShowSidebar] = useState(true)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+
   // Mantenemos sincronizada la selectedConversation si se actualiza la data de conversations
   useEffect(() => {
     if (selectedConversation) {
@@ -40,12 +47,16 @@ export function ChatInterface({ backHref = "/dashboard", role = "patient" }: Cha
     }
   }, [conversations, selectedConversation])
 
-  const { messages, isLoading: messagesLoading } = useMessages(selectedConversation?.id || null)
-  const { sendMessage } = useSendMessage()
-  const { updateStatus: updateConvStatus } = useUpdateConversationStatus()
-  
-  const [showSidebar, setShowSidebar] = useState(true)
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  // Auto-select conversation when initialConversationId is provided
+  useEffect(() => {
+    if (!initialConversationId || conversationsLoading || conversations.length === 0) return
+    if (selectedConversation?.id === initialConversationId) return
+    const target = conversations.find(c => c.id === initialConversationId)
+    if (target) {
+      setSelectedConversation(target)
+      setShowSidebar(false)
+    }
+  }, [initialConversationId, conversations, conversationsLoading, selectedConversation])
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
 

@@ -20,6 +20,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const saved = localStorage.getItem("nurea-language") as Language
     if (saved && (saved === "es" || saved === "en")) {
       setLanguageState(saved)
+      // Sync the HTML lang attribute for the saved preference too
+      document.documentElement.lang = saved
     } else {
       // Ensure Spanish is the default
       setLanguageState("es")

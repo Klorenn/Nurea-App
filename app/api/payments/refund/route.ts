@@ -82,7 +82,9 @@ export async function POST(request: Request) {
       )
     }
 
-    const finalRefundAmount = refundAmount || payment.amount
+    // Cap refund amount to what was actually paid — never trust the client value directly.
+    const requestedRefund = typeof refundAmount === 'number' && refundAmount > 0 ? refundAmount : payment.amount
+    const finalRefundAmount = Math.min(requestedRefund, payment.amount)
 
     // TODO: Procesar reembolso con Stripe/MercadoPago
     // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)

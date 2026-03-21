@@ -98,7 +98,8 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Validate each item: must have name and price > 0
+    // Validate each item
+    const validModalities = ["online", "in-person", "both"];
     for (const [i, item] of consultationTypes.entries()) {
       if (!item.name || typeof item.name !== "string" || item.name.trim() === "") {
         return NextResponse.json(
@@ -118,11 +119,30 @@ export async function PUT(req: NextRequest) {
           { status: 400 }
         );
       }
+      if (typeof item.duration_minutes !== "number" || item.duration_minutes <= 0) {
+        return NextResponse.json(
+          {
+            error: "invalid_input",
+            message: `Item at index ${i} must have a valid 'duration_minutes' (greater than 0).`,
+          },
+          { status: 400 }
+        );
+      }
+      if (!item.modality || !validModalities.includes(item.modality)) {
+        return NextResponse.json(
+          {
+            error: "invalid_input",
+            message: `Item at index ${i} must have a valid 'modality' (online, in-person, or both).`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const { data: updated, error: updateError } = await supabase
       .from("professionals")
-      .upsert({ id: user.id, consultation_types: consultationTypes }, { onConflict: "id" })
+      .update({ consultation_types: consultationTypes })
+      .eq("id", user.id)
       .select("consultation_types")
       .maybeSingle();
 

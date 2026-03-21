@@ -10,14 +10,14 @@ import {
 } from "date-fns";
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(req: Request, { params }: Params) {
   try {
     const url = new URL(req.url);
     const dateParam = url.searchParams.get("date");
-    const professionalId = params.id;
+    const { id: professionalId } = await params;
 
     if (!dateParam) {
       return NextResponse.json({ error: "Missing date" }, { status: 400 });

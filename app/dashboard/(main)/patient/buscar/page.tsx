@@ -98,7 +98,7 @@ export default function PatientBuscarPage() {
           {professionals.map((p) => (
             <Link
               key={p.id}
-              href={`/profesionales/${p.id}`}
+              href={`/professionals/${p.id}`}
               className="block rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:bg-muted/50"
             >
               <div className="flex gap-4">

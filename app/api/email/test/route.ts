@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server"
 import { getResend, sendSingleWithRetry, buildIdempotencyKey } from "@/lib/resend"
 
-const FROM = process.env.SECURITY_EMAIL_FROM
-if (!FROM) {
-  throw new Error("SECURITY_EMAIL_FROM no está configurado en las variables de entorno.")
-}
-
 /**
  * POST /api/email/test
  * Envía un email de prueba a pautelluscoop@gmail.com.
@@ -14,6 +9,11 @@ if (!FROM) {
  */
 export async function POST() {
   try {
+    const FROM = process.env.SECURITY_EMAIL_FROM
+    if (!FROM) {
+      return NextResponse.json({ success: false, error: "SECURITY_EMAIL_FROM no está configurado." }, { status: 500 })
+    }
+
     const resend = getResend()
 
     const { data, error } = await sendSingleWithRetry(

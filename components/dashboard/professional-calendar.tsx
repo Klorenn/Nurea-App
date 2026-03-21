@@ -44,6 +44,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { es, enUS } from "date-fns/locale"
 import { AddAppointmentDialog } from "./add-appointment-dialog"
 import { useRouter } from "next/navigation"
+import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
 
 type SlotStatus = "available" | "occupied" | "blocked"
 type PaymentStatus = "paid" | "pending" | "escrow"
@@ -243,7 +244,7 @@ function AppointmentModal({
               <div className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-medium">${appointment.price} USD</p>
+                  <p className="text-sm font-medium">${appointment.price?.toLocaleString("es-CL")} CLP</p>
                   <p className="text-xs text-muted-foreground">{paymentInfo.sublabel}</p>
                 </div>
               </div>
@@ -260,7 +261,10 @@ function AppointmentModal({
             <Button
               size="lg"
               className="w-full bg-teal-600 hover:bg-teal-700 text-white rounded-xl h-12 shadow-lg shadow-teal-600/20"
-              onClick={() => appointment.meeting_link && window.open(appointment.meeting_link, '_blank')}
+              onClick={() => {
+                const url = appointment.meeting_link || getJitsiMeetingUrl(appointment.id)
+                window.open(url, '_blank')
+              }}
             >
               <Video className="h-5 w-5 mr-2" />
               {isSpanish ? "Iniciar Videollamada" : "Start Video Call"}
@@ -590,7 +594,8 @@ export function ProfessionalCalendar({
         endTimeStr = rawDay.endTime ?? "23:59"
       } else {
         // New nested format
-        const nested = rawDay.online || rawDay["in-person"]
+        const rawDayAny = rawDay as any
+        const nested = rawDayAny.online || rawDayAny["in-person"]
         enabled = nested?.available ?? false
         const hours: string | null | undefined = nested?.hours
         if (hours && hours.includes(" - ")) {

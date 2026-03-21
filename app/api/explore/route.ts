@@ -91,7 +91,7 @@ export async function GET(request: Request) {
           .from("profiles")
           .select("id, role")
           .in("id", professionalIds)
-      : { data: [], error: null as any }
+      : { data: [] as { id: string; role: string }[] }
 
     const allowedRoleById = new Map<string, string>()
     ;(rolesData || []).forEach((r: any) => allowedRoleById.set(r.id, r.role))
@@ -177,12 +177,26 @@ export async function GET(request: Request) {
 }
 
 function checkAvailability(availability: any): boolean {
-  if (!availability) return false
-  
-  const days = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
+  if (!availability || typeof availability !== 'object') return false
+
+  // Day keys throughout the codebase (schedule-generator, availability-helpers)
+  // use English names. The legacy format stored arrays; the new format stores
+  // objects with { online: { available, hours }, "in-person": { available, hours } }.
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
   const today = days[new Date().getDay()]
-  
+
   const todaySchedule = availability[today]
+  if (!todaySchedule) return false
+
+  // New format: { online: { available: bool }, "in-person": { available: bool } }
+  if (typeof todaySchedule === 'object' && !Array.isArray(todaySchedule)) {
+    return (
+      todaySchedule?.online?.available === true ||
+      todaySchedule?.['in-person']?.available === true
+    )
+  }
+
+  // Legacy format: array of time strings
   return Array.isArray(todaySchedule) && todaySchedule.length > 0
 }
 

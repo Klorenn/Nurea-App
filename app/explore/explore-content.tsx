@@ -292,8 +292,8 @@ export function ExploreContent() {
                 filters={currentFilters}
                 onFilterChange={handleFilterChange}
                 onReset={handleReset}
-                specialties={Object.values(groupedSpecialties).flat()}
-                groupedSpecialties={groupedSpecialties}
+                specialties={Object.values(groupedSpecialties).flat() as any}
+                groupedSpecialties={groupedSpecialties as any}
                 loading={specialtiesLoading}
                 lang={lang}
               />

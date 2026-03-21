@@ -60,11 +60,17 @@ export interface SpecialistSearchResult {
 export interface CategoryWithSpecialties extends Category {
   specialties: Specialty[]
   professionalCount: number
+  /** Computed localized name for display (set at runtime from name_es/name_en) */
+  name?: string
 }
 
 export interface SpecialtyWithCount extends Specialty {
   professionalCount: number
   category?: Category
+  /** Computed localized name for display (set at runtime from name_es/name_en) */
+  name?: string
+  /** Computed category name for display */
+  categoryName?: string
 }
 
 export interface ExplorePageState {

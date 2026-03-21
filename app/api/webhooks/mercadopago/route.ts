@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { createHmac } from "crypto"
 
 const ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN
 
@@ -8,6 +9,40 @@ function getSupabaseAdmin() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error("Supabase credentials not configured")
   return createClient(url, key, { auth: { persistSession: false } })
+}
+
+/**
+ * Validates the MercadoPago webhook signature.
+ * MP sends: x-signature header → "ts=<timestamp>,v1=<hmac>"
+ * The signed message is: "id:<dataId>;request-id:<xRequestId>;ts:<ts>;"
+ * Ref: https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks
+ */
+function validateMpSignature(request: NextRequest, dataId: string): boolean {
+  const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET
+  // If no secret is configured, skip validation (development mode).
+  if (!webhookSecret) return true
+
+  const xSignature = request.headers.get("x-signature") || ""
+  const xRequestId = request.headers.get("x-request-id") || ""
+
+  // Parse ts and v1 from "ts=<timestamp>,v1=<hmac>"
+  const parts = Object.fromEntries(
+    xSignature.split(",").map((part) => {
+      const [k, v] = part.split("=")
+      return [k?.trim(), v?.trim()]
+    })
+  )
+  const ts = parts["ts"]
+  const v1 = parts["v1"]
+
+  if (!ts || !v1) return false
+
+  const signedTemplate = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+  const expectedHmac = createHmac("sha256", webhookSecret)
+    .update(signedTemplate)
+    .digest("hex")
+
+  return expectedHmac === v1
 }
 
 export async function POST(request: NextRequest) {
@@ -27,6 +62,12 @@ export async function POST(request: NextRequest) {
 
     if (!dataId || !type) {
       return NextResponse.json({ received: true })
+    }
+
+    // Validate webhook signature before processing (prevents spoofed events).
+    if (!validateMpSignature(request, dataId)) {
+      console.error("[mp-webhook] Invalid signature — rejecting webhook")
+      return NextResponse.json({ error: "invalid_signature" }, { status: 401 })
     }
 
     const supabase = getSupabaseAdmin()

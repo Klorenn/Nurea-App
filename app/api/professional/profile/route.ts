@@ -285,8 +285,8 @@ export async function PUT(request: Request) {
     if (languages !== undefined && languages !== null) professionalUpdate.languages = Array.isArray(languages) ? languages : []
     if (consultationType !== undefined && consultationType !== null) professionalUpdate.consultation_type = consultationType
     if (consultationTypes !== undefined && consultationTypes !== null) professionalUpdate.consultation_types = Array.isArray(consultationTypes) ? consultationTypes : null
-    if (onlinePrice !== undefined && onlinePrice !== null) professionalUpdate.online_price = typeof onlinePrice === 'number' ? onlinePrice : parseFloat(onlinePrice) || null
-    if (inPersonPrice !== undefined && inPersonPrice !== null) professionalUpdate.in_person_price = typeof inPersonPrice === 'number' ? inPersonPrice : parseFloat(inPersonPrice) || null
+    if (onlinePrice !== undefined && onlinePrice !== null) professionalUpdate.online_price = typeof onlinePrice === 'number' ? onlinePrice : (parseFloat(onlinePrice) || 0)
+    if (inPersonPrice !== undefined && inPersonPrice !== null) professionalUpdate.in_person_price = typeof inPersonPrice === 'number' ? inPersonPrice : (parseFloat(inPersonPrice) || 0)
     if (videoPlatform !== undefined && videoPlatform !== null) professionalUpdate.video_platform = videoPlatform.trim() || null
     if (clinicAddress !== undefined && clinicAddress !== null) professionalUpdate.clinic_address = clinicAddress.trim() || null
     if (availability !== undefined && availability !== null) professionalUpdate.availability = availability
@@ -325,17 +325,15 @@ export async function PUT(request: Request) {
     if (onlinePrice !== undefined || inPersonPrice !== undefined) {
       const fallbackPrice = onlinePrice || inPersonPrice
       if (fallbackPrice !== undefined && fallbackPrice !== null) {
-        professionalUpdate.consultation_price = typeof fallbackPrice === 'number' ? fallbackPrice : parseFloat(fallbackPrice) || 0
+        professionalUpdate.consultation_price = typeof fallbackPrice === 'number' ? fallbackPrice : (parseFloat(fallbackPrice) || 0)
       }
     }
 
     // Actualizar profesional
-    const { data: updatedProfessional, error: professionalError } = await supabase
+    const { error: professionalError } = await supabase
       .from('professionals')
       .update(professionalUpdate)
       .eq('id', user.id)
-      .select()
-      .single()
 
     if (professionalError) {
       console.error('Error updating professional:', professionalError)
@@ -379,7 +377,6 @@ export async function PUT(request: Request) {
       success: true,
       message: sealBroken ? 'Perfil actualizado. Alerta: Has modificado datos críticos. Tu cuenta está en revisión y ha sido temporalmente ocultada.' : 'Perfil actualizado exitosamente.',
       sealBroken,
-      profile: updatedProfessional
     })
   } catch (error) {
     console.error('Update professional profile error:', error)

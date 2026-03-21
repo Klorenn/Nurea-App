@@ -27,13 +27,13 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  CalendarDays, 
-  Clock, 
-  Video, 
-  Building2, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  CalendarDays,
+  Clock,
+  Video,
+  Building2,
+  CheckCircle2,
+  XCircle,
   Loader2,
   User,
   RefreshCw,
@@ -50,7 +50,8 @@ import {
   Filter,
   Check,
   MoreVertical,
-  ArrowRight
+  ArrowRight,
+  MessageCircle
 } from "lucide-react"
 import { 
   format, 
@@ -132,6 +133,7 @@ export default function ProfessionalAppointmentsPage() {
   const [newDate, setNewDate] = useState("")
   const [newTime, setNewTime] = useState("")
   const [loadError, setLoadError] = useState(false)
+  const [startingChat, setStartingChat] = useState(false)
 
   const loadAppointments = useCallback(async () => {
     setLoadError(false)
@@ -155,7 +157,7 @@ export default function ProfessionalAppointmentsPage() {
           payment_status,
           price,
           meeting_link,
-          patient:patient_id(
+          patient:profiles!appointments_patient_id_fkey(
             id,
             first_name,
             last_name,
@@ -330,6 +332,26 @@ export default function ProfessionalAppointmentsPage() {
     }
   }
 
+  const handleSendMessage = async (patientId: string) => {
+    setStartingChat(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const res = await fetch("/api/chat/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patientId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Error")
+      window.location.href = `/dashboard/professional/chat?conversation=${data.conversationId}`
+    } catch (err: any) {
+      toast.error(isSpanish ? "No se pudo iniciar el chat" : "Could not start chat")
+    } finally {
+      setStartingChat(false)
+    }
+  }
+
   return (
     <div className="space-y-8 max-w-[1600px] mx-auto pb-10 h-[calc(100vh-10rem)] flex flex-col">
       {loadError && (
@@ -459,12 +481,10 @@ export default function ProfessionalAppointmentsPage() {
                        <>
                          <Button
                            onClick={() => {
-                             if (selectedAppointment.meeting_link) {
-                               window.open(selectedAppointment.meeting_link, '_blank', 'noopener,noreferrer')
-                             }
+                             const url = selectedAppointment.meeting_link || getJitsiMeetingUrl(selectedAppointment.id)
+                             window.open(url, '_blank', 'noopener,noreferrer')
                            }}
-                           disabled={!selectedAppointment.meeting_link}
-                           className="w-full h-14 rounded-2xl bg-teal-600 hover:bg-teal-700 font-bold shadow-lg shadow-teal-500/20 gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                           className="w-full h-14 rounded-2xl bg-teal-600 hover:bg-teal-700 font-bold shadow-lg shadow-teal-500/20 gap-3"
                          >
                            <Video className="h-5 w-5" aria-hidden="true" />
                            {isSpanish ? "Iniciar Tele-consulta" : "Start Video Call"}
@@ -484,6 +504,18 @@ export default function ProfessionalAppointmentsPage() {
                      {(selectedAppointment.status === 'pending' || selectedAppointment.status === 'confirmed') && (
                        <Button variant="ghost" className="w-full rounded-xl font-bold h-11 hover:bg-red-50 text-red-500" onClick={() => setCancelDialogOpen(true)}>
                          {isSpanish ? "Cancelar Cita" : "Cancel Appointment"}
+                       </Button>
+                     )}
+
+                     {selectedAppointment && ['confirmed', 'completed', 'no_show'].includes(selectedAppointment.status) && (
+                       <Button
+                         variant="outline"
+                         className="w-full rounded-xl font-bold h-11 gap-2 border-teal-200 text-teal-700 hover:bg-teal-50"
+                         onClick={() => handleSendMessage(selectedAppointment.patient.id)}
+                         disabled={startingChat}
+                       >
+                         {startingChat ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                         {isSpanish ? "Enviar Mensaje" : "Send Message"}
                        </Button>
                      )}
                   </div>

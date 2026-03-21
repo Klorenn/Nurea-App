@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { RouteGuard } from "@/components/auth/route-guard"
 
 export default function AdminVerificationsPage() {
   const [verifications, setVerifications] = useState<any[]>([])
@@ -76,6 +77,7 @@ export default function AdminVerificationsPage() {
   )
 
   return (
+    <RouteGuard requiredRole="admin">
     <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -153,7 +155,7 @@ export default function AdminVerificationsPage() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
                               <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${v.last_name}`} />
-                              <AvatarFallback className="bg-violet-600 text-white font-bold">{v.first_name[0]}</AvatarFallback>
+                              <AvatarFallback className="bg-violet-600 text-white font-bold">{v.first_name?.[0] ?? "?"}</AvatarFallback>
                             </Avatar>
                             <div>
                               <p className="font-bold text-slate-900">{v.first_name} {v.last_name}</p>
@@ -254,6 +256,7 @@ export default function AdminVerificationsPage() {
         </CardContent>
       </Card>
     </div>
+    </RouteGuard>
   )
 }
 

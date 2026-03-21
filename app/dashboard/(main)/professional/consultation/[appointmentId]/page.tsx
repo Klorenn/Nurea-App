@@ -187,6 +187,7 @@ export default function ConsultationPage() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isDataInitializedRef = useRef(false)
   const [icdOpen, setIcdOpen] = useState(false)
   const [icdSearch, setIcdSearch] = useState("")
 
@@ -316,15 +317,16 @@ export default function ConsultationPage() {
         toast.error(isSpanish ? "Error al cargar datos" : "Error loading data")
       } finally {
         setLoading(false)
+        isDataInitializedRef.current = true
       }
     }
 
     loadData()
   }, [appointmentId, supabase, router, isSpanish])
 
-  // Mark changes as unsaved when form values change
+  // Mark changes as unsaved when form values change (skip initial data population)
   useEffect(() => {
-    if (!loading) {
+    if (isDataInitializedRef.current) {
       setHasUnsavedChanges(true)
     }
   }, [anamnesis, examination, diagnosis, diagnosisCode, treatment, privateNotes, vitalSigns])
@@ -346,7 +348,7 @@ export default function ConsultationPage() {
         clearTimeout(autoSaveTimerRef.current)
       }
     }
-  }, [hasUnsavedChanges, loading])
+  }, [hasUnsavedChanges, loading, handleSave])
 
   const handleSave = useCallback(async (isAutoSave = false): Promise<string | null> => {
     if (!appointment) return null

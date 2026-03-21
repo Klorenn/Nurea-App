@@ -30,6 +30,7 @@ import {
 } from "recharts"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { RouteGuard } from "@/components/auth/route-guard"
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -78,14 +79,17 @@ export default function AdminFinancesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]" role="status" aria-live="polite">
-        <RefreshCcw className="h-8 w-8 animate-spin text-violet-600" aria-hidden="true" />
-        <span className="sr-only">Cargando datos financieros...</span>
-      </div>
+      <RouteGuard requiredRole="admin">
+        <div className="flex items-center justify-center h-[60vh]" role="status" aria-live="polite">
+          <RefreshCcw className="h-8 w-8 animate-spin text-violet-600" aria-hidden="true" />
+          <span className="sr-only">Cargando datos financieros...</span>
+        </div>
+      </RouteGuard>
     )
   }
 
   return (
+    <RouteGuard requiredRole="admin">
     <motion.div
       variants={containerVariants}
       initial="hidden"
@@ -322,6 +326,7 @@ export default function AdminFinancesPage() {
         </CardContent>
       </Card>
     </motion.div>
+    </RouteGuard>
   )
 }
 

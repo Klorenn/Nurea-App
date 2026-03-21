@@ -9,7 +9,6 @@ interface FormatsSectionProps {
   locationLabel?: string
   isSpanish?: boolean
   onViewMap?: () => void
-  onViewOnlineCalendar?: () => void
   className?: string
 }
 
@@ -23,7 +22,6 @@ export function FormatsSection({
   locationLabel,
   isSpanish = true,
   onViewMap,
-  onViewOnlineCalendar,
   className,
 }: FormatsSectionProps) {
   if (!hasInPerson && !hasOnline) return null
@@ -45,12 +43,8 @@ export function FormatsSection({
 
       <div className="mt-4 space-y-3 text-sm text-slate-700 dark:text-slate-300">
         {hasInPerson && (
-          <button
-            type="button"
-            onClick={onViewMap}
-            className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
-          >
-            <MapPin className="mt-0.5 h-4 w-4 text-teal-600 dark:text-teal-400" />
+          <div className="flex items-start gap-2 px-2 py-1.5">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
             <div>
               <span className="font-medium">
                 {isSpanish ? 'En persona' : 'In-person'}
@@ -61,25 +55,21 @@ export function FormatsSection({
                 </span>
               )}
             </div>
-          </button>
+          </div>
         )}
 
         {hasOnline && (
-          <button
-            type="button"
-            onClick={onViewOnlineCalendar}
-            className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
-          >
-            <Video className="mt-0.5 h-4 w-4 text-teal-600 dark:text-teal-400" />
+          <div className="flex items-start gap-2 px-2 py-1.5">
+            <Video className="mt-0.5 h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
             <div>
               <span className="font-medium">
                 {isSpanish ? 'Videoconsulta' : 'Online consultation'}
               </span>
-              <span className="ml-1 text-teal-700 dark:text-teal-300">
-                · {isSpanish ? 'Ver calendario en línea' : 'See online calendar'}
+              <span className="ml-1 text-slate-500 dark:text-slate-400">
+                · {isSpanish ? 'Desde donde estés, por videollamada' : 'From anywhere, via video call'}
               </span>
             </div>
-          </button>
+          </div>
         )}
       </div>
     </section>

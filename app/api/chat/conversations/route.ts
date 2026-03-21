@@ -26,6 +26,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Only professionals can initiate conversations" }, { status: 403 })
     }
 
+    // Verify the patient has had at least one appointment with this professional
+    const { data: priorAppointment } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("professional_id", user.id)
+      .eq("patient_id", patientId)
+      .in("status", ["confirmed", "completed", "no_show"])
+      .limit(1)
+      .maybeSingle()
+
+    if (!priorAppointment) {
+      return NextResponse.json(
+        { error: "Solo puedes enviar mensajes a pacientes que hayan agendado contigo anteriormente." },
+        { status: 403 }
+      )
+    }
+
     // Check if a conversation already exists between these two users
     const { data: existing } = await supabase
       .from("conversation_participants")

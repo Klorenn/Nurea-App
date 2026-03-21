@@ -100,6 +100,15 @@ export async function GET(
       year: "numeric",
     })
 
+    // Helper to escape any DB-sourced strings before embedding in HTML
+    const escapeHtml = (str: string) =>
+      str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+
     // Generate HTML document (will be rendered as printable page)
     const html = `
 <!DOCTYPE html>
@@ -176,35 +185,35 @@ export async function GET(
       <div class="info-grid">
         <div class="info-item">
           <label>Paciente</label>
-          <p>${patientName}</p>
+          <p>${escapeHtml(patientName)}</p>
         </div>
         <div class="info-item">
           <label>Especialidad de Destino</label>
-          <p>${targetSpecName}</p>
+          <p>${escapeHtml(targetSpecName)}</p>
         </div>
         <div class="info-item">
           <label>Profesional Emitente</label>
-          <p>${professionalName}</p>
+          <p>${escapeHtml(professionalName)}</p>
         </div>
         <div class="info-item">
           <label>Doctor Solicitado (Opcional)</label>
-          <p>${targetProfName}</p>
+          <p>${escapeHtml(targetProfName)}</p>
         </div>
       </div>
     </div>
-    
+
     <div class="section">
       <h3 class="section-title">Motivo de Interconsulta</h3>
       <div class="content-box">
-        <p>${referral.reason}</p>
+        <p>${escapeHtml(referral.reason)}</p>
       </div>
     </div>
-    
+
     <div class="signature-section">
       <div class="signature-box">
         <div class="signature-line"></div>
-        <p class="signature-name">${professionalName}</p>
-        <p class="signature-rnpi">RNPI: ${rnpi}</p>
+        <p class="signature-name">${escapeHtml(professionalName)}</p>
+        <p class="signature-rnpi">RNPI: ${escapeHtml(rnpi)}</p>
       </div>
     </div>
     

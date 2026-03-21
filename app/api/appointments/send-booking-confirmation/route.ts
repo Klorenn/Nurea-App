@@ -6,11 +6,6 @@ import { BookingConfirmationProfessional } from "@/components/emails/BookingConf
 import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
 import { getResend, sendBatchWithRetry, buildIdempotencyKey } from "@/lib/resend"
 
-const FROM = process.env.SECURITY_EMAIL_FROM
-if (!FROM) {
-  throw new Error("SECURITY_EMAIL_FROM no está configurado en las variables de entorno.")
-}
-
 /**
  * POST /api/appointments/send-booking-confirmation
  * Envía correos al paciente (recibo + link videollamada) y al profesional (nueva cita).
@@ -19,6 +14,12 @@ if (!FROM) {
  */
 export async function POST(request: Request) {
   try {
+    const FROM = process.env.SECURITY_EMAIL_FROM
+    if (!FROM) {
+      console.error("[send-booking-confirmation] SECURITY_EMAIL_FROM no está configurado.")
+      return NextResponse.json({ success: true, sent: false, reason: "email_not_configured" })
+    }
+
     const body = await request.json().catch(() => ({}))
     const appointmentId = body.appointmentId ?? body.appointment_id
 

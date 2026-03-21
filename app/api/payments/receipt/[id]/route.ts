@@ -4,7 +4,7 @@ import { generatePaymentReceiptBuffer } from "@/lib/pdf"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
@@ -51,7 +51,7 @@ export async function GET(
     })
 
     // 3. Return PDF response
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="recibo-nurea-${financeRecord.receipt_folio}.pdf"`,

@@ -8,6 +8,7 @@ import {
   BASE_FEE,
 } from "stellar-sdk";
 import { Server as SorobanRpcServer } from "stellar-sdk/rpc";
+import { createClient } from "@/lib/supabase/server";
 
 const SOROBAN_RPC_URL = "https://soroban-testnet.stellar.org";
 const NETWORK_PASSPHRASE = Networks.TESTNET;
@@ -18,6 +19,13 @@ const NETWORK_PASSPHRASE = Networks.TESTNET;
  */
 export async function POST(request: Request) {
   try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ message: "No autorizado." }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       appointmentId,

@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { MapPin, Star, Calendar, MessageCircle, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { VerifiedBadge } from '@/components/ui/verified-badge'
+import { VerifiedBadge } from '@/components/verified-badge'
 import { cn } from '@/lib/utils'
 
 export interface ProfileHeaderProps {

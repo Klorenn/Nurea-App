@@ -18,6 +18,14 @@ interface ApiProfessional {
   consultationPrice?: number
   slotDuration?: number
   consultationTypes?: ('online' | 'in-person')[]
+  consultation_types?: Array<{
+    id?: string
+    name?: string
+    price?: number
+    duration_minutes?: number
+    modality?: 'online' | 'in-person' | 'both'
+    description?: string
+  }>
   bio?: string
   bio_extended?: string
   services?: Array<string | { name: string; description?: string; price?: number; durationMinutes?: number }>
@@ -65,37 +73,70 @@ export function mapApiProfessionalToSpecialist(
   api: ApiProfessional,
   reviews: ApiReview[] = []
 ): Specialist {
-  const services: SpecialistService[] = Array.isArray(api.services)
-    ? api.services.map((s, i) => {
-        if (typeof s === 'string') {
-          return {
-            id: `s-${i}`,
-            name: s,
-            description: '',
-            price: api.consultationPrice ?? 0,
-            currency: 'CLP',
-            durationMinutes: api.slotDuration ?? 60,
-          }
-        }
+  // Build services from consultation_types array (nuevo formato del perfil profesional)
+  const consultationTypesArray = api.consultation_types as ApiProfessional['consultation_types'] | undefined
+  const legacyServices = api.services as ApiProfessional['services']
+
+  let services: SpecialistService[] = []
+
+  // Priorizar consultation_types si existe
+  if (consultationTypesArray && consultationTypesArray.length > 0) {
+    services = consultationTypesArray.map((ct, i) => {
+      const modalityLabel = ct.modality === 'both' 
+        ? '' 
+        : ct.modality === 'online' 
+          ? 'Online' 
+          : ct.modality === 'in-person' 
+            ? 'Presencial' 
+            : ''
+      
+      const name = ct.name || (modalityLabel ? `Consulta ${modalityLabel}` : 'Consulta')
+      
+      return {
+        id: ct.id || `ct-${i}`,
+        name,
+        description: ct.description || (modalityLabel ? `${modalityLabel}` : ''),
+        price: ct.price ?? api.consultationPrice ?? 0,
+        currency: 'CLP',
+        durationMinutes: ct.duration_minutes ?? api.slotDuration ?? 60,
+        modality: ct.modality,
+      }
+    })
+  } else if (Array.isArray(legacyServices) && legacyServices.length > 0) {
+    // Fallback a services legacy
+    services = legacyServices.map((s, i) => {
+      if (typeof s === 'string') {
         return {
           id: `s-${i}`,
-          name: s.name ?? 'Consulta',
-          description: s.description ?? '',
-          price: s.price ?? api.consultationPrice ?? 0,
-          currency: 'CLP',
-          durationMinutes: s.durationMinutes ?? api.slotDuration ?? 60,
-        }
-      })
-    : [
-        {
-          id: 's0',
-          name: 'Consulta',
+          name: s,
           description: '',
           price: api.consultationPrice ?? 0,
           currency: 'CLP',
           durationMinutes: api.slotDuration ?? 60,
-        },
-      ]
+        }
+      }
+      return {
+        id: `s-${i}`,
+        name: s.name ?? 'Consulta',
+        description: s.description ?? '',
+        price: s.price ?? api.consultationPrice ?? 0,
+        currency: 'CLP',
+        durationMinutes: (s as any).durationMinutes ?? api.slotDuration ?? 60,
+      }
+    })
+  } else {
+    // Default si no hay nada configurado
+    services = [
+      {
+        id: 's0',
+        name: 'Consulta',
+        description: '',
+        price: api.consultationPrice ?? 0,
+        currency: 'CLP',
+        durationMinutes: api.slotDuration ?? 60,
+      },
+    ]
+  }
 
   const formattedReviews: SpecialistReview[] = reviews.map((r) => ({
     id: r.id,
@@ -155,14 +196,23 @@ export function mapApiProfessionalToSpecialist(
     experienceYears: api.yearsExperience ?? 0,
     patientsCount: api.patientsCount,
     certification: certifications[0],
-    onlineAvailable: api.consultationTypes?.includes('online') ?? true,
+    onlineAvailable: (() => {
+      // Prefer new consultation_types array when present
+      if (consultationTypesArray && consultationTypesArray.length > 0) {
+        return consultationTypesArray.some(
+          (ct) => ct.modality === 'online' || ct.modality === 'both'
+        )
+      }
+      // Fallback to legacy consultationTypes string array
+      return api.consultationTypes?.includes('online') ?? true
+    })(),
     bio: cleanedBio,
     bioExtended,
     education,
     certifications,
     approaches: [],
     services,
-    conditions: [],
+    conditions: Array.isArray((api as any).conditions_treated) ? (api as any).conditions_treated as string[] : [],
     reviews: formattedReviews,
     faqs: [],
     consultationTypes: api.consultationTypes ?? ['online'],

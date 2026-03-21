@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import * as StellarSdk from '@stellar/stellar-sdk';
 
 // Configuración de red (Testnet por defecto para desarrollo)
@@ -16,8 +15,7 @@ const EXPECTED_AMOUNT = "2.0000000"; // 2 USDC por ejemplo
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient();
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 

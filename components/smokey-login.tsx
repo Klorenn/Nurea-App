@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { User, Lock, ArrowRight, AlertCircle, Loader2, Stethoscope, CheckCircle2, Eye, EyeOff, KeyRound } from "lucide-react"
+import { User, Lock, ArrowRight, AlertCircle, Loader2, Stethoscope, CheckCircle2, Eye, EyeOff, KeyRound, Check } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -722,16 +722,19 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
   const { language } = useLanguage()
   const t = useTranslations(language)
   const isSpanish = language === "es"
-  
-  // 1. Estado del rol - default a 'patient' si no hay initialRole
+
   const [role, setRole] = useState<"patient" | "professional">(initialRole || "patient")
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(initialPlan || null)
+  const [selectedPlan] = useState<string | null>(initialPlan || null)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [dateOfBirth, setDateOfBirth] = useState("")
   const [dateOfBirthError, setDateOfBirthError] = useState<string | null>(null)
   const [email, setEmail] = useState("")
+  const [emailExists, setEmailExists] = useState(false)
+  const [emailVerified, setEmailVerified] = useState(false)
+  const [emailChecking, setEmailChecking] = useState(false)
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [specialty, setSpecialty] = useState("")
   const [otherSpecialty, setOtherSpecialty] = useState("")
   const [registrationNumber, setRegistrationNumber] = useState("")
@@ -746,7 +749,6 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
 
   const isProfessional = role === "professional"
 
-  // Handler para cambiar rol - limpia errores previos
   const handleRoleChange = (newRole: "patient" | "professional") => {
     setRole(newRole)
     setError(null)
@@ -754,69 +756,82 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
     setDateOfBirthError(null)
   }
 
-  const validateDateOfBirth = (value: string): boolean => {
-    if (!value) {
-      setDateOfBirthError(null)
-      return true // Opcional para pacientes
+  const formatRUT = (value: string): string => {
+    const cleaned = value.replace(/[^0-9kK]/g, "").toUpperCase()
+    if (cleaned.length <= 1) return cleaned
+    const body = cleaned.slice(0, -1)
+    const dv = cleaned.slice(-1)
+    let formatted = ""
+    for (let i = 0; i < body.length; i++) {
+      if (i > 0 && (body.length - i) % 3 === 0) formatted += "."
+      formatted += body[i]
     }
+    return `${formatted}-${dv}`
+  }
+
+  const handleNationalIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNationalId(formatRUT(e.target.value))
+  }
+
+  const handleEmailBlur = async () => {
+    const trimmed = email.trim()
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return
+    setEmailChecking(true)
+    try {
+      const res = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed }),
+      })
+      const { exists, verified } = await res.json()
+      setEmailExists(!!exists)
+      setEmailVerified(!!verified)
+    } catch {
+      setEmailExists(false)
+    } finally {
+      setEmailChecking(false)
+    }
+  }
+
+  const validateDateOfBirth = (value: string): boolean => {
+    if (!value) { setDateOfBirthError(null); return true }
     const valid = isAtLeast18(value)
     setDateOfBirthError(valid ? null : t.auth.ageError)
     return valid
   }
 
   const handleDateOfBirthBlur = () => {
-    if (dateOfBirth) {
-      validateDateOfBirth(dateOfBirth)
-    }
+    if (dateOfBirth) validateDateOfBirth(dateOfBirth)
   }
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     const errors: Record<string, string> = {}
 
-    // Validación de campos base (siempre obligatorios)
-    if (!firstName.trim()) {
-      errors.firstName = isSpanish ? "El nombre es obligatorio" : "First name is required"
-    }
-    if (!lastName.trim()) {
-      errors.lastName = isSpanish ? "El apellido es obligatorio" : "Last name is required"
-    }
-    if (!email.trim()) {
-      errors.email = isSpanish ? "El correo es obligatorio" : "Email is required"
-    }
-    if (!password || password.length < 6) {
-      errors.password = isSpanish ? "Mínimo 6 caracteres" : "Minimum 6 characters"
-    }
+    if (!firstName.trim()) errors.firstName = isSpanish ? "El nombre es obligatorio" : "First name is required"
+    if (!lastName.trim()) errors.lastName = isSpanish ? "El apellido es obligatorio" : "Last name is required"
+    if (!email.trim()) errors.email = isSpanish ? "El correo es obligatorio" : "Email is required"
+    if (!password || password.length < 6) errors.password = isSpanish ? "Mínimo 6 caracteres" : "Minimum 6 characters"
 
-    // Validación condicional según rol
     if (isProfessional) {
-      // Profesionales: Especialidad y RUT obligatorios
-      if (!specialty.trim()) {
-        errors.specialty = isSpanish ? "Selecciona tu especialidad" : "Select your specialty"
-      }
-      if (specialty === "Otra" && !otherSpecialty.trim()) {
-        errors.otherSpecialty = isSpanish ? "Especifica tu especialidad" : "Specify your specialty"
-      }
-      if (!registrationNumber.trim()) {
-        errors.registrationNumber = isSpanish ? "El RUT o registro médico es obligatorio" : "Medical ID is required"
-      }
+      if (!specialty.trim()) errors.specialty = isSpanish ? "Selecciona tu especialidad" : "Select your specialty"
+      if (specialty === "Otra" && !otherSpecialty.trim()) errors.otherSpecialty = isSpanish ? "Especifica tu especialidad" : "Specify your specialty"
+      if (!registrationNumber.trim()) errors.registrationNumber = isSpanish ? "El registro médico es obligatorio" : "Medical ID is required"
     } else {
-      // Pacientes: RUT/DNI obligatorio según petición del usuario
-      if (!nationalId.trim()) {
-        errors.nationalId = isSpanish ? "El RUT o DNI es obligatorio" : "National ID (RUT/DNI) is required"
-      }
+      if (!nationalId.trim()) errors.nationalId = isSpanish ? "El RUT o DNI es obligatorio" : "National ID (RUT/DNI) is required"
     }
 
-    // Validación de fecha de nacimiento si se proporciona
     if (dateOfBirth && !isAtLeast18(dateOfBirth)) {
       setDateOfBirthError(t.auth.ageError)
       setFieldErrors(errors)
       return
     }
+    if (Object.keys(errors).length > 0) { setFieldErrors(errors); setError(null); return }
 
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors)
-      setError(null)
+    if (emailExists) {
+      setError(isSpanish
+        ? "Este correo ya está registrado. Inicia sesión o usa otro correo."
+        : "This email is already registered. Log in or use a different email.")
       return
     }
 
@@ -838,13 +853,15 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
         nationalId: nationalId.trim() || (isProfessional ? registrationNumber.trim() : undefined),
       })
       if (result.success) {
-        if (role === "professional" && selectedPlan) {
-          sessionStorage.setItem("pending_plan", selectedPlan)
-        }
+        if (role === "professional" && selectedPlan) sessionStorage.setItem("pending_plan", selectedPlan)
         setRegisteredEmail(email.trim())
         setRegistrationSuccess(true)
       } else {
-        setError(result.error ?? (isSpanish ? "No se pudo crear la cuenta" : "Failed to create account"))
+        const errMsg = result.error ?? (isSpanish ? "No se pudo crear la cuenta" : "Failed to create account")
+        if (errMsg.toLowerCase().includes("registrado") || errMsg.toLowerCase().includes("registered")) {
+          setEmailExists(true)
+        }
+        setError(errMsg)
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : (isSpanish ? "Error al registrarse" : "An error occurred")
@@ -858,167 +875,117 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
     setLoading(true)
     try {
       window.location.href = "/api/auth/google?next=/verify-email"
-    } catch (err) {
+    } catch {
       setError("Failed to initiate Google sign up")
       setLoading(false)
     }
   }
 
+  // ── Success screen ───────────────────────────────────────────────────────
   if (registrationSuccess) {
     return (
-      <div className="w-full max-w-md sm:max-w-lg p-6 sm:p-8 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-gray-200/90 dark:border-slate-700/80 shadow-2xl shadow-slate-300/40 dark:shadow-black/40 relative z-20">
-        <div className="space-y-6 text-center">
-          <div className="mx-auto w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-500/20 flex items-center justify-center">
-            <CheckCircle2 className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+      <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl relative z-20 overflow-hidden animate-in zoom-in-95 fade-in duration-300">
+        <div className="h-1 bg-gradient-to-r from-teal-400 to-teal-600" />
+        <div className="p-6 space-y-5 text-center">
+          <div className="mx-auto w-14 h-14 rounded-full bg-teal-100 dark:bg-teal-500/20 flex items-center justify-center">
+            <CheckCircle2 className="w-7 h-7 text-teal-600 dark:text-teal-400" />
           </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-normal">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
               {isSpanish ? "¡Cuenta creada!" : "Account created!"}
             </h2>
-            <p className="text-slate-600 dark:text-slate-400">
-              {isSpanish ? "Hemos enviado un enlace de verificación a:" : "We've sent a verification link to:"}
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {isSpanish ? "Enlace de verificación enviado a:" : "Verification link sent to:"}
             </p>
-            <p className="font-semibold text-teal-600 dark:text-teal-400 flex items-center justify-center gap-2">
-              <User className="w-4 h-4" />
-              {registeredEmail}
-            </p>
+            <p className="text-sm font-semibold text-teal-600 dark:text-teal-400 break-all">{registeredEmail}</p>
           </div>
-          <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-4 text-left space-y-3">
-            <p className="text-sm text-slate-700 dark:text-slate-300">
-              <strong>{isSpanish ? "Siguiente paso:" : "Next step:"}</strong>{" "}
-              {isSpanish
-                ? "Abre tu correo y haz clic en el enlace para activar tu cuenta."
-                : "Open your email and click the link to activate your account."}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {isSpanish
-                ? "Si no lo encuentras, revisa tu carpeta de spam o correo no deseado."
-                : "If you can't find it, check your spam or junk folder."}
-            </p>
+          <div className="text-left text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 space-y-2">
+            <p>1. {isSpanish ? "Revisa tu correo y haz clic en el enlace de activación." : "Check your email and click the activation link."}</p>
+            <p>2. {isSpanish ? "Completa tu perfil para empezar." : "Complete your profile to get started."}</p>
+            <p className="text-slate-400">{isSpanish ? "¿No lo encuentras? Revisa spam." : "Can't find it? Check spam."}</p>
           </div>
           <Link
             href="/login"
-            className="inline-block text-sm font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-xl transition-colors"
           >
             {isSpanish ? "Ir a iniciar sesión" : "Go to login"}
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>
     )
   }
 
+  // ── Main form ────────────────────────────────────────────────────────────
   return (
-    <div className="w-full max-w-sm sm:max-w-md p-5 sm:p-6 flex flex-col gap-4 bg-white dark:bg-slate-900 backdrop-blur-xl rounded-2xl border border-gray-200/90 dark:border-slate-700/80 shadow-2xl shadow-slate-300/40 dark:shadow-black/40 relative z-20">
-      <div className="text-center">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-normal">{t.auth.joinNurea}</h2>
-        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed tracking-normal">{t.auth.startJourney}</p>
-      </div>
+    <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-xl relative z-20 overflow-hidden">
+      <div className="h-1 bg-gradient-to-r from-teal-400 via-teal-500 to-teal-600" />
 
-      {error && (
-        <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-          <div className="flex-1 space-y-1">
-            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{error}</p>
-            {error.includes("ya está registrado") && (
-              <p className="text-xs text-slate-700 dark:text-slate-300">
-                {isSpanish ? (
-                  <>
-                    <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
-                      Iniciar sesión
-                    </Link>
-                    {" — o "}
-                    <Link
-                      href={email ? `/verify-email?email=${encodeURIComponent(email.trim())}` : "/verify-email"}
-                      className="font-semibold text-teal-600 dark:text-teal-400 hover:underline"
-                    >
-                      solicita reenviar el correo de verificación
-                    </Link>
-                    .
-                  </>
-                ) : (
-                  <>
-                    <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
-                      Log in
-                    </Link>
-                    {" — or "}
-                    <Link
-                      href={email ? `/verify-email?email=${encodeURIComponent(email.trim())}` : "/verify-email"}
-                      className="font-semibold text-teal-600 dark:text-teal-400 hover:underline"
-                    >
-                      request a new verification email
-                    </Link>
-                    .
-                  </>
-                )}
-              </p>
-            )}
-            {error.includes("No pudimos enviar el correo") && (
-              <p className="text-xs text-slate-700 dark:text-slate-300">
-                {isSpanish
-                  ? "Comprueba tu conexión e inténtalo de nuevo. Si el problema continúa, usa «Iniciar sesión» y solicita reenviar el correo."
-                  : "Check your connection and try again. If it continues, use Log in and request a new verification email."}
-                {" "}
-                <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
-                  {isSpanish ? "Iniciar sesión" : "Log in"}
-                </Link>
-              </p>
-            )}
+      {/* Scrollable body */}
+      <div className="overflow-y-auto max-h-[calc(100svh-5rem)] overscroll-contain">
+        <div className="p-5 space-y-4">
+
+          {/* Header */}
+          <div className="text-center space-y-0.5">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t.auth.joinNurea}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {isSpanish ? "Crea tu cuenta en NUREA" : "Create your NUREA account"}
+            </p>
           </div>
-        </div>
-      )}
 
-      {/* 2. Selector de Rol - Premium Segmented Control */}
-      <div className="flex flex-col gap-2 relative z-30">
-        <label className="text-center block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em]">
-          {t.auth.selectAccountType}
-        </label>
-        <div className="flex p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-md rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-inner overflow-hidden">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              handleRoleChange("patient")
-            }}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 text-xs font-bold",
-              role === "patient"
-                ? "bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-[0_4px_12px_rgba(20,184,166,0.15)] ring-1 ring-teal-500/10"
-                : "bg-transparent text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-            )}
-            aria-pressed={role === "patient"}
-          >
-            <User className={cn("h-4 w-4 transition-transform", role === "patient" && "scale-110")} />
-            <span>{t.auth.imPatient}</span>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              handleRoleChange("professional")
-            }}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl transition-all duration-300 text-xs font-bold",
-              role === "professional"
-                ? "bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-[0_4px_12px_rgba(20,184,166,0.15)] ring-1 ring-teal-500/10"
-                : "bg-transparent text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-            )}
-            aria-pressed={role === "professional"}
-          >
-            <Stethoscope className={cn("h-4 w-4 transition-transform", role === "professional" && "scale-110")} />
-            <span>{t.auth.imProfessional}</span>
-          </button>
-        </div>
-      </div>
+          {/* Error Alert */}
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-3 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-red-800 dark:text-red-200">{error}</p>
+                {(error.includes("registrado") || error.includes("registered")) && (
+                  <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
+                    <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                      {isSpanish ? "Iniciar sesión" : "Log in"}
+                    </Link>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
-      <form onSubmit={handleSignUp} className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {/* Área con scroll limitado y degradados de desvanecimiento */}
-        <div className="relative max-h-[55vh] overflow-y-auto scrollbar-form pr-1 -mr-1">
-          <div className="absolute top-0 left-0 right-2 h-4 bg-gradient-to-b from-white dark:from-slate-900 to-transparent pointer-events-none z-10" aria-hidden />
-          <div className="absolute bottom-0 left-0 right-2 h-4 bg-gradient-to-t from-white dark:from-slate-900 to-transparent pointer-events-none z-10" aria-hidden />
-          <div className="flex flex-col gap-3 py-0.5">
-            {/* 3. Campos base - Siempre visibles: Nombre, Apellido */}
+          {/* Role Selector */}
+          <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
+            <button
+              type="button"
+              onClick={() => handleRoleChange("patient")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-all duration-200 text-xs font-semibold",
+                role === "patient"
+                  ? "bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+              )}
+              aria-pressed={role === "patient"}
+            >
+              <User className="h-3.5 w-3.5" />
+              <span>{t.auth.imPatient}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleRoleChange("professional")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-all duration-200 text-xs font-semibold",
+                role === "professional"
+                  ? "bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
+              )}
+              aria-pressed={role === "professional"}
+            >
+              <Stethoscope className="h-3.5 w-3.5" />
+              <span>{t.auth.imProfessional}</span>
+            </button>
+          </div>
+
+          <form onSubmit={handleSignUp} className="space-y-3">
+            {/* Name row */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
+              <div>
                 <AnimatedInput
                   type="text"
                   id="floating_firstname"
@@ -1031,13 +998,11 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
                   variant="stacked"
                   aria-invalid={!!fieldErrors.firstName}
                 />
-                {fieldErrors.firstName ? (
-                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.firstName}</p>
-                ) : (
-                  <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0 tracking-normal">{language === "es" ? "Tu nombre" : "Your name"}</p>
+                {fieldErrors.firstName && (
+                  <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.firstName}</p>
                 )}
               </div>
-              <div className="flex flex-col gap-1">
+              <div>
                 <AnimatedInput
                   type="text"
                   id="floating_lastname"
@@ -1050,42 +1015,55 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
                   variant="stacked"
                   aria-invalid={!!fieldErrors.lastName}
                 />
-                {fieldErrors.lastName ? (
-                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.lastName}</p>
-                ) : (
-                  <p className="text-[10px] text-slate-600 dark:text-slate-400 px-0 tracking-normal">{language === "es" ? "Tu apellido" : "Your last name"}</p>
+                {fieldErrors.lastName && (
+                  <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.lastName}</p>
                 )}
               </div>
             </div>
 
-            {/* Campos base - Email y Contraseña */}
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex flex-col gap-1">
+            {/* Email */}
+            <div>
+              <div className="relative">
                 <AnimatedInput
                   type="email"
                   id="floating_email_signup"
                   label={t.auth.email}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setEmailExists(false) }}
+                  onBlur={handleEmailBlur}
                   disabled={loading}
                   required
                   variant="stacked"
-                  aria-invalid={!!fieldErrors.email}
+                  aria-invalid={!!fieldErrors.email || emailExists}
+                  className={emailExists ? "border-amber-400 dark:border-amber-500" : ""}
                 />
-                {fieldErrors.email ? (
-                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.email}</p>
-                ) : (
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 px-0">
-                    {language === "es" 
-                      ? "Tu email es tu identidad en NUREA."
-                      : "Your email is your identity on NUREA."}
-                  </p>
+                {emailChecking && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-slate-400" />
                 )}
               </div>
+              {fieldErrors.email && (
+                <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.email}</p>
+              )}
+              {emailExists && !fieldErrors.email && (
+                <p className="mt-0.5 text-[11px] text-amber-600 dark:text-amber-400">
+                  {emailVerified
+                    ? (isSpanish ? "Este correo ya está registrado. " : "This email is already registered. ")
+                    : (isSpanish
+                        ? "Este correo está registrado pero no verificado. Revisa tu bandeja de entrada o "
+                        : "This email is registered but not verified. Check your inbox or ")}
+                  <Link href="/login" className="font-semibold underline hover:text-teal-600">
+                    {isSpanish ? "Inicia sesión" : "log in"}
+                  </Link>
+                  {!emailVerified && "."}
+                </p>
+              )}
+            </div>
 
-              <div className="flex flex-col gap-1">
+            {/* Password */}
+            <div>
+              <div className="relative">
                 <AnimatedInput
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   id="floating_password_signup"
                   label={t.auth.password}
                   value={password}
@@ -1094,76 +1072,86 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
                   required
                   minLength={6}
                   variant="stacked"
+                  className="pr-10"
                   aria-invalid={!!fieldErrors.password}
                 />
-                {fieldErrors.password && (
-                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.password}</p>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label={showPassword ? (isSpanish ? "Ocultar" : "Hide") : (isSpanish ? "Mostrar" : "Show")}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
-            </div>
-
-            {/* Campo NATIONAL ID (RUT/DNI) - Obligatorio para todos ahora según UX premium */}
-            <div className="flex flex-col gap-1 pt-1">
-              <AnimatedInput
-                type="text"
-                id="floating_national_id"
-                label={isSpanish ? "RUT / DNI" : "National ID (RUT/DNI)"}
-                value={nationalId}
-                onChange={(e) => setNationalId(e.target.value)}
-                disabled={loading}
-                required
-                variant="stacked"
-                className="font-medium"
-                placeholder={isSpanish ? "Ej: 12.345.678-9" : "e.g. 12.345.678-9"}
-                aria-invalid={!!fieldErrors.nationalId}
-              />
-              {fieldErrors.nationalId ? (
-                <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.nationalId}</p>
-              ) : (
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 px-0">
-                  {isSpanish ? "Identificación oficial requerida." : "Official identification required."}
-                </p>
+              {fieldErrors.password && (
+                <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.password}</p>
+              )}
+              {password.length > 0 && (
+                <div className="mt-1.5 flex gap-1">
+                  <div className={cn("h-0.5 flex-1 rounded-full", password.length >= 6 ? "bg-teal-500" : "bg-slate-200 dark:bg-slate-700")} />
+                  <div className={cn("h-0.5 flex-1 rounded-full", password.length >= 8 ? "bg-teal-500" : "bg-slate-200 dark:bg-slate-700")} />
+                  <div className={cn("h-0.5 flex-1 rounded-full", password.length >= 12 ? "bg-teal-500" : "bg-slate-200 dark:bg-slate-700")} />
+                </div>
               )}
             </div>
 
-            {/* Campos condicionales para PROFESIONAL */}
+            {/* National ID — only for patients */}
+            {!isProfessional && (
+              <div>
+                <AnimatedInput
+                  type="text"
+                  id="floating_national_id"
+                  label={isSpanish ? "RUT / DNI" : "National ID (RUT/DNI)"}
+                  value={nationalId}
+                  onChange={handleNationalIdChange}
+                  disabled={loading}
+                  required
+                  variant="stacked"
+                  placeholder={isSpanish ? "Ej: 12.345.678-9" : "e.g. 12.345.678-9"}
+                  aria-invalid={!!fieldErrors.nationalId}
+                />
+                {fieldErrors.nationalId && (
+                  <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.nationalId}</p>
+                )}
+              </div>
+            )}
+
+            {/* Professional fields */}
             {isProfessional && (
-              <div className="flex flex-col gap-3 pt-4 mt-1 border-t border-slate-200 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                <p className="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
-                  {isSpanish ? "Datos del Especialista" : "Specialist Details"}
+              <div className="space-y-3 pt-1 border-t border-teal-100 dark:border-teal-900/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                <p className="text-[11px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Stethoscope className="w-3.5 h-3.5" />
+                  {isSpanish ? "Datos del especialista" : "Specialist details"}
                 </p>
-                
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="signup_specialty" className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+
+                <div>
+                  <label htmlFor="signup_specialty" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     {t.auth.mainSpecialty} *
                   </label>
                   <select
                     id="signup_specialty"
                     value={specialty}
-                    onChange={(e) => {
-                      setSpecialty(e.target.value)
-                      if (e.target.value !== "Otra") setOtherSpecialty("")
-                    }}
+                    onChange={(e) => { setSpecialty(e.target.value); if (e.target.value !== "Otra") setOtherSpecialty("") }}
                     disabled={loading}
                     required={isProfessional}
                     className={cn(
-                      "w-full h-10 rounded-xl border bg-white dark:bg-slate-900 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all shadow-sm",
-                      fieldErrors.specialty ? "border-red-400 dark:border-red-500" : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                      "w-full h-9 rounded-lg border bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-all",
+                      fieldErrors.specialty ? "border-red-400" : "border-slate-200 dark:border-slate-700"
                     )}
                   >
-                    <option value="">{isSpanish ? "Selecciona una especialidad" : "Select a specialty"}</option>
+                    <option value="">{isSpanish ? "Selecciona tu especialidad" : "Select your specialty"}</option>
                     {SPECIALTY_OPTIONS.map((opt) => (
                       <option key={opt} value={opt}>{opt}</option>
                     ))}
                   </select>
                   {fieldErrors.specialty && (
-                    <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.specialty}</p>
+                    <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.specialty}</p>
                   )}
                 </div>
 
-                {/* Input condicional para "Otra" especialidad */}
                 {specialty === "Otra" && (
-                  <div className="flex flex-col gap-1 animate-in zoom-in-95 duration-200">
+                  <div className="animate-in fade-in duration-200">
                     <AnimatedInput
                       type="text"
                       id="floating_other_specialty"
@@ -1177,16 +1165,16 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
                       aria-invalid={!!fieldErrors.otherSpecialty}
                     />
                     {fieldErrors.otherSpecialty && (
-                      <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.otherSpecialty}</p>
+                      <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.otherSpecialty}</p>
                     )}
                   </div>
                 )}
 
-                <div className="flex flex-col gap-1.5">
+                <div>
                   <AnimatedInput
                     type="text"
                     id="floating_registration"
-                    label={isSpanish ? "Número de Registro Médico" : "Medical Registration Number"}
+                    label={isSpanish ? "Nº Registro Médico" : "Medical Registration No."}
                     value={registrationNumber}
                     onChange={(e) => setRegistrationNumber(e.target.value)}
                     disabled={loading}
@@ -1196,132 +1184,106 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
                     aria-invalid={!!fieldErrors.registrationNumber}
                   />
                   {fieldErrors.registrationNumber && (
-                    <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{fieldErrors.registrationNumber}</p>
+                    <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.registrationNumber}</p>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Campo condicional para PACIENTE - Fecha de nacimiento (opcional) */}
+            {/* Date of birth (patient only) */}
             {!isProfessional && (
-              <div className="flex flex-col gap-1 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <label htmlFor="floating_dob" className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                  {t.auth.dateOfBirth} <span className="text-slate-400 font-normal">({isSpanish ? "opcional" : "optional"})</span>
+              <div className="animate-in fade-in duration-200">
+                <label htmlFor="floating_dob" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  {t.auth.dateOfBirth}{" "}
+                  <span className="text-slate-400 font-normal">({isSpanish ? "opcional" : "optional"})</span>
                 </label>
                 <input
                   type="date"
                   id="floating_dob"
                   value={dateOfBirth}
-                  onChange={(e) => {
-                    setDateOfBirth(e.target.value)
-                    if (dateOfBirthError) validateDateOfBirth(e.target.value)
-                  }}
+                  onChange={(e) => { setDateOfBirth(e.target.value); if (dateOfBirthError) validateDateOfBirth(e.target.value) }}
                   onBlur={handleDateOfBirthBlur}
                   disabled={loading}
                   aria-invalid={!!dateOfBirthError}
-                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1.5 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all shadow-sm"
+                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 transition-all"
                 />
                 {dateOfBirthError && (
-                  <p className="text-[10px] text-red-500 dark:text-red-400 px-0" role="alert">{dateOfBirthError}</p>
+                  <p className="mt-0.5 text-[11px] text-red-500" role="alert">{dateOfBirthError}</p>
                 )}
               </div>
             )}
 
-            <div className="flex items-start gap-2 pt-0.5">
-              <CheckCircle2 className={cn(
-                "h-3 w-3 shrink-0 mt-0.5 transition-colors",
-                acceptedTerms && acceptedPrivacy 
-                  ? "text-teal-500 dark:text-teal-400" 
-                  : "text-slate-400 dark:text-slate-600"
-              )} />
-              <p className="text-[9px] leading-relaxed text-slate-700 dark:text-slate-300">
+            {/* Terms */}
+            <div className="flex items-start gap-2.5">
+              <button
+                type="button"
+                onClick={() => { setAcceptedTerms(v => !v); setAcceptedPrivacy(v => !v) }}
+                className={cn(
+                  "w-4 h-4 rounded border-2 flex items-center justify-center transition-all shrink-0 mt-0.5",
+                  acceptedTerms ? "bg-teal-500 border-teal-500" : "border-slate-300 dark:border-slate-600 hover:border-teal-400"
+                )}
+              >
+                {acceptedTerms && <Check className="w-2.5 h-2.5 text-white" />}
+              </button>
+              <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
                 {t.auth.agreeTerms}{" "}
                 <TermsDialog onAccept={() => setAcceptedTerms(true)}>
-                  <button 
-                    type="button"
-                    className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline relative z-10 cursor-pointer"
-                  >
-                    {t.auth.termsOfService}
-                  </button>
-                </TermsDialog>{" "}
-                {t.auth.and}{" "}
+                  <button type="button" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">{t.auth.termsOfService}</button>
+                </TermsDialog>
+                {" "}{t.auth.and}{" "}
                 <PrivacyDialog onAccept={() => setAcceptedPrivacy(true)}>
-                  <button 
-                    type="button"
-                    className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 underline relative z-10 cursor-pointer"
-                  >
-                    {t.auth.privacyPolicy}
-                  </button>
+                  <button type="button" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">{t.auth.privacyPolicy}</button>
                 </PrivacyDialog>
-                .
               </p>
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading || !acceptedTerms || !acceptedPrivacy}
-              className="group w-full flex items-center justify-center py-2 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-600/50 disabled:cursor-not-allowed rounded-lg text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-teal-500 transition-all duration-300 relative z-10"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
             >
               {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span className="text-xs">{language === "es" ? "Creando cuenta..." : "Creating account..."}</span>
-                </>
+                <><Loader2 className="h-4 w-4 animate-spin" /><span>{isSpanish ? "Creando cuenta..." : "Creating account..."}</span></>
               ) : (
-                <>
-                  <span className="text-sm">{t.auth.createAccount}</span>
-                  <ArrowRight className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
-                </>
+                <><span>{t.auth.createAccount}</span><ArrowRight className="h-4 w-4" /></>
               )}
             </button>
-          </div>
+
+            {/* Divider */}
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-slate-200 dark:border-slate-700" />
+              <span className="flex-shrink mx-3 text-[11px] text-slate-400 font-medium">{t.auth.orContinue}</span>
+              <div className="flex-grow border-t border-slate-200 dark:border-slate-700" />
+            </div>
+
+            {/* Google */}
+            <button
+              type="button"
+              onClick={handleGoogleSignUp}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:cursor-not-allowed rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 48 48">
+                <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.802 8.841C34.553 4.806 29.613 2.5 24 2.5C11.983 2.5 2.5 11.983 2.5 24s9.483 21.5 21.5 21.5S45.5 36.017 45.5 24c0-1.538-.135-3.022-.389-4.417z"/>
+                <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12.5 24 12.5c3.059 0 5.842 1.154 7.961 3.039l5.839-5.841C34.553 4.806 29.613 2.5 24 2.5C16.318 2.5 9.642 6.723 6.306 14.691z"/>
+                <path fill="#4CAF50" d="M24 45.5c5.613 0 10.553-2.306 14.802-6.341l-5.839-5.841C30.842 35.846 27.059 38 24 38c-5.039 0-9.345-2.608-11.124-6.481l-6.571 4.819C9.642 41.277 16.318 45.5 24 45.5z"/>
+                <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l5.839 5.841C44.196 35.123 45.5 29.837 45.5 24c0-1.538-.135-3.022-.389-4.417z"/>
+              </svg>
+              <span>{isSpanish ? "Continuar con Google" : "Sign up with Google"}</span>
+            </button>
+          </form>
+
+          {/* Login link */}
+          <p className="text-center text-xs text-slate-500 dark:text-slate-400">
+            {t.auth.alreadyAccount}{" "}
+            <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline transition-colors">
+              {t.auth.logIn}
+            </Link>
+          </p>
+
         </div>
-
-          {/* Divider */}
-          <div className="relative flex py-1.5 items-center">
-            <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-            <span className="flex-shrink mx-3 text-slate-600 dark:text-slate-400 text-[9px] font-medium uppercase tracking-wider">
-              {t.auth.orContinue}
-            </span>
-            <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-          </div>
-
-          {/* Google Signup Button */}
-          <button
-            type="button"
-            onClick={handleGoogleSignUp}
-            disabled={loading}
-            className="group w-full flex items-center justify-center py-2 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 transition-all duration-300 relative z-10"
-          >
-            <svg className="w-4 h-4 mr-2" viewBox="0 0 48 48">
-              <path
-                fill="#FFC107"
-                d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.802 8.841C34.553 4.806 29.613 2.5 24 2.5C11.983 2.5 2.5 11.983 2.5 24s9.483 21.5 21.5 21.5S45.5 36.017 45.5 24c0-1.538-.135-3.022-.389-4.417z"
-              ></path>
-              <path
-                fill="#FF3D00"
-                d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12.5 24 12.5c3.059 0 5.842 1.154 7.961 3.039l5.839-5.841C34.553 4.806 29.613 2.5 24 2.5C16.318 2.5 9.642 6.723 6.306 14.691z"
-              ></path>
-              <path
-                fill="#4CAF50"
-                d="M24 45.5c5.613 0 10.553-2.306 14.802-6.341l-5.839-5.841C30.842 35.846 27.059 38 24 38c-5.039 0-9.345-2.608-11.124-6.481l-6.571 4.819C9.642 41.277 16.318 45.5 24 45.5z"
-              ></path>
-              <path
-                fill="#1976D2"
-                d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l5.839 5.841C44.196 35.123 45.5 29.837 45.5 24c0-1.538-.135-3.022-.389-4.417z"
-              ></path>
-            </svg>
-            <span className="text-xs">{language === "es" ? "Continuar con Google" : "Sign up with Google"}</span>
-          </button>
-        </form>
-
-      <p className="text-center text-[11px] text-slate-700 dark:text-slate-300">
-        {t.auth.alreadyAccount}{" "}
-        <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition">
-          {t.auth.logIn}
-        </Link>
-      </p>
+      </div>
     </div>
   )
 }
-

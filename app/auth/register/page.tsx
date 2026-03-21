@@ -60,24 +60,28 @@ function RegisterPageContent() {
   const plan = searchParams.get("plan")
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-cyan-50/30 dark:bg-transparent">
+    <main className="relative min-h-screen overflow-y-auto bg-cyan-50/30 dark:bg-transparent">
       <AuthPageBackground />
 
-      <div className="absolute top-4 left-4 right-4 sm:top-8 sm:left-8 sm:right-8 z-50 flex items-center justify-between pointer-events-none">
+      {/* Top bar */}
+      <div className="sticky top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 sm:px-8">
         <Link
           href="/auth"
-          className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-all duration-300 backdrop-blur-sm bg-white/90 dark:bg-slate-900/80 px-4 py-2 rounded-xl border border-teal-200/60 dark:border-slate-600/60 h-10 shadow-sm hover:shadow-md pointer-events-auto text-teal-800 dark:text-teal-200 hover:text-teal-900 dark:hover:text-teal-100"
+          className="flex items-center gap-2 text-sm font-bold text-teal-800 dark:text-teal-200 hover:text-teal-900 dark:hover:text-teal-100 transition-colors backdrop-blur-sm bg-white/90 dark:bg-slate-900/80 px-3 py-1.5 rounded-xl border border-teal-200/60 dark:border-slate-600/60 shadow-sm"
         >
           <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">{t.auth.backToHome}</span>
         </Link>
-        <div className="flex items-center gap-3 pointer-events-auto">
+        <div className="flex items-center gap-3">
           <LanguageSelector />
           <ThemeSwitch />
         </div>
       </div>
 
-      <div className="relative z-10 w-full flex items-center justify-center px-4">
-        <SignupForm initialRole={role as "patient" | "professional"} initialPlan={plan} />
+      {/* Form centered in remaining space */}
+      <div className="relative z-10 flex items-start justify-center px-4 py-4 min-h-[calc(100vh-3.5rem)]">
+        <div className="flex items-center justify-center w-full">
+          <SignupForm initialRole={role as "patient" | "professional"} initialPlan={plan} />
+        </div>
       </div>
     </main>
   )

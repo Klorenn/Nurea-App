@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useLanguage } from '@/contexts/language-context'
 import { trackBookingEvent } from '@/lib/analytics'
@@ -12,7 +13,7 @@ import {
   AboutSection,
   ExperienceSection,
   TherapeuticApproach,
-  ServicesList,
+  ServiceSelector,
   ConditionsTreated,
   FormatsSection,
   ClinicGallerySection,
@@ -24,7 +25,7 @@ import {
 } from '@/components/specialist-profile'
 import { mapApiProfessionalToSpecialist } from '@/lib/specialist-profile-mapper'
 import { mockSpecialist } from '@/lib/specialist-profile-mock'
-import type { Specialist } from '@/lib/specialist-profile-types'
+import type { Specialist, SpecialistService } from '@/lib/specialist-profile-types'
 import { Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -137,10 +138,47 @@ export function SpecialistProfileConversionPage({
                 <TherapeuticApproach approaches={specialist.approaches} isSpanish={isSpanish} />
               )}
 
-              <ServicesList
+              <ServiceSelector
                 services={specialist.services}
+                location={specialist.location}
+                locationAddress={specialist.location}
                 isSpanish={isSpanish}
-                onReserve={handleBook}
+                onSelectService={(service) => {
+                  if (process.env.NODE_ENV === "development") {
+                    console.debug("[NUREA Analytics] select_service", { 
+                      professionalId: specialist.id, 
+                      serviceId: service.id,
+                      serviceName: service.name,
+                      price: service.price,
+                      modality: service.modality,
+                      source: 'profile_conversion' 
+                    })
+                  }
+                }}
+                onBook={(service) => {
+                  if (process.env.NODE_ENV === "development") {
+                    console.debug("[NUREA Analytics] click_book_service", { 
+                      professionalId: specialist.id, 
+                      serviceId: service.id,
+                      serviceName: service.name,
+                      price: service.price,
+                      modality: service.modality,
+                      source: 'profile_conversion' 
+                    })
+                  }
+                  if (!authLoading && !user) {
+                    const callbackUrl = pathname ? `${pathname}` : '/explore'
+                    router.push('/login?callbackUrl=' + encodeURIComponent(callbackUrl))
+                    return
+                  }
+                  // Navegar con el servicio seleccionado
+                  const params = new URLSearchParams()
+                  params.set('professionalId', specialist.id)
+                  if (service.modality) {
+                    params.set('type', service.modality === 'both' ? 'online' : service.modality)
+                  }
+                  router.push(`/dashboard/calendar?${params.toString()}`)
+                }}
               />
 
               <FormatsSection
@@ -152,7 +190,6 @@ export function SpecialistProfileConversionPage({
                   // Por ahora, simplemente hacemos scroll a la cabecera (donde se ve la ciudad).
                   document.getElementById('experience-heading')?.scrollIntoView({ behavior: 'smooth' })
                 }}
-                onViewOnlineCalendar={handleBook}
               />
 
               {specialist.conditions.length > 0 && (
@@ -190,20 +227,6 @@ export function SpecialistProfileConversionPage({
               {specialist.faqs.length > 0 && (
                 <FAQSection faqs={specialist.faqs} isSpanish={isSpanish} />
               )}
-
-              {/* In-content CTA (conversion: multiple CTAs) */}
-              <div className="rounded-2xl border border-teal-200 bg-teal-50/80 p-6 dark:border-teal-800 dark:bg-teal-900/20">
-                <p className="mb-3 text-sm font-medium text-teal-800 dark:text-teal-200">
-                  {isSpanish ? '¿Listo para agendar?' : 'Ready to book?'}
-                </p>
-                <Button
-                  onClick={handleBook}
-                  className="w-full sm:w-auto rounded-xl bg-teal-600 hover:bg-teal-700"
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {isSpanish ? 'Agendar cita' : 'Book appointment'}
-                </Button>
-              </div>
             </div>
 
             {/* Right: sticky booking sidebar (desktop) */}
@@ -216,6 +239,7 @@ export function SpecialistProfileConversionPage({
                 hasOnline={specialist.consultationTypes.includes('online')}
                 hasInPerson={specialist.consultationTypes.includes('in-person')}
                 insuranceOptions={specialist.insuranceOptions}
+                paymentMethods={specialist.paymentMethods}
                 isSpanish={isSpanish}
                 onBook={handleBook}
                 noAvailability={noAvailability}

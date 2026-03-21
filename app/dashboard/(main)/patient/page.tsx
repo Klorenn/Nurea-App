@@ -668,13 +668,13 @@ export default function PatientDashboard() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="border-indigo-200 text-indigo-700">
-                        Dr. {ref.referring_professional.profiles.first_name} {ref.referring_professional.profiles.last_name}
+                        Dr. {ref.referring_professional?.profiles?.first_name} {ref.referring_professional?.profiles?.last_name}
                       </Badge>
                       <ChevronRight className="h-4 w-4 text-slate-400" />
                       <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-300">
-                        {ref.target_specialty 
-                          ? (isSpanish ? ref.target_specialty.name_es : ref.target_specialty.name_en) 
-                          : "Especialista"}{ref.target_professional ? ` - Dr. ${ref.target_professional.profiles.first_name} ${ref.target_professional.profiles.last_name}` : ""}
+                        {ref.target_specialty
+                          ? (isSpanish ? ref.target_specialty.name_es : ref.target_specialty.name_en)
+                          : "Especialista"}{ref.target_professional ? ` - Dr. ${ref.target_professional?.profiles?.first_name} ${ref.target_professional?.profiles?.last_name}` : ""}
                       </Badge>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
@@ -778,7 +778,7 @@ export default function PatientDashboard() {
                           <p className="text-xs text-slate-500 dark:text-slate-400">
                             {formatDate(ref.created_at)}
                             <Badge variant="outline" className="ml-2 text-[10px] h-4 border-indigo-200 text-indigo-700">
-                              Dr. {ref.referring_professional.profiles.first_name} {ref.referring_professional.profiles.last_name}
+                              Dr. {ref.referring_professional?.profiles?.first_name} {ref.referring_professional?.profiles?.last_name}
                             </Badge>
                           </p>
                         </div>

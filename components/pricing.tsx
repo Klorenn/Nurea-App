@@ -9,7 +9,7 @@ import { CheckCheck, GraduationCap, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
-import { motion, useInView } from "framer-motion"
+import { motion, useInView, type Variants } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 function ensureSpaces(str: string): string {
@@ -55,7 +55,7 @@ const TimelineContent = ({
   as?: React.ElementType
   animationNum: number
   timelineRef: React.RefObject<HTMLDivElement | null>
-  customVariants?: Record<string, unknown>
+  customVariants?: Variants
   children: React.ReactNode
   className?: string
   [key: string]: unknown

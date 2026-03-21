@@ -1,8 +1,18 @@
 import crypto from 'crypto'
 
-// Use a fallback robust hash to generate a fixed 32-byte key from existing env vars.
+// Derive a fixed 32-byte AES key from an env var secret.
+// ENCRYPTION_KEY must be set in production; falling back to SUPABASE_SERVICE_ROLE_KEY
+// is acceptable since it is already a secret stored server-side.
+// The 'default_secret_nurea_key_fallback' literal has been removed — allowing it
+// in production would make all encrypted tokens trivially decryptable.
 const getEncryptionKey = (): Buffer => {
-  const secret = process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'default_secret_nurea_key_fallback';
+  const secret = process.env.ENCRYPTION_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) {
+    throw new Error(
+      '[encryption] ENCRYPTION_KEY is not set. ' +
+      'Add ENCRYPTION_KEY to .env.local (any long random string, e.g. openssl rand -hex 32).'
+    );
+  }
   return crypto.createHash('sha256').update(secret).digest();
 }
 

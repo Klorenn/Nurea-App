@@ -44,7 +44,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 import { VerificationPendingBanner, VerifiedBadge } from "@/components/verified-badge"
 import { createClient } from "@/lib/supabase/client"
-import { format, startOfMonth, subDays, startOfWeek, endOfWeek } from "date-fns"
+import { format, startOfMonth, subDays, startOfWeek, endOfWeek, subWeeks, parse } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 import { calculateWeeklyGrowth, getPerformanceTip } from "@/lib/dashboard-utils"
 
@@ -95,9 +95,9 @@ export default function ProfessionalDashboard() {
       const today = new Date().toISOString().split("T")[0]
       const firstDayOfMonth = startOfMonth(new Date()).toISOString()
       const now = new Date()
-      const currentWeekStart = startOfWeek(now).toISOString()
-      const lastWeekStart = startOfWeek(subDays(now, 7)).toISOString()
-      const lastWeekEnd = endOfWeek(subDays(now, 7)).toISOString()
+      const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString()
+      const lastWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }).toISOString()
+      const lastWeekEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }).toISOString()
 
       // 1. Verification status
       const { data: profData } = await supabase
@@ -400,7 +400,9 @@ export default function ProfessionalDashboard() {
                           <div className="flex items-center gap-3">
                              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase tracking-tighter text-muted-foreground/80">
                                <Clock className="h-3 w-3" />
-                               {apt.appointment_time}
+                               {apt.appointment_time
+                                 ? format(parse(apt.appointment_time, 'HH:mm:ss', new Date()), 'HH:mm')
+                                 : '—'}
                              </div>
                              <Badge variant="outline" className={cn(
                                "text-[9px] font-black uppercase tracking-[0.1em] border-none shadow-sm",
@@ -414,11 +416,28 @@ export default function ProfessionalDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <Button size="icon" variant="ghost" className="rounded-2xl h-12 w-12 hover:bg-slate-100 dark:hover:bg-slate-800">
-                          <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="rounded-2xl h-12 w-12 hover:bg-slate-100 dark:hover:bg-slate-800">
+                              <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-2xl">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/dashboard/professional/appointments?id=${apt.id}`}>
+                                {isSpanish ? "Ver detalle" : "View detail"}
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => { window.location.href = `/dashboard/professional/appointments?cancel=${apt.id}` }}
+                            >
+                              {isSpanish ? "Cancelar cita" : "Cancel appointment"}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button className="bg-teal-600 hover:bg-teal-500 text-white rounded-[1.2rem] h-12 px-8 font-black shadow-lg shadow-teal-500/10 transition-all active:scale-95 flex items-center gap-2" asChild>
-                          <Link href={`/consulta/${apt.id}`}>
+                          <Link href={`/dashboard/professional/consultation/${apt.id}`}>
                             <Video className="h-4 w-4" />
                             {isSpanish ? "Iniciar" : "Connect"}
                           </Link>
@@ -523,15 +542,18 @@ export default function ProfessionalDashboard() {
               </p>
 
               <div className="pt-2">
-                <Button 
-                  variant="link" 
+                <Button
+                  variant="link"
                   className={cn(
                     "p-0 h-auto font-black text-xs uppercase tracking-wider group-hover:gap-3 transition-all",
                     performanceInsight.type === 'positive' ? "text-teal-600" : "text-muted-foreground"
                   )}
+                  asChild
                 >
-                  {isSpanish ? "Optimizar mi agenda" : "Optimize my schedule"}
-                  <ArrowRight className="h-3 w-3 ml-2" />
+                  <Link href="/dashboard/professional/availability">
+                    {isSpanish ? "Optimizar mi agenda" : "Optimize my schedule"}
+                    <ArrowRight className="h-3 w-3 ml-2" />
+                  </Link>
                 </Button>
               </div>
             </div>
