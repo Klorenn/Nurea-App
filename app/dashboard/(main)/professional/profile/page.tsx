@@ -1553,7 +1553,7 @@ export default function ProfessionalProfilePage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {galleryForm.watch("clinic_images").map((img, idx) => (
                       <div key={idx} className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 shadow-sm group hover:scale-[1.05] transition-all duration-500">
                         <img src={img} className="w-full h-full object-cover" alt="Vista del consultorio" />
@@ -1679,7 +1679,7 @@ export default function ProfessionalProfilePage() {
 
                   {/* Consultation type cards */}
                   {pricingFields.length > 0 && (
-                    <div className="grid gap-4">
+                    <div className="grid gap-3">
                       {pricingFields.map((field, index) => {
                         const modality = pricingForm.watch(`consultationTypes.${index}.modality`)
                         const price = pricingForm.watch(`consultationTypes.${index}.price`)
@@ -1719,7 +1719,7 @@ export default function ProfessionalProfilePage() {
                             </div>
 
                             {/* Card body */}
-                            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {/* Name */}
                               <FormField
                                 control={pricingForm.control}
@@ -1876,7 +1876,7 @@ export default function ProfessionalProfilePage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
-                  <div className="grid gap-6 max-w-2xl">
+                  <div className="grid gap-3 max-w-2xl">
                     <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 flex gap-4 items-center">
                       <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-950 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
                         <User className="h-6 w-6 text-slate-400 dark:text-slate-500" />
@@ -1887,7 +1887,7 @@ export default function ProfessionalProfilePage() {
                       </div>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 gap-6">
+                    <div className="grid sm:grid-cols-2 gap-3">
                       <FormField
                         control={securityForm.control}
                         name="new_password"
@@ -1977,7 +1977,7 @@ export default function ProfessionalProfilePage() {
               </div>
 
               <div className="space-y-4 pt-4">
-                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <History className="h-5 w-5 text-teal-600 dark:text-teal-400" />
                   Estado de tus documentos
                 </h3>
@@ -1997,9 +1997,9 @@ export default function ProfessionalProfilePage() {
                       <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Tu perfil será más confiable al verificar tus estudios.</p>
                     </div>
                   ) : (
-                    <div className="grid gap-4">
+                    <div className="grid gap-3">
                       {credentials.map((cred) => (
-                        <div key={cred.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all gap-4 group">
+                        <div key={cred.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all gap-4 group">
                           <div className="flex items-center gap-4">
                             <div className={cn(
                               "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-all",
