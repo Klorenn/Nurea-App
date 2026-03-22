@@ -64,6 +64,7 @@ import {
   Phone,
   Mail,
   ExternalLink,
+  Camera,
 } from "lucide-react"
 import { format, parseISO, formatDistanceToNow } from "date-fns"
 import { es, enUS } from "date-fns/locale"
@@ -73,6 +74,7 @@ import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
 import { PrescriptionDrawer } from "@/components/consultation/prescription-drawer"
 import { VideoCallButton } from "@/components/consultation/video-call-button"
 import { ReferralModal } from "@/components/consultation/referral-modal"
+import { ConsultationPhotos } from "@/components/consultation/consultation-photos"
 import { Link as LinkIcon } from "lucide-react"
 
 interface Patient {
@@ -165,6 +167,8 @@ export default function ConsultationPage() {
   const [prescriptionItems, setPrescriptionItems] = useState<PrescriptionItem[]>([])
   const [prescriptionOpen, setPrescriptionOpen] = useState(false)
   const [referralOpen, setReferralOpen] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [initialPhotos, setInitialPhotos] = useState<any[]>([])
   
   // Form state
   const [recordId, setRecordId] = useState<string | null>(null)
@@ -312,6 +316,27 @@ export default function ConsultationPage() {
           setLastSaved(new Date(existingRecord.updated_at))
         }
 
+        // Load consultation photos
+        setCurrentUserId(user.id)
+        const { data: photosData } = await supabase
+          .from("consultation_photos")
+          .select("id, storage_path, description, created_at")
+          .eq("appointment_id", appointmentId)
+          .order("created_at", { ascending: true })
+
+        if (photosData?.length) {
+          // Generate signed URLs for all photos
+          const photosWithUrls = await Promise.all(
+            photosData.map(async (p) => {
+              const { data: signed } = await supabase.storage
+                .from("consultation-photos")
+                .createSignedUrl(p.storage_path, 3600)
+              return { ...p, signedUrl: signed?.signedUrl }
+            })
+          )
+          setInitialPhotos(photosWithUrls)
+        }
+
       } catch (error) {
         console.error("Error loading consultation data:", error)
         toast.error(isSpanish ? "Error al cargar datos" : "Error loading data")
@@ -330,25 +355,6 @@ export default function ConsultationPage() {
       setHasUnsavedChanges(true)
     }
   }, [anamnesis, examination, diagnosis, diagnosisCode, treatment, privateNotes, vitalSigns])
-
-  // Auto-save every 30 seconds
-  useEffect(() => {
-    if (hasUnsavedChanges && !loading) {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current)
-      }
-      
-      autoSaveTimerRef.current = setTimeout(() => {
-        handleSave(true)
-      }, 30000) // 30 seconds
-    }
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current)
-      }
-    }
-  }, [hasUnsavedChanges, loading, handleSave])
 
   const handleSave = useCallback(async (isAutoSave = false): Promise<string | null> => {
     if (!appointment) return null
@@ -418,6 +424,25 @@ export default function ConsultationPage() {
       setIsSaving(false)
     }
   }, [appointment, appointmentId, anamnesis, examination, diagnosis, diagnosisCode, treatment, privateNotes, vitalSigns, recordId, supabase, isSpanish])
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    if (hasUnsavedChanges && !loading) {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+
+      autoSaveTimerRef.current = setTimeout(() => {
+        handleSave(true)
+      }, 30000) // 30 seconds
+    }
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [hasUnsavedChanges, loading, handleSave])
 
   const handleSign = async () => {
     let currentRecordId = recordId
@@ -1045,13 +1070,43 @@ export default function ConsultationPage() {
                 <Textarea
                   value={privateNotes}
                   onChange={(e) => setPrivateNotes(e.target.value)}
-                  placeholder={isSpanish 
-                    ? "Observaciones clínicas privadas, impresiones, notas de seguimiento..." 
+                  placeholder={isSpanish
+                    ? "Observaciones clínicas privadas, impresiones, notas de seguimiento..."
                     : "Private clinical observations, impressions, follow-up notes..."}
                   className="min-h-[100px] resize-none text-sm leading-relaxed bg-white/50 dark:bg-slate-900/50"
                 />
               </CardContent>
             </Card>
+
+            {/* Consultation Photos */}
+            {currentUserId && (
+              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                      <Camera className="h-5 w-5 text-indigo-500" />
+                      {isSpanish ? "Fotos de la Consulta" : "Consultation Photos"}
+                    </CardTitle>
+                    <Badge variant="outline" className="text-[10px] border-indigo-300/40 text-indigo-600">
+                      {isSpanish ? "Privadas" : "Private"}
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs">
+                    {isSpanish
+                      ? "Imágenes clínicas adjuntas a esta consulta. Puedes agregar una descripción a cada foto."
+                      : "Clinical images attached to this consultation. Add a description to each photo."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ConsultationPhotos
+                    appointmentId={appointmentId}
+                    professionalId={currentUserId}
+                    initialPhotos={initialPhotos}
+                    isSpanish={isSpanish}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
