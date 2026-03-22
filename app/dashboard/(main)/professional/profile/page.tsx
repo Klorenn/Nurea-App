@@ -134,25 +134,53 @@ const pricingSchema = z.object({
 
 // ─── Inline accordion content helpers ─────────────────────────────────────────
 
-function PersonalDataFields({ generalForm, profileName, onSaveGeneral, saving }: any) {
-  // first_name and last_name live in profiles table, NOT in generalForm — shown read-only
+function PersonalDataFields({ generalForm, profileName, onSaveGeneral, onSaveName, saving }: any) {
   const [editingField, setEditingField] = useState<string | null>(null)
   const [tempValue, setTempValue] = useState("")
+  const [tempLast, setTempLast] = useState("")
 
   function startEdit(field: string, current: string) {
     setEditingField(field)
     setTempValue(current)
   }
-  function cancelEdit() { setEditingField(null); setTempValue("") }
+  function cancelEdit() { setEditingField(null); setTempValue(""); setTempLast("") }
   async function saveField(field: string) {
     generalForm.setValue(field, tempValue, { shouldDirty: true })
     await generalForm.handleSubmit(onSaveGeneral)()
     setEditingField(null)
   }
+  async function saveName() {
+    await onSaveName(tempValue, tempLast)
+    setEditingField(null)
+  }
 
   return (
     <div>
-      <FieldRow label="Nombre" value={profileName?.first_name ?? ""} />
+      <FieldRow
+        label="Nombre"
+        value={profileName?.first_name ?? ""}
+        editing={editingField === "first_name"}
+        onEdit={() => { setTempValue(profileName?.first_name ?? ""); setTempLast(profileName?.last_name ?? ""); setEditingField("first_name") }}
+        editContent={
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              className="flex-1 min-w-0 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2.5 text-sm outline-none"
+              placeholder="Nombre"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              autoFocus
+            />
+            <input
+              className="flex-1 min-w-0 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2.5 text-sm outline-none"
+              placeholder="Apellidos"
+              value={tempLast}
+              onChange={(e) => setTempLast(e.target.value)}
+            />
+            <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50 shrink-0">Cancelar</button>
+            <button type="button" onClick={saveName} disabled={saving} className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50 shrink-0">Guardar</button>
+          </div>
+        }
+      />
       <FieldRow label="Apellidos" value={profileName?.last_name ?? ""} />
       <FieldRow
         label="Género"
@@ -716,6 +744,22 @@ export default function ProfessionalProfilePage() {
     }
   }
 
+  const onSaveName = async (first_name: string, last_name: string) => {
+    if (!user) return
+    const trimmedFirst = first_name.trim()
+    const trimmedLast = last_name.trim()
+    if (!trimmedFirst) { toast.error("El nombre no puede estar vacío"); return }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ first_name: trimmedFirst, last_name: trimmedLast })
+      .eq("id", user.id)
+    if (error) { toast.error("Error al guardar el nombre"); return }
+    setProfileName({ first_name: trimmedFirst, last_name: trimmedLast })
+    setPageProfile((p: any) => p ? { ...p, first_name: trimmedFirst, last_name: trimmedLast } : p)
+    mutateProfile()
+    toast.success("Nombre actualizado")
+  }
+
   const handleProfilePhotoUpload = async (file: File) => {
     if (!user) return { success: false }
     try {
@@ -1197,6 +1241,7 @@ export default function ProfessionalProfilePage() {
                   generalForm={generalForm}
                   profileName={profileName}
                   onSaveGeneral={onSaveGeneral}
+                  onSaveName={onSaveName}
                   saving={saving}
                 />
               </AccordionSection>
@@ -1942,7 +1987,7 @@ export default function ProfessionalProfilePage() {
                           <FormItem>
                             <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Nueva Contraseña</FormLabel>
                             <FormControl>
-                              <Input type="password" {...field} className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 transition-all text-sm font-bold dark:text-slate-200" placeholder="Mínimo 8 caracteres" />
+                              <Input type="password" {...field} autoComplete="new-password" className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 transition-all text-sm font-bold dark:text-slate-200" placeholder="Mínimo 8 caracteres" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1956,7 +2001,7 @@ export default function ProfessionalProfilePage() {
                           <FormItem>
                             <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Confirmar Contraseña</FormLabel>
                             <FormControl>
-                              <Input type="password" {...field} className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 transition-all text-sm font-bold dark:text-slate-200" placeholder="Repite tu contraseña" />
+                              <Input type="password" {...field} autoComplete="new-password" className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 transition-all text-sm font-bold dark:text-slate-200" placeholder="Repite tu contraseña" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

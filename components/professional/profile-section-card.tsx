@@ -29,21 +29,7 @@ export function ProfileSectionCard({
   className,
 }: ProfileSectionCardProps) {
   return (
-    <div
-      className={cn(
-        "grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-8 items-start",
-        className
-      )}
-    >
-      <div className="lg:sticky lg:top-24 space-y-1">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-          {title}
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-          {description}
-        </p>
-      </div>
-
+    <div className={cn("w-full", className)}>
       <Card className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 shadow-sm overflow-hidden">
         <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between space-y-0">
           <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -81,3 +67,4 @@ export function ProfileSectionCard({
     </div>
   )
 }
+
