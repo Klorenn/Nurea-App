@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Shield } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { AvatarUploader } from "@/components/ui/avatar-uploader"
 
 interface HeroCardProps {
@@ -19,6 +18,8 @@ interface HeroCardProps {
   professional: {
     specialty?: string | null
     specialty_id?: string | null
+    is_verified?: boolean
+    updated_at?: string | null
   }
   specialties: { id: string; name_es: string }[]
   avatarUrl: string | null
@@ -36,14 +37,8 @@ interface Stats {
   minPrice: number | null
 }
 
-function LiveDot() {
-  return (
-    <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1.5 shrink-0" />
-  )
-}
-
 function StatSkeleton() {
-  return <div className="h-7 w-16 bg-slate-100 rounded animate-pulse" />
+  return <div className="h-6 w-14 bg-slate-100 rounded animate-pulse mt-1" />
 }
 
 export function HeroCard({
@@ -70,8 +65,7 @@ export function HeroCard({
           { count: totalPatients },
           { count: monthPatients },
           { data: reviews },
-          { data: bookingSettings },
-          { data: consultationTypes },
+          { data: professional },
         ] = await Promise.all([
           supabase
             .from("appointments")
@@ -89,14 +83,10 @@ export function HeroCard({
             .select("rating, replied_at")
             .eq("doctor_id", profile.id),
           supabase
-            .from("booking_settings")
-            .select("modality")
-            .eq("professional_id", profile.id)
+            .from("professionals")
+            .select("consultation_type, consultation_types")
+            .eq("id", profile.id)
             .maybeSingle(),
-          supabase
-            .from("consultation_types")
-            .select("price")
-            .eq("professional_id", profile.id),
         ])
 
         const avgRating =
@@ -106,9 +96,11 @@ export function HeroCard({
 
         const unanswered = (reviews ?? []).filter((r) => r.replied_at === null).length
 
-        const prices = (consultationTypes ?? [])
-          .map((ct) => ct.price)
-          .filter((p) => typeof p === "number")
+        // consultation_types is a JSONB array on the professionals table
+        const ctArray = Array.isArray(professional?.consultation_types)
+          ? (professional.consultation_types as { price?: number }[])
+          : []
+        const prices = ctArray.map((ct) => ct.price).filter((p): p is number => typeof p === "number")
         const minPrice = prices.length > 0 ? Math.min(...prices) : null
 
         const modalityMap: Record<string, string> = {
@@ -122,8 +114,8 @@ export function HeroCard({
           patientsThisMonth: monthPatients ?? null,
           rating: avgRating !== null ? Math.round(avgRating * 10) / 10 : null,
           unansweredCount: unanswered,
-          modality: bookingSettings?.modality
-            ? (modalityMap[bookingSettings.modality] ?? bookingSettings.modality)
+          modality: professional?.consultation_type
+            ? (modalityMap[professional.consultation_type] ?? professional.consultation_type)
             : null,
           minPrice,
         })
@@ -149,92 +141,162 @@ export function HeroCard({
     `${profile.first_name?.[0] ?? ""}${profile.last_name?.[0] ?? ""}`.toUpperCase() || "?"
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-      {/* Top section: avatar + name + button */}
-      <div className="flex items-start gap-4 p-5">
-        {/* Avatar with pencil overlay */}
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      {/* Top section */}
+      <div className="flex items-center gap-5 px-[22px] py-5">
+        {/* Avatar */}
         <div className="relative shrink-0">
           <AvatarUploader onUpload={onUpload}>
             <button
               type="button"
-              className="relative w-[72px] h-[72px] rounded-full overflow-hidden border-2 border-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="relative w-[72px] h-[72px] rounded-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-400"
+              style={{ border: "3px solid white", boxShadow: "0 0 0 2px #e2e8f0" }}
               title="Cambiar foto"
             >
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={avatarUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
               ) : (
-                <span className="w-full h-full flex items-center justify-center bg-teal-50 text-teal-700 text-xl font-bold">
+                <span
+                  className="w-full h-full flex items-center justify-center text-white font-extrabold"
+                  style={{
+                    background: "linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%)",
+                    fontSize: 24,
+                  }}
+                >
                   {initials}
                 </span>
               )}
-              {/* Pencil overlay */}
-              <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm">
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#64748b"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-              </span>
+            </button>
+          </AvatarUploader>
+          {/* Pencil overlay */}
+          <AvatarUploader onUpload={onUpload}>
+            <button
+              type="button"
+              className="absolute flex items-center justify-center bg-white rounded-full cursor-pointer"
+              style={{
+                bottom: 1,
+                right: 1,
+                width: 22,
+                height: 22,
+                border: "1.5px solid #e2e8f0",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+              }}
+              title="Cambiar foto"
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#64748b"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+              </svg>
             </button>
           </AvatarUploader>
         </div>
 
         {/* Name + chip + verified */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="font-bold text-slate-900" style={{ fontSize: 18 }}>
-              {profile.first_name} {profile.last_name}
-            </h2>
-            {profile.is_verified && (
-              <span className="flex items-center gap-1 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-2 py-0.5">
-                <Shield className="h-3 w-3" />
+          <h2
+            className="font-extrabold text-slate-900"
+            style={{ fontSize: 18, letterSpacing: "-0.02em" }}
+          >
+            {profile.first_name} {profile.last_name}
+          </h2>
+          <div className="flex items-center flex-wrap gap-2 mt-1.5">
+            {chip && (
+              <span
+                className="inline-block font-bold text-teal-700 rounded-full"
+                style={{
+                  background: "#f0fdfa",
+                  border: "1px solid #99f6e4",
+                  color: "#0d9488",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: 99,
+                }}
+              >
+                {chip}
+              </span>
+            )}
+            {professional.is_verified && (
+              <span className="inline-flex items-center gap-1 text-teal-700" style={{ fontSize: 11, fontWeight: 700 }}>
+                <Shield style={{ width: 12, height: 12 }} />
                 Verificado
               </span>
             )}
           </div>
-          {chip && (
-            <span className="mt-1 inline-block text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-3 py-0.5">
-              {chip}
-            </span>
-          )}
         </div>
 
         {/* Cambiar foto button */}
         <AvatarUploader onUpload={onUpload}>
           <button
             type="button"
-            className="shrink-0 text-xs font-semibold text-teal-600 border border-teal-200 rounded-lg px-3 py-1.5 hover:bg-teal-50 transition-colors hidden sm:block"
+            className="shrink-0 hidden sm:flex items-center gap-1.5 font-semibold text-slate-600 bg-white rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#475569",
+              border: "1.5px solid #e2e8f0",
+              padding: "7px 14px",
+              borderRadius: 8,
+            }}
           >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+            </svg>
             Cambiar foto
           </button>
         </AvatarUploader>
       </div>
 
       {/* Stats bar */}
-      <div className="border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4">
+      <div
+        className="grid grid-cols-2 sm:grid-cols-4"
+        style={{ borderTop: "1px solid #f1f5f9" }}
+      >
         {/* Pacientes */}
-        <div className="flex flex-col gap-1 px-5 py-4 border-r border-slate-100">
-          <div className="flex items-center">
-            <LiveDot />
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Pacientes</span>
-          </div>
+        <div
+          className="relative"
+          style={{ padding: "14px 20px", borderRight: "1px solid #f1f5f9" }}
+        >
+          {/* Live dot — absolute top-right */}
+          <span
+            className="absolute rounded-full animate-pulse"
+            style={{
+              top: 10,
+              right: 12,
+              width: 7,
+              height: 7,
+              background: "#22c55e",
+            }}
+          />
           {loadingStats ? (
             <StatSkeleton />
           ) : (
-            <span className="font-bold text-slate-900" style={{ fontSize: 20 }}>
+            <span
+              className="block font-extrabold text-slate-900"
+              style={{ fontSize: 20, letterSpacing: "-0.03em", lineHeight: 1 }}
+            >
               {stats?.patients ?? "—"}
             </span>
           )}
-          <span className="text-xs text-slate-400">
+          <span
+            className="block"
+            style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, marginTop: 4 }}
+          >
+            Pacientes
+          </span>
+          <span
+            className="block"
+            style={{ fontSize: 10, fontWeight: 700, color: "#22c55e", marginTop: 3 }}
+          >
             {stats?.patientsThisMonth != null
               ? `+${stats.patientsThisMonth} este mes`
               : "este mes"}
@@ -245,20 +307,39 @@ export function HeroCard({
         <button
           type="button"
           onClick={onRatingClick}
-          className="flex flex-col gap-1 px-5 py-4 border-r border-slate-100 text-left hover:bg-slate-50 transition-colors"
+          className="relative text-left transition-colors hover:bg-slate-50"
+          style={{ padding: "14px 20px", borderRight: "1px solid #f1f5f9" }}
         >
-          <div className="flex items-center">
-            <LiveDot />
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Valoración ★</span>
-          </div>
+          <span
+            className="absolute rounded-full animate-pulse"
+            style={{
+              top: 10,
+              right: 12,
+              width: 7,
+              height: 7,
+              background: "#22c55e",
+            }}
+          />
           {loadingStats ? (
             <StatSkeleton />
           ) : (
-            <span className="font-bold text-slate-900" style={{ fontSize: 20 }}>
+            <span
+              className="block font-extrabold text-slate-900"
+              style={{ fontSize: 20, letterSpacing: "-0.03em", lineHeight: 1 }}
+            >
               {stats?.rating != null ? stats.rating.toFixed(1) : "—"}
             </span>
           )}
-          <span className="text-xs text-teal-600 font-medium">
+          <span
+            className="block"
+            style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, marginTop: 4 }}
+          >
+            Valoración ★
+          </span>
+          <span
+            className="block"
+            style={{ fontSize: 10, fontWeight: 700, color: "#0d9488", marginTop: 3 }}
+          >
             {stats && stats.unansweredCount > 0 ? "Ver comentarios →" : "Ver valoraciones →"}
           </span>
         </button>
@@ -267,42 +348,84 @@ export function HeroCard({
         <button
           type="button"
           onClick={() => onTabSwitch("clinical")}
-          className="flex flex-col gap-1 px-5 py-4 border-r border-slate-100 text-left hover:bg-slate-50 transition-colors"
+          className="relative text-left transition-colors hover:bg-slate-50"
+          style={{ padding: "14px 20px", borderRight: "1px solid #f1f5f9" }}
         >
-          <div className="flex items-center">
-            <LiveDot />
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Modalidad</span>
-          </div>
+          <span
+            className="absolute rounded-full animate-pulse"
+            style={{
+              top: 10,
+              right: 12,
+              width: 7,
+              height: 7,
+              background: "#22c55e",
+            }}
+          />
           {loadingStats ? (
             <StatSkeleton />
           ) : (
-            <span className="font-bold text-slate-900" style={{ fontSize: 20 }}>
+            <span
+              className="block font-extrabold text-slate-900"
+              style={{ fontSize: 20, letterSpacing: "-0.03em", lineHeight: 1 }}
+            >
               {stats?.modality ?? "—"}
             </span>
           )}
-          <span className="text-xs text-slate-400">Cambiar en Clínica →</span>
+          <span
+            className="block"
+            style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, marginTop: 4 }}
+          >
+            Modalidad
+          </span>
+          <span
+            className="block"
+            style={{ fontSize: 10, fontWeight: 700, color: "#0d9488", marginTop: 3 }}
+          >
+            Cambiar en Clínica →
+          </span>
         </button>
 
         {/* Por sesión */}
         <button
           type="button"
           onClick={() => onTabSwitch("pricing")}
-          className="flex flex-col gap-1 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+          className="relative text-left transition-colors hover:bg-slate-50"
+          style={{ padding: "14px 20px" }}
         >
-          <div className="flex items-center">
-            <LiveDot />
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Por sesión</span>
-          </div>
+          <span
+            className="absolute rounded-full animate-pulse"
+            style={{
+              top: 10,
+              right: 12,
+              width: 7,
+              height: 7,
+              background: "#22c55e",
+            }}
+          />
           {loadingStats ? (
             <StatSkeleton />
           ) : (
-            <span className="font-bold text-slate-900" style={{ fontSize: 20 }}>
+            <span
+              className="block font-extrabold text-slate-900"
+              style={{ fontSize: 20, letterSpacing: "-0.03em", lineHeight: 1 }}
+            >
               {stats?.minPrice != null
                 ? `$${stats.minPrice.toLocaleString("es-CL")}`
                 : "—"}
             </span>
           )}
-          <span className="text-xs text-slate-400">Cambiar en Precios →</span>
+          <span
+            className="block"
+            style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, marginTop: 4 }}
+          >
+            Por sesión
+          </span>
+          <span
+            className="block"
+            style={{ fontSize: 10, fontWeight: 700, color: "#0d9488", marginTop: 3 }}
+          >
+            Cambiar en Precios →
+          </span>
         </button>
       </div>
     </div>

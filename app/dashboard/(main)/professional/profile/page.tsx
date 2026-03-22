@@ -151,7 +151,7 @@ function PersonalDataFields({ generalForm, profileName, onSaveGeneral, saving }:
   }
 
   return (
-    <div className="space-y-1">
+    <div>
       <FieldRow label="Nombre" value={profileName?.first_name ?? ""} />
       <FieldRow label="Apellidos" value={profileName?.last_name ?? ""} />
       <FieldRow
@@ -232,7 +232,7 @@ function ProfessionalTrajectoryFields({ generalForm, specialties, PROFESSIONAL_T
   const specialtyName = specialties.find((s: any) => s.id === generalForm.watch("specialty_id"))?.name_es ?? ""
 
   return (
-    <div className="space-y-1">
+    <div>
       <FieldRow
         label="Título abreviado"
         value={
@@ -529,7 +529,7 @@ export default function ProfessionalProfilePage() {
       if (!user) return
       try {
         const [{ data: profileData }, { data }] = await Promise.all([
-          supabase.from("profiles").select("id, first_name, last_name, gender, professional_title, show_phone, is_verified, updated_at").eq("id", user.id).single(),
+          supabase.from("profiles").select("first_name, last_name, gender, professional_title, show_phone").eq("id", user.id).single(),
           supabase.from("professionals").select("*").eq("id", user.id).single(),
         ])
 
@@ -1091,8 +1091,8 @@ export default function ProfessionalProfilePage() {
           </h1>
           <p className="text-sm text-slate-400 mt-0.5">
             Tu perfil profesional
-            {pageProfile?.updated_at && (
-              <> · Última edición {formatDistanceToNow(new Date(pageProfile.updated_at), { addSuffix: true, locale: es })}</>
+            {pageProfessional?.updated_at && (
+              <> · Última edición {formatDistanceToNow(new Date(pageProfessional.updated_at), { addSuffix: true, locale: es })}</>
             )}
           </p>
         </div>
@@ -1122,29 +1122,35 @@ export default function ProfessionalProfilePage() {
       {/* ¿Qué tan atractivo es tu perfil? */}
       <ProfileCompleteness
         score={completeness}
-        missingHint="Agrega la información que falta"
         missingItems={[
-          { label: "Premios", points: 1, onAdd: () => {} },
+          { label: "Premios", points: 1 },
         ]}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-slate-100/40 dark:bg-slate-800/40 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/50 mb-6 w-full sm:w-auto h-auto flex-wrap gap-1">
+        <TabsList
+          className="h-auto p-0 rounded-none bg-white overflow-x-auto flex"
+          style={{ borderBottom: "1px solid #e2e8f0" }}
+        >
           {[
-            { value: "general", label: "General", icon: User },
-            { value: "clinical", label: "Clínica", icon: Stethoscope },
-            { value: "studies", label: "Estudios", icon: GraduationCap },
-            { value: "gallery", label: "Galería", icon: Camera },
-            { value: "pricing", label: "Precios", icon: DollarSign },
-            { value: "security", label: "Seguridad", icon: Lock },
-            { value: "verification", label: "Verificación", icon: ShieldCheck },
+            { value: "general", label: "General" },
+            { value: "clinical", label: "Clínica" },
+            { value: "studies", label: "Estudios" },
+            { value: "gallery", label: "Galería" },
+            { value: "pricing", label: "Precios" },
+            { value: "security", label: "Seguridad" },
+            { value: "verification", label: "Verificación" },
           ].map((tab) => (
-            <TabsTrigger 
+            <TabsTrigger
               key={tab.value}
-              value={tab.value} 
-              className="rounded-lg px-3 py-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-teal-600 dark:data-[state=active]:text-teal-400 transition-all font-bold text-slate-600 dark:text-slate-400 text-sm"
+              value={tab.value}
+              className="rounded-none px-4 py-2.5 whitespace-nowrap bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none text-slate-500 data-[state=active]:text-teal-600 font-semibold data-[state=active]:font-bold transition-colors"
+              style={{
+                fontSize: 12.5,
+                borderBottom: activeTab === tab.value ? "2.5px solid #0d9488" : "2.5px solid transparent",
+                marginBottom: -1,
+              }}
             >
-              <tab.icon className="h-4 w-4 mr-2" />
               {tab.label}
             </TabsTrigger>
           ))}

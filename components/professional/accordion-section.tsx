@@ -17,10 +17,10 @@ interface AccordionSectionProps {
   editButton?: React.ReactNode
 }
 
-const iconBg: Record<AccordionSectionProps["iconVariant"], string> = {
-  teal:   "bg-teal-50 text-teal-600",
-  blue:   "bg-blue-50 text-blue-600",
-  violet: "bg-violet-50 text-violet-600",
+const iconStyles: Record<AccordionSectionProps["iconVariant"], React.CSSProperties> = {
+  teal:   { background: "#f0fdfa", color: "#0d9488" },
+  blue:   { background: "#eff6ff", color: "#3b82f6" },
+  violet: { background: "#f5f3ff", color: "#7c3aed" },
 }
 
 export function AccordionSection({
@@ -37,58 +37,73 @@ export function AccordionSection({
 
   return (
     <div
-      className={cn(
-        "rounded-xl transition-all duration-200",
-        open
-          ? "border-[1.5px] border-teal-600 shadow-[0_0_0_3px_rgba(13,148,136,0.08)] bg-white"
-          : "border border-slate-200 bg-white hover:bg-slate-50/80"
-      )}
+      className="bg-white transition-all duration-200"
+      style={{
+        borderRadius: 12,
+        overflow: "hidden",
+        border: open ? "1.5px solid #0d9488" : "1px solid #e2e8f0",
+        boxShadow: open ? "0 0 0 3px rgba(13,148,136,0.08)" : undefined,
+      }}
     >
-      {/* Header */}
+      {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left"
+        className="w-full flex items-center justify-between text-left transition-colors hover:bg-slate-50"
         style={{
+          padding: "15px 22px",
           background: open ? "#f0fdfa" : undefined,
-          borderRadius: open ? "10px 10px 0 0" : "10px",
           borderBottom: open ? "1px solid #e0fdf4" : undefined,
         }}
       >
-        {/* Icon */}
-        <span className={cn("p-2 rounded-lg shrink-0", iconBg[iconVariant])}>
-          {icon}
-        </span>
-
-        {/* Title + subtitle */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-slate-800">{title}</p>
-          <p className="text-xs text-slate-400">{subtitle}</p>
+        {/* Left: icon + titles */}
+        <div className="flex items-center gap-3">
+          <span
+            className="flex items-center justify-center shrink-0"
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 9,
+              ...iconStyles[iconVariant],
+            }}
+          >
+            {icon}
+          </span>
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#1e293b" }}>{title}</p>
+            <p style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 2 }}>{subtitle}</p>
+          </div>
         </div>
 
-        {/* Preview + extra button + chevron */}
-        <div className="flex items-center gap-2 shrink-0">
-          {!open && (
-            <span className="text-xs text-slate-500 truncate max-w-[140px] hidden sm:block">
+        {/* Right: preview + edit button + chevron */}
+        <div className="flex items-center gap-2.5 shrink-0 ml-4">
+          {!open && preview && (
+            <span
+              className="hidden sm:block text-right truncate"
+              style={{ fontSize: 12, color: "#94a3b8", maxWidth: 200 }}
+            >
               {preview}
             </span>
           )}
           {open && editButton}
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 transition-transform duration-200",
-              open ? "rotate-180 text-teal-600" : "text-slate-400"
-            )}
-          />
+          <span
+            className="flex items-center justify-center"
+            style={{
+              width: 20,
+              height: 20,
+              transition: "transform 0.2s",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+          >
+            <ChevronDown
+              style={{ width: 16, height: 16, stroke: open ? "#0d9488" : "#94a3b8" }}
+            />
+          </span>
         </div>
       </button>
 
       {/* Content */}
-      {open && (
-        <div className="px-4 pb-4 pt-3 space-y-1">
-          {children}
-        </div>
-      )}
+      {open && <div>{children}</div>}
     </div>
   )
 }
@@ -116,14 +131,18 @@ export function FieldRow({
 
   return (
     <div
-      className={cn(
-        "flex items-center gap-3 py-2.5 px-3 rounded-lg",
-        editing ? "border-l-[3px] border-teal-600 bg-[#fafffe]" : ""
-      )}
+      className="flex items-center"
+      style={{
+        padding: editing ? "13px 22px 13px 19px" : "13px 22px",
+        borderBottom: "1px solid #f8fafc",
+        gap: 16,
+        background: editing ? "#fafffe" : undefined,
+        borderLeft: editing ? "3px solid #0d9488" : undefined,
+      }}
     >
       <span
-        className="shrink-0 text-slate-400"
-        style={{ fontSize: "12.5px", width: 160, minWidth: 120 }}
+        className="shrink-0"
+        style={{ fontSize: 12.5, color: "#94a3b8", fontWeight: 500, width: 160, minWidth: 100 }}
       >
         {label}
       </span>
@@ -133,11 +152,12 @@ export function FieldRow({
       ) : (
         <>
           <span
-            className={cn(
-              "flex-1 font-semibold",
-              isEmpty ? "text-slate-300 italic" : "text-slate-800"
-            )}
-            style={{ fontSize: "13.5px" }}
+            className={cn("flex-1", isEmpty ? "italic" : "")}
+            style={{
+              fontSize: 13.5,
+              fontWeight: isEmpty ? 400 : 600,
+              color: isEmpty ? "#cbd5e1" : "#1e293b",
+            }}
           >
             {isEmpty ? emptyText : value}
           </span>
@@ -145,20 +165,34 @@ export function FieldRow({
             <button
               type="button"
               onClick={onEdit}
-              className="shrink-0 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-teal-600 transition-colors"
+              className="shrink-0 flex items-center justify-center transition-all"
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 7,
+                border: "1px solid transparent",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f1f5f9"
+                e.currentTarget.style.borderColor = "#e2e8f0"
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent"
+                e.currentTarget.style.borderColor = "transparent"
+              }}
             >
               <svg
-                width="14"
-                height="14"
+                width="13"
+                height="13"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
+                stroke="#cbd5e1"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
               </svg>
             </button>
           )}
@@ -184,10 +218,13 @@ export function ToggleRow({
   onCheckedChange,
 }: ToggleRowProps) {
   return (
-    <div className="flex items-center justify-between py-2.5 px-3 rounded-lg">
-      <div>
-        <p className="text-sm font-medium text-slate-700">{label}</p>
-        <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+    <div
+      className="flex items-center"
+      style={{ padding: "13px 22px", borderBottom: "1px solid #f8fafc", gap: 16 }}
+    >
+      <div className="flex-1">
+        <p style={{ fontSize: 13.5, fontWeight: 600, color: "#1e293b" }}>{label}</p>
+        <p style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 2 }}>{description}</p>
       </div>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
