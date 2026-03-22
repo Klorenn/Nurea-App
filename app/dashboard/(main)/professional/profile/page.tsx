@@ -763,7 +763,7 @@ export default function ProfessionalProfilePage() {
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-12">
       {/* Header: nombre + Editar direcciones + Ver perfil público (referencia Doctoralia) */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           {displayName}
         </h1>
@@ -813,7 +813,7 @@ export default function ProfessionalProfilePage() {
             <TabsTrigger 
               key={tab.value}
               value={tab.value} 
-              className="rounded-lg px-4 py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-teal-600 dark:data-[state=active]:text-teal-400 transition-all font-bold text-slate-600 dark:text-slate-400 text-sm"
+              className="rounded-lg px-3 py-1.5 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm data-[state=active]:text-teal-600 dark:data-[state=active]:text-teal-400 transition-all font-bold text-slate-600 dark:text-slate-400 text-sm"
             >
               <tab.icon className="h-4 w-4 mr-2" />
               {tab.label}
