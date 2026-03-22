@@ -16,15 +16,8 @@ interface ProfileCompletenessProps {
 
 export function ProfileCompleteness({
   score,
-  missingItems = [],
   className,
 }: ProfileCompletenessProps) {
-  const hint = missingItems.length > 0
-    ? `Agregar: ${missingItems.map((i) => i.label).join(", ")}`
-    : score >= 100
-    ? "¡Perfil completo!"
-    : null
-
   return (
     <div
       className={cn("bg-white flex items-center gap-3.5 px-6 py-3", className)}
@@ -67,12 +60,6 @@ export function ProfileCompleteness({
       >
         {score} <span style={{ fontSize: 11, fontWeight: 500, color: "#94a3b8" }}>/ 100</span>
       </span>
-
-      {hint && (
-        <span className="shrink-0 hidden sm:block" style={{ fontSize: 11, color: "#94a3b8" }}>
-          · {hint}
-        </span>
-      )}
     </div>
   )
 }
