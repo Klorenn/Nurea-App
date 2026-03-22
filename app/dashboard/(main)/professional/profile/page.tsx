@@ -59,6 +59,12 @@ import { ProfilePhotoUpload } from "@/components/professional/profile-photo-uplo
 import { ProfileSectionCard } from "@/components/professional/profile-section-card"
 import { TipTapEditor } from "@/components/professional/tiptap-editor"
 import { useProfile } from "@/hooks/use-profile"
+import { formatDistanceToNow } from "date-fns"
+import { es } from "date-fns/locale"
+import { HeroCard } from "@/components/professional/hero-card"
+import { ReviewsPanel } from "@/components/professional/reviews-panel"
+import { AccordionSection, FieldRow, ToggleRow } from "@/components/professional/accordion-section"
+import { GraduationCap as GraduationCapIcon, FlaskConical, MessageSquare } from "lucide-react"
 
 // --- Schemas ---
 const PROFESSIONAL_TITLES = [
@@ -125,6 +131,314 @@ const pricingSchema = z.object({
   }))
 })
 
+// ─── Inline accordion content helpers ─────────────────────────────────────────
+
+function PersonalDataFields({ generalForm, profileName, onSaveGeneral, saving }: any) {
+  // first_name and last_name live in profiles table, NOT in generalForm — shown read-only
+  const [editingField, setEditingField] = useState<string | null>(null)
+  const [tempValue, setTempValue] = useState("")
+
+  function startEdit(field: string, current: string) {
+    setEditingField(field)
+    setTempValue(current)
+  }
+  function cancelEdit() { setEditingField(null); setTempValue("") }
+  async function saveField(field: string) {
+    generalForm.setValue(field, tempValue, { shouldDirty: true })
+    await generalForm.handleSubmit(onSaveGeneral)()
+    setEditingField(null)
+  }
+
+  return (
+    <div className="space-y-1">
+      <FieldRow label="Nombre" value={profileName?.first_name ?? ""} />
+      <FieldRow label="Apellidos" value={profileName?.last_name ?? ""} />
+      <FieldRow
+        label="Género"
+        value={
+          generalForm.watch("gender") === "M" ? "Hombre"
+          : generalForm.watch("gender") === "F" ? "Mujer"
+          : generalForm.watch("gender") === "other" ? "Prefiero no especificar"
+          : ""
+        }
+        editing={editingField === "gender"}
+        editContent={
+          <div className="flex items-center gap-2">
+            <select
+              className="flex-1 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2 text-sm outline-none"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+            >
+              <option value="">Selecciona</option>
+              <option value="M">Hombre</option>
+              <option value="F">Mujer</option>
+              <option value="other">Prefiero no especificar</option>
+            </select>
+            <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50">Cancelar</button>
+            <button type="button" onClick={() => saveField("gender")} disabled={saving} className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50">Guardar</button>
+          </div>
+        }
+        onEdit={() => startEdit("gender", generalForm.getValues("gender") ?? "")}
+      />
+      <FieldRow
+        label="Teléfono"
+        value={generalForm.watch("phone") ?? ""}
+        editing={editingField === "phone"}
+        editContent={
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500 shrink-0">+56</span>
+            <input
+              className="flex-1 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2.5 text-sm outline-none"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              autoFocus
+            />
+            <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50">Cancelar</button>
+            <button type="button" onClick={() => saveField("phone")} disabled={saving} className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50">Guardar</button>
+          </div>
+        }
+        onEdit={() => startEdit("phone", generalForm.getValues("phone") ?? "")}
+      />
+      <ToggleRow
+        label="Mostrar teléfono en perfil público"
+        description="Los pacientes podrán ver y llamarte directamente"
+        checked={generalForm.watch("show_phone") ?? true}
+        onCheckedChange={(v: boolean) => {
+          generalForm.setValue("show_phone", v, { shouldDirty: true })
+          generalForm.handleSubmit(onSaveGeneral)()
+        }}
+      />
+    </div>
+  )
+}
+
+function ProfessionalTrajectoryFields({ generalForm, specialties, PROFESSIONAL_TITLES, customTitle, setCustomTitle, onSaveGeneral, saving }: any) {
+  const [editingField, setEditingField] = useState<string | null>(null)
+  const [tempValue, setTempValue] = useState("")
+  const [tempCustomTitle, setTempCustomTitle] = useState(false)
+
+  function startEdit(field: string, current: string) {
+    setEditingField(field)
+    setTempValue(current)
+  }
+  function cancelEdit() { setEditingField(null); setTempValue("") }
+  async function saveField(field: string, value?: string) {
+    generalForm.setValue(field, value ?? tempValue, { shouldDirty: true })
+    await generalForm.handleSubmit(onSaveGeneral)()
+    setEditingField(null)
+  }
+
+  const specialtyName = specialties.find((s: any) => s.id === generalForm.watch("specialty_id"))?.name_es ?? ""
+
+  return (
+    <div className="space-y-1">
+      <FieldRow
+        label="Título abreviado"
+        value={
+          generalForm.watch("professional_title")
+            ? <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-3 py-0.5">{generalForm.watch("professional_title")}</span>
+            : ""
+        }
+        editing={editingField === "professional_title"}
+        editContent={
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              {PROFESSIONAL_TITLES.map((t: any) => {
+                const isSelected = t.value === "Otro"
+                  ? tempCustomTitle
+                  : tempValue === t.value && !tempCustomTitle
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => {
+                      if (t.value === "Otro") { setTempCustomTitle(true); setTempValue("") }
+                      else { setTempCustomTitle(false); setTempValue(t.value) }
+                    }}
+                    className={cn(
+                      "px-3 py-1 rounded-xl text-sm font-bold border transition-all",
+                      isSelected ? "bg-teal-600 text-white border-teal-600" : "bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-400"
+                    )}
+                  >
+                    {t.label} <span className="text-[10px] font-normal ml-1 opacity-60">{t.desc}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {tempCustomTitle && (
+              <input
+                className="w-full rounded-lg border border-teal-300 h-8 px-2.5 text-sm outline-none"
+                value={tempValue}
+                onChange={(e) => setTempValue(e.target.value)}
+                placeholder="Ej: Lic., Kine., etc."
+                autoFocus
+              />
+            )}
+            <div className="flex gap-2">
+              <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50">Cancelar</button>
+              <button type="button" onClick={() => { setCustomTitle(tempCustomTitle); saveField("professional_title") }} disabled={saving} className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50">Guardar</button>
+            </div>
+          </div>
+        }
+        onEdit={() => { setTempCustomTitle(customTitle); startEdit("professional_title", generalForm.getValues("professional_title") ?? "") }}
+      />
+      <FieldRow
+        label="Especialidad"
+        value={specialtyName}
+        editing={editingField === "specialty_id"}
+        editContent={
+          <div className="flex items-center gap-2">
+            <select
+              className="flex-1 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2 text-sm outline-none"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+            >
+              <option value="">Selecciona una especialidad</option>
+              {specialties.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.name_es}</option>
+              ))}
+            </select>
+            <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50">Cancelar</button>
+            <button type="button" onClick={() => saveField("specialty_id")} disabled={saving} className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50">Guardar</button>
+          </div>
+        }
+        onEdit={() => startEdit("specialty_id", generalForm.getValues("specialty_id") ?? "")}
+      />
+      <FieldRow
+        label="Años de experiencia"
+        value={generalForm.watch("years_experience") != null ? String(generalForm.watch("years_experience")) : ""}
+        editing={editingField === "years_experience"}
+        editContent={
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              className="w-24 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2.5 text-sm outline-none"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              autoFocus
+            />
+            <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50">Cancelar</button>
+            <button
+              type="button"
+              onClick={() => {
+                generalForm.setValue("years_experience", parseInt(tempValue, 10), { shouldDirty: true })
+                generalForm.handleSubmit(onSaveGeneral)()
+                setEditingField(null)
+              }}
+              disabled={saving}
+              className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50"
+            >
+              Guardar
+            </button>
+          </div>
+        }
+        onEdit={() => startEdit("years_experience", String(generalForm.getValues("years_experience") ?? ""))}
+      />
+      <FieldRow
+        label="Nº Registro"
+        value={generalForm.watch("registration_number") ?? ""}
+        editing={editingField === "registration_number"}
+        editContent={
+          <div className="flex items-center gap-2">
+            <input
+              className="flex-1 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2.5 text-sm outline-none"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              autoFocus
+            />
+            <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50">Cancelar</button>
+            <button type="button" onClick={() => saveField("registration_number")} disabled={saving} className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50">Guardar</button>
+          </div>
+        }
+        onEdit={() => startEdit("registration_number", generalForm.getValues("registration_number") ?? "")}
+      />
+      <FieldRow
+        label="Institución emisora"
+        value={generalForm.watch("registration_institution") ?? ""}
+        editing={editingField === "registration_institution"}
+        editContent={
+          <div className="flex items-center gap-2">
+            <input
+              className="flex-1 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2.5 text-sm outline-none"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+              autoFocus
+            />
+            <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50">Cancelar</button>
+            <button type="button" onClick={() => saveField("registration_institution")} disabled={saving} className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50">Guardar</button>
+          </div>
+        }
+        onEdit={() => startEdit("registration_institution", generalForm.getValues("registration_institution") ?? "")}
+      />
+    </div>
+  )
+}
+
+function BioAccordion({ generalForm, onSaveGeneral, saving }: any) {
+  const [editing, setEditing] = useState(false)
+
+  const bioHtml: string = generalForm.watch("bio") ?? ""
+  const plainText = bioHtml
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .trim()
+  const preview = plainText.length > 60 ? `${plainText.slice(0, 60)}...` : plainText
+
+  return (
+    <AccordionSection
+      title="Biografía profesional"
+      subtitle="Tu presentación para los pacientes"
+      icon={<MessageSquare className="h-4 w-4" />}
+      iconVariant="teal"
+      preview={preview || "Sin biografía"}
+      editButton={
+        !editing ? (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setEditing(true) }}
+            className="text-xs font-semibold text-teal-600 border border-teal-200 rounded-lg px-3 py-1 hover:bg-teal-50 transition-colors"
+          >
+            Editar
+          </button>
+        ) : null
+      }
+    >
+      {editing ? (
+        <div className="space-y-3">
+          <TipTapEditor
+            value={generalForm.watch("bio")}
+            onChange={(v: string) => generalForm.setValue("bio", v, { shouldDirty: true })}
+            placeholder="Describe tu enfoque, especialidad y lo que ofreces a tus pacientes..."
+          />
+          <div className="flex items-center gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => { setEditing(false); generalForm.resetField("bio") }}
+              className="text-xs text-slate-500 px-3 py-1.5 border rounded-lg hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => { generalForm.handleSubmit(onSaveGeneral)(); setEditing(false) }}
+              className="text-xs font-semibold text-white bg-teal-600 px-3 py-1.5 rounded-lg hover:bg-teal-700 disabled:opacity-50"
+            >
+              {saving ? "Guardando..." : "Guardar biografía"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-slate-600 whitespace-pre-wrap">
+          {plainText || <span className="italic text-slate-400">Sin biografía. Haz clic en Editar para añadir tu presentación.</span>}
+        </p>
+      )}
+    </AccordionSection>
+  )
+}
+
 export default function ProfessionalProfilePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -137,6 +451,12 @@ export default function ProfessionalProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [profileName, setProfileName] = useState<{ first_name: string; last_name: string } | null>(null)
   const [publicProfilePath, setPublicProfilePath] = useState<string | null>(null)
+  const [pageProfile, setPageProfile] = useState<any | null>(null)
+  const [pageProfessional, setPageProfessional] = useState<any | null>(null)
+  const [showReviews, setShowReviews] = useState(false)
+  const [activeTab, setActiveTab] = useState<string>(
+    (searchParams.get("tab") as string) || "general"
+  )
 
   // Calculate completeness (0–100)
   const [completeness, setCompleteness] = useState(0)
@@ -208,7 +528,7 @@ export default function ProfessionalProfilePage() {
       if (!user) return
       try {
         const [{ data: profileData }, { data }] = await Promise.all([
-          supabase.from("profiles").select("first_name, last_name, gender, professional_title, show_phone").eq("id", user.id).single(),
+          supabase.from("profiles").select("id, first_name, last_name, gender, professional_title, show_phone, is_verified, updated_at").eq("id", user.id).single(),
           supabase.from("professionals").select("*").eq("id", user.id).single(),
         ])
 
@@ -217,6 +537,7 @@ export default function ProfessionalProfilePage() {
             first_name: profileData.first_name || "",
             last_name: profileData.last_name || "",
           })
+          setPageProfile({ ...profileData, id: user.id })
         }
 
         let professional: any = data
@@ -272,6 +593,7 @@ export default function ProfessionalProfilePage() {
             show_phone: (profileData as any)?.show_phone !== false,
           })
           setAvatarUrl(professional.avatar_url)
+          setPageProfessional(professional)
           clinicalForm.reset({
             conditions_treated: professional.conditions_treated || [],
             consultation_type: professional.consultation_type || 'online',
@@ -758,15 +1080,21 @@ export default function ProfessionalProfilePage() {
     ? `${profileName.first_name} ${profileName.last_name}`.trim() || "Tu perfil"
     : "Tu perfil"
 
-  const initialTab = (searchParams.get("tab") as "general" | "clinical" | "studies" | "gallery" | "security" | "verification" | "pricing") || "general"
-
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-12">
       {/* Header: nombre + Editar direcciones + Ver perfil público (referencia Doctoralia) */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          {displayName}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Hola, {profileName?.first_name?.split(" ")[0] ?? displayName} 👋
+          </h1>
+          <p className="text-sm text-slate-400 mt-0.5">
+            Tu perfil profesional
+            {pageProfile?.updated_at && (
+              <> · Última edición {formatDistanceToNow(new Date(pageProfile.updated_at), { addSuffix: true, locale: es })}</>
+            )}
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
@@ -799,7 +1127,7 @@ export default function ProfessionalProfilePage() {
         ]}
       />
 
-      <Tabs defaultValue={initialTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-slate-100/40 dark:bg-slate-800/40 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/50 mb-6 w-full sm:w-auto h-auto flex-wrap gap-1">
           {[
             { value: "general", label: "General", icon: User },
@@ -823,402 +1151,125 @@ export default function ProfessionalProfilePage() {
 
         {/* --- TAB: GENERAL --- */}
         <TabsContent value="general" className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4">
-          {/* Información básica: bloque dos columnas (referencia) */}
-          <ProfileSectionCard
-            title="Información básica"
-            description="Añade tu información principal y una foto tuya en la que tu cara sea fácil de identificar. Nuestra IA revisa tu foto manteniéndola a salvo y asegurándose de que nunca se utiliza para ningún otro propósito."
-            onEdit={() => {
-              // Trigger click on the avatar uploader button/area
-              const uploaderBtn = document.querySelector('[data-avatar-uploader-trigger]') as HTMLButtonElement
-              uploaderBtn?.click()
-            }}
-            editLabel="Cambiar foto"
-          >
-            <div className="flex flex-col sm:flex-row gap-6">
-              <div className="flex justify-center sm:justify-start">
-                <ProfilePhotoUpload
-                  currentUrl={avatarUrl || profile?.avatar_url || undefined}
-                  onUpload={handleProfilePhotoUpload}
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tratamiento</p>
-                  <p className="font-medium text-slate-900 dark:text-white">
-                    {specialties.find(s => s.id === generalForm.watch("specialty_id"))?.name_es || "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nombre</p>
-                  <p className="font-medium text-slate-900 dark:text-white">{profileName?.first_name || "—"}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Apellidos</p>
-                  <p className="font-medium text-slate-900 dark:text-white">{profileName?.last_name || "—"}</p>
-                </div>
-              </div>
-            </div>
-          </ProfileSectionCard>
+          {/* Hero Card */}
+          {pageProfile && (
+            <HeroCard
+              profile={pageProfile}
+              professional={pageProfessional ?? {}}
+              specialties={specialties}
+              avatarUrl={avatarUrl}
+              onPhotoClick={() => {
+                const btn = document.querySelector("[data-avatar-uploader-trigger]") as HTMLButtonElement
+                btn?.click()
+              }}
+              onRatingClick={() => setShowReviews((v) => !v)}
+              onTabSwitch={setActiveTab}
+            />
+          )}
 
-          {/* Introducción / Sobre mí */}
-          <ProfileSectionCard
-            title="Introducción"
-            description="Añade una descripción tuya. Los pacientes aprecian un lenguaje sencillo y acogedor."
-            onEdit={() => document.getElementById("form-general")?.scrollIntoView({ behavior: "smooth" })}
-            editLabel="Editar"
-          >
-            <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-              {(() => {
-                const rawBio = generalForm.watch("bio") || ""
-                const plainText = rawBio
-                  .replace(/<[^>]+>/g, "")
-                  .replace(/&nbsp;/g, " ")
-                  .trim()
+          {/* Reviews Panel */}
+          {showReviews && user && (
+            <ReviewsPanel
+              professionalId={user.id}
+              onClose={() => setShowReviews(false)}
+            />
+          )}
 
-                if (!plainText) {
-                  return (
-                    <p className="text-slate-400 dark:text-slate-500 italic">
-                      Sin descripción. Edita en la sección General para añadir tu biografía.
-                    </p>
-                  )
-                }
-
-                const preview =
-                  plainText.length > 300 ? `${plainText.slice(0, 300)}…` : plainText
-
-                return <p className="whitespace-pre-wrap">{preview}</p>
-              })()}
-            </div>
-          </ProfileSectionCard>
+          {/* Hidden photo uploader */}
+          <div className="hidden">
+            <ProfilePhotoUpload
+              currentUrl={avatarUrl || profile?.avatar_url || undefined}
+              onUpload={handleProfilePhotoUpload}
+            />
+          </div>
 
           <Form {...generalForm}>
-            <form onSubmit={generalForm.handleSubmit(onSaveGeneral)} className="space-y-4">
-              <Card id="form-general" className="border-slate-100 dark:border-slate-800 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-slate-950 scroll-mt-24">
-                <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
-                      <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-bold">Información General</CardTitle>
-                      <CardDescription className="text-xs">Detalles básicos sobre tu trayectoria profesional.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="flex gap-4 items-start">
-                    {/* Profile Photo */}
-                    <div className="flex-shrink-0">
-                      <ProfilePhotoUpload
-                        currentUrl={avatarUrl || profile?.avatar_url || undefined}
-                        onUpload={handleProfilePhotoUpload}
-                      />
-                    </div>
+            <form onSubmit={generalForm.handleSubmit(onSaveGeneral)} className="space-y-3">
 
-                    {/* Fields */}
-                    <div className="flex-1 space-y-4">
-                      {/* Row 1: Experience & Registration */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <FormField
-                          control={generalForm.control}
-                          name="years_experience"
-                          render={({ field }: { field: any }) => (
-                            <FormItem>
-                              <div className="flex items-center gap-2 mb-1">
-                                <History className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                                <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Años de experiencia</FormLabel>
-                              </div>
-                              <FormControl>
-                                <Input 
-                                  type="number"
-                                  min={0}
-                                  step={1}
-                                  value={field.value ?? ""}
-                                  onChange={(e) => {
-                                    const val = e.target.value
-                                    if (val === "") {
-                                      field.onChange(undefined)
-                                    } else {
-                                      const parsed = parseInt(val, 10)
-                                      if (!Number.isNaN(parsed) && parsed >= 0) {
-                                        field.onChange(parsed)
-                                      }
-                                    }
-                                  }}
-                                  placeholder="Ej: 5"
-                                  className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold text-center dark:text-slate-200"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={generalForm.control}
-                          name="registration_number"
-                          render={({ field }: { field: any }) => (
-                            <FormItem>
-                              <div className="flex items-center gap-2 mb-1">
-                                <BadgeCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                                <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Nº Registro Profesional</FormLabel>
-                              </div>
-                              <FormControl>
-                                <Input 
-                                  {...field} 
-                                  placeholder="Ej: 123456-7"
-                                  className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={generalForm.control}
-                          name="registration_institution"
-                          render={({ field }: { field: any }) => (
-                            <FormItem>
-                              <div className="flex items-center gap-2 mb-1">
-                                <Building2 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                                <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Institución emisora</FormLabel>
-                              </div>
-                              <FormControl>
-                                <Input 
-                                  {...field} 
-                                  placeholder="Ej: Superintendencia de Salud / Colegio Médico"
-                                  className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+              {/* Accordion: Datos personales */}
+              <AccordionSection
+                title="Datos personales"
+                subtitle="Nombre, género y teléfono"
+                icon={<User className="h-4 w-4" />}
+                iconVariant="teal"
+                preview={[
+                  profileName ? `${profileName.first_name} ${profileName.last_name}`.trim() : "",
+                  generalForm.watch("gender") === "M" ? "Hombre" : generalForm.watch("gender") === "F" ? "Mujer" : ""
+                ].filter(Boolean).join(" · ")}
+              >
+                <PersonalDataFields
+                  generalForm={generalForm}
+                  profileName={profileName}
+                  onSaveGeneral={onSaveGeneral}
+                  saving={saving}
+                />
+              </AccordionSection>
 
-                      {/* Professional Title */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            Título profesional abreviado
+              {/* Accordion: Trayectoria profesional */}
+              <AccordionSection
+                title="Trayectoria profesional"
+                subtitle="Título, especialidad y experiencia"
+                icon={<GraduationCapIcon className="h-4 w-4" />}
+                iconVariant="blue"
+                preview={[
+                  pageProfile?.professional_title,
+                  specialties.find((s: any) => s.id === generalForm.watch("specialty_id"))?.name_es,
+                  generalForm.watch("years_experience") != null ? `${generalForm.watch("years_experience")} años` : null
+                ].filter(Boolean).join(" · ")}
+              >
+                <ProfessionalTrajectoryFields
+                  generalForm={generalForm}
+                  specialties={specialties}
+                  PROFESSIONAL_TITLES={PROFESSIONAL_TITLES}
+                  customTitle={customTitle}
+                  setCustomTitle={setCustomTitle}
+                  onSaveGeneral={onSaveGeneral}
+                  saving={saving}
+                />
+              </AccordionSection>
+
+              {/* Accordion: Condiciones que tratas */}
+              <AccordionSection
+                title="Condiciones que tratas"
+                subtitle="Enfermedades y trastornos que atiendes"
+                icon={<FlaskConical className="h-4 w-4" />}
+                iconVariant="violet"
+                preview={
+                  (clinicalForm.watch("conditions_treated") ?? []).slice(0, 3).join(", ") || "Sin condiciones"
+                }
+              >
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {(clinicalForm.watch("conditions_treated") ?? []).length > 0
+                      ? clinicalForm.watch("conditions_treated").map((tag: string) => (
+                          <span
+                            key={tag}
+                            className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-3 py-0.5"
+                          >
+                            {tag}
                           </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {PROFESSIONAL_TITLES.map((t) => {
-                            const currentTitle = generalForm.watch("professional_title")
-                            const isSelected = t.value === "Otro"
-                              ? customTitle
-                              : currentTitle === t.value && !customTitle
-                            return (
-                              <button
-                                key={t.value}
-                                type="button"
-                                onClick={() => {
-                                  if (t.value === "Otro") {
-                                    setCustomTitle(true)
-                                    generalForm.setValue("professional_title", "", { shouldDirty: true })
-                                  } else {
-                                    setCustomTitle(false)
-                                    generalForm.setValue("professional_title", t.value, { shouldDirty: true })
-                                  }
-                                }}
-                                className={cn(
-                                  "px-3 py-1.5 rounded-xl text-sm font-bold border transition-all",
-                                  isSelected
-                                    ? "bg-teal-600 text-white border-teal-600 shadow-sm"
-                                    : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-400 hover:text-teal-700"
-                                )}
-                              >
-                                {t.label}
-                                <span className={cn("ml-1 text-[10px] font-normal", isSelected ? "text-teal-100" : "text-slate-400")}>
-                                  {t.desc}
-                                </span>
-                              </button>
-                            )
-                          })}
-                        </div>
-                        {customTitle && (
-                          <Input
-                            value={generalForm.watch("professional_title") || ""}
-                            onChange={(e) => generalForm.setValue("professional_title", e.target.value, { shouldDirty: true })}
-                            placeholder="Ej: Lic., Kine., Mat., etc."
-                            className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-sm font-bold"
-                            autoFocus
-                          />
+                        ))
+                      : (
+                          <span className="text-sm text-slate-400 italic">Sin condiciones configuradas.</span>
                         )}
-                        {!customTitle && !generalForm.watch("professional_title") && (
-                          <p className="text-[11px] text-slate-400 italic">
-                            Selecciona el título que aparecerá junto a tu nombre en el perfil público.
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Gender */}
-                      <FormField
-                        control={generalForm.control}
-                        name="gender"
-                        render={({ field }: { field: any }) => (
-                          <FormItem>
-                            <div className="flex items-center gap-2 mb-1">
-                              <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                              <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                Género
-                              </FormLabel>
-                            </div>
-                            <Select
-                              onValueChange={field.onChange}
-                              value={field.value || undefined}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
-                                  <SelectValue placeholder="Selecciona" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="M">Hombre</SelectItem>
-                                <SelectItem value="F">Mujer</SelectItem>
-                                <SelectItem value="other">Prefiero no especificar</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Phone */}
-                      <div className="space-y-2">
-                        <FormField
-                          control={generalForm.control}
-                          name="phone"
-                          render={({ field }: { field: any }) => (
-                            <FormItem>
-                              <div className="flex items-center gap-2 mb-1">
-                                <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                                <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                  Teléfono de contacto
-                                </FormLabel>
-                              </div>
-                              <FormControl>
-                                <div className="flex">
-                                  <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-sm font-bold select-none">
-                                    +56
-                                  </span>
-                                  <Input
-                                    type="tel"
-                                    {...field}
-                                    placeholder="9 1234 5678"
-                                    className="rounded-l-none rounded-r-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
-                                  />
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                          <div>
-                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Mostrar teléfono en perfil público</p>
-                            <p className="text-xs text-slate-400 mt-0.5">Los pacientes podrán ver y llamarte directamente</p>
-                          </div>
-                          <Switch
-                            checked={generalForm.watch("show_phone") ?? true}
-                            onCheckedChange={(v) => generalForm.setValue("show_phone", v, { shouldDirty: true })}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Row 2: Specialties */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <FormField
-                          control={generalForm.control}
-                          name="specialty_id"
-                          render={({ field }: { field: any }) => (
-                            <FormItem>
-                              <div className="flex items-center gap-2 mb-1">
-                                <Award className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                                <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Especialidad Principal</FormLabel>
-                              </div>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
-                                    <SelectValue placeholder="Selecciona una especialidad" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {specialties.map(spec => (
-                                    <SelectItem key={spec.id} value={spec.id}>{spec.name_es}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Stethoscope className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                            <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                              Condiciones que tratas
-                            </FormLabel>
-                          </div>
-                          <div className="flex flex-wrap gap-2 p-2 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 min-h-[40px]">
-                            {clinicalForm.watch("conditions_treated")?.length
-                              ? clinicalForm.watch("conditions_treated").map((tag: string) => (
-                                  <Badge
-                                    key={tag}
-                                    variant="secondary"
-                                    className="bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-100 dark:border-teal-900/50 rounded-lg"
-                                  >
-                                    {tag}
-                                  </Badge>
-                                ))
-                              : (
-                                  <span className="text-xs text-slate-400 dark:text-slate-500 italic">
-                                    Edita las condiciones en la pestaña Clínica.
-                                  </span>
-                                )}
-                          </div>
-                          <FormDescription className="text-[10px] italic">
-                            Este resumen muestra las enfermedades que configuras en la sección Clínica.
-                          </FormDescription>
-                        </div>
-                      </div>
-
-                      {/* Row 3: Bio */}
-                      <FormField
-                        control={generalForm.control}
-                        name="bio"
-                        render={({ field }: { field: any }) => (
-                          <FormItem>
-                            <div className="flex items-center gap-2 mb-1">
-                              <FileText className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                              <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Biografía Profesional</FormLabel>
-                            </div>
-                            <FormControl>
-                              <TipTapEditor 
-                                value={field.value} 
-                                onChange={field.onChange}
-                                placeholder="Describe tu enfoque, especialidad y lo que ofreces a tus pacientes..."
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
                   </div>
-                </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
-                  <Button 
-                    type="submit" 
-                    disabled={!generalForm.formState.isDirty || saving}
-                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl h-10 px-8 font-bold text-sm shadow-md shadow-teal-100 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98] gap-2"
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("clinical")}
+                    className="text-sm font-medium text-teal-600 hover:underline"
                   >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Guardar Cambios
-                  </Button>
-                </CardFooter>
-              </Card>
+                    Ir a Clínica para editar →
+                  </button>
+                </div>
+              </AccordionSection>
+
+              {/* Accordion: Biografía */}
+              <BioAccordion
+                generalForm={generalForm}
+                onSaveGeneral={onSaveGeneral}
+                saving={saving}
+              />
+
             </form>
           </Form>
         </TabsContent>
