@@ -822,7 +822,7 @@ export default function ProfessionalProfilePage() {
         </TabsList>
 
         {/* --- TAB: GENERAL --- */}
-        <TabsContent value="general" className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+        <TabsContent value="general" className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4">
           {/* Información básica: bloque dos columnas (referencia) */}
           <ProfileSectionCard
             title="Información básica"
