@@ -30,8 +30,6 @@ import {
   FileText,
   BadgeCheck,
   History,
-  Calendar,
-  Clock,
   Award,
   DollarSign,
   Tag
@@ -62,66 +60,29 @@ import { ProfileSectionCard } from "@/components/professional/profile-section-ca
 import { TipTapEditor } from "@/components/professional/tiptap-editor"
 import { useProfile } from "@/hooks/use-profile"
 
-// --- Availability Types & Constants ---
-interface DaySchedule {
-  enabled: boolean
-  startTime: string
-  endTime: string
-  slotDuration: number
-}
-
-interface WeeklySchedule {
-  monday: DaySchedule
-  tuesday: DaySchedule
-  wednesday: DaySchedule
-  thursday: DaySchedule
-  friday: DaySchedule
-  saturday: DaySchedule
-  sunday: DaySchedule
-}
-
-const DAYS_OF_WEEK = [
-  { key: "monday", labelEs: "Lunes", labelEn: "Monday" },
-  { key: "tuesday", labelEs: "Martes", labelEn: "Tuesday" },
-  { key: "wednesday", labelEs: "Miércoles", labelEn: "Wednesday" },
-  { key: "thursday", labelEs: "Jueves", labelEn: "Thursday" },
-  { key: "friday", labelEs: "Viernes", labelEn: "Friday" },
-  { key: "saturday", labelEs: "Sábado", labelEn: "Saturday" },
-  { key: "sunday", labelEs: "Domingo", labelEn: "Sunday" },
+// --- Schemas ---
+const PROFESSIONAL_TITLES = [
+  { value: "Dr.", label: "Dr.", desc: "Médico" },
+  { value: "Dra.", label: "Dra.", desc: "Médica" },
+  { value: "Ps.", label: "Ps.", desc: "Psicólogo/a" },
+  { value: "Nut.", label: "Nut.", desc: "Nutricionista" },
+  { value: "Kines.", label: "Kines.", desc: "Kinesiólogo/a" },
+  { value: "Fono.", label: "Fono.", desc: "Fonoaudiólogo/a" },
+  { value: "Enf.", label: "Enf.", desc: "Enfermero/a" },
+  { value: "TO.", label: "TO.", desc: "Terapeuta Ocupacional" },
+  { value: "Otro", label: "Otro", desc: "Personalizado" },
 ] as const
 
-const SLOT_DURATIONS = [
-  { value: 15, label: "15 min" },
-  { value: 30, label: "30 min" },
-  { value: 45, label: "45 min" },
-  { value: 60, label: "60 min" },
-]
-
-const DEFAULT_SCHEDULE: DaySchedule = {
-  enabled: false,
-  startTime: "09:00",
-  endTime: "18:00",
-  slotDuration: 60,
-}
-
-const getDefaultWeeklySchedule = (): WeeklySchedule => ({
-  monday: { ...DEFAULT_SCHEDULE, enabled: true },
-  tuesday: { ...DEFAULT_SCHEDULE, enabled: true },
-  wednesday: { ...DEFAULT_SCHEDULE, enabled: true },
-  thursday: { ...DEFAULT_SCHEDULE, enabled: true },
-  friday: { ...DEFAULT_SCHEDULE, enabled: true },
-  saturday: { ...DEFAULT_SCHEDULE },
-  sunday: { ...DEFAULT_SCHEDULE },
-})
-
-// --- Schemas ---
 const generalSchema = z.object({
   bio: z.string().min(50, "La biografía debe tener al menos 50 caracteres"),
   years_experience: z.number().min(0).optional(),
   registration_number: z.string().min(1, "Nº Registro es requerido"),
   registration_institution: z.string().optional(),
   specialty_id: z.string().uuid("Selecciona una especialidad"),
-  gender: z.enum(["M", "F"]).optional(),
+  gender: z.enum(["M", "F", "other"]).optional(),
+  professional_title: z.string().optional(),
+  phone: z.string().optional(),
+  show_phone: z.boolean().default(true),
 })
 
 const clinicalSchema = z.object({
@@ -180,37 +141,22 @@ export default function ProfessionalProfilePage() {
   // Calculate completeness (0–100)
   const [completeness, setCompleteness] = useState(0)
 
-  // --- Availability State ---
-  const [schedule, setSchedule] = useState<WeeklySchedule>(getDefaultWeeklySchedule())
-  const [hasScheduleChanges, setHasScheduleChanges] = useState(false)
-  const [originalSchedule, setOriginalSchedule] = useState<WeeklySchedule | null>(null)
-  const [savingSchedule, setSavingSchedule] = useState(false)
 
-  useEffect(() => {
-    if (!originalSchedule) return
-    const changed = JSON.stringify(schedule) !== JSON.stringify(originalSchedule)
-    setHasScheduleChanges(changed)
-  }, [schedule, originalSchedule])
-
-  const updateDaySchedule = (day: keyof WeeklySchedule, field: keyof DaySchedule, value: any) => {
-    setSchedule(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value,
-      },
-    }))
-  }
 
   // --- Forms ---
+  const [customTitle, setCustomTitle] = useState(false)
+
   const generalForm = useForm<z.infer<typeof generalSchema>>({
     resolver: zodResolver(generalSchema),
-    defaultValues: { 
-      bio: "", 
+    defaultValues: {
+      bio: "",
       registration_number: "",
       registration_institution: "",
       specialty_id: "",
       gender: undefined,
+      professional_title: "",
+      phone: "",
+      show_phone: true,
     }
   })
 
@@ -262,7 +208,7 @@ export default function ProfessionalProfilePage() {
       if (!user) return
       try {
         const [{ data: profileData }, { data }] = await Promise.all([
-          supabase.from("profiles").select("first_name, last_name, gender").eq("id", user.id).single(),
+          supabase.from("profiles").select("first_name, last_name, gender, professional_title, show_phone").eq("id", user.id).single(),
           supabase.from("professionals").select("*").eq("id", user.id).single(),
         ])
 
@@ -307,6 +253,10 @@ export default function ProfessionalProfilePage() {
           if (slugOrId) {
             setPublicProfilePath(`/professionals/${slugOrId}`)
           }
+          const loadedTitle = (profileData as any)?.professional_title || ""
+          const isCustom = loadedTitle !== "" && !PROFESSIONAL_TITLES.some(t => t.value === loadedTitle && t.value !== "Otro")
+          setCustomTitle(isCustom)
+
           generalForm.reset({
             bio: professional.bio || "",
             years_experience: typeof professional.years_experience === "number" ? professional.years_experience : undefined,
@@ -314,9 +264,12 @@ export default function ProfessionalProfilePage() {
             registration_institution: professional.registration_institution || "",
             specialty_id: professional.specialty_id || "",
             gender:
-              profileData?.gender === "F" || profileData?.gender === "M"
-                ? profileData.gender
+              profileData?.gender === "F" || profileData?.gender === "M" || (profileData?.gender as any) === "other"
+                ? (profileData?.gender as "M" | "F" | "other")
                 : undefined,
+            professional_title: loadedTitle,
+            phone: professional.phone || (profileData as any)?.phone || "",
+            show_phone: (profileData as any)?.show_phone !== false,
           })
           setAvatarUrl(professional.avatar_url)
           clinicalForm.reset({
@@ -337,37 +290,6 @@ export default function ProfessionalProfilePage() {
             consultationTypes: professional.consultation_types || []
           })
 
-          // Parse availability
-          if (professional.availability && Object.keys(professional.availability).length > 0) {
-            const storedAvailability = professional.availability as Record<string, any>
-            const parsedSchedule = getDefaultWeeklySchedule()
-
-            DAYS_OF_WEEK.forEach(({ key }) => {
-              const dayData = storedAvailability[key]
-              if (dayData) {
-                if (dayData.online || dayData['in-person']) {
-                  const onlineData = dayData.online || dayData['in-person']
-                  parsedSchedule[key as keyof WeeklySchedule] = {
-                    enabled: onlineData?.available || false,
-                    startTime: onlineData?.hours?.split(' - ')[0] || "09:00",
-                    endTime: onlineData?.hours?.split(' - ')[1] || "18:00",
-                    slotDuration: dayData.slotDuration || 60,
-                  }
-                } else if (dayData.available !== undefined) {
-                  parsedSchedule[key as keyof WeeklySchedule] = {
-                    enabled: dayData.available || false,
-                    startTime: dayData.hours?.split(' - ')[0] || dayData.startTime || "09:00",
-                    endTime: dayData.hours?.split(' - ')[1] || dayData.endTime || "18:00",
-                    slotDuration: dayData.slotDuration || 60,
-                  }
-                }
-              }
-            })
-            setSchedule(parsedSchedule)
-            setOriginalSchedule(parsedSchedule)
-          } else {
-            setOriginalSchedule(getDefaultWeeklySchedule())
-          }
         }
       } catch (err) {
         console.error(err)
@@ -436,19 +358,28 @@ export default function ProfessionalProfilePage() {
           specialty_id: values.specialty_id,
           // Mantener también la columna de texto legacy para que el perfil público muestre el título correcto.
           specialty: specialtyLabel,
+          phone: values.phone ?? null,
+          show_phone: values.show_phone,
         })
         .eq('id', user.id)
 
       if (error) throw error
 
-      // Sincroniza el género en la tabla unificada de perfiles.
-      if (values.gender === "M" || values.gender === "F") {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({ gender: values.gender })
-          .eq("id", user.id)
-        if (profileError) console.error("Error updating professional gender:", profileError)
+      // Sincroniza género, título profesional y show_phone en profiles
+      const profileUpdate: Record<string, unknown> = {
+        show_phone: values.show_phone,
       }
+      if (values.gender === "M" || values.gender === "F" || values.gender === "other") {
+        profileUpdate.gender = values.gender
+      }
+      if (values.professional_title !== undefined) {
+        profileUpdate.professional_title = values.professional_title?.trim() || null
+      }
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update(profileUpdate)
+        .eq("id", user.id)
+      if (profileError) console.error("Error updating profile fields:", profileError)
       
       // Invalidar cache del perfil
       await mutateProfile()
@@ -528,49 +459,7 @@ export default function ProfessionalProfilePage() {
     }
   }
 
-  const onSaveSchedule = async () => {
-    if (!user) return
-    setSavingSchedule(true)
-    try {
-      const availability: Record<string, any> = {}
 
-      DAYS_OF_WEEK.forEach(({ key }) => {
-        const daySchedule = schedule[key as keyof WeeklySchedule]
-        availability[key] = {
-          enabled: daySchedule.enabled,
-          online: {
-            available: daySchedule.enabled,
-            hours: daySchedule.enabled ? `${daySchedule.startTime} - ${daySchedule.endTime}` : null,
-          },
-          'in-person': {
-            available: daySchedule.enabled,
-            hours: daySchedule.enabled ? `${daySchedule.startTime} - ${daySchedule.endTime}` : null,
-          },
-          slotDuration: daySchedule.slotDuration,
-        }
-      })
-
-      const { error } = await supabase
-        .from('professionals')
-        .update({ availability })
-        .eq('id', user.id)
-
-      if (error) throw error
-
-      setOriginalSchedule(schedule)
-      setHasScheduleChanges(false)
-      
-      // Sync with profile SWR if needed (e.g. if we add availability summary to profile)
-      mutateProfile()
-      
-      toast.success("Horarios guardados exitosamente")
-    } catch (error) {
-      console.error(error)
-      toast.error("Error al guardar horarios")
-    } finally {
-      setSavingSchedule(false)
-    }
-  }
 
   const onSaveEducation = async (values: z.infer<typeof educationSchema>) => {
     if (!user) return
@@ -869,10 +758,10 @@ export default function ProfessionalProfilePage() {
     ? `${profileName.first_name} ${profileName.last_name}`.trim() || "Tu perfil"
     : "Tu perfil"
 
-  const initialTab = (searchParams.get("tab") as "general" | "clinical" | "availability" | "studies" | "gallery" | "security" | "verification" | "pricing") || "general"
+  const initialTab = (searchParams.get("tab") as "general" | "clinical" | "studies" | "gallery" | "security" | "verification" | "pricing") || "general"
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+    <div className="space-y-4 max-w-5xl mx-auto pb-12">
       {/* Header: nombre + Editar direcciones + Ver perfil público (referencia Doctoralia) */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
@@ -915,7 +804,6 @@ export default function ProfessionalProfilePage() {
           {[
             { value: "general", label: "General", icon: User },
             { value: "clinical", label: "Clínica", icon: Stethoscope },
-            { value: "availability", label: "Horarios", icon: Calendar },
             { value: "studies", label: "Estudios", icon: GraduationCap },
             { value: "gallery", label: "Galería", icon: Camera },
             { value: "pricing", label: "Precios", icon: DollarSign },
@@ -1005,30 +893,30 @@ export default function ProfessionalProfilePage() {
 
           <Form {...generalForm}>
             <form onSubmit={generalForm.handleSubmit(onSaveGeneral)} className="space-y-6">
-              <Card id="form-general" className="border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden bg-white dark:bg-slate-950 scroll-mt-24">
-                <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-6">
+              <Card id="form-general" className="border-slate-100 dark:border-slate-800 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-slate-950 scroll-mt-24">
+                <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
-                      <User className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
+                      <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-black">Información General</CardTitle>
-                      <CardDescription className="text-sm font-medium">Detalles básicos sobre tu trayectoria profesional.</CardDescription>
+                      <CardTitle className="text-base font-bold">Información General</CardTitle>
+                      <CardDescription className="text-xs">Detalles básicos sobre tu trayectoria profesional.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-10">
                     {/* Left Column: Profile Photo */}
                     <div className="flex flex-col items-center pt-4">
-                      <ProfilePhotoUpload 
-                        currentUrl={avatarUrl || profile?.avatar_url || undefined} 
-                        onUpload={handleProfilePhotoUpload} 
+                      <ProfilePhotoUpload
+                        currentUrl={avatarUrl || profile?.avatar_url || undefined}
+                        onUpload={handleProfilePhotoUpload}
                       />
                     </div>
 
                     {/* Right Column: Fields */}
-                    <div className="space-y-8">
+                    <div className="space-y-4">
                       {/* Row 1: Experience & Registration */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         <FormField
@@ -1107,6 +995,64 @@ export default function ProfessionalProfilePage() {
                         />
                       </div>
 
+                      {/* Professional Title */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            Título profesional abreviado
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {PROFESSIONAL_TITLES.map((t) => {
+                            const currentTitle = generalForm.watch("professional_title")
+                            const isSelected = t.value === "Otro"
+                              ? customTitle
+                              : currentTitle === t.value && !customTitle
+                            return (
+                              <button
+                                key={t.value}
+                                type="button"
+                                onClick={() => {
+                                  if (t.value === "Otro") {
+                                    setCustomTitle(true)
+                                    generalForm.setValue("professional_title", "", { shouldDirty: true })
+                                  } else {
+                                    setCustomTitle(false)
+                                    generalForm.setValue("professional_title", t.value, { shouldDirty: true })
+                                  }
+                                }}
+                                className={cn(
+                                  "px-3 py-1.5 rounded-xl text-sm font-bold border transition-all",
+                                  isSelected
+                                    ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                                    : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-400 hover:text-teal-700"
+                                )}
+                              >
+                                {t.label}
+                                <span className={cn("ml-1 text-[10px] font-normal", isSelected ? "text-teal-100" : "text-slate-400")}>
+                                  {t.desc}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {customTitle && (
+                          <Input
+                            value={generalForm.watch("professional_title") || ""}
+                            onChange={(e) => generalForm.setValue("professional_title", e.target.value, { shouldDirty: true })}
+                            placeholder="Ej: Lic., Kine., Mat., etc."
+                            className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-sm font-bold"
+                            autoFocus
+                          />
+                        )}
+                        {!customTitle && !generalForm.watch("professional_title") && (
+                          <p className="text-[11px] text-slate-400 italic">
+                            Selecciona el título que aparecerá junto a tu nombre en el perfil público.
+                          </p>
+                        )}
+                      </div>
+
                       {/* Gender */}
                       <FormField
                         control={generalForm.control}
@@ -1116,12 +1062,12 @@ export default function ProfessionalProfilePage() {
                             <div className="flex items-center gap-2 mb-1.5">
                               <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                               <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                Eres hombre o mujer
+                                Género
                               </FormLabel>
                             </div>
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value || undefined}
+                              value={field.value || undefined}
                             >
                               <FormControl>
                                 <SelectTrigger className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
@@ -1131,12 +1077,55 @@ export default function ProfessionalProfilePage() {
                               <SelectContent>
                                 <SelectItem value="M">Hombre</SelectItem>
                                 <SelectItem value="F">Mujer</SelectItem>
+                                <SelectItem value="other">Prefiero no especificar</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
+                      {/* Phone */}
+                      <div className="space-y-2">
+                        <FormField
+                          control={generalForm.control}
+                          name="phone"
+                          render={({ field }: { field: any }) => (
+                            <FormItem>
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                                <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                  Teléfono de contacto
+                                </FormLabel>
+                              </div>
+                              <FormControl>
+                                <div className="flex">
+                                  <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-sm font-bold select-none">
+                                    +56
+                                  </span>
+                                  <Input
+                                    type="tel"
+                                    {...field}
+                                    placeholder="9 1234 5678"
+                                    className="rounded-l-none rounded-r-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                                  />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800">
+                          <div>
+                            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Mostrar teléfono en perfil público</p>
+                            <p className="text-xs text-slate-400 mt-0.5">Los pacientes podrán ver y llamarte directamente</p>
+                          </div>
+                          <Switch
+                            checked={generalForm.watch("show_phone") ?? true}
+                            onCheckedChange={(v) => generalForm.setValue("show_phone", v, { shouldDirty: true })}
+                          />
+                        </div>
+                      </div>
 
                       {/* Row 2: Specialties */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1219,7 +1208,7 @@ export default function ProfessionalProfilePage() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                   <Button 
                     type="submit" 
                     disabled={!generalForm.formState.isDirty || saving}
@@ -1238,19 +1227,19 @@ export default function ProfessionalProfilePage() {
         <TabsContent value="clinical" id="clinical" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...clinicalForm}>
             <form onSubmit={clinicalForm.handleSubmit(onSaveClinical)} className="space-y-6">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-xl shadow-slate-200/30 dark:shadow-none rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-6">
+              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
-                      <Stethoscope className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
+                      <Stethoscope className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-black dark:text-slate-100">Información Clínica</CardTitle>
-                      <CardDescription className="text-sm font-medium dark:text-slate-400">Define cómo y qué especialidades atiendes.</CardDescription>
+                      <CardTitle className="text-base font-bold dark:text-slate-100">Información Clínica</CardTitle>
+                      <CardDescription className="text-xs dark:text-slate-400">Define cómo y qué especialidades atiendes.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 space-y-8">
+                <CardContent className="p-4 space-y-4">
                   <div className="space-y-4">
                     <Label className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Modalidad de Atención</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1434,7 +1423,7 @@ export default function ProfessionalProfilePage() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-4 flex justify-end">
+                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
                   <Button 
                     type="submit" 
                     disabled={!clinicalForm.formState.isDirty || saving}
@@ -1449,140 +1438,23 @@ export default function ProfessionalProfilePage() {
           </Form>
         </TabsContent>
 
-        {/* --- TAB: AVAILABILITY --- */}
-        <TabsContent value="availability" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-xl shadow-slate-200/30 dark:shadow-none rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-            <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
-                  <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-black dark:text-slate-100">Horarios de Atención</CardTitle>
-                  <CardDescription className="text-sm font-medium dark:text-slate-400">Configura tus días y modalidades disponibles.</CardDescription>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-500">
-                  {Object.values(schedule).filter(day => day.enabled).length} días activos
-                </span>
-                {hasScheduleChanges && (
-                  <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/30 dark:text-amber-500 dark:border-amber-900">
-                    Cambios sin guardar
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              {DAYS_OF_WEEK.map(({ key, labelEs, labelEn }) => {
-                const daySchedule = schedule[key as keyof WeeklySchedule]
-
-                return (
-                  <div key={key} className={cn(
-                    "flex flex-col xl:flex-row xl:items-center gap-4 p-4 rounded-xl border transition-all duration-300",
-                    daySchedule.enabled 
-                      ? "bg-white dark:bg-slate-900/50 border-teal-200 dark:border-teal-800/50 shadow-sm" 
-                      : "bg-slate-50/50 dark:bg-slate-950/30 border-slate-100 dark:border-slate-800/60"
-                  )}>
-                    {/* Switch & Day */}
-                    <div className="flex items-center gap-3 min-w-[140px]">
-                      <Switch
-                        checked={daySchedule.enabled}
-                        onCheckedChange={(checked) => updateDaySchedule(key as keyof WeeklySchedule, "enabled", checked)}
-                        className="data-[state=checked]:bg-teal-600"
-                      />
-                      <Label className={cn(
-                        "font-bold text-sm",
-                        daySchedule.enabled ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"
-                      )}>
-                        {labelEs}
-                      </Label>
-                    </div>
-
-                    {/* Time Inputs */}
-                    <div className={cn(
-                      "flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",
-                      !daySchedule.enabled && "opacity-50 pointer-events-none"
-                    )}>
-                      <div>
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 block">Inicio</Label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
-                          <Input
-                            type="time"
-                            value={daySchedule.startTime}
-                            onChange={(e) => updateDaySchedule(key as keyof WeeklySchedule, "startTime", e.target.value)}
-                            className="pl-9 rounded-lg h-9 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-sm font-bold dark:text-slate-200"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 block">Fin</Label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
-                          <Input
-                            type="time"
-                            value={daySchedule.endTime}
-                            onChange={(e) => updateDaySchedule(key as keyof WeeklySchedule, "endTime", e.target.value)}
-                            className="pl-9 rounded-lg h-9 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-sm font-bold dark:text-slate-200"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 block">Duración</Label>
-                        <Select
-                          value={String(daySchedule.slotDuration)}
-                          onValueChange={(val) => updateDaySchedule(key as keyof WeeklySchedule, "slotDuration", Number(val))}
-                        >
-                          <SelectTrigger className="rounded-lg h-9 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-sm font-bold dark:text-slate-200">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SLOT_DURATIONS.map((d) => (
-                              <SelectItem key={d.value} value={String(d.value)}>{d.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </CardContent>
-            <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-4 flex justify-between items-center border-t border-slate-100/60 dark:border-slate-800/60">
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                {hasScheduleChanges ? "Tienes cambios pendientes." : "Tus horarios están al día."}
-              </div>
-              <Button 
-                type="button" 
-                onClick={onSaveSchedule}
-                disabled={savingSchedule}
-                className="bg-teal-600 hover:bg-teal-700 text-white dark:bg-teal-600 dark:hover:bg-teal-500 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                {savingSchedule ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Guardar Horarios
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
         {/* --- TAB: STUDIES --- */}
         <TabsContent value="studies" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...educationForm}>
             <form onSubmit={educationForm.handleSubmit(onSaveEducation)} className="space-y-6">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-xl shadow-slate-200/30 dark:shadow-none rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-6">
+              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
-                      <GraduationCap className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
+                      <GraduationCap className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-black dark:text-slate-100">Historial Académico</CardTitle>
-                      <CardDescription className="text-sm font-medium dark:text-slate-400">Gestiona tus títulos y certificaciones profesionales.</CardDescription>
+                      <CardTitle className="text-base font-bold dark:text-slate-100">Historial Académico</CardTitle>
+                      <CardDescription className="text-xs dark:text-slate-400">Gestiona tus títulos y certificaciones profesionales.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 space-y-6">
+                <CardContent className="p-4 space-y-4">
                   <div className="grid gap-4">
                     {eduFields.map((field, index) => (
                       <div key={field.id} className="p-5 rounded-2xl bg-slate-50/30 dark:bg-slate-900/30 border border-slate-100/60 dark:border-slate-800/60 relative group animate-in zoom-in duration-500 hover:border-teal-100/60 dark:hover:border-teal-900/60 hover:bg-teal-50/10 dark:hover:bg-teal-950/10 transition-all">
@@ -1649,7 +1521,7 @@ export default function ProfessionalProfilePage() {
                     Añadir Nuevo Título
                   </Button>
                 </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-4 flex justify-end">
+                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
                   <Button 
                     type="submit" 
                     disabled={!educationForm.formState.isDirty || saving}
@@ -1668,19 +1540,19 @@ export default function ProfessionalProfilePage() {
         <TabsContent value="gallery" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...galleryForm}>
             <form onSubmit={galleryForm.handleSubmit(onSaveGallery)} className="space-y-6">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-xl shadow-slate-200/30 dark:shadow-none rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-6">
+              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
-                      <Camera className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
+                      <Camera className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-black dark:text-slate-100">Galería de Consultorio</CardTitle>
-                      <CardDescription className="text-sm font-medium dark:text-slate-400">Muestra tu espacio de trabajo a tus futuros pacientes.</CardDescription>
+                      <CardTitle className="text-base font-bold dark:text-slate-100">Galería de Consultorio</CardTitle>
+                      <CardDescription className="text-xs dark:text-slate-400">Muestra tu espacio de trabajo a tus futuros pacientes.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 space-y-8">
+                <CardContent className="p-4 space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
                     {galleryForm.watch("clinic_images").map((img, idx) => (
                       <div key={idx} className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 shadow-sm group hover:scale-[1.05] transition-all duration-500">
@@ -1716,7 +1588,7 @@ export default function ProfessionalProfilePage() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-4 flex justify-end">
+                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
                   <Button 
                     type="submit" 
                     disabled={!galleryForm.formState.isDirty || saving}
@@ -1735,21 +1607,21 @@ export default function ProfessionalProfilePage() {
         <TabsContent value="pricing" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...pricingForm}>
             <form onSubmit={pricingForm.handleSubmit(onSavePricing)} className="space-y-6">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-xl shadow-slate-200/30 dark:shadow-none rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-6">
+              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
-                      <DollarSign className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
+                      <DollarSign className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-black dark:text-slate-100">Precios y Servicios</CardTitle>
-                      <CardDescription className="text-sm font-medium dark:text-slate-400">
+                      <CardTitle className="text-base font-bold dark:text-slate-100">Precios y Servicios</CardTitle>
+                      <CardDescription className="text-xs dark:text-slate-400">
                         Define los tipos de consulta que ofreces, su precio y duración. Esta información es visible en tu perfil público.
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 space-y-6">
+                <CardContent className="p-4 space-y-4">
 
                   {/* Preset buttons */}
                   <div className="space-y-3">
@@ -1972,7 +1844,7 @@ export default function ProfessionalProfilePage() {
                     </div>
                   )}
                 </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-4 flex justify-end">
+                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
                   <Button
                     type="submit"
                     disabled={saving}
@@ -1991,19 +1863,19 @@ export default function ProfessionalProfilePage() {
         <TabsContent value="security" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...securityForm}>
             <form onSubmit={securityForm.handleSubmit(onSaveSecurity)} className="space-y-6">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-xl shadow-slate-200/30 dark:shadow-none rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-6">
+              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
-                      <Lock className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
+                      <Lock className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl font-black dark:text-slate-100">Seguridad de la Cuenta</CardTitle>
-                      <CardDescription className="text-sm font-medium dark:text-slate-400">Protege tu acceso y credenciales profesionales.</CardDescription>
+                      <CardTitle className="text-base font-bold dark:text-slate-100">Seguridad de la Cuenta</CardTitle>
+                      <CardDescription className="text-xs dark:text-slate-400">Protege tu acceso y credenciales profesionales.</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 space-y-6">
+                <CardContent className="p-4 space-y-4">
                   <div className="grid gap-6 max-w-2xl">
                     <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 flex gap-4 items-center">
                       <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-950 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -2056,7 +1928,7 @@ export default function ProfessionalProfilePage() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-4 flex justify-end">
+                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
                   <Button 
                     type="submit" 
                     className="bg-slate-900 hover:bg-black text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-slate-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -2073,19 +1945,19 @@ export default function ProfessionalProfilePage() {
 
         {/* --- TAB: VERIFICATION --- */}
         <TabsContent value="verification" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-xl shadow-slate-200/30 dark:shadow-none rounded-2xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-            <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-6">
+          <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+            <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
               <div className="flex items-center gap-3 mb-1">
-                <div className="p-2 bg-teal-50 dark:bg-teal-500/10 rounded-xl">
-                  <ShieldCheck className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
+                  <ShieldCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-black dark:text-slate-100">Verificación de Credenciales</CardTitle>
-                  <CardDescription className="text-sm font-medium dark:text-slate-400">Sube tus títulos y diplomas para obtener el sello oficial de NUREA.</CardDescription>
+                  <CardTitle className="text-base font-bold dark:text-slate-100">Verificación de Credenciales</CardTitle>
+                  <CardDescription className="text-xs dark:text-slate-400">Sube tus títulos y diplomas para obtener el sello oficial de NUREA.</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6 space-y-8">
+            <CardContent className="p-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {['Título', 'Diplomado', 'Magíster', 'Curso'].map((type) => (
                   <div key={type} className="relative group p-6 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 dark:hover:border-teal-600 hover:bg-teal-50/30 dark:hover:bg-teal-900/20 transition-all text-center">
