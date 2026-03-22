@@ -681,16 +681,16 @@ export default function ProfessionalProfilePage() {
           specialty_id: values.specialty_id,
           // Mantener también la columna de texto legacy para que el perfil público muestre el título correcto.
           specialty: specialtyLabel,
-          phone: values.phone ?? null,
-          show_phone: values.show_phone,
         })
         .eq('id', user.id)
 
       if (error) throw error
 
-      // Sincroniza género, título profesional y show_phone en profiles
+      // Sincroniza género, teléfono, título profesional y show_phone en profiles
+      // (phone, show_phone, gender y professional_title viven en profiles, no en professionals)
       const profileUpdate: Record<string, unknown> = {
         show_phone: values.show_phone,
+        phone: values.phone ?? null,
       }
       if (values.gender === "M" || values.gender === "F" || values.gender === "other") {
         profileUpdate.gender = values.gender
