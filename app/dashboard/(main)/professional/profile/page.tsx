@@ -11,6 +11,7 @@ import * as z from "zod"
 import {
   User,
   Stethoscope,
+  GraduationCap as GraduationCapIcon,
   GraduationCap,
   Camera,
   Save,
@@ -64,7 +65,7 @@ import { es } from "date-fns/locale"
 import { HeroCard } from "@/components/professional/hero-card"
 import { ReviewsPanel } from "@/components/professional/reviews-panel"
 import { AccordionSection, FieldRow, ToggleRow } from "@/components/professional/accordion-section"
-import { GraduationCap as GraduationCapIcon, FlaskConical, MessageSquare } from "lucide-react"
+import { FlaskConical, MessageSquare } from "lucide-react"
 
 // --- Schemas ---
 const PROFESSIONAL_TITLES = [
