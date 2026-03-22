@@ -1455,7 +1455,7 @@ export default function ProfessionalProfilePage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
-                  <div className="grid gap-4">
+                  <div className="grid gap-3">
                     {eduFields.map((field, index) => (
                       <div key={field.id} className="p-5 rounded-2xl bg-slate-50/30 dark:bg-slate-900/30 border border-slate-100/60 dark:border-slate-800/60 relative group animate-in zoom-in duration-500 hover:border-teal-100/60 dark:hover:border-teal-900/60 hover:bg-teal-50/10 dark:hover:bg-teal-950/10 transition-all">
                         <Button 
@@ -1467,7 +1467,7 @@ export default function ProfessionalProfilePage() {
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                        <div className="grid sm:grid-cols-2 gap-6">
+                        <div className="grid sm:grid-cols-2 gap-3">
                           <FormField
                             control={educationForm.control}
                             name={`education.${index}.institution`}
