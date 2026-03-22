@@ -892,7 +892,7 @@ export default function ProfessionalProfilePage() {
           </ProfileSectionCard>
 
           <Form {...generalForm}>
-            <form onSubmit={generalForm.handleSubmit(onSaveGeneral)} className="space-y-6">
+            <form onSubmit={generalForm.handleSubmit(onSaveGeneral)} className="space-y-4">
               <Card id="form-general" className="border-slate-100 dark:border-slate-800 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-slate-950 scroll-mt-24">
                 <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-4">
                   <div className="flex items-center gap-3">
@@ -1226,7 +1226,7 @@ export default function ProfessionalProfilePage() {
         {/* --- TAB: CLINICAL --- */}
         <TabsContent value="clinical" id="clinical" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...clinicalForm}>
-            <form onSubmit={clinicalForm.handleSubmit(onSaveClinical)} className="space-y-6">
+            <form onSubmit={clinicalForm.handleSubmit(onSaveClinical)} className="space-y-4">
               <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
                 <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
@@ -1441,7 +1441,7 @@ export default function ProfessionalProfilePage() {
         {/* --- TAB: STUDIES --- */}
         <TabsContent value="studies" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...educationForm}>
-            <form onSubmit={educationForm.handleSubmit(onSaveEducation)} className="space-y-6">
+            <form onSubmit={educationForm.handleSubmit(onSaveEducation)} className="space-y-4">
               <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
                 <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
@@ -1539,7 +1539,7 @@ export default function ProfessionalProfilePage() {
         {/* --- TAB: GALLERY --- */}
         <TabsContent value="gallery" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...galleryForm}>
-            <form onSubmit={galleryForm.handleSubmit(onSaveGallery)} className="space-y-6">
+            <form onSubmit={galleryForm.handleSubmit(onSaveGallery)} className="space-y-4">
               <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
                 <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
@@ -1606,7 +1606,7 @@ export default function ProfessionalProfilePage() {
         {/* --- TAB: PRICING --- */}
         <TabsContent value="pricing" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...pricingForm}>
-            <form onSubmit={pricingForm.handleSubmit(onSavePricing)} className="space-y-6">
+            <form onSubmit={pricingForm.handleSubmit(onSavePricing)} className="space-y-4">
               <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
                 <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
@@ -1862,7 +1862,7 @@ export default function ProfessionalProfilePage() {
         {/* --- TAB: SECURITY --- */}
         <TabsContent value="security" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...securityForm}>
-            <form onSubmit={securityForm.handleSubmit(onSaveSecurity)} className="space-y-6">
+            <form onSubmit={securityForm.handleSubmit(onSaveSecurity)} className="space-y-4">
               <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
                 <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
                   <div className="flex items-center gap-3 mb-1">
@@ -1960,7 +1960,7 @@ export default function ProfessionalProfilePage() {
             <CardContent className="p-4 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {['Título', 'Diplomado', 'Magíster', 'Curso'].map((type) => (
-                  <div key={type} className="relative group p-6 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 dark:hover:border-teal-600 hover:bg-teal-50/30 dark:hover:bg-teal-900/20 transition-all text-center">
+                  <div key={type} className="relative group p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 dark:hover:border-teal-600 hover:bg-teal-50/30 dark:hover:bg-teal-900/20 transition-all text-center">
                     <div className="w-12 h-12 bg-white dark:bg-slate-950 rounded-xl shadow-sm flex items-center justify-center mx-auto mb-3 text-slate-300 dark:text-slate-600 group-hover:text-teal-600 dark:group-hover:text-teal-400 group-hover:scale-110 group-hover:rotate-6 transition-all border border-slate-100 dark:border-slate-800">
                       <Upload className="h-6 w-6" />
                     </div>
