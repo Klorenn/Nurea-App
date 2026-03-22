@@ -906,25 +906,25 @@ export default function ProfessionalProfilePage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-10">
-                    {/* Left Column: Profile Photo */}
-                    <div className="flex flex-col items-center pt-4">
+                  <div className="flex gap-4 items-start">
+                    {/* Profile Photo */}
+                    <div className="flex-shrink-0">
                       <ProfilePhotoUpload
                         currentUrl={avatarUrl || profile?.avatar_url || undefined}
                         onUpload={handleProfilePhotoUpload}
                       />
                     </div>
 
-                    {/* Right Column: Fields */}
-                    <div className="space-y-4">
+                    {/* Fields */}
+                    <div className="flex-1 space-y-4">
                       {/* Row 1: Experience & Registration */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <FormField
                           control={generalForm.control}
                           name="years_experience"
                           render={({ field }: { field: any }) => (
                             <FormItem>
-                              <div className="flex items-center gap-2 mb-1.5">
+                              <div className="flex items-center gap-2 mb-1">
                                 <History className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                                 <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Años de experiencia</FormLabel>
                               </div>
@@ -946,7 +946,7 @@ export default function ProfessionalProfilePage() {
                                     }
                                   }}
                                   placeholder="Ej: 5"
-                                  className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold text-center dark:text-slate-200"
+                                  className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold text-center dark:text-slate-200"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -958,7 +958,7 @@ export default function ProfessionalProfilePage() {
                           name="registration_number"
                           render={({ field }: { field: any }) => (
                             <FormItem>
-                              <div className="flex items-center gap-2 mb-1.5">
+                              <div className="flex items-center gap-2 mb-1">
                                 <BadgeCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                                 <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Nº Registro Profesional</FormLabel>
                               </div>
@@ -966,7 +966,7 @@ export default function ProfessionalProfilePage() {
                                 <Input 
                                   {...field} 
                                   placeholder="Ej: 123456-7"
-                                  className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                                  className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -978,7 +978,7 @@ export default function ProfessionalProfilePage() {
                           name="registration_institution"
                           render={({ field }: { field: any }) => (
                             <FormItem>
-                              <div className="flex items-center gap-2 mb-1.5">
+                              <div className="flex items-center gap-2 mb-1">
                                 <Building2 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                                 <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Institución emisora</FormLabel>
                               </div>
@@ -986,7 +986,7 @@ export default function ProfessionalProfilePage() {
                                 <Input 
                                   {...field} 
                                   placeholder="Ej: Superintendencia de Salud / Colegio Médico"
-                                  className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                                  className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -996,7 +996,7 @@ export default function ProfessionalProfilePage() {
                       </div>
 
                       {/* Professional Title */}
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <Award className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                           <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -1042,7 +1042,7 @@ export default function ProfessionalProfilePage() {
                             value={generalForm.watch("professional_title") || ""}
                             onChange={(e) => generalForm.setValue("professional_title", e.target.value, { shouldDirty: true })}
                             placeholder="Ej: Lic., Kine., Mat., etc."
-                            className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-sm font-bold"
+                            className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-sm font-bold"
                             autoFocus
                           />
                         )}
@@ -1059,7 +1059,7 @@ export default function ProfessionalProfilePage() {
                         name="gender"
                         render={({ field }: { field: any }) => (
                           <FormItem>
-                            <div className="flex items-center gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 mb-1">
                               <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                               <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                 Género
@@ -1070,7 +1070,7 @@ export default function ProfessionalProfilePage() {
                               value={field.value || undefined}
                             >
                               <FormControl>
-                                <SelectTrigger className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
+                                <SelectTrigger className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
                                   <SelectValue placeholder="Selecciona" />
                                 </SelectTrigger>
                               </FormControl>
@@ -1092,7 +1092,7 @@ export default function ProfessionalProfilePage() {
                           name="phone"
                           render={({ field }: { field: any }) => (
                             <FormItem>
-                              <div className="flex items-center gap-2 mb-1.5">
+                              <div className="flex items-center gap-2 mb-1">
                                 <User className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                                 <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                   Teléfono de contacto
@@ -1107,7 +1107,7 @@ export default function ProfessionalProfilePage() {
                                     type="tel"
                                     {...field}
                                     placeholder="9 1234 5678"
-                                    className="rounded-l-none rounded-r-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                                    className="rounded-l-none rounded-r-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
                                   />
                                 </div>
                               </FormControl>
@@ -1115,7 +1115,7 @@ export default function ProfessionalProfilePage() {
                             </FormItem>
                           )}
                         />
-                        <div className="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
                           <div>
                             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Mostrar teléfono en perfil público</p>
                             <p className="text-xs text-slate-400 mt-0.5">Los pacientes podrán ver y llamarte directamente</p>
@@ -1128,19 +1128,19 @@ export default function ProfessionalProfilePage() {
                       </div>
 
                       {/* Row 2: Specialties */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <FormField
                           control={generalForm.control}
                           name="specialty_id"
                           render={({ field }: { field: any }) => (
                             <FormItem>
-                              <div className="flex items-center gap-2 mb-1.5">
+                              <div className="flex items-center gap-2 mb-1">
                                 <Award className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                                 <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Especialidad Principal</FormLabel>
                               </div>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                  <SelectTrigger className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
+                                  <SelectTrigger className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
                                     <SelectValue placeholder="Selecciona una especialidad" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -1155,7 +1155,7 @@ export default function ProfessionalProfilePage() {
                           )}
                         />
                         <div>
-                          <div className="flex items-center gap-2 mb-1.5">
+                          <div className="flex items-center gap-2 mb-1">
                             <Stethoscope className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                             <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                               Condiciones que tratas
@@ -1190,7 +1190,7 @@ export default function ProfessionalProfilePage() {
                         name="bio"
                         render={({ field }: { field: any }) => (
                           <FormItem>
-                            <div className="flex items-center gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 mb-1">
                               <FileText className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                               <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Biografía Profesional</FormLabel>
                             </div>
@@ -1280,12 +1280,12 @@ export default function ProfessionalProfilePage() {
                       name="clinic_address"
                       render={({ field }: { field: any }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 block">Dirección Consulta</FormLabel>
+                          <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Dirección Consulta</FormLabel>
                           <FormControl>
                             <GoogleAddressInput 
                               value={field.value} 
                               onChange={field.onChange}
-                              className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200" 
+                              className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200" 
                               placeholder="Ej: Av. Providencia 1234" 
                             />
                           </FormControl>
@@ -1298,9 +1298,9 @@ export default function ProfessionalProfilePage() {
                       name="clinic_city"
                       render={({ field }: { field: any }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 block">Ciudad / Comuna</FormLabel>
+                          <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Ciudad / Comuna</FormLabel>
                           <FormControl>
-                            <Input {...field} className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200" placeholder="Ej: Santiago / Las Condes" />
+                            <Input {...field} className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200" placeholder="Ej: Santiago / Las Condes" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1316,7 +1316,7 @@ export default function ProfessionalProfilePage() {
                          value={tagInput}
                          onChange={(e) => setTagInput(e.target.value)}
                          onKeyDown={addConditionTag}
-                         className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                         className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
                        />
                        <Button 
                          type="button" 
@@ -1355,7 +1355,7 @@ export default function ProfessionalProfilePage() {
                         value={patientsInput}
                         onChange={(e) => setPatientsInput(e.target.value)}
                         onKeyDown={addPatientGroup}
-                        className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                        className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
                       />
                       <Button
                         type="button"
@@ -1393,7 +1393,7 @@ export default function ProfessionalProfilePage() {
                         value={paymentsInput}
                         onChange={(e) => setPaymentsInput(e.target.value)}
                         onKeyDown={addPaymentMethod}
-                        className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                        className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
                       />
                       <Button
                         type="button"
@@ -1475,7 +1475,7 @@ export default function ProfessionalProfilePage() {
                               <FormItem>
                                 <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Institución</FormLabel>
                                 <FormControl>
-                                  <Input {...field} className="rounded-xl h-10 bg-white/70 dark:bg-slate-950/70 border-slate-100 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 text-sm font-bold dark:text-slate-200" />
+                                  <Input {...field} className="rounded-xl h-9 bg-white/70 dark:bg-slate-950/70 border-slate-100 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 text-sm font-bold dark:text-slate-200" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1488,7 +1488,7 @@ export default function ProfessionalProfilePage() {
                               <FormItem>
                                 <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Título / Especialidad</FormLabel>
                                 <FormControl>
-                                  <Input {...field} className="rounded-xl h-10 bg-white/70 dark:bg-slate-950/70 border-slate-100 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 text-sm font-bold dark:text-slate-200" />
+                                  <Input {...field} className="rounded-xl h-9 bg-white/70 dark:bg-slate-950/70 border-slate-100 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 text-sm font-bold dark:text-slate-200" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1501,7 +1501,7 @@ export default function ProfessionalProfilePage() {
                               <FormItem className="sm:col-span-1">
                                 <FormLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Año de Egreso</FormLabel>
                                 <FormControl>
-                                  <Input type="number" {...field} className="rounded-xl h-10 bg-white/70 dark:bg-slate-950/70 border-slate-100 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 text-sm font-bold w-full sm:w-32 dark:text-slate-200" />
+                                  <Input type="number" {...field} className="rounded-xl h-9 bg-white/70 dark:bg-slate-950/70 border-slate-100 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 text-sm font-bold w-full sm:w-32 dark:text-slate-200" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1731,7 +1731,7 @@ export default function ProfessionalProfilePage() {
                                       <Input
                                         {...f}
                                         placeholder="Ej: Consulta General"
-                                        className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                                        className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
                                       />
                                     </FormControl>
                                     <FormMessage />
@@ -1755,7 +1755,7 @@ export default function ProfessionalProfilePage() {
                                           min={0}
                                           step={500}
                                           placeholder="25000"
-                                          className="rounded-xl h-10 pl-7 pr-14 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                                          className="rounded-xl h-9 pl-7 pr-14 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
                                         />
                                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-xs font-black select-none">CLP</span>
                                       </div>
@@ -1777,7 +1777,7 @@ export default function ProfessionalProfilePage() {
                                       value={String(f.value)}
                                     >
                                       <FormControl>
-                                        <SelectTrigger className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
+                                        <SelectTrigger className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
                                           <SelectValue placeholder="Selecciona" />
                                         </SelectTrigger>
                                       </FormControl>
@@ -1801,7 +1801,7 @@ export default function ProfessionalProfilePage() {
                                     <FormLabel className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Modalidad</FormLabel>
                                     <Select onValueChange={f.onChange} value={f.value}>
                                       <FormControl>
-                                        <SelectTrigger className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
+                                        <SelectTrigger className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold">
                                           <SelectValue placeholder="Selecciona" />
                                         </SelectTrigger>
                                       </FormControl>
@@ -1893,9 +1893,9 @@ export default function ProfessionalProfilePage() {
                         name="new_password"
                         render={({ field }: { field: any }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 block">Nueva Contraseña</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Nueva Contraseña</FormLabel>
                             <FormControl>
-                              <Input type="password" {...field} className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 transition-all text-sm font-bold dark:text-slate-200" placeholder="Mínimo 8 caracteres" />
+                              <Input type="password" {...field} className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 transition-all text-sm font-bold dark:text-slate-200" placeholder="Mínimo 8 caracteres" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1907,9 +1907,9 @@ export default function ProfessionalProfilePage() {
                         name="confirm_password"
                         render={({ field }: { field: any }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5 block">Confirmar Contraseña</FormLabel>
+                            <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Confirmar Contraseña</FormLabel>
                             <FormControl>
-                              <Input type="password" {...field} className="rounded-xl h-10 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 transition-all text-sm font-bold dark:text-slate-200" placeholder="Repite tu contraseña" />
+                              <Input type="password" {...field} className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-950 transition-all text-sm font-bold dark:text-slate-200" placeholder="Repite tu contraseña" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
