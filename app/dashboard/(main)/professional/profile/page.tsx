@@ -134,7 +134,7 @@ const pricingSchema = z.object({
 
 // ─── Inline accordion content helpers ─────────────────────────────────────────
 
-function PersonalDataFields({ generalForm, profileName, onSaveGeneral, onSaveName, saving }: any) {
+function PersonalDataFields({ generalForm, profileName, onSaveGeneral, onSaveName, onSaveFieldDirect, saving }: any) {
   const [editingField, setEditingField] = useState<string | null>(null)
   const [tempValue, setTempValue] = useState("")
   const [tempLast, setTempLast] = useState("")
@@ -145,8 +145,7 @@ function PersonalDataFields({ generalForm, profileName, onSaveGeneral, onSaveNam
   }
   function cancelEdit() { setEditingField(null); setTempValue(""); setTempLast("") }
   async function saveField(field: string) {
-    generalForm.setValue(field, tempValue, { shouldDirty: true })
-    await generalForm.handleSubmit(onSaveGeneral)()
+    await onSaveFieldDirect(field, tempValue)
     setEditingField(null)
   }
   async function saveName() {
@@ -233,15 +232,14 @@ function PersonalDataFields({ generalForm, profileName, onSaveGeneral, onSaveNam
         description="Los pacientes podrán ver y llamarte directamente"
         checked={generalForm.watch("show_phone") ?? true}
         onCheckedChange={(v: boolean) => {
-          generalForm.setValue("show_phone", v, { shouldDirty: true })
-          generalForm.handleSubmit(onSaveGeneral)()
+          onSaveFieldDirect("show_phone", v)
         }}
       />
     </div>
   )
 }
 
-function ProfessionalTrajectoryFields({ generalForm, specialties, PROFESSIONAL_TITLES, customTitle, setCustomTitle, onSaveGeneral, saving }: any) {
+function ProfessionalTrajectoryFields({ generalForm, specialties, PROFESSIONAL_TITLES, customTitle, setCustomTitle, onSaveGeneral, onSaveFieldDirect, saving }: any) {
   const [editingField, setEditingField] = useState<string | null>(null)
   const [tempValue, setTempValue] = useState("")
   const [tempCustomTitle, setTempCustomTitle] = useState(false)
@@ -252,8 +250,7 @@ function ProfessionalTrajectoryFields({ generalForm, specialties, PROFESSIONAL_T
   }
   function cancelEdit() { setEditingField(null); setTempValue("") }
   async function saveField(field: string, value?: string) {
-    generalForm.setValue(field, value ?? tempValue, { shouldDirty: true })
-    await generalForm.handleSubmit(onSaveGeneral)()
+    await onSaveFieldDirect(field, value ?? tempValue)
     setEditingField(null)
   }
 
@@ -350,11 +347,7 @@ function ProfessionalTrajectoryFields({ generalForm, specialties, PROFESSIONAL_T
             <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50">Cancelar</button>
             <button
               type="button"
-              onClick={() => {
-                generalForm.setValue("years_experience", parseInt(tempValue, 10), { shouldDirty: true })
-                generalForm.handleSubmit(onSaveGeneral)()
-                setEditingField(null)
-              }}
+              onClick={() => saveField("years_experience", String(parseInt(tempValue, 10) || 0))}
               disabled={saving}
               className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50"
             >
@@ -404,7 +397,7 @@ function ProfessionalTrajectoryFields({ generalForm, specialties, PROFESSIONAL_T
   )
 }
 
-function BioAccordion({ generalForm, onSaveGeneral, saving }: any) {
+function BioAccordion({ generalForm, onSaveGeneral, onSaveFieldDirect, saving }: any) {
   const [editing, setEditing] = useState(false)
 
   const bioHtml: string = generalForm.watch("bio") ?? ""
@@ -452,7 +445,7 @@ function BioAccordion({ generalForm, onSaveGeneral, saving }: any) {
             <button
               type="button"
               disabled={saving}
-              onClick={() => { generalForm.handleSubmit(onSaveGeneral)(); setEditing(false) }}
+              onClick={() => { onSaveFieldDirect("bio", generalForm.getValues("bio")); setEditing(false) }}
               className="text-xs font-semibold text-white bg-teal-600 px-3 py-1.5 rounded-lg hover:bg-teal-700 disabled:opacity-50"
             >
               {saving ? "Guardando..." : "Guardar biografía"}
@@ -737,6 +730,36 @@ export default function ProfessionalProfilePage() {
       
       toast.success("Información general actualizada")
       generalForm.reset(values)
+    } catch (err) {
+      toast.error("Error al guardar")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Saves a single field directly to Supabase — bypasses full form validation
+  // so fields are editable even when bio/registration_number aren't filled yet
+  const onSaveFieldDirect = async (field: string, value: any) => {
+    if (!user) return
+    setSaving(true)
+    try {
+      const profileFields = ["gender", "phone", "show_phone", "professional_title"]
+      if (profileFields.includes(field)) {
+        const { error } = await supabase.from("profiles").update({ [field]: value }).eq("id", user.id)
+        if (error) throw error
+      } else if (field === "specialty_id") {
+        const selectedSpecialty = specialties.find((s: any) => s.id === value)
+        const updates: Record<string, unknown> = { specialty_id: value }
+        if (selectedSpecialty) updates.specialty = selectedSpecialty.name_es
+        const { error } = await supabase.from("professionals").update(updates).eq("id", user.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from("professionals").update({ [field]: value }).eq("id", user.id)
+        if (error) throw error
+      }
+      generalForm.setValue(field as any, value, { shouldDirty: false })
+      await mutateProfile()
+      toast.success("Guardado")
     } catch (err) {
       toast.error("Error al guardar")
     } finally {
@@ -1242,6 +1265,7 @@ export default function ProfessionalProfilePage() {
                   profileName={profileName}
                   onSaveGeneral={onSaveGeneral}
                   onSaveName={onSaveName}
+                  onSaveFieldDirect={onSaveFieldDirect}
                   saving={saving}
                 />
               </AccordionSection>
@@ -1265,6 +1289,7 @@ export default function ProfessionalProfilePage() {
                   customTitle={customTitle}
                   setCustomTitle={setCustomTitle}
                   onSaveGeneral={onSaveGeneral}
+                  onSaveFieldDirect={onSaveFieldDirect}
                   saving={saving}
                 />
               </AccordionSection>
@@ -1308,6 +1333,7 @@ export default function ProfessionalProfilePage() {
               <BioAccordion
                 generalForm={generalForm}
                 onSaveGeneral={onSaveGeneral}
+                onSaveFieldDirect={onSaveFieldDirect}
                 saving={saving}
               />
 
