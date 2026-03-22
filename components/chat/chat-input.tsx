@@ -4,7 +4,8 @@ import { useState, useRef, type KeyboardEvent } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { EmojiPicker } from "./emoji-picker"
-import { Paperclip, Send, Mic, Image, FileText } from "lucide-react"
+import { Paperclip, Mic, Image, FileText } from "lucide-react"
+import { SendIcon } from "@/components/ui/animated-state-icons"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -113,7 +114,7 @@ export function ChatInput({
             size="icon"
             className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90 shrink-0 shadow-sm"
           >
-            <Send className="h-4 w-4" />
+            <SendIcon isSending={isSending} className="h-4 w-4" />
             <span className="sr-only">Enviar mensaje</span>
           </Button>
         ) : (

@@ -45,8 +45,10 @@ import { useAuth } from "@/hooks/use-auth"
 interface PatientRecord {
   id: string
   patient_id: string
+  appointment_id: string | null
   created_at: string
   reason_for_visit: string
+  diagnosis: string | null
   is_signed: boolean
   is_draft: boolean
   patient: {
@@ -89,8 +91,10 @@ export default function ClinicalRecordsDashboard() {
         .select(`
           id,
           patient_id,
+          appointment_id,
           created_at,
           reason_for_visit,
+          diagnosis,
           is_signed,
           is_draft,
           patient:profiles!medical_records_patient_id_fkey (
@@ -165,32 +169,36 @@ export default function ClinicalRecordsDashboard() {
     }
   }
 
+  const getRecordUrl = (record: PatientRecord) => {
+    if (record.appointment_id) {
+      return `/dashboard/professional/consultation/${record.appointment_id}`
+    }
+    return `/dashboard/professional/fichas/${record.id}`
+  }
+
   const handleReviewDrafts = () => {
-    if (kpis.critical === 0) {
-      toast.info(isSpanish 
-        ? "No tienes borradores pendientes por revisar en este momento." 
-        : "You don't have pending drafts to review at this moment."
+    const firstDraft = records.find(r => r.is_draft)
+    if (!firstDraft) {
+      toast.info(isSpanish
+        ? "No tienes borradores pendientes."
+        : "No pending drafts."
       )
       return
     }
-    // Logic to open drafts list or first draft
-    toast.success(isSpanish 
-      ? `Abriendo ${kpis.critical} borradores...` 
-      : `Opening ${kpis.critical} drafts...`
-    )
+    router.push(getRecordUrl(firstDraft))
   }
 
   // --- Components ---
   const KPICard = ({ title, value, icon: Icon, color }: any) => (
-    <Card className="border-none bg-white dark:bg-slate-900 shadow-sm overflow-hidden group">
-      <CardContent className="p-5 flex items-center gap-4">
-        <div className={cn("p-3 rounded-2xl shadow-inner transition-colors", color)}>
-          <Icon className="h-5 w-5" />
+    <Card className="border-border/40 bg-white dark:bg-slate-900 shadow-sm rounded-2xl">
+      <CardContent className="p-4 flex items-center gap-3">
+        <div className={cn("p-2.5 rounded-xl shrink-0", color)}>
+          <Icon className="h-4 w-4" />
         </div>
         <div>
-          <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] mb-0.5">{title}</p>
-          <div className="text-2xl font-black tracking-tighter text-foreground/90">
-            {loading ? <Loader2 className="h-6 w-6 animate-spin text-slate-300" /> : value}
+          <p className="text-xs font-medium text-muted-foreground mb-0.5">{title}</p>
+          <div className="text-xl font-bold text-foreground">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin text-slate-300" /> : value}
           </div>
         </div>
       </CardContent>
@@ -221,36 +229,41 @@ export default function ClinicalRecordsDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 lg:p-10 space-y-8 max-w-[1600px] mx-auto font-sans">
-      
-      {/* --- Header area --- */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-            {isSpanish ? "Gestión de Historias Clínicas" : "Clinical History Management"}
+    <div className="space-y-6 pb-10">
+
+      {/* --- Header --- */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            {isSpanish ? "Fichas Clínicas" : "Clinical Records"}
           </h1>
-          <p className="text-slate-500 font-medium">
-            {isSpanish ? "Panel centralizado de fichas y borradores" : "Centralized dashboard for records and drafts"}
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {isSpanish ? "Historial de atenciones y borradores" : "Visit history and drafts"}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => loadRecords()} 
-            className="h-12 px-4 rounded-2xl border-slate-200"
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadRecords()}
+            className="h-9 rounded-xl border-border/60"
             disabled={loading}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <History className="h-4 w-4" />}
           </Button>
-          <Button className="h-12 px-6 bg-teal-600 hover:bg-teal-500 text-white rounded-2xl shadow-xl shadow-teal-500/20 transition-all font-bold gap-2">
-            <Plus className="h-5 w-5" />
-            {isSpanish ? "Nueva Ficha Clínica" : "New Clinical Record"}
+          <Button
+            size="sm"
+            className="h-9 bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm gap-2 font-medium"
+            onClick={() => router.push("/dashboard/professional/appointments")}
+          >
+            <Plus className="h-4 w-4" />
+            {isSpanish ? "Nueva Ficha" : "New Record"}
           </Button>
         </div>
-      </header>
+      </div>
 
       {/* --- KPI Grid --- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard 
           title={isSpanish ? "Fichas Totales" : "Total Records"} 
           value={kpis.total.toLocaleString()} 
@@ -277,136 +290,128 @@ export default function ClinicalRecordsDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* --- Main Content: Patient Table --- */}
-        <div className="lg:col-span-8 space-y-6">
-          <Card className="border-none bg-white dark:bg-slate-900 shadow-sm rounded-[2rem] overflow-hidden">
-            <CardHeader className="p-8 pb-4">
-              <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-                <div className="relative w-full md:w-96">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input 
-                    placeholder={isSpanish ? "Buscar por nombre, RUT o diagnóstico..." : "Search by name, ID or diagnosis..."}
+        <div className="lg:col-span-8">
+          <Card className="border-border/40 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden">
+            <CardHeader className="p-4 pb-3 border-b border-border/40">
+              <div className="flex gap-3 justify-between items-center">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={isSpanish ? "Buscar paciente o diagnóstico..." : "Search patient or diagnosis..."}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-11 bg-slate-50 dark:bg-slate-800 border-none rounded-xl"
+                    className="pl-9 h-9 bg-muted/30 border-border/60 rounded-xl text-sm"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl">
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl border-border/60 shrink-0">
+                  <Filter className="h-4 w-4" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-100 dark:border-slate-800">
-                      <th className="px-8 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">{isSpanish ? "Paciente" : "Patient"}</th>
-                      <th className="px-8 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">{isSpanish ? "Última Atención" : "Last Visit"}</th>
-                      <th className="px-8 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">{isSpanish ? "Motivo" : "Reason"}</th>
-                      <th className="px-8 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">{isSpanish ? "Estado" : "Status"}</th>
-                      <th className="px-8 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">{isSpanish ? "Acciones" : "Actions"}</th>
+                    <tr className="border-b border-border/40 bg-muted/20">
+                      <th className="px-5 py-3 text-xs font-medium text-muted-foreground">{isSpanish ? "Paciente" : "Patient"}</th>
+                      <th className="px-5 py-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">{isSpanish ? "Fecha" : "Date"}</th>
+                      <th className="px-5 py-3 text-xs font-medium text-muted-foreground hidden md:table-cell">{isSpanish ? "Motivo" : "Reason"}</th>
+                      <th className="px-5 py-3 text-xs font-medium text-muted-foreground">{isSpanish ? "Estado" : "Status"}</th>
+                      <th className="px-5 py-3 text-xs font-medium text-muted-foreground text-right">{isSpanish ? "Acciones" : "Actions"}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                  <tbody className="divide-y divide-border/30">
                     <AnimatePresence mode="popLayout">
                       {loading ? (
                         <tr>
-                          <td colSpan={5} className="p-20 text-center">
-                            <Loader2 className="h-8 w-8 animate-spin mx-auto text-teal-600" />
+                          <td colSpan={5} className="p-12 text-center">
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-teal-600" />
                           </td>
                         </tr>
                       ) : filteredRecords.map((record, i) => (
-                        <motion.tr 
+                        <motion.tr
                           key={record.id}
-                          initial={{ opacity: 0, y: 10 }}
+                          initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.05 }}
-                          className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                          transition={{ delay: i * 0.04 }}
+                          className="group hover:bg-muted/20 transition-colors"
                         >
-                          <td className="px-8 py-5">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10 rounded-xl border border-white dark:border-slate-800 shadow-sm">
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <Avatar className="h-8 w-8 rounded-lg shrink-0">
                                 <AvatarImage src={record.patient.avatar_url} />
-                                <AvatarFallback className="bg-teal-500/10 text-teal-600 font-bold">
+                                <AvatarFallback className="bg-teal-50 dark:bg-teal-950/30 text-teal-600 text-xs font-semibold rounded-lg">
                                   {record.patient.first_name?.[0]}{record.patient.last_name?.[0]}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <p className="font-bold text-slate-900 dark:text-slate-100">
-                                  {record.patient.first_name} {record.patient.last_name}
-                                </p>
-                              </div>
+                              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                {record.patient.first_name} {record.patient.last_name}
+                              </p>
                             </div>
                           </td>
-                          <td className="px-8 py-5">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                                {format(new Date(record.created_at), "dd MMM, yyyy", { locale })}
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-medium">
-                                {format(new Date(record.created_at), "HH:mm")}
-                              </span>
+                          <td className="px-5 py-3.5 hidden sm:table-cell">
+                            <div>
+                              <p className="text-sm text-foreground">{format(new Date(record.created_at), "dd MMM, yyyy", { locale })}</p>
+                              <p className="text-xs text-muted-foreground">{format(new Date(record.created_at), "HH:mm")}</p>
                             </div>
                           </td>
-                          <td className="px-8 py-5 text-sm font-medium text-slate-600 dark:text-slate-400 max-w-[200px] truncate">
-                            {record.reason_for_visit || (isSpanish ? "Sin motivo" : "No reason")}
+                          <td className="px-5 py-3.5 hidden md:table-cell">
+                            <p className="text-sm text-muted-foreground max-w-[180px] truncate">
+                              {record.reason_for_visit || record.diagnosis || (isSpanish ? "Sin especificar" : "Not specified")}
+                            </p>
                           </td>
-                          <td className="px-8 py-5">
-                             <Badge 
-                              variant="outline" 
+                          <td className="px-5 py-3.5">
+                            <Badge
+                              variant="outline"
                               className={cn(
-                                "rounded-lg px-2.5 py-0.5 text-[10px] font-black uppercase tracking-tight border-none",
-                                record.is_signed ? "bg-emerald-500/10 text-emerald-600" :
-                                record.is_draft ? "bg-blue-500/10 text-blue-600" :
-                                "bg-amber-500/10 text-amber-600"
+                                "text-xs font-medium border-none px-2 py-0.5 rounded-md",
+                                record.is_signed ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400" :
+                                record.is_draft ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400" :
+                                "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400"
                               )}
-                             >
-                               {isSpanish ? (
-                                 record.is_signed ? 'Firmado' :
-                                 record.is_draft ? 'Borrador' : 'Pendiente'
-                               ) : (
-                                 record.is_signed ? 'Signed' :
-                                 record.is_draft ? 'Draft' : 'Pending'
-                               )}
-                             </Badge>
+                            >
+                              {isSpanish ? (
+                                record.is_signed ? 'Firmado' : record.is_draft ? 'Borrador' : 'Pendiente'
+                              ) : (
+                                record.is_signed ? 'Signed' : record.is_draft ? 'Draft' : 'Pending'
+                              )}
+                            </Badge>
                           </td>
-                          <td className="px-8 py-5 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 className="h-9 px-3 rounded-xl font-bold text-teal-600 hover:bg-teal-50 gap-2"
-                                 onClick={() => router.push(`/dashboard/professional/fichas/${record.id}`)}
-                               >
-                                 {record.is_draft ? (isSpanish ? 'Continuar' : 'Continue') : (isSpanish ? 'Ver' : 'View')}
-                               </Button>
-                               <DropdownMenu>
-                                 <DropdownMenuTrigger asChild>
-                                   <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl">
-                                     <MoreHorizontal className="h-4 w-4" />
-                                   </Button>
-                                 </DropdownMenuTrigger>
-                                 <DropdownMenuContent align="end" className="rounded-xl p-2 w-48 shadow-xl">
-                                   <DropdownMenuItem
-                                     className="rounded-lg gap-2 font-medium cursor-pointer"
-                                     onClick={() => router.push(`/dashboard/patient/${record.patient_id}/history`)}
-                                   >
-                                     <History className="h-4 w-4" /> {isSpanish ? 'Ver Historial' : 'View History'}
-                                   </DropdownMenuItem>
-                                   {!record.is_signed && (
-                                     <DropdownMenuItem
-                                       className="rounded-lg gap-2 font-medium cursor-pointer"
-                                       onClick={() => handleSignRecord(record.id)}
-                                     >
-                                       <ClipboardCheck className="h-4 w-4" /> {isSpanish ? 'Firmar Ficha' : 'Sign Record'}
-                                     </DropdownMenuItem>
-                                   )}
-                                 </DropdownMenuContent>
-                               </DropdownMenu>
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-3 rounded-lg text-xs font-medium text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30"
+                                onClick={() => router.push(getRecordUrl(record))}
+                              >
+                                {record.is_draft ? (isSpanish ? 'Continuar' : 'Continue') : (isSpanish ? 'Ver' : 'View')}
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="rounded-xl w-44">
+                                  <DropdownMenuItem
+                                    className="rounded-lg gap-2 text-sm cursor-pointer"
+                                    onClick={() => router.push(getRecordUrl(record))}
+                                  >
+                                    <History className="h-4 w-4" /> {isSpanish ? 'Ver ficha' : 'View record'}
+                                  </DropdownMenuItem>
+                                  {!record.is_signed && (
+                                    <DropdownMenuItem
+                                      className="rounded-lg gap-2 text-sm cursor-pointer"
+                                      onClick={() => handleSignRecord(record.id)}
+                                    >
+                                      <ClipboardCheck className="h-4 w-4" /> {isSpanish ? 'Firmar' : 'Sign'}
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </td>
                         </motion.tr>
@@ -415,16 +420,14 @@ export default function ClinicalRecordsDashboard() {
                   </tbody>
                 </table>
                 {filteredRecords.length === 0 && !loading && (
-                  <div className="p-20 text-center flex flex-col items-center gap-4">
-                    <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center">
-                      <Search className="h-10 w-10 text-slate-300" />
+                  <div className="py-12 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                      <Search className="h-6 w-6 text-muted-foreground/50" />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-800">{isSpanish ? 'Sin resultados' : 'No results found'}</h3>
-                      <p className="text-slate-500 text-sm max-w-sm mx-auto">
-                        {isSpanish ? 'No pudimos encontrar registros que coincidan con tu búsqueda.' : 'We couldnt find any records matching your search.'}
-                      </p>
-                    </div>
+                    <p className="text-sm font-medium text-muted-foreground">{isSpanish ? 'Sin resultados' : 'No records found'}</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">
+                      {isSpanish ? 'Las fichas se crean durante las consultas.' : 'Records are created during consultations.'}
+                    </p>
                   </div>
                 )}
               </div>
@@ -432,93 +435,97 @@ export default function ClinicalRecordsDashboard() {
           </Card>
         </div>
 
-        {/* --- Sidebar: Pending Notes & AI --- */}
-        <aside className="lg:col-span-4 space-y-6">
-          <Card className="border-none bg-white dark:bg-slate-900 shadow-sm rounded-[2rem] overflow-hidden">
-            <CardHeader className="p-8 pb-4">
-               <CardTitle className="text-xl font-black flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-amber-500/10">
-                    <Clock className="h-5 w-5 text-amber-600" />
-                  </div>
-                  {isSpanish ? "Notas por Finalizar" : "Notes to Finalize"}
-               </CardTitle>
+        {/* --- Sidebar --- */}
+        <aside className="lg:col-span-4 space-y-4">
+          {/* Borradores pendientes */}
+          <Card className="border-border/40 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden">
+            <CardHeader className="p-4 pb-3 border-b border-border/40">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/30">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                </div>
+                {isSpanish ? "Borradores pendientes" : "Pending drafts"}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="p-8 pt-0 space-y-4">
-              {records.filter(r => r.is_draft).slice(0, 3).length > 0 ? (
-                records.filter(r => r.is_draft).slice(0, 3).map((note, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 group hover:ring-1 hover:ring-teal-500/30 transition-all cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center font-bold text-slate-400 overflow-hidden">
-                        <Avatar className="h-full w-full">
-                          <AvatarImage src={note.patient.avatar_url} />
-                          <AvatarFallback>{note.patient.first_name?.[0]}</AvatarFallback>
-                        </Avatar>
-                      </div>
+            <CardContent className="p-3 space-y-2">
+              {records.filter(r => r.is_draft).slice(0, 4).length > 0 ? (
+                records.filter(r => r.is_draft).slice(0, 4).map((note, i) => (
+                  <button
+                    key={i}
+                    onClick={() => router.push(getRecordUrl(note))}
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="h-7 w-7 rounded-lg">
+                        <AvatarImage src={note.patient.avatar_url} />
+                        <AvatarFallback className="bg-teal-50 text-teal-600 text-xs rounded-lg">{note.patient.first_name?.[0]}</AvatarFallback>
+                      </Avatar>
                       <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                          {note.patient.first_name} {note.patient.last_name?.[0] ?? ""}.
+                        <p className="text-xs font-semibold text-foreground">
+                          {note.patient.first_name} {note.patient.last_name?.[0]}.
                         </p>
-                        <p className="text-[10px] text-slate-400 uppercase font-black">{format(new Date(note.created_at), "HH:mm")}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(note.created_at), "HH:mm · dd MMM")}</p>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] font-black uppercase text-teal-600">
-                      Borrador
-                    </Badge>
-                  </div>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                  </button>
                 ))
               ) : (
-                <p className="text-sm text-center text-slate-500 py-4">
-                  {isSpanish ? "No hay borradores pendientes" : "No pending drafts"}
-                </p>
-              )}
-              {records.filter(r => r.is_draft).length > 3 && (
-                <Button variant="outline" className="w-full text-xs font-black text-teal-600 flex items-center gap-2 group">
-                  {isSpanish ? 'Revisar todas las pendientes' : 'Review all pending'}
-                  <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                </Button>
+                <div className="py-6 text-center">
+                  <CheckCircle className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {isSpanish ? "Sin borradores pendientes" : "No pending drafts"}
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Nura AI Integration Card */}
-          <motion.div 
-            whileHover={{ y: -5 }}
-            className="relative overflow-hidden group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-teal-500/20 via-blue-400/5 to-transparent backdrop-blur-xl rounded-[2.5rem] border border-teal-500/20" />
-            <div className="relative p-8 space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-teal-500/20 text-teal-600 shadow-inner">
-                  <BrainCircuit className="h-6 w-6 animate-pulse" />
+          {/* Nura AI */}
+          <Card className="border-teal-200/60 dark:border-teal-800/40 bg-teal-50/50 dark:bg-teal-950/10 shadow-sm rounded-2xl overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 shrink-0">
+                  <BrainCircuit className="h-4 w-4" />
                 </div>
                 <div>
-                   <span className="text-[10px] font-black tracking-[0.2em] text-teal-600 dark:text-teal-400 uppercase">
-                     Nura AI Assistant
-                   </span>
-                   <h4 className="font-black text-lg text-slate-900 dark:text-white">Workspace Inteligente</h4>
+                  <p className="text-xs font-medium text-teal-600 dark:text-teal-400">Nura AI</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {isSpanish ? "Asistente clínico" : "Clinical assistant"}
+                  </p>
                 </div>
               </div>
-              
-              <div className="space-y-4">
-                <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
-                  {isSpanish 
-                    ? `Nura tiene ${kpis.critical} borradores listos basados en tus dictados de hoy. ¿Deseas revisarlos y firmarlos?`
-                    : `Nura has ${kpis.critical} drafts ready based on your dictations today. Would you like to review and sign them?`}
-                </p>
-                <div className="flex flex-col gap-2">
-                  <Button 
-                    className="w-full bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold gap-2"
-                    onClick={handleReviewDrafts}
-                  >
-                    <Zap className="h-4 w-4 fill-current" />
-                    {isSpanish ? `Revisar Borradores (${kpis.critical})` : `Review Drafts (${kpis.critical})`}
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <Zap className="absolute -bottom-6 -right-6 h-32 w-32 text-teal-600 opacity-5 rotate-12" />
-          </motion.div>
+              <p className="text-xs leading-relaxed text-muted-foreground mb-3">
+                {kpis.pending > 0
+                  ? (isSpanish
+                      ? `Tienes ${kpis.pending} ficha${kpis.pending !== 1 ? 's' : ''} sin firmar. Revísalas y fírmalas para completar la atención de tus pacientes.`
+                      : `You have ${kpis.pending} unsigned record${kpis.pending !== 1 ? 's' : ''}. Review and sign them to complete patient care.`)
+                  : (isSpanish
+                      ? "Todas tus fichas están al día. Nura te ayuda a redactar notas clínicas durante las consultas."
+                      : "All your records are up to date. Nura helps you draft clinical notes during consultations.")}
+              </p>
+              {kpis.pending > 0 && (
+                <Button
+                  size="sm"
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white rounded-lg h-8 text-xs font-medium gap-1.5"
+                  onClick={handleReviewDrafts}
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  {isSpanish ? `Revisar pendientes (${kpis.pending})` : `Review pending (${kpis.pending})`}
+                </Button>
+              )}
+              {kpis.pending === 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full rounded-lg h-8 text-xs font-medium border-teal-200 text-teal-600 hover:bg-teal-50 dark:border-teal-800 dark:hover:bg-teal-950/30"
+                  onClick={() => router.push("/dashboard/professional/appointments")}
+                >
+                  {isSpanish ? "Ver consultas programadas" : "View scheduled consultations"}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         </aside>
       </div>
 

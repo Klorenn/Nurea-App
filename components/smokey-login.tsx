@@ -811,7 +811,26 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
     if (!firstName.trim()) errors.firstName = isSpanish ? "El nombre es obligatorio" : "First name is required"
     if (!lastName.trim()) errors.lastName = isSpanish ? "El apellido es obligatorio" : "Last name is required"
     if (!email.trim()) errors.email = isSpanish ? "El correo es obligatorio" : "Email is required"
-    if (!password || password.length < 6) errors.password = isSpanish ? "Mínimo 6 caracteres" : "Minimum 6 characters"
+    
+    const passwordLower = password.toLowerCase()
+    const firstNameLower = firstName.toLowerCase().trim()
+    const lastNameLower = lastName.toLowerCase().trim()
+    
+    const isPasswordStrong = password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password)
+    const isPasswordVeryStrong = password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    
+    if (!password || password.length < 8) {
+      errors.password = isSpanish ? "Usa mínimo 8 caracteres" : "Use at least 8 characters"
+    } else if (!/[A-Z]/.test(password)) {
+      errors.password = isSpanish ? "Tu contraseña no es segura: falta una mayúscula" : "Password not secure: missing uppercase"
+    } else if (!/[0-9]/.test(password)) {
+      errors.password = isSpanish ? "Tu contraseña no es segura: falta un número" : "Password not secure: missing number"
+    } else if (
+      (firstNameLower && passwordLower.includes(firstNameLower)) ||
+      (lastNameLower && passwordLower.includes(lastNameLower))
+    ) {
+      errors.password = isSpanish ? "Tu contraseña no es segura: contiene tu nombre" : "Password not secure: contains your name"
+    }
 
     if (isProfessional) {
       if (!specialty.trim()) errors.specialty = isSpanish ? "Selecciona tu especialidad" : "Select your specialty"
@@ -1088,10 +1107,38 @@ export function SignupForm({ initialRole, initialPlan }: { initialRole?: "patien
                 <p className="mt-0.5 text-[11px] text-red-500" role="alert">{fieldErrors.password}</p>
               )}
               {password.length > 0 && (
-                <div className="mt-1.5 flex gap-1">
-                  <div className={cn("h-0.5 flex-1 rounded-full", password.length >= 6 ? "bg-teal-500" : "bg-slate-200 dark:bg-slate-700")} />
-                  <div className={cn("h-0.5 flex-1 rounded-full", password.length >= 8 ? "bg-teal-500" : "bg-slate-200 dark:bg-slate-700")} />
-                  <div className={cn("h-0.5 flex-1 rounded-full", password.length >= 12 ? "bg-teal-500" : "bg-slate-200 dark:bg-slate-700")} />
+                <div className="mt-2 space-y-1">
+                  <div className="flex gap-1">
+                    <div className={cn(
+                      "flex-1 h-1 rounded-full transition-all duration-300",
+                      password.length >= 8 
+                        ? "bg-rose-400" 
+                        : "bg-slate-200 dark:bg-slate-600"
+                    )} />
+                    <div className={cn(
+                      "flex-1 h-1 rounded-full transition-all duration-300",
+                      password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password)
+                        ? "bg-amber-400" 
+                        : "bg-slate-200 dark:bg-slate-600"
+                    )} />
+                    <div className={cn(
+                      "flex-1 h-1 rounded-full transition-all duration-300",
+                      password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[!@#$%^&*(),.?":{}|<>]/.test(password)
+                        ? "bg-emerald-400" 
+                        : "bg-slate-200 dark:bg-slate-600"
+                    )} />
+                  </div>
+                  <div className="flex justify-center">
+                    {password.length < 8 && (
+                      <span className="text-[10px] text-slate-400">{isSpanish ? "Débil" : "Weak"}</span>
+                    )}
+                    {password.length >= 8 && !(/[A-Z]/.test(password) && /[0-9]/.test(password)) && (
+                      <span className="text-[10px] text-rose-400 font-medium">{isSpanish ? "Débil" : "Weak"}</span>
+                    )}
+                    {password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password) && (
+                      <span className="text-[10px] text-emerald-500 font-medium">{isSpanish ? "Segura" : "Secure"}</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

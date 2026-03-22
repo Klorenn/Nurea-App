@@ -62,7 +62,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json()
-    const { first_name, last_name, phone, date_of_birth, address, health_insurance, gender } = body
+    const { first_name, last_name, phone, date_of_birth, address, health_insurance, gender, show_phone } = body
 
     // Build update object with only defined values
     const updateData: any = {
@@ -76,8 +76,9 @@ export async function PUT(request: Request) {
     if (date_of_birth !== undefined && date_of_birth !== null) updateData.date_of_birth = date_of_birth
     if (address !== undefined && address !== null) updateData.address = address
     if (health_insurance !== undefined && health_insurance !== null) updateData.health_insurance = health_insurance
+    if (show_phone !== undefined && show_phone !== null) updateData.show_phone = Boolean(show_phone)
     if (gender !== undefined && gender !== null) {
-      if (gender === "M" || gender === "F") updateData.gender = gender
+      if (gender === "M" || gender === "F" || gender === "other") updateData.gender = gender
       else updateData.gender = null
     }
 

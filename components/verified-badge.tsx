@@ -135,47 +135,49 @@ export function VerificationPendingBanner({
 
           <p className="text-sm text-amber-800/80 dark:text-amber-200/70 leading-relaxed max-w-2xl">
             {isSpanish
-              ? "Para garantizar la seguridad de nuestros pacientes, estamos cruzando tu información con el Registro Nacional de Prestadores Individuales (RNPI) de la Superintendencia de Salud. Este proceso toma menos de 24 horas. Te notificaremos por correo cuando tu cuenta esté activa para recibir pacientes."
-              : "To ensure patient safety, we are cross-referencing your information with the National Registry of Individual Healthcare Providers (RNPI) from the Health Superintendence. This process takes less than 24 hours. We will notify you by email when your account is active to receive patients."}
+              ? "Tu perfil está oculto para los pacientes hasta completar los 2 pasos de activación. Puedes preparar tu perfil mientras tanto."
+              : "Your profile is hidden from patients until you complete 2 activation steps. You can prepare your profile in the meantime."}
           </p>
 
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span className="font-medium">
-                {isSpanish ? "Tiempo estimado: < 24 horas" : "Estimated time: < 24 hours"}
-              </span>
+          {/* 2-step checklist */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-100/60 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-700/30">
+              <div className="w-5 h-5 rounded-full border-2 border-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                  {isSpanish ? "Paso 1 — Verificación RNPI (en curso)" : "Step 1 — RNPI Verification (in progress)"}
+                </p>
+                <p className="text-xs text-amber-700/70 dark:text-amber-300/70 mt-0.5">
+                  {isSpanish
+                    ? "Cruzamos tus credenciales con la Superintendencia de Salud. < 24 horas."
+                    : "We cross-check your credentials with the Health Superintendence. < 24 hours."}
+                </p>
+              </div>
             </div>
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-white/50 dark:bg-slate-800/30 border border-amber-200/40 dark:border-amber-700/20">
+              <div className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {isSpanish ? "Paso 2 — Activar suscripción" : "Step 2 — Activate subscription"}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {isSpanish
+                    ? "Elige tu plan para aparecer en búsquedas y recibir pacientes."
+                    : "Choose your plan to appear in searches and receive patients."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
               <span className="font-medium">
-                {isSpanish
-                  ? "Recibirás confirmación por email"
-                  : "You'll receive email confirmation"}
+                {isSpanish ? "Te notificamos por email al verificarte" : "We'll email you when verified"}
               </span>
             </div>
           </div>

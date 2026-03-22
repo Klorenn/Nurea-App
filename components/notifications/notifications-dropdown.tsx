@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Bell, Check, CheckCheck, Calendar, MessageCircle, CreditCard, FileText, AlertCircle, Clock, X } from "lucide-react"
+import { NotificationIcon } from "@/components/ui/animated-state-icons"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { useRouter } from "next/navigation"
@@ -149,7 +150,7 @@ export function NotificationsDropdown({ role = "patient" }: NotificationsDropdow
           onClick={() => setIsOpen(true)}
           className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-background hover:bg-accent transition-colors border border-border/40"
         >
-          <Bell className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+          <NotificationIcon hasNotifications={unreadCount > 0} className="h-5 w-5 text-teal-600 dark:text-teal-400" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 dark:bg-teal-500 text-white text-xs font-bold">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -170,7 +171,7 @@ export function NotificationsDropdown({ role = "patient" }: NotificationsDropdow
           <div className="flex items-center justify-between p-4 border-b border-border/40">
             <div className="flex items-center gap-3">
               <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 dark:bg-teal-900/30">
-                <Bell className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                <NotificationIcon hasNotifications={unreadCount > 0} className="h-5 w-5 text-teal-600 dark:text-teal-400" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 dark:bg-teal-500 text-white text-xs font-bold">
                     {unreadCount > 9 ? "9+" : unreadCount}

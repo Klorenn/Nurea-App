@@ -89,15 +89,19 @@ async function fetchConversations(userId: string): Promise<ConversationListItem[
       )
     `)
     .eq("user_id", userId)
-    .neq("conversations.request_status", "rejected") // Hide rejected chats
-    .order("conversations(updated_at)", { ascending: false })
 
   if (error) throw error
 
   const result: ConversationListItem[] = []
 
-  // Filter out any that were rejected since PostgREST !inner might not fully filter the outer array correctly
-  const activeChats = (data || []).filter((item: any) => item.conversations?.request_status !== "rejected")
+  // Filter out rejected chats and sort by updated_at descending
+  const activeChats = (data || [])
+    .filter((item: any) => item.conversations?.request_status !== "rejected")
+    .sort((a: any, b: any) => {
+      const aDate = new Date(a.conversations?.updated_at || 0).getTime()
+      const bDate = new Date(b.conversations?.updated_at || 0).getTime()
+      return bDate - aDate
+    })
 
   for (const item of activeChats) {
     // Obtener el otro participante

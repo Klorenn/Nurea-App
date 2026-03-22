@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { User, Mail, Phone, Calendar, MapPin, Save, Edit2, Loader2, Shield } from "lucide-react"
+import { User, Mail, Phone, Calendar, MapPin, Save, Edit2, Loader2, Shield, Eye } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { useAuth } from "@/hooks/use-auth"
@@ -43,6 +44,7 @@ export default function ProfilePage() {
     gender: "",
     address: "",
     healthInsurance: "",
+    showPhone: true,
   })
 
   const HEALTH_INSURANCE_OPTIONS = [
@@ -76,6 +78,7 @@ export default function ProfilePage() {
             gender: data.profile.gender || "",
             address: data.profile.address || "",
             healthInsurance: data.profile.health_insurance || "",
+            showPhone: data.profile.show_phone !== false,
           })
           setInitialEmail(user.email || "")
           if (data.profile.avatar_url) {
@@ -91,6 +94,7 @@ export default function ProfilePage() {
             gender: "",
             address: "",
             healthInsurance: "",
+            showPhone: true,
           })
           setInitialEmail(user.email || "")
         }
@@ -106,6 +110,7 @@ export default function ProfilePage() {
           gender: "",
           address: "",
           healthInsurance: "",
+          showPhone: true,
         })
         setInitialEmail(user.email || "")
       } finally {
@@ -158,6 +163,13 @@ export default function ProfilePage() {
         setEmailPassword("")
       }
 
+      // Validate required fields
+      if (!formData.dateOfBirth) {
+        setError(language === "es" ? "La fecha de nacimiento es obligatoria." : "Date of birth is required.")
+        setLoading(false)
+        return
+      }
+
       // Preparar datos solo con valores definidos
       const updateData: any = {}
       if (formData.firstName?.trim()) updateData.first_name = formData.firstName.trim()
@@ -166,7 +178,8 @@ export default function ProfilePage() {
       if (formData.dateOfBirth) updateData.date_of_birth = formData.dateOfBirth
       if (formData.address?.trim()) updateData.address = formData.address.trim()
       if (formData.healthInsurance !== undefined) updateData.health_insurance = formData.healthInsurance
-      if (formData.gender === "M" || formData.gender === "F") updateData.gender = formData.gender
+      if (formData.gender) updateData.gender = formData.gender
+      updateData.show_phone = formData.showPhone
 
       const response = await fetch("/api/user/profile", {
         method: "PUT",
@@ -487,6 +500,7 @@ export default function ProfilePage() {
                 <Label htmlFor="dateOfBirth" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   {language === "es" ? "Fecha de Nacimiento" : "Date of Birth"}
+                  <span className="text-red-500">*</span>
                 </Label>
                 {isEditing ? (
                   <Input
@@ -495,6 +509,7 @@ export default function ProfilePage() {
                     value={formData.dateOfBirth}
                     onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                     className="rounded-xl"
+                    required
                     disabled={loading}
                   />
                 ) : (
@@ -506,7 +521,8 @@ export default function ProfilePage() {
 
               <div className="space-y-2">
                 <Label htmlFor="gender" className="flex items-center gap-2">
-                  {language === "es" ? "Eres hombre o mujer" : "Are you male or female"}
+                  <User className="h-4 w-4" />
+                  {language === "es" ? "Género" : "Gender"}
                 </Label>
                 {isEditing ? (
                   <select
@@ -519,22 +535,43 @@ export default function ProfilePage() {
                     <option value="">{language === "es" ? "Selecciona" : "Select"}</option>
                     <option value="M">{language === "es" ? "Hombre" : "Male"}</option>
                     <option value="F">{language === "es" ? "Mujer" : "Female"}</option>
+                    <option value="other">{language === "es" ? "Prefiero no especificar" : "Prefer not to say"}</option>
                   </select>
                 ) : (
                   <p className="text-sm font-medium py-2">
-                    {formData.gender
-                      ? formData.gender === "F"
-                        ? language === "es"
-                          ? "Mujer"
-                          : "Female"
-                        : language === "es"
-                          ? "Hombre"
-                          : "Male"
-                      : language === "es"
-                        ? "No agregado"
-                        : "Not added"}
+                    {formData.gender === "F"
+                      ? language === "es" ? "Mujer" : "Female"
+                      : formData.gender === "M"
+                      ? language === "es" ? "Hombre" : "Male"
+                      : formData.gender === "other"
+                      ? language === "es" ? "Prefiero no especificar" : "Prefer not to say"
+                      : language === "es" ? "No agregado" : "Not added"}
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  {language === "es" ? "Mostrar teléfono en perfil" : "Show phone on profile"}
+                </Label>
+                <div className="flex items-center justify-between rounded-xl border border-input bg-background px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {language === "es" ? "Visible para especialistas" : "Visible to specialists"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {language === "es"
+                        ? "Los profesionales podrán ver tu número de teléfono"
+                        : "Professionals will be able to see your phone number"}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.showPhone}
+                    onCheckedChange={(v) => setFormData({ ...formData, showPhone: v })}
+                    disabled={!isEditing || loading}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

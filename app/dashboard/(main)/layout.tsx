@@ -4,17 +4,12 @@ import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuth } from "@/hooks/use-auth"
-import { createClient } from "@/lib/supabase/client"
 import { useProfile } from "@/hooks/use-profile"
 import { DashboardSidebar, type UserRole } from "@/components/dashboard/Sidebar"
 import { UserDropdown } from "@/components/ui/user-dropdown"
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useLanguage } from "@/contexts/language-context"
-import {
-  SidebarProvider,
-  SidebarInset,
-} from "@/components/ui/sidebar"
 import { Loader2 } from "lucide-react"
 import { SupportTicketSheet } from "@/components/support/SupportTicketSheet"
 
@@ -36,8 +31,6 @@ export default function DashboardMainLayout({
   const router = useRouter()
   const pathname = usePathname()
   const { language } = useLanguage()
-  const supabase = createClient()
-
   const { profile, isLoading: profileLoading } = useProfile()
   const [redirecting, setRedirecting] = useState(false)
 
@@ -129,67 +122,61 @@ export default function DashboardMainLayout({
   const isSpanish = language === "es"
 
   return (
-    <SidebarProvider defaultOpen={role === "admin"}>
-      <div className="flex min-h-screen w-full bg-background">
-        <DashboardSidebar role={role} language={language} />
+    <div className="flex h-screen w-full bg-background overflow-hidden">
+      <DashboardSidebar role={role} language={language} />
 
-        <SidebarInset className="flex flex-col">
-          <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-xl border-b border-border/40 sticky top-0 z-30">
-            <div className="flex items-center gap-3">
-              <h1 className="hidden sm:block text-sm font-medium text-muted-foreground">
-                {role === "admin"
-                  ? isSpanish
-                    ? "Panel de Administración"
-                    : "Admin Panel"
-                  : role === "professional"
-                  ? isSpanish
-                    ? "Panel Profesional"
-                    : "Professional Dashboard"
-                  : isSpanish
-                  ? "Mi Dashboard"
-                  : "My Dashboard"}
-              </h1>
-            </div>
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {/* Top header */}
+        <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-xl border-b border-border/40 sticky top-0 z-30 shrink-0">
+          <div className="flex items-center gap-3">
+            <h1 className="hidden sm:block text-sm font-medium text-muted-foreground">
+              {role === "admin"
+                ? isSpanish ? "Panel de Administración" : "Admin Panel"
+                : role === "professional"
+                ? isSpanish ? "Panel Profesional" : "Professional Dashboard"
+                : isSpanish ? "Mi Dashboard" : "My Dashboard"}
+            </h1>
+          </div>
 
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <NotificationsDropdown role={role} />
-              <UserDropdown
-                role={role}
-                user={{
-                  name: profile.first_name
-                    ? `${profile.first_name} ${profile.last_name || ""}`.trim()
-                    : user.email?.split("@")[0] || "Usuario",
-                  email: user.email || "",
-                  avatar: profile.avatar_url || undefined,
-                  initials:
-                    profile.first_name?.[0]?.toUpperCase() ||
-                    user.email?.[0]?.toUpperCase() ||
-                    "U",
-                  status: "online",
-                }}
-              />
-            </div>
-          </header>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <NotificationsDropdown role={role} />
+            <UserDropdown
+              role={role}
+              user={{
+                name: profile.first_name
+                  ? `${profile.first_name} ${profile.last_name || ""}`.trim()
+                  : user.email?.split("@")[0] || "Usuario",
+                email: user.email || "",
+                avatar: profile.avatar_url || undefined,
+                initials:
+                  profile.first_name?.[0]?.toUpperCase() ||
+                  user.email?.[0]?.toUpperCase() ||
+                  "U",
+                status: "online",
+              }}
+            />
+          </div>
+        </header>
 
-          <main className="flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={pathname}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                >
-                  {children}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </main>
-          <SupportTicketSheet />
-        </SidebarInset>
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </main>
+        <SupportTicketSheet />
       </div>
-    </SidebarProvider>
+    </div>
   )
 }

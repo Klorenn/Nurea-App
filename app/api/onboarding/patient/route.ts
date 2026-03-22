@@ -1,123 +1,114 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import * as z from 'zod'
-
-const sexSchema = z.enum(['M', 'F'])
-
-const dateOfBirthSchema = z
-  .string()
-  .min(1, 'Fecha de nacimiento requerida')
-  .refine((v) => {
-    const d = new Date(`${v}T00:00:00`)
-    return !Number.isNaN(d.getTime())
-  }, 'Fecha inválida')
-  .refine((v) => {
-    const d = new Date(`${v}T00:00:00`)
-    const today = new Date()
-    let age = today.getFullYear() - d.getFullYear()
-    const monthDiff = today.getMonth() - d.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < d.getDate())) age -= 1
-    return age >= 18
-  }, 'Debes ser mayor de 18 años')
-
-const patientGoalSchema = z.enum(['consulta_medica', 'psicologia', 'ver_examenes', 'otra'])
-
-const patientOnboardingSchema = z
-  .object({
-    avatarUrl: z.string().url(),
-    dateOfBirth: dateOfBirthSchema,
-    gender: sexSchema,
-    phone: z.string().min(1, 'Teléfono requerido'),
-
-    allergiesEnabled: z.boolean(),
-    allergiesText: z.string().nullable().optional(),
-    chronicEnabled: z.boolean(),
-    chronicText: z.string().nullable().optional(),
-
-    currentMedications: z.string().min(1, 'Medicamentos requeridos'),
-    patientGoal: patientGoalSchema,
-  })
-  .superRefine((val, ctx) => {
-    if (val.allergiesEnabled && !val.allergiesText?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Indica tus alergias',
-        path: ['allergiesText'],
-      })
-    }
-    if (val.chronicEnabled && !val.chronicText?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Indica tus enfermedades crónicas',
-        path: ['chronicText'],
-      })
-    }
-  })
 
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    const parsed = patientOnboardingSchema.safeParse(body)
+    const {
+      avatarUrl,
+      phone,
+      gender,
+      dateOfBirth,
+      nationalId,
+      healthInsurance,
+      allergies,
+      chronicDiseases,
+      currentMedications,
+      patientGoal,
+    } = body
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid input', message: parsed.error.issues[0]?.message || 'Datos inválidos' },
-        { status: 400 },
-      )
-    }
-
+    // Verify role
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.role !== 'patient') {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+    if (profile?.role !== 'patient') {
+      return NextResponse.json(
+        { error: 'Forbidden', message: 'Solo los pacientes pueden usar este endpoint.' },
+        { status: 403 }
+      )
     }
 
-    const val = parsed.data
+    // Validate date of birth
+    if (!dateOfBirth) {
+      return NextResponse.json(
+        { error: 'Validation', message: 'La fecha de nacimiento es requerida.' },
+        { status: 400 }
+      )
+    }
 
-    const updateData = {
-      id: user.id,
-      date_of_birth: val.dateOfBirth,
-      gender: val.gender,
-      phone: val.phone.trim(),
-      allergies: val.allergiesEnabled ? val.allergiesText?.trim() : null,
-      chronic_diseases: val.chronicEnabled ? val.chronicText?.trim() : null,
-      current_medications: val.currentMedications.trim(),
-      patient_goal: val.patientGoal,
-      avatar_url: val.avatarUrl,
+    const dob = new Date(`${dateOfBirth}T00:00:00`)
+    if (isNaN(dob.getTime())) {
+      return NextResponse.json(
+        { error: 'Validation', message: 'Fecha de nacimiento inválida.' },
+        { status: 400 }
+      )
+    }
+
+    const today = new Date()
+    let age = today.getFullYear() - dob.getFullYear()
+    const m = today.getMonth() - dob.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+    if (age < 5) {
+      return NextResponse.json(
+        { error: 'Validation', message: 'Debes tener más de 5 años.' },
+        { status: 400 }
+      )
+    }
+
+    // Validate RUT format if provided
+    if (nationalId && !/^\d{7,8}-[\dkK]$/.test(String(nationalId).trim())) {
+      return NextResponse.json(
+        { error: 'Validation', message: 'Formato de RUT inválido. Ej: 12345678-9' },
+        { status: 400 }
+      )
+    }
+
+    const updatePayload: Record<string, unknown> = {
       onboarding_completed: true,
+      is_onboarded: true,
       updated_at: new Date().toISOString(),
     }
 
-    const { error: updateError } = await supabase.from('profiles').upsert(updateData, { onConflict: 'id' })
+    if (avatarUrl) updatePayload.avatar_url = avatarUrl
+    if (phone) updatePayload.phone = String(phone).trim()
+    if (gender && ['M', 'F', 'other'].includes(gender)) updatePayload.gender = gender
+    if (dateOfBirth) updatePayload.date_of_birth = dateOfBirth
+    if (nationalId) updatePayload.national_id = String(nationalId).trim()
+    if (healthInsurance) updatePayload.health_insurance = healthInsurance
+    if (allergies != null) updatePayload.allergies = allergies || null
+    if (chronicDiseases != null) updatePayload.chronic_diseases = chronicDiseases || null
+    if (currentMedications != null) updatePayload.current_medications = currentMedications || null
+    if (patientGoal) updatePayload.patient_goal = patientGoal
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(updatePayload)
+      .eq('id', user.id)
 
     if (updateError) {
+      console.error('[onboarding/patient] update error:', updateError)
       return NextResponse.json(
-        { error: 'update_failed', message: updateError.message },
-        { status: 500 },
+        { error: 'DB error', message: 'Error al guardar los datos. Intenta nuevamente.' },
+        { status: 500 }
       )
     }
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (err) {
+    console.error('[onboarding/patient] unexpected error:', err)
     return NextResponse.json(
-      { error: 'server_error', message: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 },
+      { error: 'Internal server error', message: 'Error inesperado.' },
+      { status: 500 }
     )
   }
 }
-

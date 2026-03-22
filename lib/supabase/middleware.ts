@@ -72,6 +72,7 @@ export async function updateSession(request: NextRequest) {
     '/profesionales',
     '/professionals',
     '/explore',
+    '/onboarding',
   ]
 
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))

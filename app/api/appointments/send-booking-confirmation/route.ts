@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import React from "react"
 import { BookingConfirmation } from "@/components/emails/BookingConfirmation"
@@ -147,6 +148,62 @@ export async function POST(request: Request) {
       } catch (e) {
         console.error("[send-booking-confirmation] Exception:", e)
       }
+    }
+
+    // Send in-app notifications and auto-chat message (non-blocking)
+    try {
+      const adminClient = createAdminClient()
+
+      // Notification for the professional
+      await adminClient.from("notifications").insert({
+        user_id: appointment.professional_id,
+        type: "appointment_confirmed",
+        title: "Nueva cita agendada",
+        message: `${patientName} ha agendado una cita para el ${date} a las ${time}`,
+        action_url: "/dashboard/professional",
+      })
+
+      // Notification for the patient
+      await adminClient.from("notifications").insert({
+        user_id: appointment.patient_id,
+        type: "appointment_confirmed",
+        title: "Cita confirmada",
+        message: `Tu cita con ${doctorName} para el ${date} a las ${time} está confirmada.`,
+        action_url: "/dashboard/patient",
+      })
+
+      // Get or create conversation between patient and professional
+      const { data: conversationId, error: rpcError } = await adminClient.rpc(
+        "get_or_create_conversation",
+        {
+          p_user_a: appointment.patient_id,
+          p_user_b: appointment.professional_id,
+          p_professional_id: appointment.professional_id,
+        }
+      )
+
+      if (!rpcError && conversationId) {
+        // Fetch professional's booking auto-message
+        const { data: professionalData } = await adminClient
+          .from("professionals")
+          .select("booking_auto_message")
+          .eq("id", appointment.professional_id)
+          .single()
+
+        const bookingAutoMessage =
+          professionalData?.booking_auto_message ||
+          "Gracias por agendar tu cita. Pronto nos pondremos en contacto contigo."
+
+        await adminClient.from("chat_messages").insert({
+          conversation_id: conversationId,
+          sender_id: appointment.professional_id,
+          content: bookingAutoMessage,
+          message_type: "text",
+          status: "sent",
+        })
+      }
+    } catch (notifError) {
+      console.error("[send-booking-confirmation] Error sending notifications/chat:", notifError)
     }
 
     return NextResponse.json({

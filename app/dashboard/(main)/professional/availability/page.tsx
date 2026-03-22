@@ -8,11 +8,10 @@ import {
   Loader2,
   CheckCircle2,
   Calendar,
-  Info,
   AlertCircle,
   MessageSquare,
+  ChevronRight,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -25,10 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Alert,
-  AlertDescription,
-} from "@/components/ui/alert"
 import { useLanguage } from "@/contexts/language-context"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
@@ -53,13 +48,13 @@ interface WeeklySchedule {
 }
 
 const DAYS_OF_WEEK = [
-  { key: "monday", labelEs: "Lunes", labelEn: "Monday" },
-  { key: "tuesday", labelEs: "Martes", labelEn: "Tuesday" },
-  { key: "wednesday", labelEs: "Miércoles", labelEn: "Wednesday" },
-  { key: "thursday", labelEs: "Jueves", labelEn: "Thursday" },
-  { key: "friday", labelEs: "Viernes", labelEn: "Friday" },
-  { key: "saturday", labelEs: "Sábado", labelEn: "Saturday" },
-  { key: "sunday", labelEs: "Domingo", labelEn: "Sunday" },
+  { key: "monday",    labelEs: "Lunes",      labelEn: "Monday",    isWeekend: false },
+  { key: "tuesday",   labelEs: "Martes",     labelEn: "Tuesday",   isWeekend: false },
+  { key: "wednesday", labelEs: "Miércoles",  labelEn: "Wednesday", isWeekend: false },
+  { key: "thursday",  labelEs: "Jueves",     labelEn: "Thursday",  isWeekend: false },
+  { key: "friday",    labelEs: "Viernes",    labelEn: "Friday",    isWeekend: false },
+  { key: "saturday",  labelEs: "Sábado",     labelEn: "Saturday",  isWeekend: true  },
+  { key: "sunday",    labelEs: "Domingo",    labelEn: "Sunday",    isWeekend: true  },
 ] as const
 
 const SLOT_DURATIONS = [
@@ -77,14 +72,23 @@ const DEFAULT_SCHEDULE: DaySchedule = {
 }
 
 const getDefaultWeeklySchedule = (): WeeklySchedule => ({
-  monday: { ...DEFAULT_SCHEDULE, enabled: true },
-  tuesday: { ...DEFAULT_SCHEDULE, enabled: true },
+  monday:    { ...DEFAULT_SCHEDULE, enabled: true },
+  tuesday:   { ...DEFAULT_SCHEDULE, enabled: true },
   wednesday: { ...DEFAULT_SCHEDULE, enabled: true },
-  thursday: { ...DEFAULT_SCHEDULE, enabled: true },
-  friday: { ...DEFAULT_SCHEDULE, enabled: true },
-  saturday: { ...DEFAULT_SCHEDULE },
-  sunday: { ...DEFAULT_SCHEDULE },
+  thursday:  { ...DEFAULT_SCHEDULE, enabled: true },
+  friday:    { ...DEFAULT_SCHEDULE, enabled: true },
+  saturday:  { ...DEFAULT_SCHEDULE },
+  sunday:    { ...DEFAULT_SCHEDULE },
 })
+
+function calculateSlots(startTime: string, endTime: string, duration: number): number {
+  const [startHour, startMin] = startTime.split(":").map(Number)
+  const [endHour, endMin] = endTime.split(":").map(Number)
+  const startMinutes = startHour * 60 + startMin
+  const endMinutes = endHour * 60 + endMin
+  if (endMinutes <= startMinutes) return 0
+  return Math.floor((endMinutes - startMinutes) / duration)
+}
 
 export default function AvailabilityPage() {
   const { language } = useLanguage()
@@ -98,14 +102,15 @@ export default function AvailabilityPage() {
   const [hasChanges, setHasChanges] = useState(false)
   const [originalSchedule, setOriginalSchedule] = useState<WeeklySchedule | null>(null)
   const [bookingAutoMessage, setBookingAutoMessage] = useState("")
-  const [bookingMessageSaving, setBookingMessageSaving] = useState(false)
-  const [bookingMessageLoaded, setBookingMessageLoaded] = useState(false)
+  const [originalMessage, setOriginalMessage] = useState("")
+  const [messageLoaded, setMessageLoaded] = useState(false)
+  const [messageTouched, setMessageTouched] = useState(false)
+  const [showMessageError, setShowMessageError] = useState(false)
 
-  // Load existing schedule
+  // Load schedule
   useEffect(() => {
     const loadSchedule = async () => {
       if (!user?.id) return
-
       try {
         const { data: professional, error } = await supabase
           .from("professionals")
@@ -113,35 +118,28 @@ export default function AvailabilityPage() {
           .eq("id", user.id)
           .single()
 
-        if (error) {
-          console.error("Error loading schedule:", error)
-          return
-        }
+        if (error) { console.error("Error loading schedule:", error); return }
 
         if (professional?.availability && Object.keys(professional.availability).length > 0) {
-          // Parse the stored availability format
           const storedAvailability = professional.availability as Record<string, any>
           const parsedSchedule = getDefaultWeeklySchedule()
 
           DAYS_OF_WEEK.forEach(({ key }) => {
             const dayData = storedAvailability[key]
             if (dayData) {
-              // Handle both old format (simple) and new format (with online/in-person)
-              if (dayData.online || dayData['in-person']) {
-                // New format
-                const onlineData = dayData.online || dayData['in-person']
+              if (dayData.online || dayData["in-person"]) {
+                const onlineData = dayData.online || dayData["in-person"]
                 parsedSchedule[key as keyof WeeklySchedule] = {
                   enabled: onlineData?.available || false,
-                  startTime: onlineData?.hours?.split(' - ')[0] || "09:00",
-                  endTime: onlineData?.hours?.split(' - ')[1] || "18:00",
+                  startTime: onlineData?.hours?.split(" - ")[0] || "09:00",
+                  endTime: onlineData?.hours?.split(" - ")[1] || "18:00",
                   slotDuration: dayData.slotDuration || 60,
                 }
               } else if (dayData.available !== undefined) {
-                // Legacy format
                 parsedSchedule[key as keyof WeeklySchedule] = {
                   enabled: dayData.available || false,
-                  startTime: dayData.hours?.split(' - ')[0] || dayData.startTime || "09:00",
-                  endTime: dayData.hours?.split(' - ')[1] || dayData.endTime || "18:00",
+                  startTime: dayData.hours?.split(" - ")[0] || dayData.startTime || "09:00",
+                  endTime: dayData.hours?.split(" - ")[1] || dayData.endTime || "18:00",
                   slotDuration: dayData.slotDuration || 60,
                 }
               }
@@ -159,54 +157,54 @@ export default function AvailabilityPage() {
         setLoading(false)
       }
     }
-
     loadSchedule()
-  }, [user?.id, supabase])
+  }, [user?.id])
 
-  // Load booking auto-message (Prisma)
+  // Load booking message
   useEffect(() => {
     const loadBookingMessage = async () => {
       try {
         const res = await fetch("/api/professional/booking-settings")
         if (res.ok) {
           const data = await res.json()
-          setBookingAutoMessage(data.bookingAutoMessage ?? "")
+          const msg = data.bookingAutoMessage ?? ""
+          setBookingAutoMessage(msg)
+          setOriginalMessage(msg)
         }
-      } catch {
-        // ignore
-      } finally {
-        setBookingMessageLoaded(true)
-      }
+      } catch { /* ignore */ }
+      finally { setMessageLoaded(true) }
     }
     if (user?.id) loadBookingMessage()
   }, [user?.id])
 
-  // Check for changes
+  // Track changes
   useEffect(() => {
     if (!originalSchedule) return
-    const hasChanges = JSON.stringify(schedule) !== JSON.stringify(originalSchedule)
-    setHasChanges(hasChanges)
-  }, [schedule, originalSchedule])
+    const scheduleChanged = JSON.stringify(schedule) !== JSON.stringify(originalSchedule)
+    const messageChanged = bookingAutoMessage !== originalMessage
+    setHasChanges(scheduleChanged || messageChanged)
+  }, [schedule, originalSchedule, bookingAutoMessage, originalMessage])
 
   const updateDaySchedule = (day: keyof WeeklySchedule, field: keyof DaySchedule, value: any) => {
-    setSchedule(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value,
-      },
-    }))
+    setSchedule(prev => ({ ...prev, [day]: { ...prev[day], [field]: value } }))
   }
 
   const handleSave = async () => {
     if (!user?.id) return
 
+    // Validate: message is required
+    if (!bookingAutoMessage.trim()) {
+      setShowMessageError(true)
+      setMessageTouched(true)
+      toast.error(isSpanish ? "El mensaje automático es obligatorio." : "Auto-message is required.")
+      document.getElementById("booking-message-field")?.focus()
+      return
+    }
+
     setSaving(true)
-
     try {
-      // Convert to storage format
+      // Build availability object
       const availability: Record<string, any> = {}
-
       DAYS_OF_WEEK.forEach(({ key }) => {
         const daySchedule = schedule[key as keyof WeeklySchedule]
         availability[key] = {
@@ -214,7 +212,7 @@ export default function AvailabilityPage() {
             available: daySchedule.enabled,
             hours: daySchedule.enabled ? `${daySchedule.startTime} - ${daySchedule.endTime}` : null,
           },
-          'in-person': {
+          "in-person": {
             available: daySchedule.enabled,
             hours: daySchedule.enabled ? `${daySchedule.startTime} - ${daySchedule.endTime}` : null,
           },
@@ -222,367 +220,392 @@ export default function AvailabilityPage() {
         }
       })
 
-      const { error } = await supabase
-        .from("professionals")
-        .update({
-          availability,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id)
+      // Save both in parallel
+      const [scheduleResult, messageResult] = await Promise.all([
+        supabase
+          .from("professionals")
+          .update({ availability, updated_at: new Date().toISOString() })
+          .eq("id", user.id),
+        fetch("/api/professional/booking-settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingAutoMessage: bookingAutoMessage.trim() || null }),
+        }),
+      ])
 
-      if (error) throw error
+      if (scheduleResult.error) throw scheduleResult.error
+      if (!messageResult.ok) throw new Error("message save failed")
 
+      const msgData = await messageResult.json()
       setOriginalSchedule(schedule)
+      setOriginalMessage(msgData.bookingAutoMessage ?? bookingAutoMessage)
+      setBookingAutoMessage(msgData.bookingAutoMessage ?? bookingAutoMessage)
       setHasChanges(false)
+      setShowMessageError(false)
 
-      toast.success(
-        isSpanish 
-          ? "¡Disponibilidad guardada exitosamente!" 
-          : "Availability saved successfully!",
-        {
-          icon: <CheckCircle2 className="h-5 w-5 text-teal-500" />,
-        }
-      )
+      toast.success(isSpanish ? "¡Configuración guardada!" : "Configuration saved!", {
+        icon: <CheckCircle2 className="h-5 w-5 text-teal-500" />,
+      })
     } catch (error) {
-      console.error("Error saving schedule:", error)
-      toast.error(
-        isSpanish 
-          ? "Error al guardar. Intenta nuevamente." 
-          : "Error saving. Please try again."
-      )
+      console.error("Error saving:", error)
+      toast.error(isSpanish ? "Error al guardar. Intenta nuevamente." : "Error saving. Please try again.")
     } finally {
       setSaving(false)
     }
   }
 
-  const handleSaveBookingMessage = async () => {
-    setBookingMessageSaving(true)
-    try {
-      const res = await fetch("/api/professional/booking-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingAutoMessage: bookingAutoMessage.trim() || null }),
-      })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setBookingAutoMessage(data.bookingAutoMessage ?? "")
-      toast.success(isSpanish ? "Mensaje guardado" : "Message saved")
-    } catch {
-      toast.error(isSpanish ? "Error al guardar" : "Error saving")
-    } finally {
-      setBookingMessageSaving(false)
-    }
-  }
+  const enabledDaysCount = Object.values(schedule).filter(d => d.enabled).length
+  const totalSlotsPerWeek = DAYS_OF_WEEK.reduce((acc, { key }) => {
+    const d = schedule[key as keyof WeeklySchedule]
+    return acc + (d.enabled ? calculateSlots(d.startTime, d.endTime, d.slotDuration) : 0)
+  }, 0)
 
-  const enabledDaysCount = Object.values(schedule).filter(day => day.enabled).length
+  const isMessageMissing = showMessageError && !bookingAutoMessage.trim()
 
-  if (loading) {
+  if (loading || !messageLoaded) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 text-teal-600 animate-spin mx-auto" />
-          <p className="text-sm text-slate-500">
-            {isSpanish ? "Cargando horarios..." : "Loading schedule..."}
-          </p>
+          <p className="text-sm text-slate-500">{isSpanish ? "Cargando configuración..." : "Loading configuration..."}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 space-y-8">
-      {/* Header */}
+    <div className="max-w-5xl mx-auto py-6 px-4 space-y-5">
+
+      {/* ── Header ── */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-2"
+        className="flex items-start justify-between gap-4"
       >
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-teal-500/20">
-            <Calendar className="h-6 w-6 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-md shadow-teal-500/25 shrink-0">
+            <Calendar className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
-              {isSpanish ? "Gestionar Disponibilidad" : "Manage Availability"}
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
+              {isSpanish ? "Disponibilidad" : "Availability"}
             </h1>
-            <p className="text-slate-500 dark:text-slate-400">
-              {isSpanish 
-                ? "Configura tus horarios de atención semanales"
-                : "Set up your weekly schedule"}
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {isSpanish ? "Horarios de atención y mensaje de bienvenida" : "Schedule and welcome message"}
             </p>
+          </div>
+        </div>
+
+        {/* Stats pills */}
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 rounded-lg px-3 py-1.5 text-xs font-medium">
+            <Calendar className="h-3.5 w-3.5" />
+            {enabledDaysCount} {isSpanish ? "días" : "days"}
+          </div>
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg px-3 py-1.5 text-xs font-medium">
+            <Clock className="h-3.5 w-3.5" />
+            {totalSlotsPerWeek} {isSpanish ? "citas/sem." : "slots/wk"}
           </div>
         </div>
       </motion.div>
 
-      {/* Mensaje automático al agendar */}
-      {bookingMessageLoaded && (
+      {/* ── Main grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5">
+
+        {/* ── LEFT: Schedule ── */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm"
         >
-          <Card className="border-slate-200/60 dark:border-slate-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <MessageSquare className="h-5 w-5 text-teal-600" />
-                {isSpanish ? "Mensaje automático al agendar" : "Auto-message when patient books"}
-              </CardTitle>
-              <CardDescription>
-                {isSpanish
-                  ? "Este mensaje se envía al paciente por chat cuando confirma una cita. Puedes indicar cómo coordinar el pago (transferencia, bono, etc.)."
-                  : "This message is sent to the patient via chat when they confirm an appointment. You can explain how to coordinate payment."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                value={bookingAutoMessage}
-                onChange={(e) => setBookingAutoMessage(e.target.value)}
-                placeholder={
-                  isSpanish
-                    ? "Ej: Hola, gracias por agendar conmigo. El pago de la consulta se coordina directamente por este chat (transferencia, bono u otro medio que acordemos)."
-                    : "E.g. Hello, thanks for booking. Payment is coordinated directly via this chat (transfer, voucher, etc.)."
-                }
-                className="min-h-[120px] resize-y"
-                maxLength={500}
-              />
-              <Button
-                onClick={handleSaveBookingMessage}
-                disabled={bookingMessageSaving}
-                variant="secondary"
-                size="sm"
-              >
-                {bookingMessageSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                {isSpanish ? "Guardar mensaje" : "Save message"}
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+          {/* Card header */}
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-teal-600" />
+              <span className="text-sm font-semibold text-slate-800 dark:text-white">
+                {isSpanish ? "Horario semanal" : "Weekly schedule"}
+              </span>
+            </div>
+            <span className="text-xs text-slate-400">
+              {isSpanish ? "Activa los días que atiendes" : "Toggle the days you work"}
+            </span>
+          </div>
 
-      {/* Summary Alert */}
-      <Alert className="border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30">
-        <Info className="h-4 w-4 text-teal-600" />
-        <AlertDescription className="text-teal-700 dark:text-teal-300">
-          {isSpanish 
-            ? `Tienes ${enabledDaysCount} día${enabledDaysCount !== 1 ? 's' : ''} de atención configurado${enabledDaysCount !== 1 ? 's' : ''}.`
-            : `You have ${enabledDaysCount} day${enabledDaysCount !== 1 ? 's' : ''} configured for appointments.`}
-        </AlertDescription>
-      </Alert>
+          {/* Column labels */}
+          <div className="hidden sm:grid grid-cols-[140px_1fr_1fr_120px_64px] gap-3 px-5 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">{isSpanish ? "Día" : "Day"}</span>
+            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">{isSpanish ? "Entrada" : "Start"}</span>
+            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">{isSpanish ? "Salida" : "End"}</span>
+            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">{isSpanish ? "Duración" : "Duration"}</span>
+            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide text-center">{isSpanish ? "Citas" : "Slots"}</span>
+          </div>
 
-      {/* Days Grid */}
-      <div className="space-y-4">
-        {DAYS_OF_WEEK.map(({ key, labelEs, labelEn }, index) => {
-          const daySchedule = schedule[key as keyof WeeklySchedule]
-          const isWeekend = key === "saturday" || key === "sunday"
+          {/* Day rows */}
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {DAYS_OF_WEEK.map(({ key, labelEs, labelEn, isWeekend }, index) => {
+              const day = schedule[key as keyof WeeklySchedule]
+              const slots = day.enabled ? calculateSlots(day.startTime, day.endTime, day.slotDuration) : 0
 
-          return (
-            <motion.div
-              key={key}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Card className={cn(
-                "border-slate-200/60 dark:border-slate-800 transition-all duration-300",
-                daySchedule.enabled 
-                  ? "shadow-md border-teal-200 dark:border-teal-800/50" 
-                  : "opacity-60",
-                isWeekend && !daySchedule.enabled && "bg-slate-50 dark:bg-slate-900/50"
-              )}>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    {/* Day Toggle */}
-                    <div className="flex items-center justify-between sm:justify-start gap-4 min-w-[180px]">
-                      <div className="flex items-center gap-3">
-                        <Switch
-                          checked={daySchedule.enabled}
-                          onCheckedChange={(checked) => updateDaySchedule(key as keyof WeeklySchedule, "enabled", checked)}
-                          className="data-[state=checked]:bg-teal-600"
-                        />
-                        <Label className={cn(
-                          "font-semibold text-base",
-                          daySchedule.enabled 
-                            ? "text-slate-900 dark:text-white" 
-                            : "text-slate-400 dark:text-slate-500"
-                        )}>
-                          {isSpanish ? labelEs : labelEn}
-                        </Label>
-                      </div>
-                      {isWeekend && !daySchedule.enabled && (
-                        <span className="text-xs text-slate-400 sm:hidden">
-                          {isSpanish ? "Fin de semana" : "Weekend"}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Time Inputs */}
-                    <div className={cn(
-                      "flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4",
-                      !daySchedule.enabled && "pointer-events-none"
+              return (
+                <motion.div
+                  key={key}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 + index * 0.04 }}
+                  className={cn(
+                    "flex flex-col sm:grid sm:grid-cols-[140px_1fr_1fr_120px_64px] gap-3 px-5 py-3 transition-colors",
+                    day.enabled
+                      ? "bg-white dark:bg-slate-900"
+                      : "bg-slate-50/70 dark:bg-slate-900/30",
+                    isWeekend && !day.enabled && "opacity-60"
+                  )}
+                >
+                  {/* Toggle + label */}
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={day.enabled}
+                      onCheckedChange={(checked) => updateDaySchedule(key as keyof WeeklySchedule, "enabled", checked)}
+                      className="data-[state=checked]:bg-teal-600 shrink-0"
+                    />
+                    <span className={cn(
+                      "text-sm font-semibold w-24",
+                      day.enabled ? "text-slate-800 dark:text-white" : "text-slate-400 dark:text-slate-500"
                     )}>
-                      {/* Start Time */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-slate-500 dark:text-slate-400">
-                          {isSpanish ? "Hora inicio" : "Start time"}
-                        </Label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <Input
-                            type="time"
-                            value={daySchedule.startTime}
-                            onChange={(e) => updateDaySchedule(key as keyof WeeklySchedule, "startTime", e.target.value)}
-                            disabled={!daySchedule.enabled}
-                            className={cn(
-                              "pl-10 h-11 bg-white dark:bg-slate-900",
-                              !daySchedule.enabled && "opacity-50"
-                            )}
-                          />
-                        </div>
-                      </div>
+                      {isSpanish ? labelEs : labelEn}
+                    </span>
+                  </div>
 
-                      {/* End Time */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-slate-500 dark:text-slate-400">
-                          {isSpanish ? "Hora fin" : "End time"}
-                        </Label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <Input
-                            type="time"
-                            value={daySchedule.endTime}
-                            onChange={(e) => updateDaySchedule(key as keyof WeeklySchedule, "endTime", e.target.value)}
-                            disabled={!daySchedule.enabled}
-                            className={cn(
-                              "pl-10 h-11 bg-white dark:bg-slate-900",
-                              !daySchedule.enabled && "opacity-50"
-                            )}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Slot Duration */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-slate-500 dark:text-slate-400">
-                          {isSpanish ? "Duración sesión" : "Session duration"}
-                        </Label>
-                        <Select
-                          value={String(daySchedule.slotDuration)}
-                          onValueChange={(value) => updateDaySchedule(key as keyof WeeklySchedule, "slotDuration", Number(value))}
-                          disabled={!daySchedule.enabled}
-                        >
-                          <SelectTrigger className={cn(
-                            "h-11 bg-white dark:bg-slate-900",
-                            !daySchedule.enabled && "opacity-50"
-                          )}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {SLOT_DURATIONS.map((duration) => (
-                              <SelectItem key={duration.value} value={String(duration.value)}>
-                                {duration.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                  {/* Time inputs — disabled when day is off */}
+                  <div className={cn("contents", !day.enabled && "pointer-events-none")}>
+                    {/* Start */}
+                    <div className="relative">
+                      <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                      <Input
+                        type="time"
+                        value={day.startTime}
+                        onChange={(e) => updateDaySchedule(key as keyof WeeklySchedule, "startTime", e.target.value)}
+                        disabled={!day.enabled}
+                        className={cn(
+                          "pl-8 h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700",
+                          !day.enabled && "opacity-40"
+                        )}
+                      />
                     </div>
 
-                    {/* Slots Preview */}
-                    {daySchedule.enabled && (
-                      <div className="hidden lg:flex items-center justify-center min-w-[100px]">
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                            {calculateSlots(daySchedule.startTime, daySchedule.endTime, daySchedule.slotDuration)}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {isSpanish ? "citas" : "slots"}
-                          </p>
-                        </div>
+                    {/* End */}
+                    <div className="relative">
+                      <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+                      <Input
+                        type="time"
+                        value={day.endTime}
+                        onChange={(e) => updateDaySchedule(key as keyof WeeklySchedule, "endTime", e.target.value)}
+                        disabled={!day.enabled}
+                        className={cn(
+                          "pl-8 h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700",
+                          !day.enabled && "opacity-40"
+                        )}
+                      />
+                    </div>
+
+                    {/* Duration */}
+                    <Select
+                      value={String(day.slotDuration)}
+                      onValueChange={(v) => updateDaySchedule(key as keyof WeeklySchedule, "slotDuration", Number(v))}
+                      disabled={!day.enabled}
+                    >
+                      <SelectTrigger className={cn(
+                        "h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700",
+                        !day.enabled && "opacity-40"
+                      )}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SLOT_DURATIONS.map((d) => (
+                          <SelectItem key={d.value} value={String(d.value)}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Slots count */}
+                  <div className="flex items-center justify-center">
+                    {day.enabled ? (
+                      <div className="text-center">
+                        <span className="text-lg font-bold text-teal-600 dark:text-teal-400 leading-none">{slots}</span>
+                        <span className="block text-[10px] text-slate-400 leading-none mt-0.5">
+                          {isSpanish ? "citas" : "slots"}
+                        </span>
                       </div>
+                    ) : (
+                      <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )
-        })}
-      </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        </motion.div>
 
-      {/* Save Button */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="sticky bottom-4 sm:bottom-8"
-      >
-        <Card className={cn(
-          "border-slate-200/60 dark:border-slate-800 shadow-xl",
-          hasChanges && "border-teal-300 dark:border-teal-700"
-        )}>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                {hasChanges ? (
-                  <>
-                    <AlertCircle className="h-5 w-5 text-amber-500" />
-                    <span className="text-sm text-slate-600 dark:text-slate-300">
-                      {isSpanish 
-                        ? "Tienes cambios sin guardar"
-                        : "You have unsaved changes"}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-5 w-5 text-teal-500" />
-                    <span className="text-sm text-slate-600 dark:text-slate-300">
-                      {isSpanish 
-                        ? "Todos los cambios guardados"
-                        : "All changes saved"}
-                    </span>
-                  </>
-                )}
+        {/* ── RIGHT: Message + Save ── */}
+        <div className="space-y-4">
+
+          {/* Auto-message card */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className={cn(
+              "rounded-2xl border bg-white dark:bg-slate-900 overflow-hidden shadow-sm transition-colors",
+              isMessageMissing
+                ? "border-red-300 dark:border-red-700 shadow-red-100 dark:shadow-red-900/20"
+                : "border-slate-200 dark:border-slate-800"
+            )}
+          >
+            <div className={cn(
+              "px-5 py-4 border-b",
+              isMessageMissing
+                ? "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20"
+                : "border-slate-100 dark:border-slate-800"
+            )}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className={cn(
+                    "h-4 w-4",
+                    isMessageMissing ? "text-red-500" : "text-teal-600"
+                  )} />
+                  <span className="text-sm font-semibold text-slate-800 dark:text-white">
+                    {isSpanish ? "Mensaje al agendar" : "Booking message"}
+                  </span>
+                </div>
+                <span className={cn(
+                  "text-[11px] font-semibold px-2 py-0.5 rounded-full",
+                  isMessageMissing
+                    ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
+                    : "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                )}>
+                  {isSpanish ? "Obligatorio" : "Required"}
+                </span>
               </div>
-              <Button
-                onClick={handleSave}
-                disabled={!hasChanges || saving}
-                className={cn(
-                  "w-full sm:w-auto min-w-[180px] h-12 font-semibold rounded-xl",
-                  "bg-gradient-to-r from-teal-600 to-emerald-600",
-                  "hover:from-teal-700 hover:to-emerald-700",
-                  "shadow-lg shadow-teal-500/20",
-                  "disabled:opacity-50"
-                )}
-              >
-                {saving ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    {isSpanish ? "Guardando..." : "Saving..."}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Save className="h-5 w-5" />
-                    {isSpanish ? "Guardar Cambios" : "Save Changes"}
-                  </span>
-                )}
-              </Button>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                {isSpanish
+                  ? "Se envía automáticamente al paciente cuando confirma una cita."
+                  : "Sent automatically to the patient when they confirm a booking."}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+
+            <div className="p-5 space-y-2">
+              <Textarea
+                id="booking-message-field"
+                value={bookingAutoMessage}
+                onChange={(e) => {
+                  setBookingAutoMessage(e.target.value)
+                  setMessageTouched(true)
+                  if (e.target.value.trim()) setShowMessageError(false)
+                }}
+                placeholder={
+                  isSpanish
+                    ? "Ej: Hola, gracias por agendar. El pago se coordina por este chat..."
+                    : "E.g. Hello, thanks for booking. Payment is coordinated via this chat..."
+                }
+                className={cn(
+                  "min-h-[140px] resize-none text-sm leading-relaxed bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
+                  isMessageMissing && "border-red-300 dark:border-red-700 focus-visible:ring-red-400"
+                )}
+                maxLength={500}
+              />
+              <div className="flex items-center justify-between">
+                {isMessageMissing ? (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {isSpanish ? "Este campo es obligatorio" : "This field is required"}
+                  </p>
+                ) : (
+                  <span />
+                )}
+                <span className="text-xs text-slate-400 ml-auto">
+                  {bookingAutoMessage.length}/500
+                </span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Save card */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className={cn(
+              "rounded-2xl border bg-white dark:bg-slate-900 p-5 shadow-sm transition-colors",
+              hasChanges
+                ? "border-teal-200 dark:border-teal-800 shadow-teal-100 dark:shadow-teal-900/20"
+                : "border-slate-200 dark:border-slate-800"
+            )}
+          >
+            {/* Status */}
+            <div className="flex items-center gap-2 mb-4">
+              {hasChanges ? (
+                <>
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    {isSpanish ? "Cambios pendientes de guardar" : "Unsaved changes"}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                  <span className="text-xs text-teal-600 dark:text-teal-400 font-medium">
+                    {isSpanish ? "Configuración al día" : "All saved"}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className={cn(
+                "w-full h-11 font-semibold rounded-xl text-sm",
+                "bg-gradient-to-r from-teal-600 to-emerald-600",
+                "hover:from-teal-700 hover:to-emerald-700",
+                "shadow-md shadow-teal-500/20",
+                "disabled:opacity-60 transition-all"
+              )}
+            >
+              {saving ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isSpanish ? "Guardando..." : "Saving..."}
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  {isSpanish ? "Guardar configuración" : "Save configuration"}
+                  <ChevronRight className="h-4 w-4 ml-auto opacity-60" />
+                </span>
+              )}
+            </Button>
+
+            <p className="text-[11px] text-slate-400 text-center mt-3 leading-relaxed">
+              {isSpanish
+                ? "Guarda el horario y el mensaje juntos. El mensaje es obligatorio."
+                : "Saves schedule and message together. Message is required."}
+            </p>
+          </motion.div>
+
+          {/* Mobile stats */}
+          <div className="sm:hidden flex gap-2">
+            <div className="flex-1 flex items-center justify-center gap-1.5 bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 rounded-xl px-3 py-2.5 text-xs font-medium">
+              <Calendar className="h-3.5 w-3.5" />
+              {enabledDaysCount} {isSpanish ? "días activos" : "active days"}
+            </div>
+            <div className="flex-1 flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl px-3 py-2.5 text-xs font-medium">
+              <Clock className="h-3.5 w-3.5" />
+              {totalSlotsPerWeek} {isSpanish ? "citas/sem." : "slots/wk"}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
-}
-
-function calculateSlots(startTime: string, endTime: string, duration: number): number {
-  const [startHour, startMin] = startTime.split(":").map(Number)
-  const [endHour, endMin] = endTime.split(":").map(Number)
-  
-  const startMinutes = startHour * 60 + startMin
-  const endMinutes = endHour * 60 + endMin
-  
-  if (endMinutes <= startMinutes) return 0
-  
-  return Math.floor((endMinutes - startMinutes) / duration)
 }

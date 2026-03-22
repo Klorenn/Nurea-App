@@ -13,6 +13,7 @@ export interface Profile {
   last_name: string | null
   avatar_url: string | null
   email_verified: boolean
+  onboarding_completed?: boolean
   status?: string
   last_seen?: string
   response_time?: string
@@ -26,7 +27,7 @@ export function useProfile() {
     async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, role, first_name, last_name, avatar_url, email_verified, status, last_seen, response_time")
+        .select("id, role, first_name, last_name, avatar_url, email_verified, onboarding_completed, status, last_seen, response_time")
         .eq("id", user!.id)
         .single()
 

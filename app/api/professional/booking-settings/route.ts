@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const DEFAULT_MESSAGE =
   "Hola, gracias por agendar conmigo. El pago de la consulta se coordina directamente por este chat (transferencia, bono u otro medio que acordemos).";
@@ -26,7 +27,8 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data } = await supabase
+    const adminClient = createAdminClient();
+    const { data } = await adminClient
       .from("professionals")
       .select("booking_auto_message, consultation_types")
       .eq("id", user.id)
@@ -71,7 +73,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'invalid_input', message: 'El mensaje no puede superar los 2000 caracteres.' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    const adminClient = createAdminClient();
+    const { error } = await adminClient
       .from("professionals")
       .update({
         booking_auto_message:

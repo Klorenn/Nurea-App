@@ -6,7 +6,8 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 import { TermsDialog } from "@/components/ui/terms-dialog"
 import { PrivacyDialog } from "@/components/ui/privacy-dialog"
-import { User, Lock, ArrowRight, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react"
+import { User, Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react"
+import { EyeToggleIcon } from "@/components/ui/animated-state-icons"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/client"
@@ -336,22 +337,21 @@ export function LoginForm() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, onboarding_completed")
+        .select("role")
         .eq("id", data.user.id)
         .single()
 
       const role = profile?.role || "patient"
-      const onboardingCompleted = !!profile?.onboarding_completed
       let redirectPath = "/dashboard"
 
       if (isSafeCallbackUrl(callbackUrl)) {
         redirectPath = decodeURIComponent(callbackUrl!)
       } else if (role === "professional") {
-        redirectPath = onboardingCompleted ? "/dashboard/professional" : "/onboarding"
+        redirectPath = "/dashboard/professional"
       } else if (role === "admin") {
         redirectPath = "/dashboard/admin"
       } else {
-        redirectPath = onboardingCompleted ? "/dashboard/patient" : "/onboarding"
+        redirectPath = "/dashboard/patient"
       }
 
       router.push(redirectPath)
@@ -451,7 +451,7 @@ export function LoginForm() {
             className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? "text-slate-400 hover:text-teal-400" : "text-slate-400 hover:text-teal-600"} transition-colors focus:outline-none`}
             title={showPassword ? (language === "es" ? "Ocultar contraseña" : "Hide password") : (language === "es" ? "Mostrar contraseña" : "Show password")}
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            <EyeToggleIcon visible={showPassword} className="h-[18px] w-[18px]" />
           </button>
         </div>
 
