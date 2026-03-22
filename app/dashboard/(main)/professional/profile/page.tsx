@@ -180,7 +180,31 @@ function PersonalDataFields({ generalForm, profileName, onSaveGeneral, onSaveNam
           </div>
         }
       />
-      <FieldRow label="Apellidos" value={profileName?.last_name ?? ""} />
+      <FieldRow
+        label="Apellidos"
+        value={profileName?.last_name ?? ""}
+        editing={editingField === "first_name"}
+        onEdit={() => { setTempValue(profileName?.first_name ?? ""); setTempLast(profileName?.last_name ?? ""); setEditingField("first_name") }}
+        editContent={
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              className="flex-1 min-w-0 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2.5 text-sm outline-none"
+              placeholder="Nombre"
+              value={tempValue}
+              onChange={(e) => setTempValue(e.target.value)}
+            />
+            <input
+              className="flex-1 min-w-0 rounded-lg border border-teal-300 focus:border-teal-500 h-8 px-2.5 text-sm outline-none"
+              placeholder="Apellidos"
+              value={tempLast}
+              onChange={(e) => setTempLast(e.target.value)}
+              autoFocus
+            />
+            <button type="button" onClick={cancelEdit} className="text-xs text-slate-500 px-2 py-1 border rounded-lg hover:bg-slate-50 shrink-0">Cancelar</button>
+            <button type="button" onClick={saveName} disabled={saving} className="text-xs font-semibold text-white bg-teal-600 px-2 py-1 rounded-lg hover:bg-teal-700 disabled:opacity-50 shrink-0">Guardar</button>
+          </div>
+        }
+      />
       <FieldRow
         label="Género"
         value={
