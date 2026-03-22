@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { AvatarUploader } from "@/components/ui/avatar-uploader"
 
 interface HeroCardProps {
   profile: {
@@ -21,7 +22,7 @@ interface HeroCardProps {
   }
   specialties: { id: string; name_es: string }[]
   avatarUrl: string | null
-  onPhotoClick: () => void
+  onUpload: (file: File) => Promise<{ success: boolean }>
   onRatingClick: () => void
   onTabSwitch: (tab: string) => void
 }
@@ -50,7 +51,7 @@ export function HeroCard({
   professional,
   specialties,
   avatarUrl,
-  onPhotoClick,
+  onUpload,
   onRatingClick,
   onTabSwitch,
 }: HeroCardProps) {
@@ -153,37 +154,38 @@ export function HeroCard({
       <div className="flex items-start gap-4 p-5">
         {/* Avatar with pencil overlay */}
         <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={onPhotoClick}
-            className="relative w-[72px] h-[72px] rounded-full overflow-hidden border-2 border-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-400"
-            title="Cambiar foto"
-          >
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
-            ) : (
-              <span className="w-full h-full flex items-center justify-center bg-teal-50 text-teal-700 text-xl font-bold">
-                {initials}
+          <AvatarUploader onUpload={onUpload}>
+            <button
+              type="button"
+              className="relative w-[72px] h-[72px] rounded-full overflow-hidden border-2 border-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              title="Cambiar foto"
+            >
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="Foto de perfil" className="w-full h-full object-cover" />
+              ) : (
+                <span className="w-full h-full flex items-center justify-center bg-teal-50 text-teal-700 text-xl font-bold">
+                  {initials}
+                </span>
+              )}
+              {/* Pencil overlay */}
+              <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#64748b"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
               </span>
-            )}
-            {/* Pencil overlay */}
-            <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm">
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#64748b"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-            </span>
-          </button>
+            </button>
+          </AvatarUploader>
         </div>
 
         {/* Name + chip + verified */}
@@ -207,13 +209,14 @@ export function HeroCard({
         </div>
 
         {/* Cambiar foto button */}
-        <button
-          type="button"
-          onClick={onPhotoClick}
-          className="shrink-0 text-xs font-semibold text-teal-600 border border-teal-200 rounded-lg px-3 py-1.5 hover:bg-teal-50 transition-colors hidden sm:block"
-        >
-          Cambiar foto
-        </button>
+        <AvatarUploader onUpload={onUpload}>
+          <button
+            type="button"
+            className="shrink-0 text-xs font-semibold text-teal-600 border border-teal-200 rounded-lg px-3 py-1.5 hover:bg-teal-50 transition-colors hidden sm:block"
+          >
+            Cambiar foto
+          </button>
+        </AvatarUploader>
       </div>
 
       {/* Stats bar */}

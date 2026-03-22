@@ -1159,10 +1159,7 @@ export default function ProfessionalProfilePage() {
               professional={pageProfessional ?? {}}
               specialties={specialties}
               avatarUrl={avatarUrl}
-              onPhotoClick={() => {
-                const btn = document.querySelector("[data-avatar-uploader-trigger]") as HTMLButtonElement
-                btn?.click()
-              }}
+              onUpload={handleProfilePhotoUpload}
               onRatingClick={() => setShowReviews((v) => !v)}
               onTabSwitch={setActiveTab}
             />
@@ -1175,14 +1172,6 @@ export default function ProfessionalProfilePage() {
               onClose={() => setShowReviews(false)}
             />
           )}
-
-          {/* Hidden photo uploader */}
-          <div className="hidden">
-            <ProfilePhotoUpload
-              currentUrl={avatarUrl || profile?.avatar_url || undefined}
-              onUpload={handleProfilePhotoUpload}
-            />
-          </div>
 
           <Form {...generalForm}>
             <form onSubmit={generalForm.handleSubmit(onSaveGeneral)} className="space-y-3">
