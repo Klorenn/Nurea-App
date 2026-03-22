@@ -1958,7 +1958,7 @@ export default function ProfessionalProfilePage() {
               </div>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {['Título', 'Diplomado', 'Magíster', 'Curso'].map((type) => (
                   <div key={type} className="relative group p-6 rounded-2xl bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 dark:hover:border-teal-600 hover:bg-teal-50/30 dark:hover:bg-teal-900/20 transition-all text-center">
                     <div className="w-12 h-12 bg-white dark:bg-slate-950 rounded-xl shadow-sm flex items-center justify-center mx-auto mb-3 text-slate-300 dark:text-slate-600 group-hover:text-teal-600 dark:group-hover:text-teal-400 group-hover:scale-110 group-hover:rotate-6 transition-all border border-slate-100 dark:border-slate-800">
