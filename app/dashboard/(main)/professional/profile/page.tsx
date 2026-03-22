@@ -1242,7 +1242,7 @@ export default function ProfessionalProfilePage() {
                 <CardContent className="p-4 space-y-4">
                   <div className="space-y-4">
                     <Label className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Modalidad de Atención</Label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {[
                         { id: 'online', label: 'Online', icon: Monitor, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50/50 dark:bg-indigo-500/10' },
                         { id: 'in-person', label: 'Presencial', icon: Building2, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50/50 dark:bg-rose-500/10' },
@@ -1250,18 +1250,18 @@ export default function ProfessionalProfilePage() {
                       ].map((type) => {
                         const isActive = clinicalForm.watch("consultation_type") === type.id
                         return (
-                          <div 
+                          <div
                             key={type.id}
                             onClick={() => clinicalForm.setValue("consultation_type", type.id as any, { shouldDirty: true })}
                             className={cn(
-                              "flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all cursor-pointer h-24 group",
-                              isActive 
-                                ? "border-teal-600 dark:border-teal-500 bg-teal-50/20 dark:bg-teal-950/30 shadow-md shadow-teal-100/50 dark:shadow-none" 
+                              "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all cursor-pointer h-16 group",
+                              isActive
+                                ? "border-teal-600 dark:border-teal-500 bg-teal-50/20 dark:bg-teal-950/30 shadow-md shadow-teal-100/50 dark:shadow-none"
                                 : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900"
                             )}
                           >
                             <type.icon className={cn(
-                              "h-6 w-6 mb-2 transition-all", 
+                              "h-5 w-5 mb-1 transition-all",
                               isActive ? type.color : "text-slate-300 dark:text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-500"
                             )} />
                             <span className={cn(
@@ -1274,7 +1274,7 @@ export default function ProfessionalProfilePage() {
                     </div>
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <FormField
                       control={clinicalForm.control}
                       name="clinic_address"
@@ -1327,7 +1327,7 @@ export default function ProfessionalProfilePage() {
                          <Plus className="h-5 w-5 text-teal-600 dark:text-teal-400" />
                        </Button>
                     </div>
-                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[100px] items-start">
+                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[48px] items-start">
                       {clinicalForm.watch("conditions_treated").length === 0 && (
                         <div className="flex flex-col items-center justify-center w-full h-full text-slate-300 dark:text-slate-600 gap-2">
                           <Info className="h-6 w-6 opacity-50" />
@@ -1366,7 +1366,7 @@ export default function ProfessionalProfilePage() {
                         <Plus className="h-5 w-5 text-teal-600 dark:text-teal-400" />
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[64px] items-start">
+                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[48px] items-start">
                       {(!clinicalForm.watch("patients_groups") || clinicalForm.watch("patients_groups")?.length === 0) && (
                         <p className="italic text-xs font-medium text-slate-300 dark:text-slate-600">
                           Ejemplos: Adultos, Niños, Adolescentes, Parejas...
@@ -1404,7 +1404,7 @@ export default function ProfessionalProfilePage() {
                         <Plus className="h-5 w-5 text-teal-600 dark:text-teal-400" />
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[64px] items-start">
+                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[48px] items-start">
                       {(!clinicalForm.watch("payment_methods") || clinicalForm.watch("payment_methods")?.length === 0) && (
                         <p className="italic text-xs font-medium text-slate-300 dark:text-slate-600">
                           Ejemplos: Transferencia bancaria, Efectivo, Tarjeta de débito...
