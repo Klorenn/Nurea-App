@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 /**
  * POST /api/appointments/complete
- * Mark an appointment as completed and release funds from escrow to available.
+ * Mark an appointment as completed.
  */
 export async function POST(request: Request) {
   try {

@@ -771,8 +771,8 @@ function PaymentsTab({ isSpanish }: { isSpanish: boolean }) {
                 </div>
                 <p className="text-xs text-teal-700 dark:text-teal-300 leading-relaxed">
                   {isSpanish
-                    ? "El paciente paga al reservar. Los fondos se mantienen en garantía y se liberan a tu cuenta después de la consulta. Elimina el ausentismo y garantiza tu ingreso."
-                    : "Patient pays upon booking. Funds are held in escrow and released to your account after the consultation. Eliminates no-shows and guarantees your income."}
+                    ? "El paciente paga al reservar. El pago se procesa y se acredita a tu cuenta tras la consulta. Elimina el ausentismo y garantiza tu ingreso."
+                    : "Patient pays upon booking. Payment is processed and credited to your account after the consultation. Eliminates no-shows and guarantees your income."}
                 </p>
                 <Badge className="bg-teal-600 text-white text-[10px] mt-1">
                   {isSpanish ? "Recomendado" : "Recommended"}

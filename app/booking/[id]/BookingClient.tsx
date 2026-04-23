@@ -89,7 +89,6 @@ export default function BookingClient({ professional }: BookingClientProps) {
         onClose={() => setIsBookingOpen(false)}
         professionalId={professional.id}
         professionalName={professional.name}
-        stellarWallet={professional.stellar_wallet}
         offersInPerson={professional.consultationTypes?.includes("in-person")}
         isSpanish={isSpanish}
       />

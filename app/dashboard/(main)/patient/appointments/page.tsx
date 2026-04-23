@@ -253,20 +253,20 @@ function UpcomingAppointmentCard({
                   </p>
                 </div>
               </div>
-              <Badge
-                className={cn(
-                  "text-xs font-semibold px-3 py-1",
-                  appointment.payment_status === 'paid' || appointment.payment_status === 'held_escrow'
-                    ? "bg-teal-500/10 text-teal-600 border-teal-500/20"
-                    : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                )}
-              >
-                {appointment.payment_status === 'paid' || appointment.payment_status === 'held_escrow'
-                  ? isSpanish
-                    ? "Confirmada - Pagada"
-                    : "Confirmed - Paid"
-                  : isSpanish
-                  ? "Pendiente de pago"
+               <Badge
+                 className={cn(
+                   "text-xs font-semibold px-3 py-1",
+                   appointment.payment_status === 'paid'
+                     ? "bg-teal-500/10 text-teal-600 border-teal-500/20"
+                     : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                 )}
+               >
+                 {appointment.payment_status === 'paid'
+                   ? isSpanish
+                     ? "Confirmada - Pagada"
+                     : "Confirmed - Paid"
+                   : isSpanish
+                   ? "Pendiente de pago"
                   : "Payment pending"}
               </Badge>
             </div>

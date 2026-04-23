@@ -280,20 +280,20 @@ export default function ProfessionalDashboardPage() {
           .select("professional_net")
           .eq("professional_id", user.id)
           .gte("created_at", firstDayOfMonth)
-          .in("status", ["escrow", "available", "payout_pending", "paid_out"]),
+          .in("status", ["available", "payout_pending", "paid_out"]),
         supabase
           .from("financial_transactions")
           .select("professional_net")
           .eq("professional_id", user.id)
           .gte("created_at", currentWeekStart)
-          .in("status", ["escrow", "available", "payout_pending", "paid_out"]),
+          .in("status", ["available", "payout_pending", "paid_out"]),
         supabase
           .from("financial_transactions")
           .select("professional_net")
           .eq("professional_id", user.id)
           .gte("created_at", lastWeekStart)
           .lte("created_at", lastWeekEnd)
-          .in("status", ["escrow", "available", "payout_pending", "paid_out"]),
+          .in("status", ["available", "payout_pending", "paid_out"]),
         supabase
           .from("appointments")
           .select("*", { count: "exact", head: true })

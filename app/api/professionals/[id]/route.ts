@@ -80,7 +80,6 @@ export async function GET(
           availableToday: true,
           availableUntil: '7:00 PM',
           patientsServed: 0,
-          stellarWallet: testProfessional.stellar_wallet ?? null,
         }
 
         return NextResponse.json({
@@ -282,7 +281,6 @@ async function handleProfessionalResponse(professional: any, supabase: any, id: 
       availableToday: availableToday,
       availableUntil: availableUntil,
       patientsServed: patientsServed, 
-      stellarWallet: professional.stellar_wallet ?? null,
       accepted_insurances: professional.accepted_insurances ?? null,
       patients_groups: professional.patients_groups ?? [],
       payment_methods: professional.payment_methods ?? [],
