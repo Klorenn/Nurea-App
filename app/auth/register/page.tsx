@@ -523,6 +523,50 @@ function RegisterContent() {
           </blockquote>
         </div>
 
+        {/* Stats */}
+        {isES && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 16,
+              marginTop: 24,
+              paddingTop: 20,
+              borderTop: "1px solid oklch(1 0 0 0 / 0.15)",
+            }}
+          >
+            {[
+              { num: "14 días", label: "Prueba gratis" },
+              { num: "48h", label: "Primera cita" },
+              { num: "0%", label: "Permanencia" },
+            ].map((stat) => (
+              <div key={stat.label}>
+                <div
+                  style={{
+                    fontFamily: "var(--font-fraunces), serif",
+                    fontSize: 26,
+                    fontWeight: 400,
+                    marginBottom: 4,
+                    color: "white",
+                  }}
+                >
+                  {stat.num}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "oklch(0.72 0.03 170 / 0.6)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div
           style={{
             position: "relative",
