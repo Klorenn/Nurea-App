@@ -9,11 +9,11 @@
   "crons": [
     {
       "path": "/api/cron/send-reminders",
-      "schedule": "0 * * * *"
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/send-message-notifications",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }

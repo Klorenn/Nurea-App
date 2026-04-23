@@ -13,7 +13,7 @@ import { appointmentReminderEmail } from '@/lib/emails/templates'
  * {
  *   "crons": [{
  *     "path": "/api/cron/send-reminders",
- *     "schedule": "0 * * * *"  // Cada hora
+ *     "schedule": "0 8 * * *"  // Una vez al día a las 8am
  *   }]
  * }
  */

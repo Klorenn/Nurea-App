@@ -11,7 +11,7 @@ import { es } from "date-fns/locale";
  * Para cron (Vercel, etc.): llamar con header Authorization: Bearer <CRON_SECRET>.
  *
  * Vercel crons (vercel.json):
- *   { "path": "/api/appointments/reminders", "schedule": "0 * * * *" }
+ *   { "path": "/api/appointments/reminders", "schedule": "0 8 * * *" }
  */
 async function handler(request: Request) {
   const startTime = Date.now();
