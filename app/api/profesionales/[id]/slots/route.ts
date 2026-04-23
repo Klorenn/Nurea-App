@@ -9,6 +9,8 @@ import {
   isWithinInterval,
 } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 interface Params {
   params: Promise<{ id: string }>;
 }
