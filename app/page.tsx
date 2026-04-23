@@ -439,21 +439,6 @@ function Nav({ daysLeft }: { daysLeft: number }) {
         </ul>
 
         <div className="flex items-center gap-2">
-          <span
-            className="hidden items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] lg:inline-flex"
-            style={{
-              borderColor: "var(--line-soft)",
-              color: "var(--ink-soft)",
-              background: "var(--bg-warm)",
-              fontFamily: "var(--font-jetbrains-mono)",
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-            }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--terracotta)" }} />
-            {daysLeft}d · 10 dic
-          </span>
-
           <Link
             href="/login"
             className="hidden rounded-full px-4 py-2.5 text-[13.5px] font-medium sm:inline-flex"
@@ -2174,20 +2159,6 @@ function CtaBlock({ timeLeft }: { timeLeft: TimeLeft }) {
               filter: "blur(60px)",
             }}
           />
-          <div
-            className="relative inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px]"
-            style={{
-              borderColor: "color-mix(in oklab, white 30%, transparent)",
-              color: "color-mix(in oklab, var(--bg) 88%, transparent)",
-              fontFamily: "var(--font-jetbrains-mono)",
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-            }}
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--terracotta)" }} />
-            Faltan {timeLeft.days} días · 10 dic 2026
-          </div>
-
           <h2
             className="relative mx-auto mt-6 max-w-[780px]"
             style={{
