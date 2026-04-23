@@ -781,21 +781,23 @@ function RegisterContent() {
             </button>
             <button
               type="button"
-              disabled
-              title={isES ? "Próximamente" : "Coming soon"}
+              disabled={loading}
+              onClick={handleGoogle}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 8,
                 padding: "9px 12px",
-                background: "oklch(0.97 0.005 90)",
+                background: "white",
                 border: "1px solid oklch(0.92 0.01 90)",
                 borderRadius: 10,
                 fontSize: 12.5,
                 fontWeight: 500,
-                color: "oklch(0.55 0.02 170)",
-                cursor: "not-allowed",
+                color: "oklch(0.25 0.03 170)",
+                cursor: loading ? "not-allowed" : "pointer",
+                opacity: loading ? 0.6 : 1,
+                transition: "all 0.2s",
               }}
             >
               {IcoApple}
