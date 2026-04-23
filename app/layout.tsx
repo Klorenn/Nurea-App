@@ -7,6 +7,8 @@ import { QueryProvider } from "@/providers/query-provider"
 import { Toaster } from "sonner"
 import { AnalyticsClient } from "@/components/analytics-client"
 import "./globals.css"
+import "./auth.css"
+import "./dashboard.css"
 
 import { NuraChatDynamic } from "@/components/nura/nura-chat-wrapper"
 
