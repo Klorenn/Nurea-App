@@ -64,7 +64,6 @@ export async function POST(request: Request) {
     }
 
     // 3. Call the RPC to atomically update status and release funds (Security & Robustness)
-    console.log(`🚀 Completing appointment ${appointmentId} and releasing funds...`)
     
     const { error: rpcError } = await supabase.rpc('complete_appointment_and_release_funds', {
       p_appointment_id: appointmentId

@@ -48,8 +48,8 @@ export function GoogleAddressInput({
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     if (key) {
       setApiKey(key)
-      // @ts-ignore
-      if (!window.google) {
+      const win = window as unknown as { google?: unknown }
+      if (!win.google) {
         const script = document.createElement("script")
         script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
         script.async = true
