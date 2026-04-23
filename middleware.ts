@@ -1,19 +1,11 @@
-import { type NextRequest } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-export async function middleware(request: NextRequest) {
-  return await updateSession(request)
-}
+const isProtectedRoute = createRouteMatcher(['/dashboard(.*)', '/api/user(.*)', '/api/professional(.*)', '/api/appointments(.*)', '/api/chat(.*)', '/api/payments(.*)'])
+
+export default clerkMiddleware()
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico, robots.txt, sitemap.xml
-     * - Public image files
-     */
     '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google"
+import { ClerkProvider } from "@clerk/nextjs"
 import { LanguageProvider } from "@/contexts/language-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/providers/query-provider"
@@ -188,16 +189,18 @@ export default function RootLayout({
         />
       </head>
       <body className={`${InterFont.variable} ${FrauncesFont.variable} ${JetBrainsMonoFont.variable} font-sans antialiased`} suppressHydrationWarning>
-        <ThemeProvider>
-          <QueryProvider>
-            <LanguageProvider>
-              {children}
-              <Toaster position="top-right" richColors closeButton />
-              <AnalyticsClient />
-              <NuraChatDynamic />
-            </LanguageProvider>
-          </QueryProvider>
-        </ThemeProvider>
+        <ClerkProvider>
+          <ThemeProvider>
+            <QueryProvider>
+              <LanguageProvider>
+                {children}
+                <Toaster position="top-right" richColors closeButton />
+                <AnalyticsClient />
+                <NuraChatDynamic />
+              </LanguageProvider>
+            </QueryProvider>
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   )
