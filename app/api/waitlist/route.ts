@@ -3,108 +3,116 @@ import { NextResponse } from 'next/server'
 
 /**
  * POST /api/waitlist
- * Guarda un email en la lista de espera
+ * Registra a alguien en la lista de espera de Nurea.
+ * Body:
+ *   - email        (required)
+ *   - first_name   (optional)
+ *   - last_name    (optional)
+ *   - user_role    (optional) one of: patient | professional | curious
+ *   - source       (optional) metadata about where the signup came from
  */
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const email: string | undefined = body?.email
+    const first_name: string | undefined = body?.first_name
+    const last_name: string | undefined = body?.last_name
+    const user_role: string | undefined = body?.user_role
+    const source: string | undefined = body?.source
 
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return NextResponse.json(
-        { error: 'Email inválido' },
+        { success: false, error: 'Email inválido' },
+        { status: 400 }
+      )
+    }
+
+    if (user_role && !['patient', 'professional', 'curious'].includes(user_role)) {
+      return NextResponse.json(
+        { success: false, error: 'Rol inválido' },
         { status: 400 }
       )
     }
 
     const supabase = await createClient()
 
-    // Verificar si la tabla waitlist existe, si no, crearla
-    // Por ahora, insertamos en una tabla simple
     const { data, error } = await supabase
       .from('waitlist')
       .insert({
         email: email.toLowerCase().trim(),
-        created_at: new Date().toISOString(),
+        first_name: first_name?.trim() || null,
+        last_name: last_name?.trim() || null,
+        user_role: user_role || null,
+        source: source || 'landing',
       })
       .select()
       .single()
 
     if (error) {
-      // Si la tabla no existe
+      // Tabla no existe
       if (error.code === '42P01') {
-        console.error('Tabla waitlist no existe. Aplica la migración SQL primero.')
         return NextResponse.json(
-          { 
+          {
             success: false,
-            error: 'La tabla waitlist no existe. Por favor, aplica la migración SQL en Supabase primero.',
-            message: 'Error de configuración del servidor'
+            error: 'La tabla waitlist no existe',
+            message: 'Aplica los scripts en supabase/schema/ para crear la tabla.',
           },
           { status: 500 }
         )
       }
 
-      // Si es un error de duplicado, retornar éxito
+      // Email duplicado
       if (error.code === '23505') {
-        // Obtener el conteo actual
         const { count } = await supabase
           .from('waitlist')
           .select('*', { count: 'exact', head: true })
-        
         return NextResponse.json({
           success: true,
+          already_registered: true,
           message: 'Ya estás en la lista de espera',
-          count: count || 0
+          count: count || 0,
         })
       }
 
-      console.error('Error guardando email en waitlist:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      })
-      
-      // Si es un error de RLS, dar un mensaje más específico
+      // RLS
       if (error.message?.includes('row-level security') || error.code === '42501') {
         return NextResponse.json(
-          { 
+          {
             success: false,
-            error: error.message || 'Error de permisos',
-            message: 'Error de configuración de seguridad. Por favor, ejecuta el script QUICK_FIX_WAITLIST_RLS.sql en Supabase.',
-            code: error.code
+            error: error.message,
+            message:
+              'Error de permisos. Asegúrate de haber aplicado las políticas RLS en supabase/schema/06_onboarding_and_blog.sql',
           },
           { status: 500 }
         )
       }
-      
+
       return NextResponse.json(
-        { 
+        {
           success: false,
-          error: error.message || 'Error al guardar el email',
-          message: 'No se pudo agregar tu email. Por favor, intenta nuevamente.',
-          code: error.code
+          error: error.message,
+          message: 'No se pudo registrar. Intenta nuevamente.',
         },
         { status: 500 }
       )
     }
 
-    // Obtener el nuevo conteo después de insertar
     const { count } = await supabase
       .from('waitlist')
       .select('*', { count: 'exact', head: true })
 
     return NextResponse.json({
       success: true,
-      message: 'Email agregado a la lista de espera',
+      already_registered: false,
+      message: 'Registro exitoso. Te avisaremos al lanzamiento.',
       data,
-      count: count || 0
+      count: count || 0,
     })
   } catch (error) {
     console.error('Error en waitlist API:', error)
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { success: false, error: 'Error interno del servidor' },
       { status: 500 }
     )
   }
 }
-

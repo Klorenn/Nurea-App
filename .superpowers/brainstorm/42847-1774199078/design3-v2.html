@@ -1,0 +1,490 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: #f1f5f9; }
+
+h2 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.subtitle { font-size: 0.82rem; color: #64748b; margin-bottom: 20px; }
+
+/* ---- PAGE SHELL ---- */
+.page-shell {
+  background: #f1f5f9;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  max-width: 860px;
+  margin: 0 auto 24px;
+}
+
+.page-topbar {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.page-topbar-left h1 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+.page-topbar-left p {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+.topbar-actions { display: flex; gap: 8px; }
+.btn-outline {
+  font-size: 11px; font-weight: 600; color: #475569;
+  border: 1px solid #e2e8f0; background: white;
+  padding: 6px 12px; border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-primary {
+  font-size: 11px; font-weight: 700; color: white;
+  background: #0d9488; border: none;
+  padding: 6px 14px; border-radius: 7px; cursor: pointer;
+}
+
+/* ---- COMPLETENESS ---- */
+.completeness-bar {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.completeness-label { font-size: 11px; font-weight: 600; color: #64748b; white-space: nowrap; }
+.completeness-track { flex: 1; height: 5px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+.completeness-fill { height: 100%; width: 40%; background: linear-gradient(90deg, #f97316, #eab308); border-radius: 99px; }
+.completeness-score { font-size: 12px; font-weight: 800; color: #f97316; white-space: nowrap; }
+
+/* ---- TABS ---- */
+.tabs-row {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 24px;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+}
+.tab {
+  font-size: 11.5px; font-weight: 600; color: #64748b;
+  padding: 10px 14px;
+  border-bottom: 2px solid transparent;
+  cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 5px;
+  transition: all 0.12s;
+}
+.tab.active { color: #0d9488; border-bottom-color: #0d9488; font-weight: 700; }
+.tab-icon { font-size: 12px; }
+
+/* ---- CONTENT AREA ---- */
+.content-area {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---- PROFILE HERO CARD ---- */
+.profile-hero {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.hero-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+}
+.avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%);
+  border: 3px solid white;
+  box-shadow: 0 0 0 2px #e2e8f0;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: white; font-weight: 800;
+}
+.avatar-edit-btn {
+  position: absolute; bottom: 0; right: 0;
+  width: 20px; height: 20px;
+  background: #0d9488; color: white;
+  border-radius: 50%;
+  font-size: 9px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid white;
+  cursor: pointer;
+}
+.hero-info { flex: 1; }
+.hero-name { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.01em; }
+.hero-meta { font-size: 12px; color: #64748b; margin-top: 3px; display: flex; align-items: center; gap: 8px; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #f0fdfa; border: 1px solid #99f6e4;
+  color: #0d9488; font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 99px;
+}
+.hero-verified { color: #0d9488; font-size: 10px; font-weight: 700; }
+.hero-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.hero-photo-btn {
+  font-size: 10px; font-weight: 700; color: #0d9488;
+  background: #f0fdfa; border: 1px solid #99f6e4;
+  padding: 5px 11px; border-radius: 6px; cursor: pointer;
+  white-space: nowrap;
+}
+.hero-divider { height: 1px; background: #f1f5f9; margin: 0 18px; }
+.hero-stats {
+  display: flex;
+  padding: 10px 18px;
+  gap: 24px;
+}
+.hero-stat { text-align: center; }
+.hero-stat-val { font-size: 14px; font-weight: 800; color: #0f172a; }
+.hero-stat-label { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+
+/* ---- SETTINGS SECTION ---- */
+.settings-section {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.section-header-left { display: flex; align-items: center; gap: 9px; }
+.section-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+}
+.section-icon.teal { background: #f0fdfa; }
+.section-icon.blue { background: #eff6ff; }
+.section-icon.purple { background: #faf5ff; }
+.section-title { font-size: 12.5px; font-weight: 700; color: #1e293b; }
+.section-subtitle { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+.section-edit-btn {
+  font-size: 10px; font-weight: 700; color: #64748b;
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  padding: 5px 11px; border-radius: 6px; cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+}
+.section-edit-btn.active { color: #0d9488; background: #f0fdfa; border-color: #99f6e4; }
+
+/* ---- FIELD ROWS ---- */
+.field-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 18px;
+  border-bottom: 1px solid #f8fafc;
+  gap: 12px;
+  transition: background 0.1s;
+  cursor: default;
+}
+.field-row:last-child { border-bottom: none; }
+.field-label {
+  font-size: 11px;
+  color: #94a3b8;
+  width: 130px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.field-value {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e293b;
+  flex: 1;
+}
+.field-value.empty { color: #cbd5e1; font-style: italic; font-weight: 400; }
+.field-edit { font-size: 11px; color: #cbd5e1; }
+
+/* Editing state */
+.field-row.editing { background: #f8fafc; cursor: default; }
+.field-input {
+  flex: 1;
+  border: 1.5px solid #0d9488;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #1e293b;
+  background: white;
+  outline: none;
+}
+.field-save {
+  font-size: 10px; font-weight: 700; color: white;
+  background: #0d9488; border: none;
+  padding: 5px 10px; border-radius: 6px; cursor: pointer; flex-shrink: 0;
+}
+.field-cancel {
+  font-size: 10px; font-weight: 600; color: #94a3b8;
+  background: transparent; border: 1px solid #e2e8f0;
+  padding: 5px 9px; border-radius: 6px; cursor: pointer; flex-shrink: 0;
+}
+
+/* Toggle row */
+.toggle-row {
+  display: flex; align-items: center;
+  padding: 10px 18px;
+  border-bottom: 1px solid #f8fafc;
+  gap: 12px;
+}
+.toggle-info { flex: 1; }
+.toggle-info .label { font-size: 12px; font-weight: 600; color: #1e293b; }
+.toggle-info .desc { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+.toggle {
+  width: 34px; height: 19px;
+  background: #0d9488; border-radius: 99px;
+  position: relative; cursor: pointer; flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 13px; height: 13px;
+  background: white; border-radius: 50%;
+}
+
+/* Bio section */
+.bio-content {
+  padding: 12px 18px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.6;
+  border-bottom: 1px solid #f8fafc;
+}
+
+/* Pills row */
+.pills-row {
+  padding: 10px 18px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  border-bottom: 1px solid #f8fafc;
+}
+.pills-row:last-child { border-bottom: none; }
+.pill {
+  font-size: 10px; font-weight: 600;
+  padding: 3px 9px; border-radius: 99px;
+  background: #f1f5f9; color: #475569;
+  border: 1px solid #e2e8f0;
+}
+.pill.teal { background: #f0fdfa; color: #0d9488; border-color: #99f6e4; }
+
+/* Specialty badge */
+.specialty-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #f0fdfa; border: 1px solid #99f6e4;
+  color: #0d9488; font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 99px;
+}
+</style>
+
+<h2>Diseño 3 mejorado — ¿Así te gusta?</h2>
+<p class="subtitle">Pestaña General completa en estilo Settings. Sin repetición, todo limpio y directo.</p>
+
+<div class="page-shell">
+
+  <!-- TOP BAR -->
+  <div class="page-topbar">
+    <div class="page-topbar-left">
+      <h1>María Jesús Chavez San Luis</h1>
+      <p>Perfil profesional · Última edición hace 2 días</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-outline">🔗 Ver perfil público</button>
+      <button class="btn-outline">📍 Editar direcciones</button>
+    </div>
+  </div>
+
+  <!-- COMPLETENESS -->
+  <div class="completeness-bar">
+    <span class="completeness-label">Completitud del perfil</span>
+    <div class="completeness-track"><div class="completeness-fill"></div></div>
+    <span class="completeness-score">40 / 100</span>
+    <span style="font-size:10px;color:#f97316;font-weight:700">· Falta: Premios (+1)</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-row">
+    <div class="tab active"><span class="tab-icon">👤</span> General</div>
+    <div class="tab"><span class="tab-icon">🏥</span> Clínica</div>
+    <div class="tab"><span class="tab-icon">🎓</span> Estudios</div>
+    <div class="tab"><span class="tab-icon">🖼</span> Galería</div>
+    <div class="tab"><span class="tab-icon">💲</span> Precios</div>
+    <div class="tab"><span class="tab-icon">🔒</span> Seguridad</div>
+    <div class="tab"><span class="tab-icon">✅</span> Verificación</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content-area">
+
+    <!-- HERO -->
+    <div class="profile-hero">
+      <div class="hero-inner">
+        <div class="avatar-wrap">
+          <div class="avatar">MJ</div>
+          <div class="avatar-edit-btn">✏</div>
+        </div>
+        <div class="hero-info">
+          <div class="hero-name">María Jesús Chavez San Luis</div>
+          <div class="hero-meta">
+            <span class="hero-badge">Ps. · Psicología</span>
+            <span style="color:#e2e8f0">·</span>
+            <span>5 años de experiencia</span>
+            <span style="color:#e2e8f0">·</span>
+            <span class="hero-verified">✓ Verificada</span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="hero-photo-btn">📷 Cambiar foto</button>
+        </div>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-val">24</div><div class="hero-stat-label">Pacientes</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">4.9★</div><div class="hero-stat-label">Valoración</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">Online</div><div class="hero-stat-label">Modalidad</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">$35.000</div><div class="hero-stat-label">Por sesión</div></div>
+      </div>
+    </div>
+
+    <!-- DATOS PERSONALES -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon teal">🪪</div>
+          <div>
+            <div class="section-title">Datos personales</div>
+            <div class="section-subtitle">Tu información básica de registro</div>
+          </div>
+        </div>
+        <button class="section-edit-btn">✏ Editar sección</button>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Nombre</div>
+        <div class="field-value">María Jesús</div>
+        <div class="field-edit">✏</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Apellidos</div>
+        <div class="field-value">Chavez San Luis</div>
+        <div class="field-edit">✏</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Género</div>
+        <div class="field-value">Femenino</div>
+        <div class="field-edit">✏</div>
+      </div>
+      <div class="field-row editing">
+        <div class="field-label">Teléfono</div>
+        <input class="field-input" value="+56 9 8765 4321">
+        <button class="field-save">Guardar</button>
+        <button class="field-cancel">Cancelar</button>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="label">Mostrar teléfono en perfil público</div>
+          <div class="desc">Los pacientes podrán ver y llamarte directamente</div>
+        </div>
+        <div class="toggle"></div>
+      </div>
+    </div>
+
+    <!-- TÍTULO PROFESIONAL -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon blue">🎓</div>
+          <div>
+            <div class="section-title">Trayectoria profesional</div>
+            <div class="section-subtitle">Cómo te presentas a los pacientes</div>
+          </div>
+        </div>
+        <button class="section-edit-btn">✏ Editar sección</button>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Título abreviado</div>
+        <div class="field-value"><span class="specialty-badge">Ps.</span></div>
+        <div class="field-edit">✏</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Especialidad</div>
+        <div class="field-value">Psicología</div>
+        <div class="field-edit">✏</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Años de experiencia</div>
+        <div class="field-value">5 años</div>
+        <div class="field-edit">✏</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Nº Registro</div>
+        <div class="field-value">1111111</div>
+        <div class="field-edit">✏</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Institución emisora</div>
+        <div class="field-value empty">Sin especificar</div>
+        <div class="field-edit">✏</div>
+      </div>
+    </div>
+
+    <!-- CONDICIONES -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon purple">🩺</div>
+          <div>
+            <div class="section-title">Condiciones que tratas</div>
+            <div class="section-subtitle">Configúralas en la pestaña Clínica</div>
+          </div>
+        </div>
+      </div>
+      <div class="pills-row">
+        <span class="pill teal">Ansiedad</span>
+        <span class="pill teal">Depresión</span>
+        <span class="pill teal">Autoestima</span>
+        <span class="pill teal">Duelo</span>
+        <span class="pill" style="color:#94a3b8;border-style:dashed;cursor:pointer">+ Añadir en Clínica →</span>
+      </div>
+    </div>
+
+    <!-- BIOGRAFÍA -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon teal">📝</div>
+          <div>
+            <div class="section-title">Biografía profesional</div>
+            <div class="section-subtitle">Presentación para tus pacientes</div>
+          </div>
+        </div>
+        <button class="section-edit-btn active">✓ Editando</button>
+      </div>
+      <div class="bio-content">
+        Acompaño a adolescentes y personas adultas que están atravesando momentos de malestar emocional, ansiedad, inseguridad personal o procesos de cambio. En terapia trabajamos juntos para comprender lo que ocurre, aliviar el malestar y fortalecer recursos personales de forma gradual y respetuosa.
+      </div>
+      <div style="padding:10px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #f1f5f9">
+        <button class="field-cancel">Cancelar</button>
+        <button class="field-save" style="padding:6px 14px">Guardar biografía</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p class="subtitle" style="text-align:center;margin-top:4px">¿Te gusta esta dirección? ¿Quieres ajustar algo — colores, estructura, qué datos aparecen?</p>

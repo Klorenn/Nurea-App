@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
+import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 /**
  * Root Dashboard Redirector
@@ -75,7 +76,7 @@ export default function DashboardRootPage() {
   }, [user, loading, router, supabase])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className={loadingFullViewportClassName("bg-background")}>
       <div className="text-center space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-[#0f766e] mx-auto" />
         <p className="text-sm text-muted-foreground animate-pulse font-medium">

@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Lora } from "next/font/google"
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google"
 import { LanguageProvider } from "@/contexts/language-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/providers/query-provider"
@@ -10,17 +10,31 @@ import "./globals.css"
 
 import { NuraChatDynamic } from "@/components/nura/nura-chat-wrapper"
 
-const GeistFont = Geist({
+/* ─── Rebrand abril 2026 ─────────────────────────────────────────────
+   Inter         → body / UI                           (--font-inter)
+   Fraunces      → display serif, headings editoriales (--font-fraunces)
+   JetBrains Mono → eyebrows, micro labels, code       (--font-jetbrains-mono)
+───────────────────────────────────────────────────────────────────── */
+const InterFont = Inter({
   subsets: ["latin"],
-  display: "optional",
+  display: "swap",
   preload: true,
-  variable: "--font-sans",
+  variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
 })
-const LoraFont = Lora({
+const FrauncesFont = Fraunces({
   subsets: ["latin"],
-  weight: ["400", "600"],
-  variable: "--font-serif",
-  display: "optional",
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-fraunces",
+  display: "swap",
+  preload: true,
+})
+const JetBrainsMonoFont = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
   preload: false,
 })
 
@@ -92,6 +106,12 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/logo.png" type="image/png" sizes="any" />
         <link rel="apple-touch-icon" href="/logo.png" />
+        <meta name="theme-color" content="#3d4f48" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="NUREA" />
+        <link rel="apple-touch-startup-image" href="/icons/splash.png" />
         {/* Preconnect to external domains for performance */}
         <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
@@ -167,7 +187,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${GeistFont.variable} ${LoraFont.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${InterFont.variable} ${FrauncesFont.variable} ${JetBrainsMonoFont.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>
             <LanguageProvider>

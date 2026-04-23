@@ -187,8 +187,6 @@ export function generateWeekSchedule(
       const existing = uniqueSlots.get(slot.time)
       if (!existing || !existing.available) {
         uniqueSlots.set(slot.time, slot)
-      } else if (slot.available && !existing.available) {
-        uniqueSlots.set(slot.time, slot)
       }
     }
 
@@ -275,8 +273,6 @@ export function generateDaySlots(
   for (const slot of allSlots) {
     const existing = uniqueSlots.get(slot.time)
     if (!existing || !existing.available) {
-      uniqueSlots.set(slot.time, slot)
-    } else if (slot.available && !existing.available) {
       uniqueSlots.set(slot.time, slot)
     }
   }

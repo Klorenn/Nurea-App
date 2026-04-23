@@ -221,28 +221,24 @@ async function calculateAverageResponseTime(
 /**
  * Verifica si el profesional tiene un plan premium activo
  */
+ 
 async function checkPremiumPlan(
-  supabase: any,
-  professionalId: string
+  _supabase: any,
+  _professionalId: string
 ): Promise<boolean> {
-  try {
-    // TODO: Verificar tabla de suscripciones cuando se implemente
-    // Por ahora, retornamos false (todos son basic)
-    // const { data: subscription } = await supabase
-    //   .from('subscriptions')
-    //   .select('plan_type, status, expires_at')
-    //   .eq('professional_id', professionalId)
-    //   .eq('status', 'active')
-    //   .single()
-    //
-    // return subscription?.plan_type === 'premium' && 
-    //        new Date(subscription.expires_at) > new Date()
+  // TODO: Verificar tabla de suscripciones cuando se implemente
+  // Por ahora, retornamos false (todos son basic)
+  // const { data: subscription } = await supabase
+  //   .from('subscriptions')
+  //   .select('plan_type, status, expires_at')
+  //   .eq('professional_id', professionalId)
+  //   .eq('status', 'active')
+  //   .single()
+  //
+  // return subscription?.plan_type === 'premium' && 
+  //        new Date(subscription.expires_at) > new Date()
 
-    return false // Temporal hasta implementar suscripciones
-  } catch (error) {
-    console.error('Error verificando plan premium:', error)
-    return false
-  }
+  return false // Temporal hasta implementar suscripciones
 }
 
 /**

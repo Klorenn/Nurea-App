@@ -365,7 +365,7 @@ export function HealthChat({
     } else if (messageDate.getTime() === today.getTime() - 86400000) {
       return t.chat.yesterday
     } else {
-      return date.toLocaleDateString(language === "es" ? "es-ES" : "en-US", {
+      return date.toLocaleDateString(language === "es" ? "es-CL" : "en-US", {
         month: "short",
         day: "numeric",
       })
@@ -374,7 +374,7 @@ export function HealthChat({
 
   const formatMessageTime = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleTimeString(language === "es" ? "es-ES" : "en-US", {
+    return date.toLocaleTimeString(language === "es" ? "es-CL" : "en-US", {
       hour: "2-digit",
       minute: "2-digit",
     })

@@ -1,539 +1,693 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import {
-  Bell,
-  Shield,
-  Globe,
-  CreditCard,
-  Trash2,
-  Lock,
-  Eye,
-  EyeOff,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-} from "lucide-react"
-import { useLanguage } from "@/contexts/language-context"
-import { Separator } from "@/components/ui/separator"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { toast } from "sonner"
+import { useLanguage } from "@/contexts/language-context"
 
-export default function SettingsPage() {
+const C = {
+  bg: "oklch(0.985 0.008 150)",
+  bgWarm: "oklch(0.97 0.015 85)",
+  panel: "#fff",
+  ink: "oklch(0.22 0.025 170)",
+  inkSoft: "oklch(0.42 0.02 170)",
+  inkMute: "oklch(0.58 0.015 170)",
+  line: "oklch(0.88 0.015 150)",
+  lineSoft: "oklch(0.93 0.012 150)",
+  sage100: "oklch(0.95 0.025 170)",
+  sage300: "oklch(0.78 0.06 170)",
+  sage500: "oklch(0.58 0.07 170)",
+  sage700: "oklch(0.38 0.05 170)",
+  terracotta: "oklch(0.68 0.11 45)",
+  danger: "oklch(0.55 0.19 25)",
+  dangerSoft: "oklch(0.96 0.025 25)",
+}
+
+type Tab = "perfil" | "cuenta" | "notificaciones" | "idioma" | "privacidad"
+
+interface ProfileData {
+  id: string
+  first_name: string | null
+  last_name: string | null
+  email: string | null
+  phone: string | null
+  city: string | null
+  region: string | null
+  language: "es" | "en"
+  notification_preferences: Record<string, boolean> | null
+  privacy_preferences: Record<string, boolean> | null
+}
+
+const defaultNotif = {
+  email_notifications: true,
+  push_notifications: true,
+  appointment_reminders: true,
+  marketing_emails: false,
+  forum_replies: true,
+  new_messages: true,
+}
+
+const defaultPrivacy = {
+  show_online_status: true,
+  profile_public: true,
+  allow_direct_messages: true,
+}
+
+export default function PatientSettingsPage() {
+  const supabase = useMemo(() => createClient(), [])
   const { language, setLanguage } = useLanguage()
-  const isSpanish = language === "es"
-  const supabase = createClient()
+  const isES = language === "es"
+  const router = useRouter()
 
-  // — Notification preferences —
-  const [notifLoading, setNotifLoading] = useState(true)
-  const [emailNotif, setEmailNotif] = useState(true)
-  const [pushNotif, setPushNotif] = useState(true)
-  const [appointmentReminders, setAppointmentReminders] = useState(true)
-  const [savingNotif, setSavingNotif] = useState(false)
+  const [tab, setTab] = useState<Tab>("perfil")
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [profile, setProfile] = useState<ProfileData | null>(null)
 
-  // — Password change —
-  const [showPasswordForm, setShowPasswordForm] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [showNewPwd, setShowNewPwd] = useState(false)
-  const [savingPassword, setSavingPassword] = useState(false)
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [city, setCity] = useState("")
+  const [region, setRegion] = useState("")
 
-  // — Delete account —
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [deleteConfirmText, setDeleteConfirmText] = useState("")
-  const [deletingAccount, setDeletingAccount] = useState(false)
+  const [newPwd, setNewPwd] = useState("")
+  const [confirmPwd, setConfirmPwd] = useState("")
 
-  // Load notification preferences on mount
+  const [notif, setNotif] = useState<Record<string, boolean>>(defaultNotif)
+  const [privacy, setPrivacy] = useState<Record<string, boolean>>(defaultPrivacy)
+
+  const [deleteConfirm, setDeleteConfirm] = useState("")
+
   useEffect(() => {
-    const loadPrefs = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data } = await supabase
-          .from("profiles")
-          .select("notification_preferences")
-          .eq("id", user.id)
-          .single()
-
-        const prefs = data?.notification_preferences as Record<string, boolean> | null
-        if (prefs) {
-          setEmailNotif(prefs.email_notifications ?? true)
-          setPushNotif(prefs.push_notifications ?? true)
-          setAppointmentReminders(prefs.appointment_reminders ?? true)
-        }
-      } catch {
-        // Column may not exist yet — keep defaults
-      } finally {
-        setNotifLoading(false)
+    const load = async () => {
+      setLoading(true)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        router.replace("/login")
+        return
       }
-    }
-    loadPrefs()
-  }, [supabase])
-
-  const saveNotifications = async (patch: Partial<{ email: boolean; push: boolean; reminders: boolean }>) => {
-    setSavingNotif(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("No session")
-
-      const next = {
-        email_notifications: patch.email ?? emailNotif,
-        push_notifications: patch.push ?? pushNotif,
-        appointment_reminders: patch.reminders ?? appointmentReminders,
-      }
-
-      const { error } = await supabase
+      const { data } = await supabase
         .from("profiles")
-        .update({ notification_preferences: next })
+        .select(
+          "id, first_name, last_name, email, phone, city, region, language, notification_preferences, privacy_preferences"
+        )
         .eq("id", user.id)
-
-      if (error) throw error
-      toast.success(isSpanish ? "Preferencias guardadas" : "Preferences saved")
-    } catch {
-      toast.error(isSpanish ? "No se pudo guardar" : "Could not save")
-    } finally {
-      setSavingNotif(false)
-    }
-  }
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newPassword !== confirmPassword) {
-      toast.error(isSpanish ? "Las contraseñas no coinciden" : "Passwords do not match")
-      return
-    }
-    if (newPassword.length < 8) {
-      toast.error(isSpanish ? "La contraseña debe tener al menos 8 caracteres" : "Password must be at least 8 characters")
-      return
-    }
-    setSavingPassword(true)
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
-      if (error) throw error
-      toast.success(isSpanish ? "Contraseña actualizada exitosamente" : "Password updated successfully")
-      setShowPasswordForm(false)
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
-    } catch (err: any) {
-      toast.error(err.message || (isSpanish ? "Error al cambiar contraseña" : "Error changing password"))
-    } finally {
-      setSavingPassword(false)
-    }
-  }
-
-  const handleDeleteAccount = async () => {
-    setDeletingAccount(true)
-    try {
-      const res = await fetch("/api/user/delete-account", { method: "DELETE" })
-      if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        throw new Error(data?.message || "Error")
+        .single()
+      if (data) {
+        const p = data as ProfileData
+        setProfile(p)
+        setFirstName(p.first_name ?? "")
+        setLastName(p.last_name ?? "")
+        setPhone(p.phone ?? "")
+        setCity(p.city ?? "")
+        setRegion(p.region ?? "")
+        setNotif({ ...defaultNotif, ...(p.notification_preferences || {}) })
+        setPrivacy({ ...defaultPrivacy, ...(p.privacy_preferences || {}) })
       }
-      toast.success(isSpanish ? "Cuenta eliminada" : "Account deleted")
+      setLoading(false)
+    }
+    load()
+  }, [supabase, router])
+
+  async function saveProfile() {
+    if (!profile) return
+    setSaving(true)
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        first_name: firstName.trim() || null,
+        last_name: lastName.trim() || null,
+        phone: phone.trim() || null,
+        city: city.trim() || null,
+        region: region.trim() || null,
+      })
+      .eq("id", profile.id)
+    setSaving(false)
+    alert(error ? error.message : isES ? "Perfil actualizado" : "Profile updated")
+  }
+
+  async function changePassword() {
+    if (!newPwd || newPwd.length < 8) {
+      alert(isES ? "La contraseña debe tener al menos 8 caracteres." : "Password must be at least 8 characters.")
+      return
+    }
+    if (newPwd !== confirmPwd) {
+      alert(isES ? "Las contraseñas no coinciden." : "Passwords don't match.")
+      return
+    }
+    setSaving(true)
+    const { error } = await supabase.auth.updateUser({ password: newPwd })
+    setSaving(false)
+    if (error) return alert(error.message)
+    setNewPwd("")
+    setConfirmPwd("")
+    alert(isES ? "Contraseña actualizada" : "Password updated")
+  }
+
+  async function saveNotif() {
+    if (!profile) return
+    setSaving(true)
+    const { error } = await supabase
+      .from("profiles")
+      .update({ notification_preferences: notif })
+      .eq("id", profile.id)
+    setSaving(false)
+    alert(error ? error.message : isES ? "Preferencias guardadas" : "Preferences saved")
+  }
+
+  async function savePrivacy() {
+    if (!profile) return
+    setSaving(true)
+    const { error } = await supabase
+      .from("profiles")
+      .update({ privacy_preferences: privacy })
+      .eq("id", profile.id)
+    setSaving(false)
+    alert(error ? error.message : isES ? "Preferencias guardadas" : "Preferences saved")
+  }
+
+  async function saveLanguage(lang: "es" | "en") {
+    if (!profile) return
+    setLanguage(lang)
+    await supabase.from("profiles").update({ language: lang }).eq("id", profile.id)
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut()
+    router.replace("/login")
+  }
+
+  async function deleteAccount() {
+    if (deleteConfirm !== "BORRAR") {
+      alert(isES ? 'Escribe "BORRAR" para confirmar.' : 'Type "BORRAR" to confirm.')
+      return
+    }
+    if (!confirm(isES ? "¿Seguro? Esta acción es irreversible." : "Are you sure? This is irreversible.")) return
+    setSaving(true)
+    try {
+      const res = await fetch("/api/account/delete", { method: "DELETE" })
+      if (!res.ok) throw new Error(await res.text())
       await supabase.auth.signOut()
-      window.location.href = "/"
-    } catch (err: any) {
-      toast.error(
-        err.message ||
-        (isSpanish
-          ? "No se pudo eliminar la cuenta. Contacta a soporte."
-          : "Could not delete account. Contact support.")
-      )
+      router.replace("/")
+    } catch {
+      alert(isES ? "No se pudo eliminar la cuenta" : "Could not delete account")
     } finally {
-      setDeletingAccount(false)
-      setShowDeleteDialog(false)
+      setSaving(false)
     }
   }
+
+  if (loading) {
+    return (
+      <div style={{ background: C.bg, minHeight: "100vh", display: "grid", placeItems: "center" }}>
+        <p style={{ color: C.inkMute, fontFamily: "var(--font-jetbrains-mono)", fontSize: 13 }}>
+          {isES ? "Cargando…" : "Loading…"}
+        </p>
+      </div>
+    )
+  }
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "perfil", label: isES ? "Perfil" : "Profile" },
+    { id: "cuenta", label: isES ? "Cuenta" : "Account" },
+    { id: "notificaciones", label: isES ? "Notificaciones" : "Notifications" },
+    { id: "idioma", label: isES ? "Idioma" : "Language" },
+    { id: "privacidad", label: isES ? "Privacidad" : "Privacy" },
+  ]
 
   return (
-    <DashboardLayout role="patient">
-      <div className="space-y-8 pb-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {isSpanish ? "Configuración" : "Settings"}
+    <div style={{ background: C.bg, minHeight: "100vh", color: C.ink, padding: "32px 24px 64px" }}>
+      <div style={{ maxWidth: 980, margin: "0 auto" }}>
+        <div style={{ marginBottom: 24 }}>
+          <div
+            style={{
+              fontFamily: "var(--font-jetbrains-mono)",
+              fontSize: 12,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: C.sage700,
+              marginBottom: 8,
+            }}
+          >
+            {isES ? "Configuración" : "Settings"}
+          </div>
+          <h1
+            style={{
+              fontFamily: "var(--font-fraunces)",
+              fontWeight: 400,
+              fontSize: "clamp(32px, 4vw, 42px)",
+              lineHeight: 1.1,
+              margin: 0,
+              color: C.ink,
+            }}
+          >
+            {isES ? "Tu cuenta en Nurea" : "Your Nurea account"}
           </h1>
-          <p className="text-muted-foreground mt-1">
-            {isSpanish
-              ? "Gestiona tus preferencias y configuración"
-              : "Manage your preferences and settings"}
-          </p>
         </div>
 
-        {/* Notifications */}
-        <Card className="border-border/40">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Bell className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle>{isSpanish ? "Notificaciones" : "Notifications"}</CardTitle>
-                <CardDescription>
-                  {isSpanish
-                    ? "Controla cómo y cuándo recibes notificaciones"
-                    : "Control how and when you receive notifications"}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {notifLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {isSpanish ? "Cargando..." : "Loading..."}
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">
-                      {isSpanish ? "Notificaciones por Email" : "Email Notifications"}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {isSpanish
-                        ? "Recibe recordatorios y actualizaciones por correo"
-                        : "Receive reminders and updates via email"}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={emailNotif}
-                    disabled={savingNotif}
-                    onCheckedChange={(v) => {
-                      setEmailNotif(v)
-                      saveNotifications({ email: v })
-                    }}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">
-                      {isSpanish ? "Notificaciones Push" : "Push Notifications"}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {isSpanish
-                        ? "Recibe notificaciones en tu dispositivo"
-                        : "Receive notifications on your device"}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={pushNotif}
-                    disabled={savingNotif}
-                    onCheckedChange={(v) => {
-                      setPushNotif(v)
-                      saveNotifications({ push: v })
-                    }}
-                  />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">
-                      {isSpanish ? "Recordatorios de Citas" : "Appointment Reminders"}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {isSpanish
-                        ? "Te avisamos antes de tus citas programadas"
-                        : "We'll remind you before your scheduled appointments"}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={appointmentReminders}
-                    disabled={savingNotif}
-                    onCheckedChange={(v) => {
-                      setAppointmentReminders(v)
-                      saveNotifications({ reminders: v })
-                    }}
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Privacy & Security */}
-        <Card className="border-border/40">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
-                <Shield className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle>{isSpanish ? "Privacidad y Seguridad" : "Privacy & Security"}</CardTitle>
-                <CardDescription>
-                  {isSpanish
-                    ? "Gestiona tu privacidad y seguridad de cuenta"
-                    : "Manage your privacy and account security"}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Password change */}
-            <Button
-              variant="outline"
-              className="w-full justify-start rounded-xl h-auto py-4"
-              onClick={() => setShowPasswordForm(!showPasswordForm)}
-            >
-              <div className="flex items-center gap-3 flex-1">
-                <Lock className="h-5 w-5 text-muted-foreground" />
-                <div className="text-left flex-1">
-                  <p className="font-semibold">
-                    {isSpanish ? "Cambiar Contraseña" : "Change Password"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {isSpanish
-                      ? "Actualiza tu contraseña regularmente para mantener tu cuenta segura"
-                      : "Update your password regularly to keep your account secure"}
-                  </p>
-                </div>
-                {showPasswordForm
-                  ? <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" />
-                  : <Eye className="h-4 w-4 text-muted-foreground shrink-0" />
-                }
-              </div>
-            </Button>
-
-            {showPasswordForm && (
-              <form onSubmit={handlePasswordChange} className="rounded-xl border border-border/60 bg-muted/20 p-5 space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="new-pwd">
-                    {isSpanish ? "Nueva contraseña" : "New password"}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="new-pwd"
-                      type={showNewPwd ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder={isSpanish ? "Mínimo 8 caracteres" : "At least 8 characters"}
-                      className="rounded-xl pr-10"
-                      disabled={savingPassword}
-                      required
-                      minLength={8}
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowNewPwd(!showNewPwd)}
-                    >
-                      {showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-pwd">
-                    {isSpanish ? "Confirmar contraseña" : "Confirm password"}
-                  </Label>
-                  <Input
-                    id="confirm-pwd"
-                    type={showNewPwd ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder={isSpanish ? "Repite la contraseña" : "Repeat password"}
-                    className="rounded-xl"
-                    disabled={savingPassword}
-                    required
-                  />
-                  {confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {isSpanish ? "Las contraseñas no coinciden" : "Passwords do not match"}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-3 pt-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-xl"
-                    onClick={() => { setShowPasswordForm(false); setNewPassword(""); setConfirmPassword("") }}
-                    disabled={savingPassword}
-                  >
-                    {isSpanish ? "Cancelar" : "Cancel"}
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="rounded-xl bg-teal-600 hover:bg-teal-700"
-                    disabled={savingPassword || newPassword !== confirmPassword || newPassword.length < 8}
-                  >
-                    {savingPassword ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isSpanish ? "Guardando..." : "Saving..."}</>
-                    ) : (
-                      <><CheckCircle2 className="h-4 w-4 mr-2" />{isSpanish ? "Guardar contraseña" : "Save password"}</>
-                    )}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Language & Region */}
-        <Card className="border-border/40">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 dark:text-green-400">
-                <Globe className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle>{isSpanish ? "Idioma y Región" : "Language & Region"}</CardTitle>
-                <CardDescription>
-                  {isSpanish ? "Personaliza tu experiencia en NUREA" : "Personalize your NUREA experience"}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-base">{isSpanish ? "Idioma" : "Language"}</Label>
-                <p className="text-sm text-muted-foreground">
-                  {isSpanish ? "Actualmente: Español" : "Currently: English"}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                className="rounded-xl"
-                onClick={() => setLanguage(language === "es" ? "en" : "es")}
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            marginBottom: 24,
+            borderBottom: `1px solid ${C.line}`,
+            overflowX: "auto",
+          }}
+        >
+          {tabs.map((t) => {
+            const active = tab === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                style={{
+                  padding: "12px 18px",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: `2px solid ${active ? C.sage700 : "transparent"}`,
+                  color: active ? C.ink : C.inkMute,
+                  fontWeight: active ? 600 : 500,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
               >
-                {isSpanish ? "Switch to English" : "Cambiar a Español"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
 
-        {/* Payment Methods */}
-        <Card className="border-border/40">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                <CreditCard className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle>{isSpanish ? "Métodos de Pago" : "Payment Methods"}</CardTitle>
-                <CardDescription>
-                  {isSpanish
-                    ? "Los pagos se gestionan a través de MercadoPago al agendar una cita"
-                    : "Payments are managed through MercadoPago when booking an appointment"}
-                </CardDescription>
-              </div>
+        {tab === "perfil" && (
+          <Section
+            title={isES ? "Información personal" : "Personal info"}
+            description={
+              isES ? "Estos datos se usan en reservas y comunicación." : "Used for bookings and communication."
+            }
+          >
+            <div style={grid2}>
+              <Field label={isES ? "Nombre" : "First name"} value={firstName} onChange={setFirstName} />
+              <Field label={isES ? "Apellido" : "Last name"} value={lastName} onChange={setLastName} />
+              <Field label={isES ? "Teléfono" : "Phone"} value={phone} onChange={setPhone} placeholder="+56 9 …" />
+              <Field label="Email" value={profile?.email ?? ""} readOnly />
+              <Field label={isES ? "Ciudad" : "City"} value={city} onChange={setCity} />
+              <Field label={isES ? "Región" : "Region"} value={region} onChange={setRegion} />
             </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground rounded-xl bg-muted/40 px-4 py-3 border border-border/40">
-              {isSpanish
-                ? "Los métodos de pago se configuran automáticamente al completar el pago de tu cita mediante MercadoPago. No se almacenan datos de tarjetas en NUREA."
-                : "Payment methods are configured automatically when completing your appointment payment via MercadoPago. No card data is stored in NUREA."}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Danger Zone */}
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
-                <Trash2 className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle className="text-destructive">
-                  {isSpanish ? "Zona de Peligro" : "Danger Zone"}
-                </CardTitle>
-                <CardDescription>
-                  {isSpanish ? "Acciones irreversibles en tu cuenta" : "Irreversible actions on your account"}
-                </CardDescription>
-              </div>
+            <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={saveProfile} disabled={saving} style={btnPrimary}>
+                {saving ? (isES ? "Guardando…" : "Saving…") : isES ? "Guardar cambios" : "Save changes"}
+              </button>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Button
-              variant="destructive"
-              className="rounded-xl"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {isSpanish ? "Eliminar Cuenta" : "Delete Account"}
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              {isSpanish
-                ? "Esta acción no se puede deshacer. Se eliminará toda tu información permanentemente."
-                : "This action cannot be undone. All your information will be permanently deleted."}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </Section>
+        )}
 
-      {/* Delete account confirmation */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive">
-              {isSpanish ? "¿Eliminar tu cuenta?" : "Delete your account?"}
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>
-                  {isSpanish
-                    ? "Esta acción es permanente e irreversible. Se eliminarán todos tus datos, citas, historial médico y acceso a la plataforma."
-                    : "This action is permanent and irreversible. All your data, appointments, medical history, and platform access will be deleted."}
-                </p>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">
-                    {isSpanish
-                      ? 'Escribe "ELIMINAR" para confirmar'
-                      : 'Type "DELETE" to confirm'}
-                  </Label>
-                  <Input
-                    value={deleteConfirmText}
-                    onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder={isSpanish ? "ELIMINAR" : "DELETE"}
-                    className="rounded-xl"
-                  />
-                </div>
+        {tab === "cuenta" && (
+          <>
+            <Section title={isES ? "Cambiar contraseña" : "Change password"}>
+              <div style={grid2}>
+                <Field
+                  label={isES ? "Nueva contraseña" : "New password"}
+                  value={newPwd}
+                  onChange={setNewPwd}
+                  type="password"
+                />
+                <Field
+                  label={isES ? "Confirmar contraseña" : "Confirm password"}
+                  value={confirmPwd}
+                  onChange={setConfirmPwd}
+                  type="password"
+                />
               </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingAccount}>
-              {isSpanish ? "Cancelar" : "Cancel"}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); handleDeleteAccount() }}
-              disabled={
-                deletingAccount ||
-                deleteConfirmText !== (isSpanish ? "ELIMINAR" : "DELETE")
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={changePassword} disabled={saving} style={btnPrimary}>
+                  {isES ? "Actualizar contraseña" : "Update password"}
+                </button>
+              </div>
+            </Section>
+
+            <Section title={isES ? "Sesión" : "Session"}>
+              <p style={{ color: C.inkSoft, margin: "0 0 16px" }}>
+                {isES
+                  ? "Cierra sesión en este dispositivo. Tus datos se mantienen intactos."
+                  : "Sign out on this device. Your data stays intact."}
+              </p>
+              <button onClick={signOut} style={btnSecondary}>
+                {isES ? "Cerrar sesión" : "Sign out"}
+              </button>
+            </Section>
+
+            <DangerZone
+              title={isES ? "Zona de peligro" : "Danger zone"}
+              description={
+                isES
+                  ? "Eliminar tu cuenta borra permanentemente todos tus datos, reservas y mensajes."
+                  : "Deleting your account permanently removes all your data, bookings, and messages."
               }
-              className="bg-destructive hover:bg-destructive/90 text-white"
             >
-              {deletingAccount ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isSpanish ? "Eliminando..." : "Deleting..."}</>
-              ) : (
-                isSpanish ? "Sí, eliminar mi cuenta" : "Yes, delete my account"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </DashboardLayout>
+              <Field
+                label={isES ? 'Escribe "BORRAR" para confirmar' : 'Type "BORRAR" to confirm'}
+                value={deleteConfirm}
+                onChange={setDeleteConfirm}
+              />
+              <div style={{ marginTop: 14 }}>
+                <button onClick={deleteAccount} disabled={saving} style={btnDanger}>
+                  {isES ? "Eliminar mi cuenta" : "Delete my account"}
+                </button>
+              </div>
+            </DangerZone>
+          </>
+        )}
+
+        {tab === "notificaciones" && (
+          <Section
+            title={isES ? "Notificaciones" : "Notifications"}
+            description={isES ? "Decide qué avisos quieres recibir." : "Choose what alerts you want to receive."}
+          >
+            <ToggleRow
+              label={isES ? "Emails generales" : "General emails"}
+              hint={isES ? "Mensajes y actualizaciones importantes." : "Messages and important updates."}
+              checked={notif.email_notifications}
+              onChange={(v) => setNotif((n) => ({ ...n, email_notifications: v }))}
+            />
+            <ToggleRow
+              label={isES ? "Notificaciones push" : "Push notifications"}
+              hint={isES ? "Alertas en el navegador o móvil." : "Alerts in browser or mobile."}
+              checked={notif.push_notifications}
+              onChange={(v) => setNotif((n) => ({ ...n, push_notifications: v }))}
+            />
+            <ToggleRow
+              label={isES ? "Recordatorios de cita" : "Appointment reminders"}
+              hint={isES ? "24h y 2h antes de tu hora." : "24h and 2h before your booking."}
+              checked={notif.appointment_reminders}
+              onChange={(v) => setNotif((n) => ({ ...n, appointment_reminders: v }))}
+            />
+            <ToggleRow
+              label={isES ? "Nuevos mensajes" : "New messages"}
+              checked={notif.new_messages}
+              onChange={(v) => setNotif((n) => ({ ...n, new_messages: v }))}
+            />
+            <ToggleRow
+              label={isES ? "Respuestas en foro" : "Forum replies"}
+              checked={notif.forum_replies}
+              onChange={(v) => setNotif((n) => ({ ...n, forum_replies: v }))}
+            />
+            <ToggleRow
+              label={isES ? "Emails de marketing" : "Marketing emails"}
+              hint={isES ? "Novedades, blog y lanzamientos." : "Product news, blog and launches."}
+              checked={notif.marketing_emails}
+              onChange={(v) => setNotif((n) => ({ ...n, marketing_emails: v }))}
+            />
+            <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={saveNotif} disabled={saving} style={btnPrimary}>
+                {isES ? "Guardar preferencias" : "Save preferences"}
+              </button>
+            </div>
+          </Section>
+        )}
+
+        {tab === "idioma" && (
+          <Section
+            title={isES ? "Idioma" : "Language"}
+            description={isES ? "Afecta toda la interfaz de Nurea." : "Affects the entire Nurea interface."}
+          >
+            <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1fr 1fr" }}>
+              {(["es", "en"] as const).map((lang) => {
+                const active = language === lang
+                const label = lang === "es" ? "Español (Chile)" : "English"
+                return (
+                  <button
+                    key={lang}
+                    onClick={() => saveLanguage(lang)}
+                    style={{
+                      padding: "18px 20px",
+                      borderRadius: 14,
+                      border: `1px solid ${active ? C.sage700 : C.line}`,
+                      background: active ? C.sage100 : "#fff",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      color: C.ink,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 12, color: C.inkMute }}>
+                      {lang === "es" ? "es-CL · America/Santiago" : "en-US"}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </Section>
+        )}
+
+        {tab === "privacidad" && (
+          <Section
+            title={isES ? "Privacidad" : "Privacy"}
+            description={isES ? "Controla quién puede verte y contactarte." : "Control who can see and contact you."}
+          >
+            <ToggleRow
+              label={isES ? "Mostrar estado en línea" : "Show online status"}
+              checked={privacy.show_online_status}
+              onChange={(v) => setPrivacy((p) => ({ ...p, show_online_status: v }))}
+            />
+            <ToggleRow
+              label={isES ? "Perfil público" : "Public profile"}
+              hint={isES ? "Visible en búsquedas y el foro." : "Visible in search and forum."}
+              checked={privacy.profile_public}
+              onChange={(v) => setPrivacy((p) => ({ ...p, profile_public: v }))}
+            />
+            <ToggleRow
+              label={isES ? "Permitir mensajes directos" : "Allow direct messages"}
+              checked={privacy.allow_direct_messages}
+              onChange={(v) => setPrivacy((p) => ({ ...p, allow_direct_messages: v }))}
+            />
+            <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={savePrivacy} disabled={saving} style={btnPrimary}>
+                {isES ? "Guardar" : "Save"}
+              </button>
+            </div>
+          </Section>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const grid2: React.CSSProperties = {
+  display: "grid",
+  gap: 14,
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+}
+
+const btnPrimary: React.CSSProperties = {
+  padding: "10px 18px",
+  borderRadius: 10,
+  border: "none",
+  background: C.sage700,
+  color: "#fff",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+}
+
+const btnSecondary: React.CSSProperties = {
+  padding: "10px 18px",
+  borderRadius: 10,
+  border: `1px solid ${C.line}`,
+  background: "#fff",
+  color: C.ink,
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: "pointer",
+}
+
+const btnDanger: React.CSSProperties = {
+  padding: "10px 18px",
+  borderRadius: 10,
+  border: `1px solid ${C.danger}`,
+  background: C.danger,
+  color: "#fff",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: "pointer",
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section
+      style={{
+        background: C.panel,
+        border: `1px solid ${C.line}`,
+        borderRadius: 20,
+        padding: 28,
+        marginBottom: 22,
+      }}
+    >
+      <h2
+        style={{
+          fontFamily: "var(--font-fraunces)",
+          fontWeight: 500,
+          fontSize: 22,
+          lineHeight: 1.2,
+          margin: 0,
+          color: C.ink,
+        }}
+      >
+        {title}
+      </h2>
+      {description && (
+        <p style={{ color: C.inkSoft, fontSize: 14, margin: "8px 0 20px" }}>{description}</p>
+      )}
+      {!description && <div style={{ height: 16 }} />}
+      {children}
+    </section>
+  )
+}
+
+function DangerZone({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <section
+      style={{
+        background: C.dangerSoft,
+        border: `1px solid ${C.danger}`,
+        borderRadius: 20,
+        padding: 28,
+      }}
+    >
+      <h2
+        style={{
+          fontFamily: "var(--font-fraunces)",
+          fontWeight: 500,
+          fontSize: 22,
+          margin: 0,
+          color: C.danger,
+        }}
+      >
+        {title}
+      </h2>
+      <p style={{ color: C.inkSoft, fontSize: 14, margin: "8px 0 20px" }}>{description}</p>
+      {children}
+    </section>
+  )
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  readOnly,
+}: {
+  label: string
+  value: string
+  onChange?: (v: string) => void
+  placeholder?: string
+  type?: string
+  readOnly?: boolean
+}) {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span
+        style={{
+          fontFamily: "var(--font-jetbrains-mono)",
+          fontSize: 11,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: C.inkMute,
+        }}
+      >
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        type={type}
+        readOnly={readOnly}
+        style={{
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: `1px solid ${C.line}`,
+          background: readOnly ? C.lineSoft : "#fff",
+          color: C.ink,
+          fontSize: 14,
+          outline: "none",
+        }}
+      />
+    </label>
+  )
+}
+
+function ToggleRow({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string
+  hint?: string
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 16,
+        padding: "14px 0",
+        borderBottom: `1px solid ${C.lineSoft}`,
+        cursor: "pointer",
+      }}
+    >
+      <div>
+        <div style={{ fontWeight: 500, color: C.ink, fontSize: 15 }}>{label}</div>
+        {hint && <div style={{ color: C.inkMute, fontSize: 13, marginTop: 2 }}>{hint}</div>}
+      </div>
+      <div
+        onClick={() => onChange(!checked)}
+        style={{
+          width: 44,
+          height: 26,
+          borderRadius: 999,
+          background: checked ? C.sage700 : C.line,
+          position: "relative",
+          transition: "background 0.2s",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 3,
+            left: checked ? 21 : 3,
+            width: 20,
+            height: 20,
+            borderRadius: "50%",
+            background: "#fff",
+            transition: "left 0.2s",
+            boxShadow: "0 1px 3px oklch(0.22 0.025 170 / 0.25)",
+          }}
+        />
+      </div>
+    </label>
   )
 }

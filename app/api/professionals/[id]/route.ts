@@ -52,7 +52,7 @@ export async function GET(
           specialty: testProfessional.specialty || 'Médico General',
           specialtyEn: testProfessional.specialty || 'General Medicine',
           yearsExperience: testProfessional.years_experience || 5,
-          location: testProfessional.location || 'Santiago, Chile',
+          location: testProfessional.location || 'Temuco, Chile',
           rating: Math.round(averageRating * 10) / 10,
           reviewsCount: reviewsCount,
           price: testProfessional.consultation_price || 35000,

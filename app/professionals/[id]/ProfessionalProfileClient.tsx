@@ -39,6 +39,7 @@ import { DoctorProfileView } from "@/components/professionals/DoctorProfileView"
 import { useAuth } from "@/hooks/use-auth"
 import { trackBookingEvent } from "@/lib/analytics"
 import { genderizeSpecialtyLabel } from "@/lib/utils/genderize-specialty"
+import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 interface ProfessionalProfileClientProps {
   professionalId: string
@@ -179,7 +180,7 @@ export default function ProfessionalProfileClient({
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+      <main className={loadingFullViewportClassName("bg-slate-50 dark:bg-slate-950")}>
         <div className="text-center space-y-4">
           <Loader2 className="h-10 w-10 animate-spin text-teal-600 mx-auto" />
           <p className="text-slate-500">{isSpanish ? "Cargando perfil..." : "Loading profile..."}</p>

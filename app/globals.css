@@ -5,92 +5,146 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* NUREA HealthTech - Teal/Aqua Green color palette - light mode */
-  --background: oklch(0.98 0.008 180); /* Cool off-white with teal undertone */
-  --foreground: oklch(0.22 0.02 200); /* Dark teal-gray for text */
+  /* ============================================================
+     NUREA — Palette sage + terracotta (rebrand abril 2026)
+     Organic health marketplace. Fraunces + Inter + JetBrains Mono.
+     ============================================================ */
 
-  --card: oklch(0.995 0.005 180); /* Pure white with slight teal tint */
-  --card-foreground: oklch(0.22 0.02 200);
+  /* Custom Nurea tokens (usados por la landing y páginas nuevas) */
+  --bg: oklch(0.985 0.008 150);
+  --bg-warm: oklch(0.97 0.015 85);
+  --bg-sage: oklch(0.93 0.035 170);
+  --sage-50: oklch(0.975 0.015 170);
+  --sage-100: oklch(0.95 0.025 170);
+  --sage-200: oklch(0.88 0.045 170);
+  --sage-300: oklch(0.78 0.06 170);
+  --sage-500: oklch(0.58 0.07 170);
+  --sage-700: oklch(0.38 0.05 170);
+  --sage-900: oklch(0.22 0.03 170);
+  --ink: oklch(0.22 0.025 170);
+  --ink-soft: oklch(0.42 0.02 170);
+  --ink-mute: oklch(0.58 0.015 170);
+  --line: oklch(0.88 0.015 150);
+  --line-soft: oklch(0.93 0.012 150);
+  --terracotta: oklch(0.68 0.11 45);
+  --terracotta-soft: oklch(0.92 0.04 45);
+  --terracotta-deep: oklch(0.52 0.13 40);
+  --cream: oklch(0.96 0.02 90);
+  --blue: oklch(0.55 0.12 230);
+  --blue-soft: oklch(0.94 0.03 230);
+  --amber-soft: oklch(0.94 0.04 80);
+  --danger: oklch(0.6 0.15 25);
 
-  --popover: oklch(0.995 0.005 180);
-  --popover-foreground: oklch(0.22 0.02 200);
+  /* Tailwind/shadcn tokens (rebrandeados sobre la paleta nueva) */
+  --background: oklch(0.985 0.008 150);       /* bg */
+  --foreground: oklch(0.22 0.025 170);        /* ink */
 
-  --primary: oklch(0.65 0.15 180); /* Teal/Aqua green - #14B8A6 equivalent */
-  --primary-foreground: oklch(0.99 0.003 60);
+  --card: oklch(1 0 0);                        /* white on sage-tinted bg */
+  --card-foreground: oklch(0.22 0.025 170);
 
-  --secondary: oklch(0.55 0.12 190); /* Deeper teal for secondary actions */
-  --secondary-foreground: oklch(0.99 0.003 60);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.025 170);
 
-  --muted: oklch(0.94 0.01 180); /* Light teal-gray */
-  --muted-foreground: oklch(0.40 0.025 200); /* Improved contrast for accessibility */
+  --primary: oklch(0.22 0.025 170);            /* ink (buttons oscuros) */
+  --primary-foreground: oklch(0.985 0.008 150);
 
-  --accent: oklch(0.90 0.02 180); /* Light teal accent */
-  --accent-foreground: oklch(0.25 0.025 200); /* Improved contrast for accessibility */
+  --secondary: oklch(0.58 0.07 170);           /* sage-500 */
+  --secondary-foreground: oklch(0.985 0.008 150);
 
-  --destructive: oklch(0.55 0.18 25); /* Muted red for errors */
-  --destructive-foreground: oklch(0.99 0.003 60);
+  --muted: oklch(0.93 0.012 150);              /* line-soft */
+  --muted-foreground: oklch(0.42 0.02 170);    /* ink-soft */
 
-  --border: oklch(0.88 0.015 180); /* Teal-tinted border */
-  --input: oklch(0.94 0.01 180);
-  --ring: oklch(0.65 0.15 180); /* Teal focus ring */
+  --accent: oklch(0.95 0.025 170);             /* sage-100 */
+  --accent-foreground: oklch(0.38 0.05 170);   /* sage-700 */
 
-  --radius: 0.75rem;
+  --destructive: oklch(0.6 0.15 25);           /* danger */
+  --destructive-foreground: oklch(0.985 0.008 150);
 
-  --sidebar: oklch(0.98 0.008 180);
-  --sidebar-foreground: oklch(0.22 0.02 200);
-  --sidebar-primary: oklch(0.65 0.15 180);
-  --sidebar-primary-foreground: oklch(0.99 0.003 60);
-  --sidebar-accent: oklch(0.90 0.02 180);
-  --sidebar-accent-foreground: oklch(0.25 0.025 200); /* Improved contrast for accessibility */
-  --sidebar-border: oklch(0.88 0.015 180);
-  --sidebar-ring: oklch(0.65 0.15 180);
+  --border: oklch(0.88 0.015 150);             /* line */
+  --input: oklch(0.93 0.012 150);              /* line-soft */
+  --ring: oklch(0.58 0.07 170);                /* sage-500 */
+
+  --radius: 0.875rem;
+
+  --sidebar: oklch(0.97 0.015 85);             /* bg-warm */
+  --sidebar-foreground: oklch(0.22 0.025 170);
+  --sidebar-primary: oklch(0.22 0.025 170);
+  --sidebar-primary-foreground: oklch(0.985 0.008 150);
+  --sidebar-accent: oklch(0.95 0.025 170);
+  --sidebar-accent-foreground: oklch(0.38 0.05 170);
+  --sidebar-border: oklch(0.88 0.015 150);
+  --sidebar-ring: oklch(0.58 0.07 170);
 }
 
 .dark {
-  /* NUREA HealthTech - Teal/Aqua Green color palette - dark mode */
-  --background: oklch(0.15 0.02 200); /* Dark teal-gray */
-  --foreground: oklch(0.95 0.01 180); /* Light teal-tinted text */
+  /* NUREA — Dark mode (sage-900 base con acentos sage-200) */
+  --bg: oklch(0.22 0.03 170);
+  --bg-warm: oklch(0.25 0.028 170);
+  --bg-sage: oklch(0.28 0.035 170);
+  --sage-50: oklch(0.30 0.03 170);
+  --sage-100: oklch(0.34 0.035 170);
+  --sage-200: oklch(0.42 0.045 170);
+  --sage-300: oklch(0.52 0.055 170);
+  --sage-500: oklch(0.65 0.075 170);
+  --sage-700: oklch(0.78 0.06 170);
+  --sage-900: oklch(0.92 0.03 170);
+  --ink: oklch(0.96 0.015 170);
+  --ink-soft: oklch(0.78 0.015 170);
+  --ink-mute: oklch(0.6 0.012 170);
+  --line: oklch(0.32 0.025 170);
+  --line-soft: oklch(0.28 0.022 170);
+  --terracotta: oklch(0.72 0.12 45);
+  --terracotta-soft: oklch(0.34 0.06 45);
+  --terracotta-deep: oklch(0.58 0.14 40);
+  --cream: oklch(0.35 0.02 90);
+  --blue: oklch(0.7 0.13 230);
+  --blue-soft: oklch(0.32 0.04 230);
+  --amber-soft: oklch(0.32 0.05 80);
+  --danger: oklch(0.68 0.16 25);
 
-  --card: oklch(0.20 0.02 200); /* Slightly lighter teal-gray for cards */
-  --card-foreground: oklch(0.95 0.01 180);
+  --background: oklch(0.22 0.03 170);
+  --foreground: oklch(0.96 0.015 170);
 
-  --popover: oklch(0.20 0.02 200);
-  --popover-foreground: oklch(0.95 0.01 180);
+  --card: oklch(0.25 0.028 170);
+  --card-foreground: oklch(0.96 0.015 170);
 
-  --primary: oklch(0.70 0.16 180); /* Brighter teal for dark mode */
-  --primary-foreground: oklch(0.15 0.02 200);
+  --popover: oklch(0.25 0.028 170);
+  --popover-foreground: oklch(0.96 0.015 170);
 
-  --secondary: oklch(0.60 0.13 190); /* Deeper teal */
-  --secondary-foreground: oklch(0.15 0.02 200);
+  --primary: oklch(0.96 0.015 170);
+  --primary-foreground: oklch(0.22 0.03 170);
 
-  --muted: oklch(0.30 0.02 200); /* Muted teal-gray */
-  --muted-foreground: oklch(0.75 0.015 180); /* Improved contrast for accessibility */
+  --secondary: oklch(0.65 0.075 170);
+  --secondary-foreground: oklch(0.22 0.03 170);
 
-  --accent: oklch(0.40 0.03 200); /* Dark teal accent */
-  --accent-foreground: oklch(0.95 0.01 180);
+  --muted: oklch(0.28 0.022 170);
+  --muted-foreground: oklch(0.78 0.015 170);
 
-  --destructive: oklch(0.6 0.2 25); /* Brighter error red for dark mode */
-  --destructive-foreground: oklch(0.95 0.01 180);
+  --accent: oklch(0.34 0.035 170);
+  --accent-foreground: oklch(0.78 0.06 170);
 
-  --border: oklch(0.35 0.02 200); /* Dark teal border */
-  --input: oklch(0.30 0.02 200);
-  --ring: oklch(0.70 0.16 180);
+  --destructive: oklch(0.68 0.16 25);
+  --destructive-foreground: oklch(0.96 0.015 170);
 
-  --sidebar: oklch(0.20 0.02 200);
-  --sidebar-foreground: oklch(0.95 0.01 180);
-  --sidebar-primary: oklch(0.70 0.16 180);
-  --sidebar-primary-foreground: oklch(0.15 0.02 200);
-  --sidebar-accent: oklch(0.30 0.02 200);
-  --sidebar-accent-foreground: oklch(0.92 0.015 180); /* Improved contrast for accessibility */
-  --sidebar-border: oklch(0.35 0.02 200);
-  --sidebar-ring: oklch(0.70 0.16 180);
+  --border: oklch(0.32 0.025 170);
+  --input: oklch(0.28 0.022 170);
+  --ring: oklch(0.65 0.075 170);
+
+  --sidebar: oklch(0.25 0.028 170);
+  --sidebar-foreground: oklch(0.96 0.015 170);
+  --sidebar-primary: oklch(0.96 0.015 170);
+  --sidebar-primary-foreground: oklch(0.22 0.03 170);
+  --sidebar-accent: oklch(0.34 0.035 170);
+  --sidebar-accent-foreground: oklch(0.78 0.06 170);
+  --sidebar-border: oklch(0.32 0.025 170);
+  --sidebar-ring: oklch(0.65 0.075 170);
 }
 
 @theme inline {
-  /* <CHANGE> Using Inter for clean, accessible HealthTech typography */
-  --font-sans: "Geist", "Geist Fallback";
-  --font-serif: "Lora", "Georgia", serif;
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  /* Rebrand abril 2026 — Fraunces (display), Inter (body), JetBrains Mono (eyebrow/labels) */
+  --font-sans: var(--font-inter), -apple-system, "Segoe UI", Arial, sans-serif;
+  --font-serif: var(--font-fraunces), "Georgia", serif;
+  --font-mono: var(--font-jetbrains-mono), "Menlo", "Consolas", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -217,7 +271,7 @@
   /* Scrollbar ultra delgada y minimalista para formularios (ej. registro) */
   .scrollbar-form {
     scrollbar-width: thin;
-    scrollbar-color: rgb(204 251 241) transparent; /* teal-200 */
+    scrollbar-color: var(--sage-200) transparent;
   }
   .scrollbar-form::-webkit-scrollbar {
     width: 6px;
@@ -226,13 +280,153 @@
     background: transparent;
   }
   .scrollbar-form::-webkit-scrollbar-thumb {
-    background: rgb(204 251 241);
+    background: var(--sage-200);
     border-radius: 3px;
   }
   .dark .scrollbar-form {
-    scrollbar-color: rgb(45 212 191 / 0.4) transparent;
+    scrollbar-color: var(--sage-300) transparent;
   }
   .dark .scrollbar-form::-webkit-scrollbar-thumb {
-    background: rgb(45 212 191 / 0.4);
+    background: var(--sage-300);
+  }
+
+  /* ===============================================
+     Nurea landing — helpers tipográficos y animations
+     =============================================== */
+  .font-serif-display {
+    font-family: var(--font-fraunces), Georgia, serif;
+    letter-spacing: -0.02em;
+    font-weight: 400;
+  }
+  .font-mono-micro {
+    font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  @keyframes nurea-drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(40px, -30px) scale(1.1); }
+  }
+  .animate-nurea-drift       { animation: nurea-drift 22s ease-in-out infinite; }
+  .animate-nurea-drift-rev   { animation: nurea-drift 28s ease-in-out infinite reverse; }
+
+  @keyframes nurea-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+  }
+  .animate-nurea-float { animation: nurea-float 6s ease-in-out infinite; }
+
+  @keyframes nurea-pulse-ring {
+    0%   { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+  .animate-nurea-pulse-ring { animation: nurea-pulse-ring 2.2s ease-out infinite; }
+
+  @keyframes nurea-blink { 50% { opacity: 0; } }
+  .animate-nurea-blink { animation: nurea-blink 1.2s infinite; }
+
+  /* Scroll reveal (IntersectionObserver añade .nurea-in) */
+  .nurea-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+      opacity 0.8s cubic-bezier(0.2, 0.9, 0.3, 1),
+      transform 0.8s cubic-bezier(0.2, 0.9, 0.3, 1);
+    will-change: opacity, transform;
+  }
+  .nurea-reveal.nurea-in {
+    opacity: 1;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nurea-reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+    .animate-nurea-drift,
+    .animate-nurea-drift-rev,
+    .animate-nurea-float,
+    .animate-nurea-pulse-ring,
+    .animate-nurea-blink {
+      animation: none !important;
+    }
+  }
+
+  /* Tile hover — spec card radial glow */
+  .nurea-spec-card {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1),
+      border-color 0.3s, background 0.3s;
+  }
+  .nurea-spec-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at 80% 120%,
+      var(--sage-200),
+      transparent 60%
+    );
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+  .nurea-spec-card:hover { transform: translateY(-4px); }
+  .nurea-spec-card:hover::before { opacity: 0.7; }
+
+  /* Logo-mark hover rotate */
+  .nurea-logo-mark {
+    transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .nurea-logo-group:hover .nurea-logo-mark {
+    transform: rotate(90deg) scale(1.05);
+  }
+
+  /* How step dashed ring on hover */
+  .nurea-step-num {
+    position: relative;
+    transition: transform 0.3s, background 0.3s, border-color 0.3s;
+  }
+  .nurea-step-num::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px dashed var(--sage-300);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .nurea-step:hover .nurea-step-num {
+    transform: scale(1.04);
+    background: var(--sage-100);
+    border-color: var(--sage-300);
+  }
+  .nurea-step:hover .nurea-step-num::before { opacity: 1; }
+
+  /* Feature card lift on hover */
+  .nurea-feature-card {
+    transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1),
+      border-color 0.3s, box-shadow 0.35s;
+  }
+  .nurea-feature-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--sage-300);
+    box-shadow: 0 30px 60px -30px oklch(0.3 0.04 170 / 0.15);
+  }
+
+  /* Pricing toggle sliding pill handled inline with refs in React */
+  .nurea-pricing-pill {
+    transition: all 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+
+  /* FAQ toggle rotates when open */
+  .nurea-faq-toggle {
+    transition: transform 0.3s, background 0.3s, color 0.3s, border-color 0.3s;
+  }
+  .nurea-faq-toggle.open {
+    transform: rotate(45deg);
   }
 }

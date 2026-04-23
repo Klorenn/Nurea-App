@@ -114,7 +114,7 @@ const getWeekDates = (referenceDate: Date): Date[] => {
 
 const formatDate = (date: Date, format: "short" | "full" = "short"): string => {
   if (format === "short") {
-    return date.toLocaleDateString("es-ES", { day: "numeric" })
+    return date.toLocaleDateString("es-CL", { day: "numeric" })
   }
   return date.toISOString().split("T")[0]
 }
@@ -671,22 +671,22 @@ export function ProfessionalCalendar({
 
   const dateRangeText = useMemo(() => {
     if (viewMode === "monthly") {
-      return currentDate.toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
+      return currentDate.toLocaleDateString(isSpanish ? "es-CL" : "en-US", {
         month: "long",
         year: "numeric",
       })
     }
     if (viewMode === "daily") {
-      return currentDate.toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
+      return currentDate.toLocaleDateString(isSpanish ? "es-CL" : "en-US", {
         day: "numeric",
         month: "long",
         year: "numeric",
       })
     }
-    const startMonth = weekDates[0].toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
+    const startMonth = weekDates[0].toLocaleDateString(isSpanish ? "es-CL" : "en-US", {
       month: "short",
     })
-    const endMonth = weekDates[6].toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
+    const endMonth = weekDates[6].toLocaleDateString(isSpanish ? "es-CL" : "en-US", {
       month: "short",
     })
     const startDay = weekDates[0].getDate()

@@ -1,0 +1,3 @@
+[    1034ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/nura-avatar.png:0
+[    1279ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/nura-avatar.png:0
+[    1792ms] [WARNING] [tiptap warn]: Duplicate extension names found: ['underline']. This can lead to issues. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297

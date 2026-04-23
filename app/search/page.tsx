@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 function SearchRedirect() {
   const router = useRouter()
@@ -22,7 +23,7 @@ function SearchRedirect() {
   }, [router, searchParams])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className={loadingFullViewportClassName("bg-slate-50 dark:bg-slate-950")}>
       <div className="flex flex-col items-center gap-6 max-w-sm text-center px-4">
         <div className="relative">
           <div className="h-16 w-16 rounded-full border-4 border-teal-500/20 border-t-teal-500 animate-spin" />
@@ -44,7 +45,7 @@ function SearchRedirect() {
 }
 
 const LoadingFallback = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+  <div className={loadingFullViewportClassName("bg-slate-50 dark:bg-slate-950")}>
     <div className="h-16 w-16 rounded-full border-4 border-teal-500/20 border-t-teal-500 animate-spin" />
   </div>
 )

@@ -50,7 +50,7 @@ export function ReviewsPanel({ professionalId, onClose }: ReviewsPanelProps) {
       setLoading(false)
     }
     fetchReviews()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }, [professionalId])
 
   const avg =

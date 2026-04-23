@@ -29,6 +29,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 interface DaySchedule {
   enabled: boolean
@@ -264,7 +265,7 @@ export default function AvailabilityPage() {
 
   if (loading || !messageLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className={loadingDashboardInsetClassName("bg-background")}>
         <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 text-teal-600 animate-spin mx-auto" />
           <p className="text-sm text-slate-500">{isSpanish ? "Cargando configuración..." : "Loading configuration..."}</p>

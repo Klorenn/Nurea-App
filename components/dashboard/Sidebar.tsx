@@ -28,6 +28,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -91,6 +92,7 @@ const professionalNavigation: NavGroup[] = [
     items: [
       { icon: BarChart3, label: "Resumen", labelEn: "Overview", href: "/dashboard/professional" },
       { icon: Calendar, label: "Mi Agenda", labelEn: "My Schedule", href: "/dashboard/professional/appointments" },
+      { icon: MessageSquare, label: "Comunidad", labelEn: "Community", href: "/dashboard/forum" },
       { icon: Users, label: "Mis Pacientes", labelEn: "My Patients", href: "/dashboard/professional/patients" },
       { icon: FileText, label: "Fichas Clínicas", labelEn: "Clinical Records", href: "/dashboard/professional/fichas" },
       { icon: MessageCircle, label: "Mensajes", labelEn: "Messages", href: "/dashboard/professional/chat" },
@@ -117,6 +119,7 @@ const patientNavigation: NavGroup[] = [
     items: [
       { icon: LayoutDashboard, label: "Mi Dashboard", labelEn: "My Dashboard", href: "/dashboard/patient" },
       { icon: Search, label: "Buscar Especialista", labelEn: "Find Specialist", href: "/explore" },
+      { icon: MessageSquare, label: "Comunidad", labelEn: "Community", href: "/dashboard/forum" },
       { icon: Calendar, label: "Mis Citas", labelEn: "My Appointments", href: "/dashboard/appointments" },
       { icon: MessageCircle, label: "Mensajes", labelEn: "Messages", href: "/dashboard/chat" },
       { icon: Heart, label: "Mis Favoritos", labelEn: "My Favorites", href: "/dashboard/favorites" },
@@ -343,7 +346,7 @@ export function DashboardSidebar({ role, language = "es", className }: Dashboard
                           </span>
                         )}
                       </div>
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 rotate-45 bg-popover border-l border-b border-border/50" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 rotate-45 !bg-popover bg-background border-l border-b border-border/50" />
                     </div>
                   )}
                 </Link>

@@ -148,7 +148,7 @@ export default function PatientOnboardingPage() {
         if (data.gender) merge({ gender: data.gender as Gender })
         if (data.date_of_birth) merge({ dateOfBirth: data.date_of_birth })
       })
-  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id]) // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
 

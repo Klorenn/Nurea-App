@@ -20,6 +20,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
 import { ProfessionalCalendar } from "@/components/dashboard/professional-calendar"
 import { createClient } from "@/lib/supabase/client"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 interface ProfessionalProfile {
   id: string
@@ -54,7 +55,7 @@ function VerificationPendingCard({ isSpanish }: { isSpanish: boolean }) {
   return (
     <motion.div
       variants={itemVariants}
-      className="flex items-center justify-center min-h-[60vh]"
+      className={loadingDashboardInsetClassName()}
     >
       <div className="relative w-full max-w-2xl mx-auto">
         <div className="absolute -top-20 -left-20 w-72 h-72 bg-teal-400/20 rounded-full blur-3xl animate-pulse" />

@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       : "Profesional"
 
     const appointmentDateObj = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
-    const date = appointmentDateObj.toLocaleDateString("es-ES", {
+    const date = appointmentDateObj.toLocaleDateString("es-CL", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -159,7 +159,7 @@ export async function POST(request: Request) {
         user_id: appointment.professional_id,
         type: "appointment_confirmed",
         title: "Nueva cita agendada",
-        message: `${patientName} ha agendado una cita para el ${date} a las ${time}`,
+        message: `${patientName} ha agendado una cita contigo para el ${date} a las ${time}.`,
         action_url: "/dashboard/professional",
       })
 

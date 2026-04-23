@@ -54,7 +54,7 @@ export function useSpecialists(
       ...merged,
       page: merged.page ?? prev.page ?? 1
     }))
-  }, [urlSyncKey]) // eslint-disable-line react-hooks/exhaustive-deps -- initialFilters from URL, sync only when urlSyncKey changes
+  }, [urlSyncKey]) // eslint-disable-line @typescript-eslint/no-explicit-any -- initialFilters from URL, sync only when urlSyncKey changes
 
   const fetchSpecialists = useCallback(async () => {
     // Cancelar petición anterior si existe

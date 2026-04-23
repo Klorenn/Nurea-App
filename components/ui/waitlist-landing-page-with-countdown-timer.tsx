@@ -4,26 +4,25 @@ import React, { useState, useEffect } from "react"
 import { useLanguage } from "@/contexts/language-context"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { LAUNCH_TARGET_DATE, getTimeLeftUntil } from "@/lib/countdown"
+import { useLaunchCountdown } from "@/lib/countdown"
 
 export function WaitlistExperience(): React.ReactElement {
   const { language } = useLanguage()
   const isSpanish = language === "es"
-  
+
   const [email, setEmail] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [userRole, setUserRole] = useState<"patient" | "professional" | "curious">("patient")
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [waitlistCount, setWaitlistCount] = useState(0)
-  
+
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
   const isEmailValid = isValidEmail(email)
 
-  const [timeLeft, setTimeLeft] = useState(() => ({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  }))
+  // Cuenta regresiva en vivo, lee launch_date desde platform_settings
+  const { timeLeft } = useLaunchCountdown()
 
   useEffect(() => {
     const fetchCount = async () => {
@@ -40,13 +39,6 @@ export function WaitlistExperience(): React.ReactElement {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    const tick = () => setTimeLeft(getTimeLeftUntil(LAUNCH_TARGET_DATE))
-    tick()
-    const timer = setInterval(tick, 1000)
-    return () => clearInterval(timer)
-  }, [])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isEmailValid) return
@@ -56,7 +48,13 @@ export function WaitlistExperience(): React.ReactElement {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          first_name: firstName.trim() || undefined,
+          last_name: lastName.trim() || undefined,
+          user_role: userRole,
+          source: "landing",
+        }),
       })
       const data = await res.json()
 
@@ -67,6 +65,8 @@ export function WaitlistExperience(): React.ReactElement {
 
       setIsSubmitted(true)
       setEmail("")
+      setFirstName("")
+      setLastName("")
       if (typeof data.count === "number") setWaitlistCount(data.count)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : (isSpanish ? "Error al agregar tu email." : "Error adding your email.")
@@ -117,7 +117,49 @@ export function WaitlistExperience(): React.ReactElement {
                       </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="mb-5">
+                    <form onSubmit={handleSubmit} className="mb-5 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          type="text"
+                          placeholder={isSpanish ? "Nombre" : "First name"}
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className="bg-background/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 h-10 rounded-lg backdrop-blur-sm text-sm"
+                        />
+                        <Input
+                          type="text"
+                          placeholder={isSpanish ? "Apellido" : "Last name"}
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className="bg-background/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20 h-10 rounded-lg backdrop-blur-sm text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-1.5 justify-center">
+                        {(["patient", "professional", "curious"] as const).map((r) => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setUserRole(r)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                              userRole === r
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-background/50 text-muted-foreground border border-border hover:border-primary/40"
+                            }`}
+                          >
+                            {isSpanish
+                              ? r === "patient"
+                                ? "Soy paciente"
+                                : r === "professional"
+                                ? "Soy profesional"
+                                : "Curioso/a"
+                              : r === "patient"
+                              ? "I'm a patient"
+                              : r === "professional"
+                              ? "I'm a professional"
+                              : "Just curious"}
+                          </button>
+                        ))}
+                      </div>
                       <div className="flex gap-2">
                         <Input
                           type="email"

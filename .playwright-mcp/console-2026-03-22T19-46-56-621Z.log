@@ -1,0 +1,8 @@
+[    1758ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/nura-avatar.png:0
+[    2006ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/nura-avatar.png:0
+[    3129ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://rhzanxzoqmbxptvxgnfj.supabase.co/rest/v1/booking_settings?select=modality&professional_id=eq.61fb39c8-a411-4e25-964f-527b0b222025:0
+[    3130ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://rhzanxzoqmbxptvxgnfj.supabase.co/rest/v1/reviews?select=rating%2Creplied_at&doctor_id=eq.61fb39c8-a411-4e25-964f-527b0b222025:0
+[    3136ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://rhzanxzoqmbxptvxgnfj.supabase.co/rest/v1/consultation_types?select=price&professional_id=eq.61fb39c8-a411-4e25-964f-527b0b222025:0
+[    3349ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://rhzanxzoqmbxptvxgnfj.supabase.co/rest/v1/reviews?select=rating%2Creplied_at&doctor_id=eq.61fb39c8-a411-4e25-964f-527b0b222025:0
+[    3350ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://rhzanxzoqmbxptvxgnfj.supabase.co/rest/v1/booking_settings?select=modality&professional_id=eq.61fb39c8-a411-4e25-964f-527b0b222025:0
+[    3352ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://rhzanxzoqmbxptvxgnfj.supabase.co/rest/v1/consultation_types?select=price&professional_id=eq.61fb39c8-a411-4e25-964f-527b0b222025:0

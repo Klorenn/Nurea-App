@@ -1,0 +1,544 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: #f1f5f9; }
+
+h2 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; }
+
+.page-shell {
+  background: #f1f5f9;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  max-width: 880px;
+  margin: 0 auto 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+
+/* TOP BAR */
+.page-topbar {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.page-topbar h1 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+.page-topbar p {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.topbar-actions { display: flex; gap: 8px; }
+.btn-outline {
+  font-size: 12px; font-weight: 600; color: #475569;
+  border: 1px solid #e2e8f0; background: white;
+  padding: 7px 14px; border-radius: 8px; cursor: pointer;
+}
+.btn-outline:hover { background: #f8fafc; }
+
+/* COMPLETENESS */
+.completeness-bar {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 11px 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.completeness-label { font-size: 12px; font-weight: 600; color: #64748b; white-space: nowrap; }
+.completeness-track { flex: 1; height: 5px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+.completeness-fill { height: 100%; width: 40%; background: linear-gradient(90deg, #f97316, #eab308); border-radius: 99px; }
+.completeness-score { font-size: 13px; font-weight: 800; color: #f97316; }
+.completeness-hint { font-size: 11px; color: #94a3b8; }
+
+/* TABS */
+.tabs-row {
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 28px;
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+}
+.tab {
+  font-size: 12.5px; font-weight: 600; color: #64748b;
+  padding: 11px 16px;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer; white-space: nowrap;
+  transition: all 0.12s;
+}
+.tab.active { color: #0d9488; border-bottom-color: #0d9488; font-weight: 700; }
+.tab:hover:not(.active) { color: #334155; }
+
+/* CONTENT */
+.content-area {
+  padding: 22px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* HERO CARD */
+.profile-hero {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.hero-inner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 22px;
+}
+.avatar-wrap { position: relative; flex-shrink: 0; }
+.avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%);
+  border: 3px solid white;
+  box-shadow: 0 0 0 2px #e2e8f0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800; color: white;
+  letter-spacing: -0.02em;
+}
+.avatar-edit {
+  position: absolute; bottom: 1px; right: 1px;
+  width: 22px; height: 22px;
+  background: white; border: 1.5px solid #e2e8f0;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+.avatar-edit svg { width: 10px; height: 10px; stroke: #64748b; }
+
+.hero-info { flex: 1; }
+.hero-name { font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+.hero-meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-top: 6px;
+}
+.hero-chip {
+  display: inline-flex; align-items: center;
+  background: #f0fdfa; border: 1px solid #99f6e4;
+  color: #0d9488; font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 99px; letter-spacing: 0.01em;
+}
+.hero-dot { width: 3px; height: 3px; background: #cbd5e1; border-radius: 50%; }
+.hero-text { font-size: 12px; color: #64748b; }
+.hero-verified {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; color: #0d9488;
+}
+.hero-verified svg { width: 12px; height: 12px; }
+
+.hero-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.photo-btn {
+  font-size: 12px; font-weight: 600; color: #475569;
+  background: white; border: 1.5px solid #e2e8f0;
+  padding: 7px 14px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+}
+.photo-btn svg { width: 13px; height: 13px; stroke: #64748b; }
+
+.hero-divider { height: 1px; background: #f1f5f9; margin: 0 22px; }
+.hero-stats {
+  display: flex;
+  padding: 14px 22px;
+  gap: 32px;
+}
+.hero-stat { }
+.hero-stat-val { font-size: 15px; font-weight: 800; color: #0f172a; }
+.hero-stat-label { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 2px; }
+
+/* SECTION CARDS */
+.settings-section {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 22px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.section-header-left { display: flex; align-items: center; gap: 11px; }
+.section-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.section-icon.teal { background: #f0fdfa; }
+.section-icon.blue { background: #eff6ff; }
+.section-icon.violet { background: #f5f3ff; }
+.section-icon svg { width: 15px; height: 15px; }
+.section-icon.teal svg { stroke: #0d9488; }
+.section-icon.blue svg { stroke: #3b82f6; }
+.section-icon.violet svg { stroke: #7c3aed; }
+
+.section-title { font-size: 13.5px; font-weight: 700; color: #1e293b; }
+.section-subtitle { font-size: 11px; color: #94a3b8; margin-top: 2px; font-weight: 400; }
+.edit-btn {
+  font-size: 11.5px; font-weight: 600; color: #64748b;
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  padding: 6px 13px; border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+}
+.edit-btn svg { width: 12px; height: 12px; stroke: #94a3b8; }
+.edit-btn.active { color: #0d9488; background: #f0fdfa; border-color: #99f6e4; }
+.edit-btn.active svg { stroke: #0d9488; }
+
+/* FIELD ROWS */
+.field-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 22px;
+  border-bottom: 1px solid #f8fafc;
+  gap: 16px;
+}
+.field-row:last-child { border-bottom: none; }
+.field-label {
+  font-size: 12px;
+  color: #94a3b8;
+  width: 150px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.field-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  flex: 1;
+}
+.field-value.empty { color: #cbd5e1; font-style: italic; font-weight: 400; font-size: 12px; }
+.field-pencil {
+  width: 28px; height: 28px;
+  border-radius: 6px; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+  transition: all 0.1s;
+}
+.field-pencil:hover { background: #f1f5f9; border-color: #e2e8f0; }
+.field-pencil svg { width: 12px; height: 12px; stroke: #cbd5e1; }
+.field-pencil:hover svg { stroke: #64748b; }
+
+/* EDITING ROW */
+.field-row.editing { background: #fafffe; border-left: 3px solid #0d9488; padding-left: 19px; }
+.field-input {
+  flex: 1;
+  border: 1.5px solid #0d9488;
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  background: white;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(13,148,136,0.08);
+}
+.save-btn {
+  font-size: 11.5px; font-weight: 700; color: white;
+  background: #0d9488; border: none;
+  padding: 7px 13px; border-radius: 7px; cursor: pointer; flex-shrink: 0;
+}
+.cancel-btn {
+  font-size: 11.5px; font-weight: 600; color: #94a3b8;
+  background: white; border: 1px solid #e2e8f0;
+  padding: 7px 12px; border-radius: 7px; cursor: pointer; flex-shrink: 0;
+}
+
+/* TOGGLE ROW */
+.toggle-row {
+  display: flex; align-items: center;
+  padding: 12px 22px;
+  border-bottom: 1px solid #f8fafc;
+  gap: 16px;
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-info { flex: 1; }
+.toggle-info .t-label { font-size: 13px; font-weight: 600; color: #1e293b; }
+.toggle-info .t-desc { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.toggle-switch {
+  width: 38px; height: 22px;
+  background: #0d9488; border-radius: 99px;
+  position: relative; cursor: pointer; flex-shrink: 0;
+  transition: background 0.2s;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 16px; height: 16px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* TAGS ROW */
+.tags-row {
+  padding: 13px 22px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  align-items: center;
+}
+.tag {
+  font-size: 11.5px; font-weight: 600;
+  padding: 4px 11px; border-radius: 99px;
+  background: #f1f5f9; color: #475569;
+  border: 1px solid #e2e8f0;
+}
+.tag.teal { background: #f0fdfa; color: #0d9488; border-color: #99f6e4; }
+.tag-link {
+  font-size: 11.5px; font-weight: 600; color: #0d9488;
+  padding: 4px 11px; cursor: pointer;
+  text-decoration: none;
+}
+
+/* BIO */
+.bio-text {
+  padding: 14px 22px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.65;
+  border-bottom: 1px solid #f1f5f9;
+}
+.bio-footer {
+  padding: 11px 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+</style>
+
+<h2>Diseño refinado — sin emojis, tipografía más grande</h2>
+<p class="subtitle">Mismo concepto de settings panel, más limpio y profesional.</p>
+
+<div class="page-shell">
+
+  <!-- TOP BAR -->
+  <div class="page-topbar">
+    <div>
+      <h1>María Jesús Chavez San Luis</h1>
+      <p>Perfil profesional · Última edición hace 2 días</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-outline">Ver perfil público</button>
+      <button class="btn-outline">Editar direcciones</button>
+    </div>
+  </div>
+
+  <!-- COMPLETENESS -->
+  <div class="completeness-bar">
+    <span class="completeness-label">Completitud del perfil</span>
+    <div class="completeness-track"><div class="completeness-fill"></div></div>
+    <span class="completeness-score">40 / 100</span>
+    <span class="completeness-hint">· Agregar: Premios</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-row">
+    <div class="tab active">General</div>
+    <div class="tab">Clínica</div>
+    <div class="tab">Estudios</div>
+    <div class="tab">Galería</div>
+    <div class="tab">Precios</div>
+    <div class="tab">Seguridad</div>
+    <div class="tab">Verificación</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content-area">
+
+    <!-- HERO -->
+    <div class="profile-hero">
+      <div class="hero-inner">
+        <div class="avatar-wrap">
+          <div class="avatar">MJ</div>
+          <div class="avatar-edit">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+          </div>
+        </div>
+        <div class="hero-info">
+          <div class="hero-name">María Jesús Chavez San Luis</div>
+          <div class="hero-meta">
+            <span class="hero-chip">Ps. · Psicología</span>
+            <span class="hero-dot"></span>
+            <span class="hero-text">5 años de experiencia</span>
+            <span class="hero-dot"></span>
+            <span class="hero-verified">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg>
+              Verificada
+            </span>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button class="photo-btn">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/></svg>
+            Cambiar foto
+          </button>
+        </div>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-val">24</div><div class="hero-stat-label">Pacientes</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">4.9</div><div class="hero-stat-label">Valoración</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">Online</div><div class="hero-stat-label">Modalidad</div></div>
+        <div class="hero-stat"><div class="hero-stat-val">$35.000</div><div class="hero-stat-label">Por sesión</div></div>
+      </div>
+    </div>
+
+    <!-- DATOS PERSONALES -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon teal">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Datos personales</div>
+            <div class="section-subtitle">Tu información básica de registro</div>
+          </div>
+        </div>
+        <button class="edit-btn">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+          Editar sección
+        </button>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Nombre</div>
+        <div class="field-value">María Jesús</div>
+        <div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Apellidos</div>
+        <div class="field-value">Chavez San Luis</div>
+        <div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Género</div>
+        <div class="field-value">Femenino</div>
+        <div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+      </div>
+      <div class="field-row editing">
+        <div class="field-label">Teléfono</div>
+        <input class="field-input" value="+56 9 8765 4321">
+        <button class="cancel-btn">Cancelar</button>
+        <button class="save-btn">Guardar</button>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="t-label">Mostrar teléfono en perfil público</div>
+          <div class="t-desc">Los pacientes podrán ver y contactarte directamente</div>
+        </div>
+        <div class="toggle-switch"></div>
+      </div>
+    </div>
+
+    <!-- TRAYECTORIA PROFESIONAL -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon blue">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Trayectoria profesional</div>
+            <div class="section-subtitle">Título, especialidad y registro</div>
+          </div>
+        </div>
+        <button class="edit-btn">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+          Editar sección
+        </button>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Título abreviado</div>
+        <div class="field-value"><span style="background:#f0fdfa;border:1px solid #99f6e4;color:#0d9488;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;">Ps.</span></div>
+        <div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Especialidad</div>
+        <div class="field-value">Psicología</div>
+        <div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Años de experiencia</div>
+        <div class="field-value">5 años</div>
+        <div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Nº Registro</div>
+        <div class="field-value">1111111</div>
+        <div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Institución emisora</div>
+        <div class="field-value empty">Sin especificar</div>
+        <div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+      </div>
+    </div>
+
+    <!-- CONDICIONES -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon violet">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Condiciones que tratas</div>
+            <div class="section-subtitle">Se configuran en la pestaña Clínica</div>
+          </div>
+        </div>
+      </div>
+      <div class="tags-row">
+        <span class="tag teal">Ansiedad</span>
+        <span class="tag teal">Depresión</span>
+        <span class="tag teal">Autoestima</span>
+        <span class="tag teal">Duelo</span>
+        <span class="tag teal">Burnout</span>
+        <a class="tag-link">Ir a Clínica para editar →</a>
+      </div>
+    </div>
+
+    <!-- BIOGRAFÍA -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon teal">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Biografía profesional</div>
+            <div class="section-subtitle">Tu presentación para los pacientes</div>
+          </div>
+        </div>
+        <button class="edit-btn active">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          Guardando...
+        </button>
+      </div>
+      <div class="bio-text">
+        Acompaño a adolescentes y personas adultas que están atravesando momentos de malestar emocional, ansiedad, inseguridad personal o procesos de cambio. En terapia trabajamos juntos para comprender lo que ocurre, aliviar el malestar y fortalecer recursos personales de forma gradual y respetuosa.
+      </div>
+      <div class="bio-footer">
+        <button class="cancel-btn">Cancelar</button>
+        <button class="save-btn">Guardar biografía</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p class="subtitle" style="text-align:center">¿Te convence esta dirección? Cuéntame qué cambiarías.</p>

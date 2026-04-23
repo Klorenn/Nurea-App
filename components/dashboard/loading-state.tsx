@@ -3,10 +3,13 @@
 import { Loader2 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 export interface LoadingStateProps {
   message?: string
   variant?: "spinner" | "skeleton" | "inline"
+  /** Ocupa el área principal del dashboard y centra (sidebar + header). */
+  fullPage?: boolean
   className?: string
   skeletonCount?: number
 }
@@ -14,10 +17,21 @@ export interface LoadingStateProps {
 export function LoadingState({
   message,
   variant = "spinner",
+  fullPage = false,
   className,
   skeletonCount = 3,
 }: LoadingStateProps) {
   if (variant === "spinner") {
+    if (fullPage) {
+      return (
+        <div className={loadingDashboardInsetClassName(cn("bg-background", className))}>
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            {message && <p className="text-muted-foreground">{message}</p>}
+          </div>
+        </div>
+      )
+    }
     return (
       <div className={cn("flex items-center justify-center py-12", className)}>
         <div className="text-center space-y-4">

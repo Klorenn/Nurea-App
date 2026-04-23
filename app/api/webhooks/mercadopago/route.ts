@@ -20,7 +20,14 @@ function getSupabaseAdmin() {
 function validateMpSignature(request: NextRequest, dataId: string): boolean {
   const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET
   // If no secret is configured, skip validation (development mode).
-  if (!webhookSecret) return true
+  if (!webhookSecret) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("MERCADOPAGO_WEBHOOK_SECRET not set in production!")
+      return false
+    }
+    console.warn("Mercadopago webhook validation bypassed in development mode")
+    return true
+  }
 
   const xSignature = request.headers.get("x-signature") || ""
   const xRequestId = request.headers.get("x-request-id") || ""

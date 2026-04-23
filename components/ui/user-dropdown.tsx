@@ -39,7 +39,17 @@ import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 
+interface ProfileData {
+  id: string
+  role: "patient" | "professional" | "admin"
+  first_name: string | null
+  last_name: string | null
+  avatar_url: string | null
+  email_verified: boolean
+}
+
 interface UserDropdownProps {
+  profile?: ProfileData
   role?: "patient" | "professional" | "admin"
   user?: {
     name: string
@@ -52,6 +62,7 @@ interface UserDropdownProps {
 }
 
 export const UserDropdown = ({
+  profile: profileProp,
   role = "patient",
   user,
 }: UserDropdownProps) => {
@@ -63,7 +74,8 @@ export const UserDropdown = ({
   const [mounted, setMounted] = React.useState(false)
   const [helpOpen, setHelpOpen] = React.useState(false)
 
-  const { profile, isLoading: profileLoading } = useProfile()
+  const { profile: fetchedProfile, isLoading: profileLoading } = useProfile()
+  const profile = profileProp ?? fetchedProfile
 
   React.useEffect(() => setMounted(true), [])
   const isDark = mounted && resolvedTheme === "dark"

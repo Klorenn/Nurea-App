@@ -160,7 +160,7 @@ export async function POST(request: Request) {
 
     // Formatear fecha para el email
     const appointmentDateObj = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
-    const formattedDate = appointmentDateObj.toLocaleDateString('es-ES', {
+    const formattedDate = appointmentDateObj.toLocaleDateString('es-CL', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

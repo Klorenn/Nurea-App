@@ -1,0 +1,60 @@
+[    1240ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/nura-avatar.png:0
+[    1518ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/nura-avatar.png:0
+[   15304ms] [WARNING] Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15313ms] [WARNING] Element with name "gmp-internal-loading-text" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15313ms] [WARNING] Element with name "gmp-internal-request-error-text" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15313ms] [WARNING] Element with name "gmp-internal-back-button" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15313ms] [WARNING] Element with name "gmp-internal-dialog" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15313ms] [WARNING] Element with name "gmp-internal-disclosure" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15313ms] [WARNING] Element with name "gmp-internal-disclosure-section" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15313ms] [WARNING] Element with name "gmp-internal-attribution" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15314ms] [WARNING] Element with name "gmp-internal-element-support-verification" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15314ms] [ERROR] You have included the Google Maps JavaScript API multiple times on this page. This may cause unexpected errors. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[   15314ms] [WARNING] Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15318ms] [WARNING] Element with name "gmp-internal-rating" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15318ms] [WARNING] Element with name "gmp-place-all-content" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15318ms] [WARNING] Element with name "gmp-internal-link-button" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15318ms] [WARNING] Element with name "gmp-internal-menu" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15318ms] [WARNING] Element with name "gmp-internal-place-opening-hours" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15318ms] [WARNING] Element with name "gmp-internal-place-review" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15318ms] [WARNING] Element with name "gmp-internal-tabbed-layout" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15318ms] [WARNING] Element with name "gmp-internal-lightbox" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-internal-collage" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-internal-place-rating-summary" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-place-content-config" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-place-standard-content" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-internal-place-basic-info" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-place-details-location-request" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-place-details-place-request" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-internal-circular-loader" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-place-details-compact" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15319ms] [WARNING] Element with name "gmp-internal-use-place-details-compact" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-media" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-address" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-rating" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-type" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-price" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-accessible-entrance-icon" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-open-now-status" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-attribution" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-website" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-phone-number" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-opening-hours" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-summary" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-type-specific-highlights" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15320ms] [WARNING] Element with name "gmp-place-review-summary" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-place-reviews" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-place-plus-code" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-place-feature-list" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-place-details" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-internal-place-carousel" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-internal-place-search-list-item" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-place-nearby-search-request" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-place-text-search-request" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15321ms] [WARNING] Element with name "gmp-place-search" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15322ms] [WARNING] Element with name "gmp-map" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15322ms] [WARNING] Element with name "gmp-place-autocomplete" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15322ms] [WARNING] Element with name "gmp-basic-place-autocomplete" already defined. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   15333ms] [WARNING] As of March 1st, 2025, google.maps.places.AutocompleteService is not available to new customers. Please use google.maps.places.AutocompleteSuggestion instead. At this time, google.maps.places.AutocompleteService is not scheduled to be discontinued, but google.maps.places.AutocompleteSuggestion is recommended over google.maps.places.AutocompleteService. While google.maps.places.AutocompleteService will continue to receive bug fixes for any major regressions, existing bugs in google.maps.places.AutocompleteService will not be addressed. At least 12 months notice will be given before support is discontinued. Please see https://developers.google.com/maps/legacy for additional details and https://developers.google.com/maps/documentation/javascript/places-migration-overview for the migration guide. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[   20316ms] Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'GJ')
+    at <anonymous> (https://maps.googleapis.com/maps/api/js?key=AIzaSyB-P9tFrXjlMPldGCPMWO15Bt-fh02Hnoo&libraries=places:1426:190)

@@ -46,6 +46,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 import { 
   Form, 
   FormControl, 
@@ -666,7 +667,7 @@ export default function ProfessionalProfilePage() {
       }
     }
     loadProfile()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }, [user])
 
   // --- Manage Credentials ---
@@ -1158,13 +1159,15 @@ export default function ProfessionalProfilePage() {
     const sub3 = educationForm.watch(() => recalc())
     const sub4 = galleryForm.watch(() => recalc())
     return () => { sub1.unsubscribe(); sub2.unsubscribe(); sub3.unsubscribe(); sub4.unsubscribe() }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }, [avatarUrl, credentials.length])
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-      <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-      <p className="text-slate-500 font-medium">Cargando perfil...</p>
+    <div className={loadingDashboardInsetClassName("bg-background")}>
+      <div className="flex flex-col items-center justify-center gap-4 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <p className="text-slate-500 font-medium">Cargando perfil...</p>
+      </div>
     </div>
   )
 
@@ -1368,27 +1371,28 @@ export default function ProfessionalProfilePage() {
         {/* --- TAB: CLINICAL --- */}
         <TabsContent value="clinical" id="clinical" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...clinicalForm}>
-            <form onSubmit={clinicalForm.handleSubmit(onSaveClinical)} className="space-y-4">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
-                      <Stethoscope className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-bold dark:text-slate-100">Información Clínica</CardTitle>
-                      <CardDescription className="text-xs dark:text-slate-400">Define cómo y qué especialidades atiendes.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-4">
-                  <div className="space-y-4">
-                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Modalidad de Atención</Label>
+            <form onSubmit={clinicalForm.handleSubmit(onSaveClinical)} className="space-y-3">
+
+              {/* Accordion: Modalidad y Dirección */}
+              <AccordionSection
+                title="Modalidad de Atención"
+                subtitle="Cómo atiendes a tus pacientes"
+                icon={<Stethoscope className="h-4 w-4" />}
+                iconVariant="teal"
+                preview={
+                  clinicalForm.watch("consultation_type") === "online" ? "Online" :
+                  clinicalForm.watch("consultation_type") === "in-person" ? "Presencial" :
+                  clinicalForm.watch("consultation_type") === "both" ? "Online y Presencial" : ""
+                }
+              >
+                <div className="space-y-4 px-5 py-4">
+                  <div className="space-y-3">
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-500">¿Cómo atiendes?</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {[
-                        { id: 'online', label: 'Online', icon: Monitor, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50/50 dark:bg-indigo-500/10' },
-                        { id: 'in-person', label: 'Presencial', icon: Building2, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50/50 dark:bg-rose-500/10' },
-                        { id: 'both', label: 'Ambos', icon: CheckCircle2, color: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50/50 dark:bg-teal-500/10' }
+                        { id: 'online', label: 'Online', icon: Monitor, color: 'text-indigo-600', bg: 'bg-indigo-50/50', desc: 'Videollamada' },
+                        { id: 'in-person', label: 'Presencial', icon: Building2, color: 'text-rose-600', bg: 'bg-rose-50/50', desc: 'En consultorio' },
+                        { id: 'both', label: 'Ambos', icon: CheckCircle2, color: 'text-teal-600', bg: 'bg-teal-50/50', desc: 'Online y presencial' }
                       ].map((type) => {
                         const isActive = clinicalForm.watch("consultation_type") === type.id
                         return (
@@ -1398,184 +1402,204 @@ export default function ProfessionalProfilePage() {
                             className={cn(
                               "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all cursor-pointer h-16 group",
                               isActive
-                                ? "border-teal-600 dark:border-teal-500 bg-teal-50/20 dark:bg-teal-950/30 shadow-md shadow-teal-100/50 dark:shadow-none"
-                                : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900"
+                                ? "border-teal-600 bg-teal-50/20 shadow-md shadow-teal-100/50"
+                                : "border-slate-100 hover:border-slate-200 hover:bg-slate-50"
                             )}
                           >
-                            <type.icon className={cn(
-                              "h-5 w-5 mb-1 transition-all",
-                              isActive ? type.color : "text-slate-300 dark:text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-500"
-                            )} />
-                            <span className={cn(
-                              "text-sm font-black uppercase tracking-wider",
-                              isActive ? "text-slate-900 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"
-                            )}>{type.label}</span>
+                            <type.icon className={cn("h-5 w-5 mb-1 transition-all", isActive ? type.color : "text-slate-300 group-hover:text-slate-400")} />
+                            <span className={cn("text-sm font-black uppercase tracking-wider", isActive ? "text-slate-900" : "text-slate-400")}>{type.label}</span>
                           </div>
                         )
                       })}
                     </div>
                   </div>
-
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <FormField
-                      control={clinicalForm.control}
-                      name="clinic_address"
-                      render={({ field }: { field: any }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Dirección Consulta</FormLabel>
-                          <FormControl>
-                            <GoogleAddressInput 
-                              value={field.value} 
-                              onChange={field.onChange}
-                              className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200" 
-                              placeholder="Ej: Av. Providencia 1234" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={clinicalForm.control}
-                      name="clinic_city"
-                      render={({ field }: { field: any }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Ciudad / Comuna</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200" placeholder="Ej: Santiago / Las Condes" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="space-y-4 pt-2">
-                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Condiciones y Enfermedades que tratas</Label>
-                    <div className="flex gap-2">
-                       <Input 
-                         placeholder="Escribe una condición y presiona Enter..."
-                         value={tagInput}
-                         onChange={(e) => setTagInput(e.target.value)}
-                         onKeyDown={addConditionTag}
-                         className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
-                       />
-                       <Button 
-                         type="button" 
-                         onClick={() => addConditionTag({ key: 'Enter', preventDefault: () => {} } as any)} 
-                         variant="outline" 
-                         className="rounded-xl h-10 w-10 shrink-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-teal-300 dark:hover:border-teal-800 transition-all p-0 flex items-center justify-center dark:text-slate-300"
-                       >
-                         <Plus className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                       </Button>
+                  {(clinicalForm.watch("consultation_type") === "in-person" || clinicalForm.watch("consultation_type") === "both") && (
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Building2 className="h-4 w-4 text-rose-500" />
+                        <p className="text-xs font-black uppercase tracking-wider text-slate-500">Ubicación del consultorio</p>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <FormField
+                          control={clinicalForm.control}
+                          name="clinic_address"
+                          render={({ field }: { field: any }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 mb-1 block">Dirección</FormLabel>
+                              <FormControl>
+                                <GoogleAddressInput
+                                  value={field.value}
+                                  onChange={field.onChange}
+                                  className="rounded-xl h-9 bg-slate-50/50 border-slate-200 focus:bg-white transition-all text-sm font-bold"
+                                  placeholder="Ej: Av. Providencia 1234"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={clinicalForm.control}
+                          name="clinic_city"
+                          render={({ field }: { field: any }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-black uppercase tracking-wider text-slate-500 mb-1 block">Ciudad / Comuna</FormLabel>
+                              <FormControl>
+                                <Input {...field} className="rounded-xl h-9 bg-slate-50/50 border-slate-200 focus:bg-white transition-all text-sm font-bold" placeholder="Ej: Santiago / Las Condes" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[48px] items-start">
+                  )}
+                </div>
+              </AccordionSection>
+
+              {/* Accordion: Condiciones y Pacientes */}
+              <AccordionSection
+                title="Condiciones y pacientes"
+                subtitle="Enfermedades que tratas y grupos de pacientes"
+                icon={<FlaskConical className="h-4 w-4" />}
+                iconVariant="violet"
+                preview={
+                  (clinicalForm.watch("conditions_treated") ?? []).slice(0, 2).join(", ") || "Sin condiciones"
+                }
+              >
+                <div className="space-y-4 px-5 py-4">
+                  <div className="space-y-3">
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-500">Condiciones y Enfermedades que tratas</p>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Escribe una condición y presiona Enter..."
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={addConditionTag}
+                        className="rounded-xl h-9 bg-slate-50/50 border-slate-200 focus:bg-white transition-all text-sm font-bold"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => addConditionTag({ key: 'Enter', preventDefault: () => {} } as any)}
+                        variant="outline"
+                        className="rounded-xl h-10 w-10 shrink-0 border-slate-200 hover:border-teal-300 transition-all p-0 flex items-center justify-center"
+                      >
+                        <Plus className="h-5 w-5 text-teal-600" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 border border-slate-100 min-h-[48px] items-start">
                       {clinicalForm.watch("conditions_treated").length === 0 && (
-                        <div className="flex flex-col items-center justify-center w-full h-full text-slate-300 dark:text-slate-600 gap-2">
+                        <div className="flex flex-col items-center justify-center w-full h-full text-slate-300 gap-2">
                           <Info className="h-6 w-6 opacity-50" />
                           <p className="italic text-xs font-medium">No has añadido etiquetas aún.</p>
                         </div>
                       )}
                       {clinicalForm.watch("conditions_treated").map(tag => (
-                        <Badge 
-                          key={tag} 
-                          className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900 transition-all cursor-pointer group rounded-full px-3 py-1.5 gap-2 border shadow-sm dark:shadow-none text-xs font-bold"
+                        <Badge
+                          key={tag}
+                          className="bg-white border-slate-200 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all cursor-pointer group rounded-full px-3 py-1.5 gap-2 border shadow-sm text-xs font-bold"
                           onClick={() => removeConditionTag(tag)}
                         >
                           {tag}
-                          <X className="h-3 w-3 text-slate-300 dark:text-slate-500 group-hover:text-rose-500 dark:group-hover:text-rose-400 transition-colors" />
+                          <X className="h-3 w-3 text-slate-300 group-hover:text-rose-500 transition-colors" />
                         </Badge>
                       ))}
                     </div>
                   </div>
-
-                  <div className="space-y-4 pt-4">
-                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Pacientes que atiendes</Label>
+                  <div className="space-y-3 pt-2">
+                    <p className="text-xs font-black uppercase tracking-wider text-slate-500">Pacientes que atiendes</p>
                     <div className="flex gap-2">
                       <Input
                         placeholder="Ej: Adultos, Niños, Parejas..."
                         value={patientsInput}
                         onChange={(e) => setPatientsInput(e.target.value)}
                         onKeyDown={addPatientGroup}
-                        className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
+                        className="rounded-xl h-9 bg-slate-50/50 border-slate-200 focus:bg-white transition-all text-sm font-bold"
                       />
                       <Button
                         type="button"
                         onClick={() => addPatientGroup({ key: 'Enter', preventDefault: () => {} } as any)}
                         variant="outline"
-                        className="rounded-xl h-10 w-10 shrink-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-teal-300 dark:hover:border-teal-800 transition-all p-0 flex items-center justify-center dark:text-slate-300"
+                        className="rounded-xl h-10 w-10 shrink-0 border-slate-200 hover:border-teal-300 transition-all p-0 flex items-center justify-center"
                       >
-                        <Plus className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                        <Plus className="h-5 w-5 text-teal-600" />
                       </Button>
                     </div>
-                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[48px] items-start">
+                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 border border-slate-100 min-h-[48px] items-start">
                       {(!clinicalForm.watch("patients_groups") || clinicalForm.watch("patients_groups")?.length === 0) && (
-                        <p className="italic text-xs font-medium text-slate-300 dark:text-slate-600">
-                          Ejemplos: Adultos, Niños, Adolescentes, Parejas...
-                        </p>
+                        <p className="italic text-xs font-medium text-slate-300">Ejemplos: Adultos, Niños, Adolescentes, Parejas...</p>
                       )}
                       {(clinicalForm.watch("patients_groups") || []).map((g: string) => (
                         <Badge
                           key={g}
-                          className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900 transition-all cursor-pointer group rounded-full px-3 py-1.5 gap-2 border shadow-sm dark:shadow-none text-xs font-bold"
+                          className="bg-white border-slate-200 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all cursor-pointer group rounded-full px-3 py-1.5 gap-2 border shadow-sm text-xs font-bold"
                           onClick={() => removePatientGroup(g)}
                         >
                           {g}
-                          <X className="h-3 w-3 text-slate-300 dark:text-slate-500 group-hover:text-rose-500 dark:group-hover:text-rose-400 transition-colors" />
+                          <X className="h-3 w-3 text-slate-300 group-hover:text-rose-500 transition-colors" />
                         </Badge>
                       ))}
                     </div>
                   </div>
+                </div>
+              </AccordionSection>
 
-                  <div className="space-y-4 pt-4">
-                    <Label className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Formas de pago aceptadas</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Ej: Transferencia bancaria, Efectivo..."
-                        value={paymentsInput}
-                        onChange={(e) => setPaymentsInput(e.target.value)}
-                        onKeyDown={addPaymentMethod}
-                        className="rounded-xl h-9 bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 focus:bg-white dark:focus:bg-slate-900 transition-all text-sm font-bold dark:text-slate-200"
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => addPaymentMethod({ key: 'Enter', preventDefault: () => {} } as any)}
-                        variant="outline"
-                        className="rounded-xl h-10 w-10 shrink-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-teal-300 dark:hover:border-teal-800 transition-all p-0 flex items-center justify-center dark:text-slate-300"
-                      >
-                        <Plus className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 min-h-[48px] items-start">
-                      {(!clinicalForm.watch("payment_methods") || clinicalForm.watch("payment_methods")?.length === 0) && (
-                        <p className="italic text-xs font-medium text-slate-300 dark:text-slate-600">
-                          Ejemplos: Transferencia bancaria, Efectivo, Tarjeta de débito...
-                        </p>
-                      )}
-                      {(clinicalForm.watch("payment_methods") || []).map((m: string) => (
-                        <Badge
-                          key={m}
-                          className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-200 dark:hover:border-rose-900 transition-all cursor-pointer group rounded-full px-3 py-1.5 gap-2 border shadow-sm dark:shadow-none text-xs font-bold"
-                          onClick={() => removePaymentMethod(m)}
-                        >
-                          {m}
-                          <X className="h-3 w-3 text-slate-300 dark:text-slate-500 group-hover:text-rose-500 dark:group-hover:text-rose-400 transition-colors" />
-                        </Badge>
-                      ))}
-                    </div>
+              {/* Accordion: Métodos de Pago */}
+              <AccordionSection
+                title="Formas de pago"
+                subtitle="Cómo pueden pagarte los pacientes"
+                icon={<DollarSign className="h-4 w-4" />}
+                iconVariant="blue"
+                preview={(clinicalForm.watch("payment_methods") ?? []).slice(0, 3).join(", ") || "Sin configurar"}
+              >
+                <div className="space-y-3 px-5 py-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ej: Transferencia bancaria, Efectivo..."
+                      value={paymentsInput}
+                      onChange={(e) => setPaymentsInput(e.target.value)}
+                      onKeyDown={addPaymentMethod}
+                      className="rounded-xl h-9 bg-slate-50/50 border-slate-200 focus:bg-white transition-all text-sm font-bold"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => addPaymentMethod({ key: 'Enter', preventDefault: () => {} } as any)}
+                      variant="outline"
+                      className="rounded-xl h-10 w-10 shrink-0 border-slate-200 hover:border-teal-300 transition-all p-0 flex items-center justify-center"
+                    >
+                      <Plus className="h-5 w-5 text-teal-600" />
+                    </Button>
                   </div>
-                </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
-                  <Button 
-                    type="submit" 
-                    disabled={!clinicalForm.formState.isDirty || saving}
-                    className="bg-teal-600 hover:bg-teal-700 text-white dark:bg-teal-600 dark:hover:bg-teal-500 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                    Guardar Cambios
-                  </Button>
-                </CardFooter>
-              </Card>
+                  <div className="flex flex-wrap gap-2 p-4 rounded-xl bg-slate-50/50 border border-slate-100 min-h-[48px] items-start">
+                    {(!clinicalForm.watch("payment_methods") || clinicalForm.watch("payment_methods")?.length === 0) && (
+                      <p className="italic text-xs font-medium text-slate-300">Ejemplos: Transferencia bancaria, Efectivo, Tarjeta de débito...</p>
+                    )}
+                    {(clinicalForm.watch("payment_methods") || []).map((m: string) => (
+                      <Badge
+                        key={m}
+                        className="bg-white border-slate-200 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all cursor-pointer group rounded-full px-3 py-1.5 gap-2 border shadow-sm text-xs font-bold"
+                        onClick={() => removePaymentMethod(m)}
+                      >
+                        {m}
+                        <X className="h-3 w-3 text-slate-300 group-hover:text-rose-500 transition-colors" />
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </AccordionSection>
+
+              {/* Save */}
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="submit"
+                  disabled={!clinicalForm.formState.isDirty || saving}
+                  className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-teal-200/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  Guardar Cambios
+                </Button>
+              </div>
+
             </form>
           </Form>
         </TabsContent>
@@ -1584,19 +1608,14 @@ export default function ProfessionalProfilePage() {
         <TabsContent value="studies" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...educationForm}>
             <form onSubmit={educationForm.handleSubmit(onSaveEducation)} className="space-y-4">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
-                      <GraduationCap className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-bold dark:text-slate-100">Historial Académico</CardTitle>
-                      <CardDescription className="text-xs dark:text-slate-400">Gestiona tus títulos y certificaciones profesionales.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-4">
+              <AccordionSection
+                title="Historial Académico"
+                subtitle="Gestiona tus títulos y certificaciones profesionales"
+                icon={<GraduationCap className="h-4 w-4" />}
+                iconVariant="teal"
+                preview={`${eduFields.length} título${eduFields.length !== 1 ? 's' : ''} registrado${eduFields.length !== 1 ? 's' : ''}`}
+              >
+                <div className="space-y-4 px-5 py-4">
                   <div className="grid gap-3">
                     {eduFields.map((field, index) => (
                       <div key={field.id} className="p-5 rounded-2xl bg-slate-50/30 dark:bg-slate-900/30 border border-slate-100/60 dark:border-slate-800/60 relative group animate-in zoom-in duration-500 hover:border-teal-100/60 dark:hover:border-teal-900/60 hover:bg-teal-50/10 dark:hover:bg-teal-950/10 transition-all">
@@ -1653,27 +1672,27 @@ export default function ProfessionalProfilePage() {
                       </div>
                     ))}
                   </div>
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    onClick={() => appendEdu({ institution: "", degree: "", graduation_year: "" })}
-                    className="w-full h-12 rounded-xl border-2 border-dashed bg-teal-50/10 dark:bg-teal-950/20 border-teal-200/60 dark:border-teal-800/60 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 hover:border-teal-400 dark:hover:border-teal-600 hover:scale-[1.01] transition-all font-black text-sm uppercase tracking-wider"
-                  >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Añadir Nuevo Título
-                  </Button>
-                </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
-                  <Button 
-                    type="submit" 
-                    disabled={!educationForm.formState.isDirty || saving}
-                    className="bg-teal-600 hover:bg-teal-700 text-white dark:bg-teal-600 dark:hover:bg-teal-500 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                    Guardar Cambios
-                  </Button>
-                </CardFooter>
-              </Card>
+                  <div className="flex gap-2 justify-end">
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      onClick={() => appendEdu({ institution: "", degree: "", graduation_year: "" })}
+                      className="h-10 rounded-xl border-dashed border-teal-200/60 dark:border-teal-800/60 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 hover:border-teal-400 dark:hover:border-teal-600 transition-all font-bold text-sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Añadir Título
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={!educationForm.formState.isDirty || saving}
+                      className="bg-teal-600 hover:bg-teal-700 text-white dark:bg-teal-600 dark:hover:bg-teal-500 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                      Guardar
+                    </Button>
+                  </div>
+                </div>
+              </AccordionSection>
             </form>
           </Form>
         </TabsContent>
@@ -1682,19 +1701,14 @@ export default function ProfessionalProfilePage() {
         <TabsContent value="gallery" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...galleryForm}>
             <form onSubmit={galleryForm.handleSubmit(onSaveGallery)} className="space-y-4">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
-                      <Camera className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-bold dark:text-slate-100">Galería de Consultorio</CardTitle>
-                      <CardDescription className="text-xs dark:text-slate-400">Muestra tu espacio de trabajo a tus futuros pacientes.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-4">
+              <AccordionSection
+                title="Galería de Consultorio"
+                subtitle="Muestra tu espacio de trabajo a tus futuros pacientes"
+                icon={<Camera className="h-4 w-4" />}
+                iconVariant="blue"
+                preview={`${galleryForm.watch("clinic_images").length} imagen${galleryForm.watch("clinic_images").length !== 1 ? 'es' : ''}`}
+              >
+                <div className="space-y-4 px-5 py-4">
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {galleryForm.watch("clinic_images").map((img, idx) => (
                       <div key={idx} className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 shadow-sm group hover:scale-[1.05] transition-all duration-500">
@@ -1729,18 +1743,18 @@ export default function ProfessionalProfilePage() {
                       <p className="text-xs text-slate-600 dark:text-indigo-300/80 leading-relaxed">Al subir imágenes, estas se procesan en el servidor. <span className="text-indigo-600 dark:text-indigo-400 font-bold">Recuerda presionar el botón "Guardar Cambios"</span> para publicarlas en tu perfil.</p>
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
-                  <Button 
-                    type="submit" 
-                    disabled={!galleryForm.formState.isDirty || saving}
-                    className="bg-teal-600 hover:bg-teal-700 text-white dark:bg-teal-600 dark:hover:bg-teal-500 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                    Guardar Cambios
-                  </Button>
-                </CardFooter>
-              </Card>
+                  <div className="flex justify-end">
+                    <Button 
+                      type="submit" 
+                      disabled={!galleryForm.formState.isDirty || saving}
+                      className="bg-teal-600 hover:bg-teal-700 text-white dark:bg-teal-600 dark:hover:bg-teal-500 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                      Guardar Cambios
+                    </Button>
+                  </div>
+                </div>
+              </AccordionSection>
             </form>
           </Form>
         </TabsContent>
@@ -1749,22 +1763,14 @@ export default function ProfessionalProfilePage() {
         <TabsContent value="pricing" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...pricingForm}>
             <form onSubmit={pricingForm.handleSubmit(onSavePricing)} className="space-y-4">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
-                      <DollarSign className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-bold dark:text-slate-100">Precios y Servicios</CardTitle>
-                      <CardDescription className="text-xs dark:text-slate-400">
-                        Define los tipos de consulta que ofreces, su precio y duración. Esta información es visible en tu perfil público.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-4">
-
+              <AccordionSection
+                title="Precios y Servicios"
+                subtitle="Define los tipos de consulta que ofreces, su precio y duración"
+                icon={<DollarSign className="h-4 w-4" />}
+                iconVariant="teal"
+                preview={`${pricingFields.length} servicio${pricingFields.length !== 1 ? 's' : ''}`}
+              >
+                <div className="space-y-4 px-5 py-4">
                   {/* Preset buttons */}
                   <div className="space-y-3">
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Añadir servicio rápido</p>
@@ -1802,7 +1808,7 @@ export default function ProfessionalProfilePage() {
 
                   {/* Empty state */}
                   {pricingFields.length === 0 && (
-                    <div className="text-center py-16 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                    <div className="text-center py-12 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
                       <div className="w-16 h-16 bg-white dark:bg-slate-950 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 dark:border-slate-800">
                         <DollarSign className="h-8 w-8 text-slate-200 dark:text-slate-700" />
                       </div>
@@ -1985,18 +1991,21 @@ export default function ProfessionalProfilePage() {
                       })}
                     </div>
                   )}
-                </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
-                  <Button
-                    type="submit"
-                    disabled={saving}
-                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl h-10 px-6 font-bold text-sm gap-2 shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Guardar Precios
-                  </Button>
-                </CardFooter>
-              </Card>
+
+                  {pricingFields.length > 0 && (
+                    <div className="flex justify-end">
+                      <Button
+                        type="submit"
+                        disabled={saving}
+                        className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl h-10 px-6 font-bold text-sm gap-2 shadow-md shadow-teal-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        Guardar Precios
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </AccordionSection>
             </form>
           </Form>
         </TabsContent>
@@ -2005,19 +2014,14 @@ export default function ProfessionalProfilePage() {
         <TabsContent value="security" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Form {...securityForm}>
             <form onSubmit={securityForm.handleSubmit(onSaveSecurity)} className="space-y-4">
-              <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-                <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
-                  <div className="flex items-center gap-3 mb-1">
-                    <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
-                      <Lock className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base font-bold dark:text-slate-100">Seguridad de la Cuenta</CardTitle>
-                      <CardDescription className="text-xs dark:text-slate-400">Protege tu acceso y credenciales profesionales.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 space-y-4">
+              <AccordionSection
+                title="Seguridad de la Cuenta"
+                subtitle="Protege tu acceso y credenciales profesionales"
+                icon={<Lock className="h-4 w-4" />}
+                iconVariant="blue"
+                preview={user?.email ?? ""}
+              >
+                <div className="space-y-4 px-5 py-4">
                   <div className="grid gap-3 max-w-2xl">
                     <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 flex gap-4 items-center">
                       <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-950 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -2069,144 +2073,147 @@ export default function ProfessionalProfilePage() {
                       <p className="text-xs text-slate-600 dark:text-amber-400/80 leading-relaxed">Si cambias tu contraseña, <span className="text-amber-700 dark:text-amber-500 font-bold">se cerrará la sesión en todos tus otros dispositivos</span> por motivos de seguridad.</p>
                     </div>
                   </div>
-                </CardContent>
-                <CardFooter className="bg-slate-50/30 dark:bg-slate-900/30 p-3 flex justify-end">
-                  <Button 
-                    type="submit" 
-                    className="bg-slate-900 hover:bg-black text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-slate-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
-                    disabled={saving}
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
-                    Actualizar Contraseña
-                  </Button>
-                </CardFooter>
-              </Card>
+
+                  <div className="flex justify-end">
+                    <Button 
+                      type="submit" 
+                      className="bg-slate-900 hover:bg-black text-white dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl h-10 px-6 font-bold text-sm shadow-md shadow-slate-200/50 dark:shadow-none transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      disabled={saving}
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldCheck className="h-4 w-4 mr-2" />}
+                      Actualizar Contraseña
+                    </Button>
+                  </div>
+                </div>
+              </AccordionSection>
             </form>
           </Form>
         </TabsContent>
 
         {/* --- TAB: VERIFICATION --- */}
         <TabsContent value="verification" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="border-slate-200/60 dark:border-slate-800/60 shadow-sm dark:shadow-none rounded-xl overflow-hidden bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
-            <CardHeader className="bg-slate-50/30 dark:bg-slate-900/30 border-b border-slate-100/60 dark:border-slate-800/60 p-4">
-              <div className="flex items-center gap-3 mb-1">
-                <div className="p-1.5 bg-teal-50 dark:bg-teal-500/10 rounded-lg">
-                  <ShieldCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-bold dark:text-slate-100">Verificación de Credenciales</CardTitle>
-                  <CardDescription className="text-xs dark:text-slate-400">Sube tus títulos y diplomas para obtener el sello oficial de NUREA.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {['Título', 'Diplomado', 'Magíster', 'Curso'].map((type) => (
-                  <div key={type} className="relative group p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 dark:hover:border-teal-600 hover:bg-teal-50/30 dark:hover:bg-teal-900/20 transition-all text-center">
-                    <div className="w-12 h-12 bg-white dark:bg-slate-950 rounded-xl shadow-sm flex items-center justify-center mx-auto mb-3 text-slate-300 dark:text-slate-600 group-hover:text-teal-600 dark:group-hover:text-teal-400 group-hover:scale-110 group-hover:rotate-6 transition-all border border-slate-100 dark:border-slate-800">
-                      <Upload className="h-6 w-6" />
-                    </div>
-                    <span className="text-sm font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 group-hover:text-teal-700 dark:group-hover:text-teal-300">{type}</span>
-                    <input 
-                      type="file" 
-                      className="absolute inset-0 opacity-0 cursor-pointer" 
-                      accept=".pdf"
-                      onChange={(e) => handleCredentialUpload(e, type)}
-                      disabled={saving}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-4 pt-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <History className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                  Estado de tus documentos
-                </h3>
-                
-                <div className="grid gap-3">
-                  {loadingCredentials ? (
-                    <div className="flex flex-col items-center justify-center py-10 gap-3">
-                      <Loader2 className="h-8 w-8 animate-spin text-teal-600 dark:text-teal-400" />
-                      <p className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[10px]">Cargando documentos...</p>
-                    </div>
-                  ) : credentials.length === 0 ? (
-                    <div className="text-center py-10 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                      <div className="w-12 h-12 bg-white dark:bg-slate-950 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 dark:border-slate-800">
-                        <FileText className="h-6 w-6 text-slate-200 dark:text-slate-700" />
+          <div className="space-y-4">
+            <AccordionSection
+              title="Subir Documentos"
+              subtitle="Sube tus títulos y diplomas para obtener el sello oficial de NUREA"
+              icon={<ShieldCheck className="h-4 w-4" />}
+              iconVariant="teal"
+                preview={`${credentials.length} documento${credentials.length !== 1 ? 's' : ''} subido${credentials.length !== 1 ? 's' : ''}`}
+            >
+              <div className="px-5 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {['Título', 'Diplomado', 'Magíster', 'Curso'].map((type) => (
+                    <div key={type} className="relative group p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 dark:hover:border-teal-600 hover:bg-teal-50/30 dark:hover:bg-teal-900/20 transition-all text-center">
+                      <div className="w-12 h-12 bg-white dark:bg-slate-950 rounded-xl shadow-sm flex items-center justify-center mx-auto mb-3 text-slate-300 dark:text-slate-600 group-hover:text-teal-600 dark:group-hover:text-teal-400 group-hover:scale-110 group-hover:rotate-6 transition-all border border-slate-100 dark:border-slate-800">
+                        <Upload className="h-6 w-6" />
                       </div>
-                      <p className="text-base font-bold text-slate-400 dark:text-slate-500">Aún no has subido documentos para verificar.</p>
-                      <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Tu perfil será más confiable al verificar tus estudios.</p>
+                      <span className="text-sm font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 group-hover:text-teal-700 dark:group-hover:text-teal-300">{type}</span>
+                      <input 
+                        type="file" 
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                        accept=".pdf"
+                        onChange={(e) => handleCredentialUpload(e, type)}
+                        disabled={saving}
+                      />
                     </div>
-                  ) : (
-                    <div className="grid gap-3">
-                      {credentials.map((cred) => (
-                        <div key={cred.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all gap-4 group">
-                          <div className="flex items-center gap-4">
-                            <div className={cn(
-                              "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-all",
-                              cred.status === 'verified' ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-900 text-emerald-600 dark:text-emerald-400" : 
-                              cred.status === 'rejected' ? "bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-900 text-rose-600 dark:text-rose-400" : "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-400"
-                            )}>
-                              <FileText className="h-6 w-6" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <h4 className="text-base font-black text-slate-900 dark:text-slate-200">{cred.title}</h4>
-                                <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700">
-                                  {cred.type}
-                                </Badge>
-                              </div>
-                              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{cred.institution} <span className="mx-2 text-slate-300 dark:text-slate-700">•</span> {cred.year}</p>
-                            </div>
+                  ))}
+                </div>
+              </div>
+            </AccordionSection>
+
+            <AccordionSection
+              title="Estado de tus Documentos"
+              subtitle="Historial de documentos subidos y su estado de verificación"
+              icon={<History className="h-4 w-4" />}
+              iconVariant="violet"
+              preview={
+                credentials.length > 0
+                  ? `${credentials.filter(c => c.status === 'verified').length} verificado${credentials.filter(c => c.status === 'verified').length !== 1 ? 's' : ''}`
+                  : "Sin documentos"
+              }
+            >
+              <div className="px-5 py-4">
+                {loadingCredentials ? (
+                  <div className="flex flex-col items-center justify-center py-10 gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-teal-600 dark:text-teal-400" />
+                    <p className="font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[10px]">Cargando documentos...</p>
+                  </div>
+                ) : credentials.length === 0 ? (
+                  <div className="text-center py-10 bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                    <div className="w-12 h-12 bg-white dark:bg-slate-950 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 dark:border-slate-800">
+                      <FileText className="h-6 w-6 text-slate-200 dark:text-slate-700" />
+                    </div>
+                    <p className="text-base font-bold text-slate-400 dark:text-slate-500">Aún no has subido documentos para verificar.</p>
+                    <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Tu perfil será más confiable al verificar tus estudios.</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {credentials.map((cred) => (
+                      <div key={cred.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all gap-4 group">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border transition-all",
+                            cred.status === 'verified' ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-900 text-emerald-600 dark:text-emerald-400" : 
+                            cred.status === 'rejected' ? "bg-rose-50 dark:bg-rose-500/10 border-rose-100 dark:border-rose-900 text-rose-600 dark:text-rose-400" : "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-400"
+                          )}>
+                            <FileText className="h-6 w-6" />
                           </div>
-                          
-                          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                            <div className={cn(
-                              "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm flex items-center gap-1.5",
-                              cred.status === 'verified' ? "bg-emerald-500 dark:bg-emerald-600 text-white border-emerald-400 dark:border-emerald-700" : 
-                              cred.status === 'rejected' ? "bg-rose-500 dark:bg-rose-600 text-white border-rose-400 dark:border-rose-700" : "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700"
-                            )}>
-                              {cred.status === 'verified' ? (
-                                <><ShieldCheck className="h-3 w-3" /> Verificado</>
-                              ) : cred.status === 'rejected' ? (
-                                <><X className="h-3 w-3" /> Rechazado</>
-                              ) : (
-                                <><History className="h-3 w-3" /> Pendiente</>
-                              )}
+                          <div>
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h4 className="text-base font-black text-slate-900 dark:text-slate-200">{cred.title}</h4>
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700">
+                                {cred.type}
+                              </Badge>
                             </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-9 w-9 rounded-lg border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 hover:border-teal-200 dark:hover:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-all"
-                                asChild
-                              >
-                                <a href={cred.file_url} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                              </Button>
-                              {cred.status === 'pending' && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-9 w-9 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all opacity-0 group-hover:opacity-100"
-                                  onClick={() => handleDeleteCredential(cred.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
+                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{cred.institution} <span className="mx-2 text-slate-300 dark:text-slate-700">•</span> {cred.year}</p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        
+                        <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                          <div className={cn(
+                            "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm flex items-center gap-1.5",
+                            cred.status === 'verified' ? "bg-emerald-500 dark:bg-emerald-600 text-white border-emerald-400 dark:border-emerald-700" : 
+                            cred.status === 'rejected' ? "bg-rose-500 dark:bg-rose-600 text-white border-rose-400 dark:border-rose-700" : "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700"
+                          )}>
+                            {cred.status === 'verified' ? (
+                              <><ShieldCheck className="h-3 w-3" /> Verificado</>
+                            ) : cred.status === 'rejected' ? (
+                              <><X className="h-3 w-3" /> Rechazado</>
+                            ) : (
+                              <><History className="h-3 w-3" /> Pendiente</>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-9 w-9 rounded-lg border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:text-teal-600 dark:hover:text-teal-400 hover:border-teal-200 dark:hover:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950/50 transition-all"
+                              asChild
+                            >
+                              <a href={cred.file_url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            {cred.status === 'pending' && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-9 w-9 rounded-lg text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all opacity-0 group-hover:opacity-100"
+                                onClick={() => handleDeleteCredential(cred.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            </AccordionSection>
+          </div>
         </TabsContent>
       </Tabs>
 

@@ -134,7 +134,7 @@ export async function GET(request: Request) {
 
         // Formatear fecha y hora
         const appointmentDateObj = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
-        const formattedDate = appointmentDateObj.toLocaleDateString('es-ES', {
+        const formattedDate = appointmentDateObj.toLocaleDateString('es-CL', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',

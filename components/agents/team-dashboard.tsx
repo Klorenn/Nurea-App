@@ -21,6 +21,7 @@ import {
   FlaskConical,
   Wrench,
 } from "lucide-react"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -192,7 +193,7 @@ export function AgentTeamDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className={loadingDashboardInsetClassName("bg-background")}>
         <div className="text-center space-y-4">
           <Loader2 className="h-10 w-10 animate-spin text-teal-600 mx-auto" />
           <p className="text-sm text-slate-500 font-bold animate-pulse">

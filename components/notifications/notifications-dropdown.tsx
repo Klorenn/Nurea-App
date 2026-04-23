@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Bell, Check, CheckCheck, Calendar, MessageCircle, CreditCard, FileText, AlertCircle, Clock, X } from "lucide-react"
+import { Bell, CheckCheck, Calendar, MessageCircle, CreditCard, FileText, AlertCircle, X } from "lucide-react"
 import { NotificationIcon } from "@/components/ui/animated-state-icons"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
@@ -34,6 +34,9 @@ const getNotificationIcon = (type: string) => {
     case 'appointment_cancelled':
       return AlertCircle
     case 'message_new':
+    case 'new_message':
+    case 'forum_reply':
+    case 'admin_message':
       return MessageCircle
     case 'payment_confirmed':
     case 'payment_failed':
@@ -55,6 +58,9 @@ const getNotificationColor = (type: string) => {
     case 'appointment_cancelled':
       return "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
     case 'message_new':
+    case 'new_message':
+    case 'forum_reply':
+    case 'admin_message':
       return "bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400"
     case 'payment_confirmed':
       return "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
@@ -182,6 +188,9 @@ export function NotificationsDropdown({ role = "patient" }: NotificationsDropdow
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                   {language === "es" ? "Notificaciones" : "Notifications"}
                 </h3>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {role}
+                </p>
                 {unreadCount > 0 && (
                   <p className="text-xs text-muted-foreground">
                     {unreadCount} {language === "es" ? "sin leer" : "unread"}

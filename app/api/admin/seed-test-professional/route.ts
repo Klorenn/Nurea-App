@@ -32,8 +32,8 @@ export async function POST(request: Request) {
       online_price: 35000,
       in_person_price: 40000,
       video_platform: 'google-meet',
-      clinic_address: 'Santiago, Chile',
-      location: 'Santiago, Chile',
+      clinic_address: 'Temuco, Chile',
+      location: 'Temuco, Chile',
       years_experience: 5,
       verified: true,
       availability: {

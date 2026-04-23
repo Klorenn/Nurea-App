@@ -574,7 +574,7 @@ export default function ProfessionalOnboardingPage() {
         if (data.professional_title) merge({ professionalTitle: data.professional_title })
         merge({ showPhone: data.show_phone !== false }) // default true
       })
-  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id]) // eslint-disable-line @typescript-eslint/no-explicit-any
 
   // Fetch real-time platform stats
   useEffect(() => {

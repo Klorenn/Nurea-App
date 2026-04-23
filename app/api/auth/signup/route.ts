@@ -101,6 +101,27 @@ export async function POST(request: Request) {
     }
   }
 
+  // Create welcome notification
+  try {
+    const { error: notifError } = await supabase.from('notifications').insert({
+      user_id: data.user.id,
+      type: 'welcome',
+      title: role === 'professional' 
+        ? '¡Bienvenido a NUREA!' 
+        : '¡Bienvenido a NUREA!',
+      message: role === 'professional'
+        ? `¡Hola ${firstName}! Gracias por unirte a NUREA. Completa tu perfil profesional para que los pacientes puedan encontrarte.`
+        : `¡Hola ${firstName}! Gracias por ser parte de NUREA. Ahora puedes buscar profesionales de salud y agendar tus citas.`,
+      link: role === 'professional' ? '/professional/onboarding' : '/explore',
+    })
+    
+    if (notifError) {
+      console.error('Welcome notification error:', notifError)
+    }
+  } catch (notifErr) {
+    console.error('Error creating welcome notification:', notifErr)
+  }
+
   // If user is a professional, create entry in professionals table
   if (role === 'professional') {
     // Wait a bit more to ensure profile is created

@@ -24,12 +24,17 @@ export async function getAuthUser(): Promise<AuthUser | null> {
     return null
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role, date_of_birth, email_verified")
     .eq("id", user.id)
     .single()
 
+
+  if (profileError) {
+    console.error("Error fetching profile:", profileError)
+    return null
+  }
   const role = (profile?.role as UserRole) || "patient"
   const emailVerified = user.email_confirmed_at !== null || profile?.email_verified || false
   const profileComplete = !!profile?.date_of_birth && emailVerified

@@ -1,0 +1,448 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: #f1f5f9; }
+h2 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; }
+
+.page-shell {
+  background: #f1f5f9;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  max-width: 880px;
+  margin: 0 auto 24px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+.page-topbar {
+  background: white; border-bottom: 1px solid #e2e8f0;
+  padding: 16px 28px; display: flex; align-items: center; justify-content: space-between;
+}
+.page-topbar h1 { font-size: 1.2rem; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+.page-topbar p { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+.topbar-actions { display: flex; gap: 8px; }
+.btn-outline { font-size: 12px; font-weight: 600; color: #475569; border: 1px solid #e2e8f0; background: white; padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+
+.completeness-bar { background: white; border-bottom: 1px solid #e2e8f0; padding: 11px 28px; display: flex; align-items: center; gap: 14px; }
+.completeness-label { font-size: 12px; font-weight: 600; color: #64748b; white-space: nowrap; }
+.completeness-track { flex: 1; height: 5px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+.completeness-fill { height: 100%; width: 40%; background: linear-gradient(90deg, #f97316, #eab308); border-radius: 99px; }
+.completeness-score { font-size: 13px; font-weight: 800; color: #f97316; }
+.completeness-hint { font-size: 11px; color: #94a3b8; }
+
+.tabs-row { background: white; border-bottom: 1px solid #e2e8f0; padding: 0 28px; display: flex; overflow-x: auto; }
+.tab { font-size: 12.5px; font-weight: 600; color: #64748b; padding: 11px 16px; border-bottom: 2.5px solid transparent; cursor: pointer; white-space: nowrap; }
+.tab.active { color: #0d9488; border-bottom-color: #0d9488; font-weight: 700; }
+
+.content-area { padding: 22px 28px; display: flex; flex-direction: column; gap: 14px; }
+
+/* HERO */
+.profile-hero { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.hero-inner { display: flex; align-items: center; gap: 20px; padding: 20px 22px; }
+.avatar-wrap { position: relative; flex-shrink: 0; }
+.avatar { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%); border: 3px solid white; box-shadow: 0 0 0 2px #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: white; }
+.avatar-edit { position: absolute; bottom: 1px; right: 1px; width: 22px; height: 22px; background: white; border: 1.5px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.avatar-edit svg { width: 10px; height: 10px; stroke: #64748b; }
+.hero-info { flex: 1; }
+.hero-name { font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+.hero-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.hero-chip { background: #f0fdfa; border: 1px solid #99f6e4; color: #0d9488; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+.hero-dot { width: 3px; height: 3px; background: #cbd5e1; border-radius: 50%; }
+.hero-text { font-size: 12px; color: #64748b; }
+.hero-verified { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #0d9488; }
+.hero-verified svg { width: 12px; height: 12px; }
+.photo-btn { font-size: 12px; font-weight: 600; color: #475569; background: white; border: 1.5px solid #e2e8f0; padding: 7px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.photo-btn svg { width: 13px; height: 13px; stroke: #64748b; }
+
+/* STATS BAR — LIVE */
+.hero-divider { height: 1px; background: #f1f5f9; margin: 0 22px; }
+.hero-stats { display: flex; border-top: 1px solid #f1f5f9; }
+.stat-item {
+  flex: 1;
+  padding: 14px 20px;
+  border-right: 1px solid #f1f5f9;
+  position: relative;
+  cursor: default;
+  transition: background 0.12s;
+}
+.stat-item:last-child { border-right: none; }
+.stat-item.clickable { cursor: pointer; }
+.stat-item.clickable:hover { background: #f8fafc; }
+.stat-item.clickable:hover .stat-val { color: #0d9488; }
+.stat-live-dot {
+  position: absolute; top: 10px; right: 12px;
+  width: 7px; height: 7px;
+  background: #22c55e; border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.stat-val { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.03em; line-height: 1; }
+.stat-label { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 4px; }
+.stat-arrow { font-size: 11px; color: #cbd5e1; margin-left: 3px; }
+.stat-trend {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 10px; font-weight: 700; color: #22c55e;
+  margin-top: 3px;
+}
+.stat-trend.down { color: #f97316; }
+
+/* REVIEWS PANEL */
+.reviews-panel {
+  background: white;
+  border: 1.5px solid #0d9488;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(13,148,136,0.1);
+}
+.reviews-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f0fdfa;
+}
+.reviews-title { font-size: 14px; font-weight: 700; color: #0d9488; }
+.reviews-close { font-size: 11px; font-weight: 600; color: #94a3b8; cursor: pointer; background: white; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 6px; }
+
+.review-item { padding: 14px 20px; border-bottom: 1px solid #f8fafc; }
+.review-item:last-of-type { border-bottom: none; }
+.review-top { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.review-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.review-avatar.g2 { background: linear-gradient(135deg, #f97316, #eab308); }
+.review-name { font-size: 13px; font-weight: 700; color: #1e293b; }
+.review-date { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+.review-stars { margin-left: auto; font-size: 12px; color: #eab308; letter-spacing: 1px; }
+.review-text { font-size: 12.5px; color: #475569; line-height: 1.55; margin-left: 42px; }
+.review-reply-area { margin: 10px 0 0 42px; }
+.review-reply-btn { font-size: 11.5px; font-weight: 600; color: #0d9488; background: #f0fdfa; border: 1px solid #99f6e4; padding: 5px 12px; border-radius: 7px; cursor: pointer; }
+.reply-box { display: none; margin-top: 8px; }
+.reply-input { width: 100%; border: 1.5px solid #0d9488; border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #1e293b; resize: none; outline: none; font-family: inherit; }
+.reply-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+.reply-send { font-size: 11.5px; font-weight: 700; color: white; background: #0d9488; border: none; padding: 6px 13px; border-radius: 7px; cursor: pointer; }
+.reply-cancel-small { font-size: 11.5px; font-weight: 600; color: #94a3b8; background: white; border: 1px solid #e2e8f0; padding: 6px 11px; border-radius: 7px; cursor: pointer; }
+.review-existing-reply { margin: 8px 0 0 42px; background: #f8fafc; border-left: 3px solid #0d9488; border-radius: 0 8px 8px 0; padding: 8px 12px; }
+.review-existing-reply .reply-from { font-size: 10px; font-weight: 700; color: #0d9488; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+.review-existing-reply p { font-size: 12px; color: #475569; line-height: 1.5; }
+
+/* SETTINGS SECTIONS */
+.settings-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.section-header { display: flex; align-items: center; justify-content: space-between; padding: 13px 22px; border-bottom: 1px solid #f1f5f9; }
+.section-header-left { display: flex; align-items: center; gap: 11px; }
+.section-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.section-icon.teal { background: #f0fdfa; } .section-icon.teal svg { stroke: #0d9488; }
+.section-icon.blue { background: #eff6ff; } .section-icon.blue svg { stroke: #3b82f6; }
+.section-icon svg { width: 15px; height: 15px; }
+.section-title { font-size: 13.5px; font-weight: 700; color: #1e293b; }
+.section-subtitle { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.edit-btn { font-size: 11.5px; font-weight: 600; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 13px; border-radius: 7px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.edit-btn svg { width: 12px; height: 12px; stroke: #94a3b8; }
+
+.field-row { display: flex; align-items: center; padding: 12px 22px; border-bottom: 1px solid #f8fafc; gap: 16px; }
+.field-row:last-child { border-bottom: none; }
+.field-label { font-size: 12px; color: #94a3b8; width: 150px; flex-shrink: 0; font-weight: 500; }
+.field-value { font-size: 13px; font-weight: 600; color: #1e293b; flex: 1; }
+.field-value.empty { color: #cbd5e1; font-style: italic; font-weight: 400; font-size: 12px; }
+.field-pencil { width: 28px; height: 28px; border-radius: 6px; border: 1px solid transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.field-pencil svg { width: 12px; height: 12px; stroke: #cbd5e1; }
+
+.toggle-row { display: flex; align-items: center; padding: 12px 22px; border-bottom: 1px solid #f8fafc; gap: 16px; }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-info { flex: 1; }
+.toggle-info .t-label { font-size: 13px; font-weight: 600; color: #1e293b; }
+.toggle-info .t-desc { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.toggle-switch { width: 38px; height: 22px; background: #0d9488; border-radius: 99px; position: relative; cursor: pointer; flex-shrink: 0; }
+.toggle-switch::after { content: ''; position: absolute; top: 3px; right: 3px; width: 16px; height: 16px; background: white; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+
+.tags-row { padding: 13px 22px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tag { font-size: 11.5px; font-weight: 600; padding: 4px 11px; border-radius: 99px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.tag.teal { background: #f0fdfa; color: #0d9488; border-color: #99f6e4; }
+.tag-link { font-size: 11.5px; font-weight: 600; color: #0d9488; padding: 4px 11px; cursor: pointer; }
+
+.bio-text { padding: 14px 22px; font-size: 13px; color: #475569; line-height: 1.65; }
+</style>
+
+<h2>Diseño final — stats en vivo + valoraciones con respuestas</h2>
+<p class="subtitle">Los stats se actualizan en tiempo real. Haz click en "Valoración" para responder comentarios de pacientes.</p>
+
+<div class="page-shell">
+
+  <div class="page-topbar">
+    <div>
+      <h1>María Jesús Chavez San Luis</h1>
+      <p>Perfil profesional · Última edición hace 2 días</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-outline">Ver perfil público</button>
+      <button class="btn-outline">Editar direcciones</button>
+    </div>
+  </div>
+
+  <div class="completeness-bar">
+    <span class="completeness-label">Completitud del perfil</span>
+    <div class="completeness-track"><div class="completeness-fill"></div></div>
+    <span class="completeness-score">40 / 100</span>
+    <span class="completeness-hint">· Agregar: Premios</span>
+  </div>
+
+  <div class="tabs-row">
+    <div class="tab active">General</div>
+    <div class="tab">Clínica</div>
+    <div class="tab">Estudios</div>
+    <div class="tab">Galería</div>
+    <div class="tab">Precios</div>
+    <div class="tab">Seguridad</div>
+    <div class="tab">Verificación</div>
+  </div>
+
+  <div class="content-area">
+
+    <!-- HERO -->
+    <div class="profile-hero">
+      <div class="hero-inner">
+        <div class="avatar-wrap">
+          <div class="avatar">MJ</div>
+          <div class="avatar-edit">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+          </div>
+        </div>
+        <div class="hero-info">
+          <div class="hero-name">María Jesús Chavez San Luis</div>
+          <div class="hero-meta">
+            <span class="hero-chip">Ps. · Psicología</span>
+            <span class="hero-dot"></span>
+            <span class="hero-text">5 años de experiencia</span>
+            <span class="hero-dot"></span>
+            <span class="hero-verified">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.745 3.745 0 013.296-1.043A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg>
+              Verificada
+            </span>
+          </div>
+        </div>
+        <button class="photo-btn">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/></svg>
+          Cambiar foto
+        </button>
+      </div>
+
+      <!-- STATS BAR -->
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-live-dot"></div>
+          <div class="stat-val" id="stat-patients">24</div>
+          <div class="stat-label">Pacientes</div>
+          <div class="stat-trend">+2 este mes</div>
+        </div>
+        <div class="stat-item clickable" onclick="toggleReviews()" title="Ver y responder comentarios">
+          <div class="stat-live-dot"></div>
+          <div class="stat-val" style="display:flex;align-items:baseline;gap:4px">
+            <span id="stat-rating">4.9</span>
+            <span style="font-size:14px;color:#eab308">★</span>
+            <span class="stat-arrow">↗</span>
+          </div>
+          <div class="stat-label">Valoración <span style="color:#0d9488;font-weight:700">· Ver comentarios</span></div>
+          <div class="stat-trend">3 sin responder</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-live-dot"></div>
+          <div class="stat-val" id="stat-modality">Online</div>
+          <div class="stat-label">Modalidad</div>
+          <div class="stat-trend" style="color:#64748b">Presencial: No</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-live-dot"></div>
+          <div class="stat-val" id="stat-price">$35.000</div>
+          <div class="stat-label">Por sesión</div>
+          <div class="stat-trend">Desde Precios</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVIEWS PANEL (oculto por defecto) -->
+    <div class="reviews-panel" id="reviews-panel" style="display:none">
+      <div class="reviews-header">
+        <div>
+          <div class="reviews-title">Valoraciones de pacientes — 4.9 ★</div>
+          <div style="font-size:11px;color:#0d9488;margin-top:2px">3 comentarios sin responder</div>
+        </div>
+        <button class="reviews-close" onclick="toggleReviews()">Cerrar</button>
+      </div>
+
+      <!-- Review 1 — sin respuesta -->
+      <div class="review-item">
+        <div class="review-top">
+          <div class="review-avatar">AP</div>
+          <div>
+            <div class="review-name">Ana P.</div>
+            <div class="review-date">Hace 3 días</div>
+          </div>
+          <div class="review-stars">★★★★★</div>
+        </div>
+        <div class="review-text">Excelente profesional, muy empática y atenta. Me ayudó mucho a entender lo que estaba viviendo. La recomiendo sin dudarlo.</div>
+        <div class="review-reply-area">
+          <button class="review-reply-btn" onclick="showReply(this)">Responder</button>
+          <div class="reply-box">
+            <textarea class="reply-input" rows="2" placeholder="Escribe tu respuesta a Ana..."></textarea>
+            <div class="reply-actions">
+              <button class="reply-cancel-small" onclick="hideReply(this)">Cancelar</button>
+              <button class="reply-send">Publicar respuesta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review 2 — con respuesta existente -->
+      <div class="review-item">
+        <div class="review-top">
+          <div class="review-avatar g2">CM</div>
+          <div>
+            <div class="review-name">Carlos M.</div>
+            <div class="review-date">Hace 1 semana</div>
+          </div>
+          <div class="review-stars">★★★★★</div>
+        </div>
+        <div class="review-text">Muy buena experiencia. El espacio de sesión online fue muy cómodo y se siente un ambiente de confianza desde el primer momento.</div>
+        <div class="review-existing-reply">
+          <div class="reply-from">Tu respuesta</div>
+          <p>Muchas gracias Carlos, fue un placer acompañarte en este proceso. Seguimos adelante!</p>
+        </div>
+      </div>
+
+      <!-- Review 3 — sin respuesta -->
+      <div class="review-item">
+        <div class="review-top">
+          <div class="review-avatar" style="background:linear-gradient(135deg,#ec4899,#f43f5e)">SL</div>
+          <div>
+            <div class="review-name">Sofía L.</div>
+            <div class="review-date">Hace 2 semanas</div>
+          </div>
+          <div class="review-stars">★★★★☆</div>
+        </div>
+        <div class="review-text">Muy buena atención y puntualidad. A veces me hubiera gustado que la sesión durara un poco más, pero en general muy conforme.</div>
+        <div class="review-reply-area">
+          <button class="review-reply-btn" onclick="showReply(this)">Responder</button>
+          <div class="reply-box">
+            <textarea class="reply-input" rows="2" placeholder="Escribe tu respuesta a Sofía..."></textarea>
+            <div class="reply-actions">
+              <button class="reply-cancel-small" onclick="hideReply(this)">Cancelar</button>
+              <button class="reply-send">Publicar respuesta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATOS PERSONALES -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon teal">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Datos personales</div>
+            <div class="section-subtitle">Tu información básica de registro</div>
+          </div>
+        </div>
+        <button class="edit-btn">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+          Editar sección
+        </button>
+      </div>
+      <div class="field-row"><div class="field-label">Nombre</div><div class="field-value">María Jesús</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      <div class="field-row"><div class="field-label">Apellidos</div><div class="field-value">Chavez San Luis</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      <div class="field-row"><div class="field-label">Género</div><div class="field-value">Femenino</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      <div class="field-row"><div class="field-label">Teléfono</div><div class="field-value">+56 9 8765 4321</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <div class="t-label">Mostrar teléfono en perfil público</div>
+          <div class="t-desc">Los pacientes podrán ver y contactarte directamente</div>
+        </div>
+        <div class="toggle-switch"></div>
+      </div>
+    </div>
+
+    <!-- TRAYECTORIA -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon blue">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Trayectoria profesional</div>
+            <div class="section-subtitle">Título, especialidad y registro</div>
+          </div>
+        </div>
+        <button class="edit-btn">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+          Editar sección
+        </button>
+      </div>
+      <div class="field-row"><div class="field-label">Título abreviado</div><div class="field-value"><span style="background:#f0fdfa;border:1px solid #99f6e4;color:#0d9488;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;">Ps.</span></div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      <div class="field-row"><div class="field-label">Especialidad</div><div class="field-value">Psicología</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      <div class="field-row"><div class="field-label">Años de experiencia</div><div class="field-value">5 años</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      <div class="field-row"><div class="field-label">Nº Registro</div><div class="field-value">1111111</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      <div class="field-row"><div class="field-label">Institución emisora</div><div class="field-value empty">Sin especificar</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+    </div>
+
+    <!-- BIOGRAFÍA -->
+    <div class="settings-section">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-icon teal">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+          </div>
+          <div>
+            <div class="section-title">Biografía profesional</div>
+            <div class="section-subtitle">Tu presentación para los pacientes</div>
+          </div>
+        </div>
+        <button class="edit-btn">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+          Editar
+        </button>
+      </div>
+      <div class="bio-text">Acompaño a adolescentes y personas adultas que están atravesando momentos de malestar emocional, ansiedad, inseguridad personal o procesos de cambio. En terapia trabajamos juntos para comprender lo que ocurre, aliviar el malestar y fortalecer recursos personales de forma gradual y respetuosa.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function toggleReviews() {
+  const panel = document.getElementById('reviews-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel.style.display === 'block') {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+function showReply(btn) {
+  btn.style.display = 'none';
+  btn.nextElementSibling.style.display = 'block';
+  btn.nextElementSibling.querySelector('textarea').focus();
+}
+function hideReply(cancelBtn) {
+  const box = cancelBtn.closest('.reply-box');
+  box.style.display = 'none';
+  box.previousElementSibling.style.display = 'inline-flex';
+}
+
+// Simular stats en vivo
+function animateCounter(el, from, to, duration) {
+  const start = Date.now();
+  const timer = setInterval(() => {
+    const elapsed = Date.now() - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const current = Math.round(from + (to - from) * progress);
+    el.textContent = current;
+    if (progress === 1) clearInterval(timer);
+  }, 16);
+}
+setTimeout(() => {
+  const patients = document.getElementById('stat-patients');
+  animateCounter(patients, 24, 25, 1200);
+}, 2000);
+</script>
+
+<p class="subtitle" style="text-align:center;margin-top:4px">Haz click en "Valoración" para ver el panel de comentarios. ¿Aprobamos este diseño para implementarlo?</p>

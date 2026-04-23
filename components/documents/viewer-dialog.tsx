@@ -81,7 +81,7 @@ export function ViewerDialog({ isOpen, onClose, documentId }: ViewerDialogProps)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(
-      language === "es" ? "es-ES" : "en-US",
+      language === "es" ? "es-CL" : "en-US",
       { year: "numeric", month: "long", day: "numeric" }
     )
   }

@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 export default function ProfessionalWelcomePage() {
   const { user, loading: authLoading } = useAuth()
@@ -42,7 +43,7 @@ export default function ProfessionalWelcomePage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className={loadingDashboardInsetClassName("bg-background")}>
         <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
       </div>
     )
@@ -50,7 +51,7 @@ export default function ProfessionalWelcomePage() {
 
   if (!profData) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500 font-medium">
+      <div className={loadingDashboardInsetClassName("bg-background text-slate-500 font-medium text-center px-4")}>
         No se pudo cargar la información del perfil.
       </div>
     )

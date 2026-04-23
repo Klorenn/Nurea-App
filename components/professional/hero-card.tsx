@@ -126,7 +126,7 @@ export function HeroCard({
       }
     }
     fetchStats()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }, [profile?.id])
 
   const specialtyName =

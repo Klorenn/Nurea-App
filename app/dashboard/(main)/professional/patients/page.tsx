@@ -601,7 +601,12 @@ export default function ProfessionalPatientsPage() {
           data,
         })
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Ignore AbortError - it's expected when timeout occurs
+      if (err?.name === "AbortError" || err?.message?.includes("aborted")) {
+        console.log("Request timed out or was aborted")
+        return
+      }
       console.error("Failed to load patients", err)
       setFetchError(true)
       setDebugInfo(null)
@@ -633,7 +638,7 @@ export default function ProfessionalPatientsPage() {
       isMounted = false
       window.clearInterval(interval)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }, [])
 
   const filteredPatients = useMemo(() => {

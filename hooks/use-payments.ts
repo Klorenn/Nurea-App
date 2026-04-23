@@ -50,7 +50,7 @@ export function usePayments(options: UsePaymentsOptions = {}) {
       }
 
       const response = await fetch(`/api/payments/list?${params.toString()}`)
-      const data = await response.json()
+      const data = await response.json() ?? {}
 
       if (!response.ok) {
         throw new Error(data.message || 'Error al cargar pagos')

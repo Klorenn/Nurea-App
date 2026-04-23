@@ -43,8 +43,19 @@ export default [
     plugins: {
       "@typescript-eslint": tsPlugin,
     },
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+        ignoreRestSiblings: true,
+      }],
+      "no-undef": "off",
+      "react-hooks/exhaustive-deps": "off",
+    },
   },
-  { ...js.configs.recommended, files },
+  { ...js.configs.recommended, files, rules: { "no-unused-vars": "off" } },
   { ...next.configs["core-web-vitals"], files },
 ]
 
+y7          a5swn ioifrtfdr

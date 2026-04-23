@@ -157,7 +157,7 @@ export function FeaturesSection() {
                       <>
                         Únete a{" "}
                         <span className="font-bold text-primary">
-                          {professionalCount.toLocaleString('es-ES')}
+                          {professionalCount.toLocaleString('es-CL')}
                           {professionalCount > 0 ? "+" : ""}
                         </span>{" "}
                         especialistas hoy

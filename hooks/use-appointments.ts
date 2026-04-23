@@ -58,7 +58,7 @@ export function useAppointments(options: UseAppointmentsOptions = {}) {
       }
 
       const response = await fetch(`/api/appointments/history?${params.toString()}`)
-      const data = await response.json()
+      const data = await response.json() ?? {}
 
       if (!response.ok) {
         throw new Error(data.message || 'Error al cargar citas')

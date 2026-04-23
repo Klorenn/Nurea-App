@@ -209,7 +209,7 @@ export async function GET(request: Request) {
         name: `Dr. ${testProfileRecord?.first_name || 'Nurea'} ${testProfileRecord?.last_name || 'Doctor'}`.trim(),
         specialty: testProfData.specialty || 'Médico General',
         specialtyEn: testProfData.specialty || 'General Medicine',
-        location: testProfData.location || 'Santiago, Chile',
+        location: testProfData.location || 'Temuco, Chile',
         rating: 4.9,
         patientsServed: 0,
         price: testProfData.consultation_price || 35000,

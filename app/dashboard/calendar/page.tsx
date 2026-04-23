@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BookingCalendarClient } from "./BookingCalendarClient";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { loadingBelowHeaderClassName } from "@/lib/loading-layout";
 
 export default function CalendarPage() {
   return (
@@ -19,7 +20,7 @@ export default function CalendarPage() {
       </div>
       <Suspense
         fallback={
-          <div className="flex min-h-[60vh] items-center justify-center">
+          <div className={loadingBelowHeaderClassName()}>
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         }

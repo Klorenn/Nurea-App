@@ -1,70 +1,220 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { motion, type Variants, AnimatePresence } from "framer-motion"
-import {
-  Calendar,
-  Clock,
-  DollarSign,
-  Users,
-  Video,
-  ArrowRight,
-  TrendingUp,
-  MoreHorizontal,
-  Loader2,
-  CalendarDays,
-  Activity,
-  BrainCircuit,
-  ArrowUpRight,
-  ChevronRight,
-  Sparkles,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts"
-import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
-import { cn } from "@/lib/utils"
-import { VerificationPendingBanner, VerifiedBadge } from "@/components/verified-badge"
 import { createClient } from "@/lib/supabase/client"
-import { format, startOfMonth, subDays, startOfWeek, endOfWeek, subWeeks, parse } from "date-fns"
+import { useAuth } from "@/hooks/use-auth"
+import { useProfile } from "@/hooks/use-profile"
+import { useLanguage } from "@/contexts/language-context"
+import {
+  format,
+  startOfMonth,
+  startOfWeek,
+  endOfWeek,
+  subWeeks,
+  subDays,
+  parse,
+} from "date-fns"
 import { es, enUS } from "date-fns/locale"
 import { calculateWeeklyGrowth, getPerformanceTip } from "@/lib/dashboard-utils"
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
-}
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 120, damping: 18 } },
+/* ------------------------------------------------------------------
+ *  Iconos inline
+ * ------------------------------------------------------------------ */
+const icoCalendar = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+)
+const icoUsers = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+)
+const icoDollar = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <line x1="12" y1="1" x2="12" y2="23" />
+    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </svg>
+)
+const icoActivity = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+  </svg>
+)
+const icoTrending = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
+  </svg>
+)
+const icoSparkles = (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M12 2l2.4 6.5L21 11l-6.6 2.5L12 20l-2.4-6.5L3 11l6.6-2.5z" />
+  </svg>
+)
+const icoArrow = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M5 12h14M13 5l7 7-7 7" />
+  </svg>
+)
+const icoPlus = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+const icoVideo = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+)
+const icoShield = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+)
+
+/* ------------------------------------------------------------------
+ *  Design tokens (sage + terracotta)
+ * ------------------------------------------------------------------ */
+const C = {
+  bg: "oklch(0.985 0.008 150)",
+  bgWarm: "oklch(0.97 0.015 85)",
+  ink: "oklch(0.22 0.025 170)",
+  inkSoft: "oklch(0.42 0.02 170)",
+  inkMute: "oklch(0.58 0.015 170)",
+  line: "oklch(0.88 0.015 150)",
+  lineSoft: "oklch(0.93 0.012 150)",
+  sage50: "oklch(0.97 0.015 170)",
+  sage100: "oklch(0.95 0.025 170)",
+  sage200: "oklch(0.88 0.045 170)",
+  sage300: "oklch(0.78 0.06 170)",
+  sage500: "oklch(0.58 0.07 170)",
+  sage700: "oklch(0.38 0.05 170)",
+  sage900: "oklch(0.22 0.03 170)",
+  terracotta: "oklch(0.68 0.11 45)",
+  terracottaDeep: "oklch(0.52 0.13 40)",
+  terracottaSoft: "oklch(0.92 0.04 55)",
+  amberSoft: "oklch(0.96 0.035 85)",
+  amber: "oklch(0.55 0.1 70)",
+  blueSoft: "oklch(0.94 0.03 230)",
+  blue: "oklch(0.4 0.1 230)",
+  blueMid: "oklch(0.65 0.09 230)",
+  dangerSoft: "oklch(0.95 0.03 15)",
+  danger: "oklch(0.45 0.13 20)",
 }
 
-export default function ProfessionalDashboard() {
-  const { language } = useLanguage()
+/* ------------------------------------------------------------------
+ *  Tipos
+ * ------------------------------------------------------------------ */
+interface TodayAppointment {
+  id: string
+  appointment_date: string
+  appointment_time: string
+  type: string | null
+  status: string | null
+  duration_minutes?: number | null
+  patient?: {
+    first_name?: string | null
+    last_name?: string | null
+    avatar_url?: string | null
+  } | null
+}
+
+interface ChartPoint {
+  label: string
+  income: number
+}
+
+/* ------------------------------------------------------------------
+ *  Helpers
+ * ------------------------------------------------------------------ */
+function greet(isES: boolean): string {
+  const h = new Date().getHours()
+  if (isES) {
+    if (h < 12) return "Buenos días"
+    if (h < 19) return "Buenas tardes"
+    return "Buenas noches"
+  }
+  if (h < 12) return "Good morning"
+  if (h < 19) return "Good afternoon"
+  return "Good evening"
+}
+
+function hourPart(time: string): { h: string; m: string } {
+  const [h = "00", m = "00"] = time.split(":")
+  return { h, m }
+}
+
+function avatarGradient(seed: string): string {
+  const n = (seed.charCodeAt(0) || 0) % 5
+  const palette = [
+    "linear-gradient(135deg, oklch(0.78 0.06 170), oklch(0.62 0.08 160))",
+    "linear-gradient(135deg, oklch(0.8 0.08 60), oklch(0.68 0.1 45))",
+    "linear-gradient(135deg, oklch(0.75 0.05 230), oklch(0.62 0.07 220))",
+    "linear-gradient(135deg, oklch(0.82 0.05 340), oklch(0.7 0.07 330))",
+    "linear-gradient(135deg, oklch(0.78 0.08 20), oklch(0.65 0.1 10))",
+  ]
+  return palette[n]
+}
+
+/* ------------------------------------------------------------------
+ *  Styles
+ * ------------------------------------------------------------------ */
+const cardStyle: React.CSSProperties = {
+  background: "white",
+  border: `1px solid ${C.lineSoft}`,
+  borderRadius: 18,
+  padding: 22,
+}
+
+const chipBase: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "4px 10px",
+  borderRadius: 999,
+  fontSize: 11,
+  fontWeight: 500,
+}
+
+function chipStyle(
+  tone: "sage" | "amber" | "blue" | "terracotta" | "mute" | "danger"
+): React.CSSProperties {
+  if (tone === "sage") return { ...chipBase, background: C.sage100, color: C.sage700 }
+  if (tone === "amber") return { ...chipBase, background: C.amberSoft, color: C.amber }
+  if (tone === "blue") return { ...chipBase, background: C.blueSoft, color: C.blue }
+  if (tone === "terracotta")
+    return { ...chipBase, background: C.terracottaSoft, color: C.terracotta }
+  if (tone === "danger") return { ...chipBase, background: C.dangerSoft, color: C.danger }
+  return { ...chipBase, background: C.bgWarm, color: C.inkSoft }
+}
+
+const dotStyle: React.CSSProperties = {
+  width: 6,
+  height: 6,
+  borderRadius: "50%",
+  background: "currentColor",
+}
+
+/* ------------------------------------------------------------------
+ *  Professional dashboard
+ * ------------------------------------------------------------------ */
+export default function ProfessionalDashboardPage() {
   const { user } = useAuth()
-  const isSpanish = language === "es"
-  const supabase = createClient()
+  const { profile } = useProfile()
+  const { language } = useLanguage()
+  const isES = language === "es"
+  const supabase = useMemo(() => createClient(), [])
 
-  const [isVerified, setIsVerified] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isVerified, setIsVerified] = useState<boolean | null>(null)
   const [stats, setStats] = useState({
     appointmentsToday: 0,
     appointmentsWeek: 0,
@@ -73,13 +223,13 @@ export default function ProfessionalDashboard() {
     weeklyIncomeGrowth: 0,
     weeklyAppointmentGrowth: 0,
   })
-  const [todayAppointments, setTodayAppointments] = useState<any[]>([])
-  const [chartData, setChartData] = useState<any[]>([])
-  const [professionalName, setProfessionalName] = useState("")
+  const [todayAppointments, setTodayAppointments] = useState<TodayAppointment[]>([])
+  const [chartData, setChartData] = useState<ChartPoint[]>([])
 
   const performanceInsight = useMemo(
-    () => getPerformanceTip(stats.weeklyIncomeGrowth, stats.weeklyAppointmentGrowth, isSpanish),
-    [stats.weeklyIncomeGrowth, stats.weeklyAppointmentGrowth, isSpanish]
+    () =>
+      getPerformanceTip(stats.weeklyIncomeGrowth, stats.weeklyAppointmentGrowth, isES),
+    [stats.weeklyIncomeGrowth, stats.weeklyAppointmentGrowth, isES]
   )
 
   const loadDashboardData = async () => {
@@ -99,13 +249,6 @@ export default function ProfessionalDashboard() {
         .maybeSingle()
       setIsVerified(profData?.verified ?? false)
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("first_name")
-        .eq("id", user.id)
-        .maybeSingle()
-      setProfessionalName(profileData?.first_name || "")
-
       const [
         { count: countToday },
         { count: countWeek },
@@ -116,22 +259,66 @@ export default function ProfessionalDashboard() {
         { count: currentWeekAppointments },
         { count: lastWeekAppointments },
       ] = await Promise.all([
-        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("professional_id", user.id).eq("appointment_date", today).in("status", ["confirmed", "pending"]),
-        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("professional_id", user.id).gte("appointment_date", currentWeekStart.split("T")[0]).in("status", ["confirmed", "pending"]),
-        supabase.from("appointments").select("patient_id").eq("professional_id", user.id),
-        supabase.from("financial_transactions").select("professional_net").eq("professional_id", user.id).gte("created_at", firstDayOfMonth).in("status", ["escrow", "available", "payout_pending", "paid_out"]),
-        supabase.from("financial_transactions").select("professional_net").eq("professional_id", user.id).gte("created_at", currentWeekStart).in("status", ["escrow", "available", "payout_pending", "paid_out"]),
-        supabase.from("financial_transactions").select("professional_net").eq("professional_id", user.id).gte("created_at", lastWeekStart).lte("created_at", lastWeekEnd).in("status", ["escrow", "available", "payout_pending", "paid_out"]),
-        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("professional_id", user.id).gte("created_at", currentWeekStart),
-        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("professional_id", user.id).gte("created_at", lastWeekStart).lte("created_at", lastWeekEnd),
+        supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("professional_id", user.id)
+          .eq("appointment_date", today)
+          .in("status", ["confirmed", "pending"]),
+        supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("professional_id", user.id)
+          .gte("appointment_date", currentWeekStart.split("T")[0])
+          .in("status", ["confirmed", "pending"]),
+        supabase
+          .from("appointments")
+          .select("patient_id")
+          .eq("professional_id", user.id),
+        supabase
+          .from("financial_transactions")
+          .select("professional_net")
+          .eq("professional_id", user.id)
+          .gte("created_at", firstDayOfMonth)
+          .in("status", ["escrow", "available", "payout_pending", "paid_out"]),
+        supabase
+          .from("financial_transactions")
+          .select("professional_net")
+          .eq("professional_id", user.id)
+          .gte("created_at", currentWeekStart)
+          .in("status", ["escrow", "available", "payout_pending", "paid_out"]),
+        supabase
+          .from("financial_transactions")
+          .select("professional_net")
+          .eq("professional_id", user.id)
+          .gte("created_at", lastWeekStart)
+          .lte("created_at", lastWeekEnd)
+          .in("status", ["escrow", "available", "payout_pending", "paid_out"]),
+        supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("professional_id", user.id)
+          .gte("created_at", currentWeekStart),
+        supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("professional_id", user.id)
+          .gte("created_at", lastWeekStart)
+          .lte("created_at", lastWeekEnd),
       ])
 
       const uniquePatients = new Set(patientsData?.map((p) => p.patient_id)).size
-      const monthlyTotal = incomeData?.reduce((acc, curr) => acc + Number(curr.professional_net || 0), 0) || 0
-      const currentWeekTotal = currentWeekIncome?.reduce((acc, curr) => acc + Number(curr.professional_net || 0), 0) || 0
-      const lastWeekTotal = lastWeekIncome?.reduce((acc, curr) => acc + Number(curr.professional_net || 0), 0) || 0
+      const monthlyTotal =
+        incomeData?.reduce((acc, curr) => acc + Number(curr.professional_net || 0), 0) || 0
+      const currentWeekTotal =
+        currentWeekIncome?.reduce((acc, curr) => acc + Number(curr.professional_net || 0), 0) || 0
+      const lastWeekTotal =
+        lastWeekIncome?.reduce((acc, curr) => acc + Number(curr.professional_net || 0), 0) || 0
       const incomeGrowth = calculateWeeklyGrowth(currentWeekTotal, lastWeekTotal)
-      const appointmentGrowth = calculateWeeklyGrowth(currentWeekAppointments || 0, lastWeekAppointments || 0)
+      const appointmentGrowth = calculateWeeklyGrowth(
+        currentWeekAppointments || 0,
+        lastWeekAppointments || 0
+      )
 
       setStats({
         appointmentsToday: countToday || 0,
@@ -144,13 +331,18 @@ export default function ProfessionalDashboard() {
 
       const { data: appointments } = await supabase
         .from("appointments")
-        .select(`id, appointment_date, appointment_time, type, status, patient:profiles!appointments_patient_id_fkey(first_name, last_name, avatar_url)`)
+        .select(
+          `id, appointment_date, appointment_time, type, status, duration_minutes,
+           patient:profiles!appointments_patient_id_fkey(first_name, last_name, avatar_url)`
+        )
         .eq("professional_id", user.id)
         .eq("appointment_date", today)
         .order("appointment_time", { ascending: true })
-      setTodayAppointments(appointments || [])
+      setTodayAppointments((appointments as unknown as TodayAppointment[]) || [])
 
-      const last7Days = Array.from({ length: 7 }, (_, i) => format(subDays(new Date(), 6 - i), "yyyy-MM-dd"))
+      const last7Days = Array.from({ length: 7 }, (_, i) =>
+        format(subDays(new Date(), 6 - i), "yyyy-MM-dd")
+      )
       const { data: weeklyIncome } = await supabase
         .from("financial_transactions")
         .select("created_at, professional_net")
@@ -159,8 +351,11 @@ export default function ProfessionalDashboard() {
 
       setChartData(
         last7Days.map((date) => ({
-          name: format(new Date(date), "EEE", { locale: isSpanish ? es : enUS }),
-          income: weeklyIncome?.filter((a) => format(new Date(a.created_at), "yyyy-MM-dd") === date).reduce((acc, curr) => acc + Number(curr.professional_net || 0), 0) || 0,
+          label: format(new Date(date), "EEE", { locale: isES ? es : enUS }),
+          income:
+            weeklyIncome
+              ?.filter((a) => format(new Date(a.created_at), "yyyy-MM-dd") === date)
+              .reduce((acc, curr) => acc + Number(curr.professional_net || 0), 0) || 0,
         }))
       )
     } catch (error) {
@@ -172,388 +367,1135 @@ export default function ProfessionalDashboard() {
 
   useEffect(() => {
     loadDashboardData()
-    const ch1 = supabase.channel("dashboard-appointments").on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `professional_id=eq.${user?.id}` }, loadDashboardData).subscribe()
-    const ch2 = supabase.channel("dashboard-transactions").on("postgres_changes", { event: "*", schema: "public", table: "financial_transactions", filter: `professional_id=eq.${user?.id}` }, loadDashboardData).subscribe()
-    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
-  }, [user?.id, isSpanish])
+    if (!user?.id) return
+    const ch1 = supabase
+      .channel("dashboard-appointments")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `professional_id=eq.${user.id}`,
+        },
+        loadDashboardData
+      )
+      .subscribe()
+    const ch2 = supabase
+      .channel("dashboard-transactions")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "financial_transactions",
+          filter: `professional_id=eq.${user.id}`,
+        },
+        loadDashboardData
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(ch1)
+      supabase.removeChannel(ch2)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, isES])
 
-  const now = new Date()
-  const greeting = isSpanish
-    ? now.getHours() < 12 ? "Buenos días" : now.getHours() < 19 ? "Buenas tardes" : "Buenas noches"
-    : now.getHours() < 12 ? "Good morning" : now.getHours() < 19 ? "Good afternoon" : "Good evening"
+  /* — Derivados — */
+  const firstName = profile?.first_name || ""
+  const dateLabel = format(new Date(), "EEEE d 'de' MMMM", {
+    locale: isES ? es : enUS,
+  })
+  const nextAppt = todayAppointments[0]
+  const summary = nextAppt
+    ? isES
+      ? `Hoy atiendes a ${todayAppointments.length} pacientes · Primera cita ${nextAppt.appointment_time?.slice(
+          0,
+          5
+        )}.`
+      : `Today you'll see ${todayAppointments.length} patients · First at ${nextAppt.appointment_time?.slice(
+          0,
+          5
+        )}.`
+    : isES
+    ? "Un día tranquilo en tu agenda."
+    : "A calm day on your calendar."
 
-  const dateLabel = format(now, "EEEE d 'de' MMMM", { locale: isSpanish ? es : enUS })
+  /* — Chart helpers — */
+  const maxChart = Math.max(1, ...chartData.map((p) => p.income))
 
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-      <div className="relative">
-        <div className="w-12 h-12 border-4 border-teal-500/20 border-t-teal-600 rounded-full animate-spin" />
-        <Activity className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 text-teal-600" />
+  /* ------------------------------------------------------------------
+   *  Render
+   * ------------------------------------------------------------------ */
+  return (
+    <div
+      style={{
+        background: C.bgWarm,
+        color: C.ink,
+        fontFamily: "var(--font-inter), ui-sans-serif, system-ui",
+        minHeight: "100%",
+        padding: "8px 4px 40px",
+      }}
+    >
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 8px" }}>
+        {/* Topbar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 20,
+            marginBottom: 28,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 6,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: C.sage500,
+                  display: "inline-block",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 11,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  color: C.sage700,
+                  fontWeight: 600,
+                }}
+              >
+                {isES ? "En consulta" : "In practice"}
+              </span>
+              {isVerified && (
+                <span style={chipStyle("sage")}>
+                  {icoShield}
+                  {isES ? "Verificado" : "Verified"}
+                </span>
+              )}
+            </div>
+            <h1
+              style={{
+                fontFamily: "var(--font-fraunces), serif",
+                fontSize: "clamp(26px, 3vw, 32px)",
+                letterSpacing: "-0.02em",
+                fontWeight: 400,
+                margin: 0,
+                color: C.ink,
+              }}
+            >
+              {greet(isES)}
+              {firstName ? (
+                <>
+                  ,{" "}
+                  <em style={{ fontStyle: "italic", color: C.sage500, fontWeight: 300 }}>
+                    {firstName}
+                  </em>
+                </>
+              ) : null}
+              .
+            </h1>
+            <p
+              style={{
+                color: C.inkSoft,
+                fontSize: 14,
+                marginTop: 4,
+                textTransform: "capitalize",
+              }}
+            >
+              {dateLabel} · {summary}
+            </p>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Link
+              href="/dashboard/professional/availability"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 18px",
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.ink,
+                background: "white",
+                border: `1px solid ${C.line}`,
+                borderRadius: 999,
+                textDecoration: "none",
+                transition: "all 0.2s",
+              }}
+            >
+              {icoCalendar}
+              {isES ? "Disponibilidad" : "Availability"}
+            </Link>
+            <Link
+              href="/dashboard/professional/patients"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 18px",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "white",
+                background: C.ink,
+                borderRadius: 999,
+                textDecoration: "none",
+                transition: "all 0.2s",
+              }}
+            >
+              {icoPlus}
+              {isES ? "Pacientes" : "Patients"}
+            </Link>
+          </div>
+        </div>
+
+        {/* Verification pending banner */}
+        {isVerified === false && (
+          <div
+            style={{
+              background: `linear-gradient(90deg, ${C.amberSoft}, ${C.terracottaSoft})`,
+              border: `1px solid ${C.line}`,
+              borderRadius: 16,
+              padding: "14px 18px",
+              marginBottom: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 14,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "white",
+                  color: C.amber,
+                  flexShrink: 0,
+                }}
+              >
+                {icoShield}
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 2 }}>
+                  {isES ? "Verificación en curso" : "Verification in progress"}
+                </div>
+                <div style={{ fontSize: 12, color: C.inkSoft, lineHeight: 1.5 }}>
+                  {isES
+                    ? "Tu perfil aparecerá como verificado en 48h tras confirmar tu registro profesional."
+                    : "Your profile will show as verified within 48h after confirming your registration."}
+                </div>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/professional/profile"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 500,
+                padding: "8px 14px",
+                borderRadius: 999,
+                background: C.sage900,
+                color: "white",
+                textDecoration: "none",
+                flexShrink: 0,
+              }}
+            >
+              {isES ? "Completar perfil" : "Complete profile"} {icoArrow}
+            </Link>
+          </div>
+        )}
+
+        {/* Stats — 4 cards */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+            marginBottom: 16,
+          }}
+        >
+          <StatCard
+            icon={icoCalendar}
+            iconBg={C.sage100}
+            iconColor={C.sage700}
+            label={isES ? "Citas hoy" : "Today"}
+            value={stats.appointmentsToday}
+            delta={
+              nextAppt
+                ? isES
+                  ? `Primera · ${nextAppt.appointment_time?.slice(0, 5)}`
+                  : `First · ${nextAppt.appointment_time?.slice(0, 5)}`
+                : isES
+                ? "Sin citas hoy"
+                : "No appointments"
+            }
+            deltaTone="up"
+          />
+          <StatCard
+            icon={icoActivity}
+            iconBg={C.terracottaSoft}
+            iconColor={C.terracotta}
+            label={isES ? "Semana" : "Week"}
+            value={stats.appointmentsWeek}
+            delta={
+              stats.weeklyAppointmentGrowth !== 0
+                ? `${stats.weeklyAppointmentGrowth > 0 ? "+" : ""}${stats.weeklyAppointmentGrowth}% ${
+                    isES ? "vs anterior" : "vs prev"
+                  }`
+                : isES
+                ? "Sin cambios"
+                : "No change"
+            }
+            deltaTone={
+              stats.weeklyAppointmentGrowth > 0
+                ? "up"
+                : stats.weeklyAppointmentGrowth < 0
+                ? "down"
+                : "neutral"
+            }
+          />
+          <StatCard
+            icon={icoUsers}
+            iconBg={C.blueSoft}
+            iconColor={C.blueMid}
+            label={isES ? "Pacientes" : "Patients"}
+            value={stats.totalPatients}
+            delta={isES ? "Únicos" : "Unique"}
+            deltaTone="neutral"
+          />
+          <StatCard
+            icon={icoDollar}
+            iconBg={C.amberSoft}
+            iconColor={C.amber}
+            label={isES ? "Ingresos mes" : "Monthly"}
+            value={`$${stats.monthlyIncome.toLocaleString(isES ? "es-CL" : "en-US")}`}
+            delta={
+              stats.weeklyIncomeGrowth !== 0
+                ? `${stats.weeklyIncomeGrowth > 0 ? "+" : ""}${stats.weeklyIncomeGrowth}% ${
+                    isES ? "semanal" : "weekly"
+                  }`
+                : isES
+                ? "Estable"
+                : "Stable"
+            }
+            deltaTone={
+              stats.weeklyIncomeGrowth > 0
+                ? "up"
+                : stats.weeklyIncomeGrowth < 0
+                ? "down"
+                : "neutral"
+            }
+          />
+        </div>
+
+        {/* Agenda + Income */}
+        <div
+          className="nurea-grid-hh"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)",
+            gap: 16,
+            marginBottom: 16,
+          }}
+        >
+          <section style={cardStyle}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "var(--font-fraunces), serif",
+                  fontSize: 18,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  fontWeight: 400,
+                }}
+              >
+                {isES ? "Agenda de hoy" : "Today's agenda"}
+                <span
+                  style={{
+                    fontFamily: "var(--font-inter), sans-serif",
+                    fontSize: 11,
+                    color: C.inkMute,
+                    marginLeft: 10,
+                    fontWeight: 400,
+                  }}
+                >
+                  {todayAppointments.length}{" "}
+                  {isES
+                    ? todayAppointments.length === 1
+                      ? "cita"
+                      : "citas"
+                    : todayAppointments.length === 1
+                    ? "apt"
+                    : "apts"}
+                </span>
+              </h2>
+              <Link
+                href="/dashboard/professional/appointments"
+                style={{
+                  fontSize: 12,
+                  color: C.sage700,
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                {isES ? "Ver todo" : "View all"} →
+              </Link>
+            </div>
+
+            {loading ? (
+              <LoadingRow />
+            ) : todayAppointments.length === 0 ? (
+              <EmptyState
+                title={isES ? "Sin citas hoy" : "No appointments today"}
+                message={
+                  isES
+                    ? "Aprovecha para revisar fichas o abrir nuevos horarios."
+                    : "Take a moment to review records or open new slots."
+                }
+                ctaLabel={isES ? "Abrir disponibilidad" : "Open availability"}
+                ctaHref="/dashboard/professional/availability"
+              />
+            ) : (
+              todayAppointments
+                .slice(0, 5)
+                .map((apt) => <ProAppointmentRow key={apt.id} apt={apt} isES={isES} />)
+            )}
+          </section>
+
+          <section style={cardStyle}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 14,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "var(--font-fraunces), serif",
+                  fontSize: 18,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  fontWeight: 400,
+                }}
+              >
+                {isES ? "Ingresos · 7 días" : "Income · 7d"}
+              </h2>
+              {stats.weeklyIncomeGrowth !== 0 && (
+                <span
+                  style={chipStyle(
+                    stats.weeklyIncomeGrowth > 0 ? "sage" : "danger"
+                  )}
+                >
+                  {icoTrending}
+                  {stats.weeklyIncomeGrowth > 0 ? "+" : ""}
+                  {stats.weeklyIncomeGrowth}%
+                </span>
+              )}
+            </div>
+
+            <Sparkline data={chartData} max={maxChart} />
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: 10,
+                fontFamily: "var(--font-jetbrains-mono), monospace",
+                fontSize: 10,
+                color: C.inkMute,
+                letterSpacing: "0.05em",
+              }}
+            >
+              {chartData.map((p, i) => (
+                <span key={i} style={{ textTransform: "uppercase" }}>
+                  {p.label}
+                </span>
+              ))}
+            </div>
+
+            <div
+              style={{
+                marginTop: 18,
+                padding: 14,
+                background: C.sage50,
+                borderRadius: 12,
+                fontSize: 12.5,
+                color: C.sage700,
+                lineHeight: 1.55,
+              }}
+            >
+              <strong>{isES ? "Esta semana" : "This week"}</strong>
+              <div
+                style={{
+                  fontFamily: "var(--font-fraunces), serif",
+                  fontSize: 28,
+                  letterSpacing: "-0.02em",
+                  color: C.ink,
+                  marginTop: 4,
+                }}
+              >
+                $
+                {chartData
+                  .reduce((acc, p) => acc + p.income, 0)
+                  .toLocaleString(isES ? "es-CL" : "en-US")}
+              </div>
+              <div style={{ fontSize: 11, color: C.inkMute, marginTop: 4 }}>
+                {isES ? "Neto después de comisión" : "Net after commission"}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Insight + Quick links */}
+        <div
+          className="nurea-grid-hh"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)",
+            gap: 16,
+          }}
+        >
+          <section
+            style={{
+              ...cardStyle,
+              background:
+                performanceInsight.type === "positive"
+                  ? `linear-gradient(135deg, ${C.sage50}, ${C.bgWarm})`
+                  : "white",
+              borderColor:
+                performanceInsight.type === "positive" ? C.sage200 : C.lineSoft,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background:
+                    performanceInsight.type === "positive" ? C.sage100 : C.bgWarm,
+                  color:
+                    performanceInsight.type === "positive" ? C.sage700 : C.inkSoft,
+                }}
+              >
+                {icoSparkles}
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    color: C.inkMute,
+                    fontWeight: 600,
+                  }}
+                >
+                  Nura Insights
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-fraunces), serif",
+                    fontSize: 17,
+                    color: C.ink,
+                    fontWeight: 400,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {performanceInsight.title}
+                </div>
+              </div>
+            </div>
+
+            <p
+              style={{
+                fontSize: 13.5,
+                color: C.inkSoft,
+                lineHeight: 1.6,
+                margin: "12px 0 16px",
+              }}
+            >
+              {performanceInsight.message}
+            </p>
+
+            <Link
+              href="/dashboard/professional/availability"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 500,
+                color: C.sage700,
+                textDecoration: "none",
+              }}
+            >
+              {isES ? "Optimizar agenda" : "Optimize schedule"} →
+            </Link>
+          </section>
+
+          <section style={cardStyle}>
+            <h2
+              style={{
+                fontFamily: "var(--font-fraunces), serif",
+                fontSize: 18,
+                letterSpacing: "-0.01em",
+                margin: "0 0 14px",
+                fontWeight: 400,
+              }}
+            >
+              {isES ? "Accesos rápidos" : "Quick access"}
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <QuickLink
+                href="/dashboard/professional/fichas"
+                icon={icoActivity}
+                label={isES ? "Fichas clínicas" : "Clinical records"}
+                hint={isES ? "Notas y seguimientos" : "Notes & tracking"}
+              />
+              <QuickLink
+                href="/dashboard/professional/availability"
+                icon={icoCalendar}
+                label={isES ? "Disponibilidad" : "Availability"}
+                hint={isES ? "Horarios abiertos" : "Open slots"}
+              />
+              <QuickLink
+                href="/dashboard/professional/profile"
+                icon={icoUsers}
+                label={isES ? "Mi perfil" : "My profile"}
+                hint={isES ? "Bio · Especialidad" : "Bio · Specialty"}
+              />
+              <QuickLink
+                href="/dashboard/payments"
+                icon={icoDollar}
+                label={isES ? "Pagos y payouts" : "Payments & payouts"}
+                hint={isES ? "Historial y retiros" : "History & withdrawals"}
+              />
+            </div>
+          </section>
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground animate-pulse">
-        {isSpanish ? "Cargando..." : "Loading..."}
-      </p>
+
+      {/* Responsive stack */}
+      <style jsx global>{`
+        @media (max-width: 900px) {
+          .nurea-grid-hh {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   )
+}
+
+/* ------------------------------------------------------------------
+ *  StatCard
+ * ------------------------------------------------------------------ */
+function StatCard({
+  icon,
+  iconBg,
+  iconColor,
+  label,
+  value,
+  delta,
+  deltaTone,
+}: {
+  icon: React.ReactNode
+  iconBg: string
+  iconColor: string
+  label: string
+  value: number | string
+  delta: string
+  deltaTone: "up" | "neutral" | "down"
+}) {
+  const deltaBg =
+    deltaTone === "up" ? C.sage100 : deltaTone === "down" ? C.dangerSoft : C.bgWarm
+  const deltaFg =
+    deltaTone === "up" ? C.sage700 : deltaTone === "down" ? C.danger : C.inkSoft
 
   return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-5 pb-8 max-w-6xl">
+    <div style={{ ...cardStyle, padding: 20, overflow: "hidden", position: "relative" }}>
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 14,
+          background: iconBg,
+          color: iconColor,
+        }}
+      >
+        {icon}
+      </div>
+      <div
+        style={{
+          fontSize: 12,
+          color: C.inkMute,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-fraunces), serif",
+          fontSize: 36,
+          fontWeight: 400,
+          letterSpacing: "-0.025em",
+          lineHeight: 1,
+          color: C.ink,
+        }}
+      >
+        {value}
+      </div>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          fontSize: 12,
+          marginTop: 8,
+          padding: "3px 8px",
+          borderRadius: 999,
+          background: deltaBg,
+          color: deltaFg,
+        }}
+      >
+        {delta}
+      </span>
+    </div>
+  )
+}
 
-      {/* ── Header ── */}
-      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal-500" />
-            </span>
-            <span className="text-xs font-medium text-teal-600 dark:text-teal-400">
-              {isSpanish ? "En vivo" : "Live"}
-            </span>
-            {isVerified && <VerifiedBadge variant="card" isSpanish={isSpanish} />}
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            {greeting}{professionalName ? `, ${professionalName}` : ""} 👋
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{dateLabel}</p>
+/* ------------------------------------------------------------------
+ *  ProAppointmentRow
+ * ------------------------------------------------------------------ */
+function ProAppointmentRow({
+  apt,
+  isES,
+}: {
+  apt: TodayAppointment
+  isES: boolean
+}) {
+  const raw = apt.appointment_time || "00:00:00"
+  let h = "00"
+  let m = "00"
+  try {
+    const parsed = parse(raw, "HH:mm:ss", new Date())
+    h = format(parsed, "HH")
+    m = format(parsed, "mm")
+  } catch {
+    const parts = hourPart(raw)
+    h = parts.h
+    m = parts.m
+  }
+  const patientName =
+    `${apt.patient?.first_name ?? ""} ${apt.patient?.last_name ?? ""}`.trim() ||
+    (isES ? "Paciente" : "Patient")
+  const isOnline =
+    (apt.type || "").toLowerCase().includes("online") ||
+    (apt.type || "").toLowerCase().includes("video")
+  const chip = isOnline ? chipStyle("sage") : chipStyle("blue")
+  const confirmed = apt.status === "confirmed"
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "64px 1fr auto",
+        gap: 14,
+        alignItems: "center",
+        padding: 14,
+        borderRadius: 14,
+        background: C.bgWarm,
+        marginBottom: 8,
+        border: "1px solid transparent",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div
+          style={{
+            fontFamily: "var(--font-fraunces), serif",
+            fontSize: 22,
+            lineHeight: 1,
+            fontWeight: 400,
+          }}
+        >
+          {h}
+          <span style={{ fontSize: 14, color: C.inkMute }}>:{m}</span>
         </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" className="h-9 rounded-xl border-border/60 gap-2 text-sm font-medium" asChild>
-            <Link href="/dashboard/professional/appointments">
-              <Calendar className="h-4 w-4 text-teal-600" />
-              {isSpanish ? "Agenda" : "Schedule"}
-            </Link>
-          </Button>
-          <Button size="sm" className="h-9 bg-teal-600 hover:bg-teal-700 text-white rounded-xl gap-2 text-sm font-medium shadow-sm" asChild>
-            <Link href="/dashboard/professional/patients">
-              <Users className="h-4 w-4" />
-              {isSpanish ? "Pacientes" : "Patients"}
-            </Link>
-          </Button>
-        </div>
-      </motion.div>
-
-      {!isVerified && <VerificationPendingBanner isSpanish={isSpanish} />}
-
-      {/* ── Summary strip ── */}
-      <motion.div variants={itemVariants}>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[
-            {
-              label: isSpanish ? "Citas hoy" : "Today",
-              val: stats.appointmentsToday,
-              icon: CalendarDays,
-              sub: isSpanish ? "programadas" : "scheduled",
-              color: "teal",
-              growth: stats.weeklyAppointmentGrowth,
-            },
-            {
-              label: isSpanish ? "Esta semana" : "This week",
-              val: stats.appointmentsWeek,
-              icon: Calendar,
-              sub: isSpanish ? "citas" : "appointments",
-              color: "violet",
-              growth: null,
-            },
-            {
-              label: isSpanish ? "Pacientes" : "Patients",
-              val: stats.totalPatients,
-              icon: Users,
-              sub: isSpanish ? "únicos" : "unique",
-              color: "blue",
-              growth: null,
-            },
-            {
-              label: isSpanish ? "Ingresos mes" : "Monthly",
-              val: `$${stats.monthlyIncome.toLocaleString()}`,
-              icon: DollarSign,
-              sub: isSpanish ? "netos" : "net",
-              color: "emerald",
-              growth: stats.weeklyIncomeGrowth,
-            },
-          ].map((kpi, i) => (
-            <motion.div key={i} variants={itemVariants}>
-              <Card className="border-border/40 bg-white dark:bg-slate-900 shadow-sm hover:shadow-md transition-all rounded-2xl group">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={cn(
-                      "p-2.5 rounded-xl",
-                      kpi.color === "teal"    ? "bg-teal-50 dark:bg-teal-950/40 text-teal-600" :
-                      kpi.color === "violet"  ? "bg-violet-50 dark:bg-violet-950/40 text-violet-600" :
-                      kpi.color === "blue"    ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600" :
-                                                "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600"
-                    )}>
-                      <kpi.icon className="h-5 w-5" />
-                    </div>
-                    {kpi.growth !== null && kpi.growth !== 0 && (
-                      <span className={cn(
-                        "text-xs font-bold px-2 py-0.5 rounded-md",
-                        kpi.growth > 0
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                          : "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400"
-                      )}>
-                        {kpi.growth > 0 ? "+" : ""}{Math.abs(kpi.growth)}%
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white leading-none">{kpi.val}</div>
-                  <div className="flex items-baseline gap-1 mt-1.5">
-                    <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{kpi.label}</span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">· {kpi.sub}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* ── Main grid ── */}
-      <div className="grid gap-4 lg:grid-cols-7">
-
-        {/* Agenda */}
-        <motion.div variants={itemVariants} className="lg:col-span-4">
-          <Card className="border-border/40 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden h-full">
-            <CardHeader className="flex flex-row items-center justify-between px-5 py-4 border-b border-border/40">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-teal-600" />
-                <CardTitle className="text-base font-semibold">{isSpanish ? "Agenda de hoy" : "Today's agenda"}</CardTitle>
-                <span className={cn(
-                  "text-xs font-semibold px-2 py-0.5 rounded-full ml-1",
-                  todayAppointments.length > 0
-                    ? "bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400"
-                    : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                )}>
-                  {todayAppointments.length} {isSpanish ? "citas" : "apts"}
-                </span>
-              </div>
-              <Button variant="ghost" size="sm" className="text-teal-600 text-sm font-medium hover:bg-teal-50 dark:hover:bg-teal-950/30 rounded-lg gap-1 h-8 px-3" asChild>
-                <Link href="/dashboard/professional/appointments">
-                  {isSpanish ? "Ver todo" : "View all"}
-                  <ArrowUpRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </CardHeader>
-
-            <CardContent className="p-0">
-              <AnimatePresence mode="popLayout">
-                {todayAppointments.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-10 text-center space-y-2 px-6"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                      <CalendarDays className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <div>
-                      <p className="text-base font-medium text-slate-500">{isSpanish ? "Sin citas hoy" : "No appointments today"}</p>
-                      <p className="text-sm text-slate-400 mt-0.5">{isSpanish ? "¡Disfruta tu día!" : "Enjoy your day!"}</p>
-                    </div>
-                    <Button variant="outline" size="sm" className="rounded-xl text-sm h-9 mt-2 gap-1.5" asChild>
-                      <Link href="/dashboard/professional/availability">
-                        <Calendar className="h-4 w-4" />
-                        {isSpanish ? "Gestionar disponibilidad" : "Manage availability"}
-                      </Link>
-                    </Button>
-                  </motion.div>
-                ) : (
-                  <div className="divide-y divide-border/40">
-                    {todayAppointments.map((apt, idx) => (
-                      <motion.div
-                        key={apt.id}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.04 }}
-                        className="group flex items-center justify-between px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="relative">
-                            <Avatar className="h-10 w-10 rounded-xl">
-                              <AvatarImage src={apt.patient?.avatar_url} />
-                              <AvatarFallback className="bg-teal-50 dark:bg-teal-950/30 text-teal-700 text-sm font-semibold rounded-xl">
-                                {apt.patient?.first_name?.[0]}{apt.patient?.last_name?.[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className={cn(
-                              "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900",
-                              apt.status === "confirmed" ? "bg-emerald-500" : "bg-amber-500"
-                            )} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground group-hover:text-teal-600 transition-colors leading-tight">
-                              {apt.patient?.first_name} {apt.patient?.last_name}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="h-3.5 w-3.5" />
-                                {apt.appointment_time ? format(parse(apt.appointment_time, "HH:mm:ss", new Date()), "HH:mm") : "—"}
-                              </span>
-                              <span className={cn(
-                                "text-xs font-medium px-2 py-0.5 rounded-md",
-                                apt.type === "online"
-                                  ? "bg-blue-50 dark:bg-blue-950/30 text-blue-600"
-                                  : "bg-orange-50 dark:bg-orange-950/30 text-orange-600"
-                              )}>
-                                {apt.type === "online" ? "Video" : isSpanish ? "Presencial" : "In-person"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg">
-                                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="rounded-xl">
-                              <DropdownMenuItem asChild>
-                                <Link href={`/dashboard/professional/appointments?id=${apt.id}`}>
-                                  {isSpanish ? "Ver detalle" : "View detail"}
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600" onClick={() => { window.location.href = `/dashboard/professional/appointments?cancel=${apt.id}` }}>
-                                {isSpanish ? "Cancelar" : "Cancel"}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          <Button size="sm" className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg h-8 px-3 text-sm font-medium gap-1.5 shadow-sm" asChild>
-                            <Link href={`/dashboard/professional/consultation/${apt.id}`}>
-                              <Video className="h-3.5 w-3.5" />
-                              {isSpanish ? "Iniciar" : "Start"}
-                            </Link>
-                          </Button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </AnimatePresence>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Right sidebar */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
-
-          {/* Income chart */}
-          <motion.div variants={itemVariants}>
-            <Card className="border-border/40 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3.5 border-b border-border/40">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-teal-600" />
-                  {isSpanish ? "Ingresos últimos 7 días" : "Income last 7 days"}
-                </CardTitle>
-                {stats.weeklyIncomeGrowth !== 0 && (
-                  <span className={cn(
-                    "text-xs font-bold px-2 py-0.5 rounded-md",
-                    stats.weeklyIncomeGrowth > 0
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                      : "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400"
-                  )}>
-                    {stats.weeklyIncomeGrowth > 0 ? "+" : ""}{Math.abs(stats.weeklyIncomeGrowth)}% vs sem. ant.
-                  </span>
-                )}
-              </CardHeader>
-              <CardContent className="px-2 pt-3 pb-2">
-                <div className="h-[130px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorIncomePro" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0f766e" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#0f766e" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" opacity={0.4} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#94a3b8" }} dy={6} />
-                      <YAxis hide />
-                      <Tooltip
-                        contentStyle={{ borderRadius: "10px", border: "none", boxShadow: "0 4px 20px rgba(0,0,0,0.08)", fontSize: "11px", padding: "6px 10px" }}
-                        formatter={(v: any) => [`$${Number(v).toLocaleString()}`, isSpanish ? "Ingresos" : "Income"]}
-                      />
-                      <Area type="monotone" dataKey="income" stroke="#0f766e" strokeWidth={2} fillOpacity={1} fill="url(#colorIncomePro)" dot={{ r: 3, fill: "#0f766e", strokeWidth: 0 }} activeDot={{ r: 4 }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Nura Insight */}
-          <motion.div variants={itemVariants}>
-            <Card className={cn(
-              "border shadow-sm rounded-2xl overflow-hidden",
-              performanceInsight.type === "positive"
-                ? "border-teal-200/60 dark:border-teal-800/40 bg-gradient-to-br from-teal-50/80 to-emerald-50/50 dark:from-teal-950/20 dark:to-emerald-950/10"
-                : "border-border/40 bg-white dark:bg-slate-900"
-            )}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className={cn(
-                    "p-1.5 rounded-lg shrink-0",
-                    performanceInsight.type === "positive"
-                      ? "bg-teal-100 dark:bg-teal-900/40 text-teal-600"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-                  )}>
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold tracking-wide uppercase text-muted-foreground">{performanceInsight.title}</p>
-                    <p className="text-sm font-semibold text-foreground">Nura Insights</p>
-                  </div>
-                </div>
-                <p className="text-sm leading-relaxed text-muted-foreground mb-3">
-                  {performanceInsight.message}
-                </p>
-                <Button variant="link" size="sm" className={cn(
-                  "p-0 h-auto text-sm font-medium gap-1",
-                  performanceInsight.type === "positive" ? "text-teal-600" : "text-muted-foreground"
-                )} asChild>
-                  <Link href="/dashboard/professional/availability">
-                    {isSpanish ? "Optimizar agenda" : "Optimize schedule"}
-                    <ChevronRight className="h-3 w-3" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Quick links */}
-          <motion.div variants={itemVariants}>
-            <Card className="border-border/40 bg-white dark:bg-slate-900 shadow-sm rounded-2xl overflow-hidden">
-              <CardContent className="p-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 px-1">
-                  {isSpanish ? "Accesos rápidos" : "Quick access"}
-                </p>
-                <div className="space-y-1">
-                  {[
-                    { href: "/dashboard/professional/fichas", label: isSpanish ? "Fichas clínicas" : "Clinical records", icon: Activity },
-                    { href: "/dashboard/professional/availability", label: isSpanish ? "Disponibilidad" : "Availability", icon: CalendarDays },
-                    { href: "/dashboard/professional/profile", label: isSpanish ? "Mi perfil" : "My profile", icon: Users },
-                  ].map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="flex items-center justify-between px-2 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <link.icon className="h-4 w-4 text-teal-600" />
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors">
-                          {link.label}
-                        </span>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-teal-500 transition-colors" />
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+        <div
+          style={{
+            fontSize: 10,
+            color: C.inkMute,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            marginTop: 2,
+          }}
+        >
+          {isES ? "hoy" : "today"}
         </div>
       </div>
-    </motion.div>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            flexShrink: 0,
+            background: avatarGradient(patientName),
+          }}
+        />
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 13.5,
+              fontWeight: 600,
+              marginBottom: 3,
+              color: C.ink,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {patientName}
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: C.inkSoft,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={chip}>
+              <span style={dotStyle} />
+              {isOnline
+                ? isES
+                  ? "Videoconsulta"
+                  : "Video call"
+                : isES
+                ? "Presencial"
+                : "In-person"}
+            </span>
+            <span>
+              {apt.duration_minutes ?? 45} min ·{" "}
+              {confirmed
+                ? isES
+                  ? "Confirmada"
+                  : "Confirmed"
+                : isES
+                ? "Pendiente"
+                : "Pending"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {isOnline ? (
+        <Link
+          href={`/dashboard/professional/consultation/${apt.id}`}
+          style={{
+            padding: "7px 14px",
+            fontSize: 12,
+            fontWeight: 500,
+            borderRadius: 999,
+            background: C.terracotta,
+            color: "white",
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          {icoVideo}
+          {isES ? "Iniciar" : "Start"}
+        </Link>
+      ) : (
+        <Link
+          href={`/dashboard/professional/appointments?id=${apt.id}`}
+          style={{
+            padding: "7px 14px",
+            fontSize: 12,
+            fontWeight: 500,
+            borderRadius: 999,
+            background: "white",
+            border: `1px solid ${C.line}`,
+            color: C.ink,
+            textDecoration: "none",
+          }}
+        >
+          {isES ? "Detalles" : "Details"}
+        </Link>
+      )}
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  Sparkline (SVG area chart)
+ * ------------------------------------------------------------------ */
+function Sparkline({ data, max }: { data: ChartPoint[]; max: number }) {
+  const w = 280
+  const h = 90
+  const pad = 4
+  const stepX = data.length > 1 ? (w - pad * 2) / (data.length - 1) : 0
+  const pts = data.map((p, i) => {
+    const x = pad + i * stepX
+    const y = h - pad - (p.income / Math.max(1, max)) * (h - pad * 2)
+    return { x, y, income: p.income }
+  })
+  const path =
+    pts.length === 0
+      ? ""
+      : pts
+          .map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`))
+          .join(" ")
+  const area =
+    pts.length === 0
+      ? ""
+      : `${path} L ${pts[pts.length - 1].x},${h - pad} L ${pts[0].x},${h - pad} Z`
+
+  return (
+    <div style={{ width: "100%", overflow: "hidden" }}>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        width="100%"
+        preserveAspectRatio="none"
+        style={{ display: "block", height: 90 }}
+      >
+        <defs>
+          <linearGradient id="proSparkFill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={C.sage500} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={C.sage500} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        {/* grid lines */}
+        {[0.25, 0.5, 0.75].map((r, i) => (
+          <line
+            key={i}
+            x1={pad}
+            x2={w - pad}
+            y1={pad + (h - pad * 2) * r}
+            y2={pad + (h - pad * 2) * r}
+            stroke={C.lineSoft}
+            strokeWidth={1}
+            strokeDasharray="3 3"
+          />
+        ))}
+        {pts.length > 0 && (
+          <>
+            <path d={area} fill="url(#proSparkFill)" />
+            <path
+              d={path}
+              fill="none"
+              stroke={C.sage500}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {pts.map((p, i) => (
+              <circle
+                key={i}
+                cx={p.x}
+                cy={p.y}
+                r={2.5}
+                fill={C.sage700}
+                stroke="white"
+                strokeWidth={1.5}
+              />
+            ))}
+          </>
+        )}
+      </svg>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  QuickLink
+ * ------------------------------------------------------------------ */
+function QuickLink({
+  href,
+  icon,
+  label,
+  hint,
+}: {
+  href: string
+  icon: React.ReactNode
+  label: string
+  hint: string
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 12px",
+        borderRadius: 12,
+        textDecoration: "none",
+        color: C.ink,
+        transition: "background 0.15s",
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 10,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: C.sage100,
+          color: C.sage700,
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 2 }}>{label}</div>
+        <div
+          style={{
+            fontSize: 11.5,
+            color: C.inkMute,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {hint}
+        </div>
+      </div>
+      <span style={{ color: C.inkMute, fontSize: 14 }}>→</span>
+    </Link>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  LoadingRow + EmptyState
+ * ------------------------------------------------------------------ */
+function LoadingRow() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: C.inkMute,
+        fontSize: 13,
+        padding: "22px 0",
+      }}
+    >
+      Cargando…
+    </div>
+  )
+}
+
+function EmptyState({
+  title,
+  message,
+  ctaLabel,
+  ctaHref,
+  small,
+}: {
+  title: string
+  message: string
+  ctaLabel?: string
+  ctaHref?: string
+  small?: boolean
+}) {
+  return (
+    <div
+      style={{
+        padding: small ? "18px 6px" : "32px 10px",
+        textAlign: "center",
+        color: C.inkSoft,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--font-fraunces), serif",
+          fontSize: small ? 15 : 17,
+          color: C.ink,
+          marginBottom: 6,
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ fontSize: 13, color: C.inkMute, marginBottom: ctaLabel ? 14 : 0 }}>
+        {message}
+      </div>
+      {ctaLabel && ctaHref && (
+        <Link
+          href={ctaHref}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 12,
+            fontWeight: 500,
+            padding: "8px 14px",
+            borderRadius: 999,
+            background: C.sage900,
+            color: "white",
+            textDecoration: "none",
+          }}
+        >
+          {ctaLabel} {icoArrow}
+        </Link>
+      )}
+    </div>
   )
 }

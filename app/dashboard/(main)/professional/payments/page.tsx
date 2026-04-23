@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 import { cn } from "@/lib/utils"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 type SubscriptionStatus = "inactive" | "trialing" | "active" | "past_due" | "canceled" | null
 
@@ -88,7 +89,7 @@ export default function ProfessionalSubscriptionPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className={loadingDashboardInsetClassName("bg-background")}>
         <Loader2 className="animate-spin h-8 w-8 text-teal-600" />
       </div>
     )

@@ -35,7 +35,12 @@ export async function depositEscrowForBooking(
   const patientWallet = await connectWallet();
 
   if (!contractId || !tokenId) {
-    // Sin contrato desplegado: simular éxito para que el flujo UI funcione (reserva con escrow "simulado").
+    const isProduction = process.env.NODE_ENV === "production";
+    if (isProduction) {
+      throw new Error(
+        "Escrow no configurado. Por favor, configura NEXT_PUBLIC_ESCROW_CONTRACT_ID y NEXT_PUBLIC_ESCROW_TOKEN_ID."
+      );
+    }
     console.warn(
       "[sorobanEscrow] NEXT_PUBLIC_ESCROW_CONTRACT_ID o NEXT_PUBLIC_ESCROW_TOKEN_ID no configurados. Simulando depósito."
     );

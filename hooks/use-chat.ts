@@ -27,12 +27,12 @@ function formatTimestamp(dateString: string): string {
 
   if (diffDays === 0) return formatTime(dateString)
   if (diffDays === 1) return "Ayer"
-  if (diffDays < 7) return date.toLocaleDateString("es-ES", { weekday: "short" })
-  return date.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
+  if (diffDays < 7) return date.toLocaleDateString("es-CL", { weekday: "short" })
+  return date.toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })
 }
 
 function formatTime(dateString: string): string {
-  return new Date(dateString).toLocaleTimeString("es-ES", {
+  return new Date(dateString).toLocaleTimeString("es-CL", {
     hour: "2-digit",
     minute: "2-digit",
   })
@@ -54,27 +54,6 @@ function getInitials(name: string): string {
 // =============================================================================
 // FETCHER FUNCTIONS
 // =============================================================================
-
-async function fetchCurrentProfile(userId: string): Promise<ChatProfile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, first_name, last_name, avatar_url, role, response_time, status, last_seen")
-    .eq("id", userId)
-    .single()
-
-  if (error || !data) {
-    console.error("fetchCurrentProfile error:", error)
-    return null
-  }
-
-  return {
-    ...data,
-    full_name: buildFullName(data),
-    status: (data.status as ChatProfile["status"]) || "offline",
-    response_time: data.response_time || "2-4 horas",
-    role: data.role as ChatProfile["role"],
-  } as ChatProfile
-}
 
 async function fetchConversations(userId: string): Promise<ConversationListItem[]> {
   const { data, error } = await supabase
@@ -254,12 +233,11 @@ export function useConversations() {
           setIsConnected(true)
         }
         if (status === 'CHANNEL_ERROR') {
-          console.error('[Chat] Conversations channel error')
+          console.warn('[Chat] Conversations channel error - using polling fallback')
           setIsConnected(false)
-          toast.error('Conexión de chat perdida. Reconectando...')
         }
         if (status === 'TIMED_OUT') {
-          console.warn('[Chat] Conversations channel timed out')
+          console.warn('[Chat] Conversations channel timed out - using polling fallback')
           setIsConnected(false)
         }
       })
@@ -338,12 +316,11 @@ export function useMessages(conversationId: string | null) {
           setIsConnected(true)
         }
         if (status === 'CHANNEL_ERROR') {
-          console.error('[Chat] Messages channel error')
+          console.warn('[Chat] Messages channel error - using polling fallback')
           setIsConnected(false)
-          toast.error('Conexión de chat perdida. Reconectando...')
         }
         if (status === 'TIMED_OUT') {
-          console.warn('[Chat] Messages channel timed out')
+          console.warn('[Chat] Messages channel timed out - using polling fallback')
           setIsConnected(false)
         }
       })
@@ -379,6 +356,7 @@ export function useMessages(conversationId: string | null) {
 
 export function useSendMessage() {
   const { user } = useCurrentChatUser()
+  const { profile } = useProfile()
   const sendingRef = useRef(false)
 
   const sendMessage = useCallback(
@@ -442,6 +420,32 @@ export function useSendMessage() {
             .update({ status: "delivered" })
             .eq("id", data.id)
         }, 800)
+
+        // Enviar notificación al receptor
+        try {
+          // Obtener el receiver_id de la conversación
+          const { data: convData } = await supabase
+            .from("conversation_participants")
+            .select("user_id")
+            .eq("conversation_id", input.conversationId)
+            .neq("user_id", user.id)
+            .single()
+
+          if (convData?.user_id) {
+            const senderName = profile?.first_name || profile?.last_name || 'Usuario'
+            
+            // Crear notificación
+            await supabase.from("notifications").insert({
+              user_id: convData.user_id,
+              type: "new_message",
+              title: "Nuevo mensaje",
+              message: `${senderName} te ha enviado un mensaje.`,
+              action_url: `/dashboard/chat?conversation=${input.conversationId}`,
+            })
+          }
+        } catch (notifErr) {
+          console.error("Error sending notification:", notifErr)
+        }
 
         sendingRef.current = false
         return data as ChatMessageDB

@@ -16,6 +16,7 @@ import { ArrowLeft, CalendarDays, CheckCircle2, Clock, Loader2, MessageCircle } 
 import Link from "next/link";
 import { toast } from "sonner";
 import { trackBookingEvent } from "@/lib/analytics";
+import { loadingBelowHeaderClassName } from "@/lib/loading-layout";
 
 interface Slot {
   id: string;
@@ -96,7 +97,7 @@ export function BookingCalendarClient() {
     // When "both", keep the type from URL params if valid, otherwise default to "online"
     else if (typeParam === "in-person" || typeParam === "online") setBookingType(typeParam);
     else setBookingType("online");
-  }, [info?.consultationType]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [info?.consultationType]); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   useEffect(() => {
     // Avoid keeping a slot chosen for another modality.
@@ -196,7 +197,7 @@ export function BookingCalendarClient() {
 
   if (authLoading || loadingProfessional) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div className={loadingBelowHeaderClassName()}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );

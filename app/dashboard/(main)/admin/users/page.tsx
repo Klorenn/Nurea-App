@@ -403,7 +403,7 @@ export default function AdminUsersPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(
-      isSpanish ? "es-ES" : "en-US",
+      isSpanish ? "es-CL" : "en-US",
       { year: "numeric", month: "short", day: "numeric" }
     )
   }

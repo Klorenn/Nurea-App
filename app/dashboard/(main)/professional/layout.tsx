@@ -19,6 +19,7 @@ import {
   BarChart3,
   Loader2
 } from "lucide-react"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 interface ProfileInfo {
   subscription_status: string | null
@@ -26,6 +27,7 @@ interface ProfileInfo {
   trial_end_date: string | null
   selected_plan_id: string | null
   is_onboarded: boolean | null
+  onboarding_completed: boolean | null
 }
 
 export default function ProfessionalLayout({
@@ -55,7 +57,7 @@ export default function ProfessionalLayout({
         // Seleccionamos solo las columnas que sabemos que existen para evitar errores 400
         const { data, error } = await supabase
           .from("profiles")
-          .select("subscription_status, stripe_subscription_id, is_onboarded, role")
+          .select("subscription_status, stripe_subscription_id, is_onboarded, onboarding_completed, role")
           .eq("id", user.id)
           .single()
 
@@ -66,13 +68,22 @@ export default function ProfessionalLayout({
             stripe_subscription_id: null,
             trial_end_date: null,
             selected_plan_id: null,
-            is_onboarded: false
+            is_onboarded: false,
+            onboarding_completed: false
           })
         } else {
           // Redirect non-professionals away from the professional dashboard
           const userRole = (data as any).role || user.app_metadata?.role || user.user_metadata?.role
           if (userRole && userRole !== 'professional') {
             router.replace(userRole === 'admin' ? '/dashboard/admin' : '/dashboard/patient')
+            return
+          }
+
+          // Guard: si el onboarding no está completo, forzar wizard
+          const onboardingDone =
+            (data as any).onboarding_completed === true || (data as any).is_onboarded === true
+          if (!onboardingDone && !pathname?.startsWith("/dashboard/professional/onboarding")) {
+            router.replace("/dashboard/professional/onboarding")
             return
           }
 
@@ -148,7 +159,7 @@ export default function ProfessionalLayout({
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className={loadingDashboardInsetClassName("bg-background")}>
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 text-teal-600 animate-spin mx-auto" />
           <p className="text-sm text-muted-foreground">

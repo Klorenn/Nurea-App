@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, User, MapPin, Star } from "lucide-react";
+import { Search, User, MapPin, Star, Loader2 } from "lucide-react";
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/language-context";
@@ -86,9 +87,14 @@ export default function PatientBuscarPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground py-8">
-          {isSpanish ? "Cargando..." : "Loading..."}
-        </p>
+        <div className={loadingDashboardInsetClassName("bg-transparent")}>
+          <div className="flex flex-col items-center justify-center gap-3 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+            <p className="text-sm text-muted-foreground">
+              {isSpanish ? "Cargando..." : "Loading..."}
+            </p>
+          </div>
+        </div>
       ) : professionals.length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
           {isSpanish ? "No se encontraron especialistas." : "No specialists found."}

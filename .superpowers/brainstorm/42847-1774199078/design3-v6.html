@@ -1,0 +1,303 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: #f1f5f9; }
+h2 { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.subtitle { font-size: 0.85rem; color: #64748b; margin-bottom: 20px; }
+
+.page-shell { background: #f1f5f9; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; max-width: 880px; margin: 0 auto 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+
+/* TOP BAR — 3 variantes */
+.variants { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.variant-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+
+.topbar-option {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.topbar-option:hover { border-color: #94a3b8; }
+.topbar-option.selected { border-color: #0d9488; background: #f0fdfa; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+.topbar-option.selected::after { content: '✓ Seleccionada'; font-size: 11px; font-weight: 700; color: #0d9488; background: #ccfbf1; padding: 3px 9px; border-radius: 99px; }
+
+.greeting { }
+.greeting-main { font-size: 1.15rem; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+.greeting-main .name { color: #0d9488; }
+.greeting-sub { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+
+/* PAGE ACTUAL */
+.page-topbar { background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; }
+.topbar-actions { display: flex; gap: 8px; }
+.btn-outline { font-size: 12px; font-weight: 600; color: #475569; border: 1px solid #e2e8f0; background: white; padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+
+.completeness-bar { background: white; border-bottom: 1px solid #e2e8f0; padding: 11px 28px; display: flex; align-items: center; gap: 14px; }
+.completeness-label { font-size: 12px; font-weight: 600; color: #64748b; white-space: nowrap; }
+.completeness-track { flex: 1; height: 5px; background: #e2e8f0; border-radius: 99px; overflow: hidden; }
+.completeness-fill { height: 100%; width: 40%; background: linear-gradient(90deg, #f97316, #eab308); border-radius: 99px; }
+.completeness-score { font-size: 13px; font-weight: 800; color: #f97316; }
+.completeness-hint { font-size: 11px; color: #94a3b8; }
+
+.tabs-row { background: white; border-bottom: 1px solid #e2e8f0; padding: 0 28px; display: flex; overflow-x: auto; }
+.tab { font-size: 12.5px; font-weight: 600; color: #64748b; padding: 11px 16px; border-bottom: 2.5px solid transparent; cursor: pointer; white-space: nowrap; }
+.tab.active { color: #0d9488; border-bottom-color: #0d9488; font-weight: 700; }
+
+.content-area { padding: 22px 28px; display: flex; flex-direction: column; gap: 14px; }
+
+/* HERO */
+.profile-hero { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.hero-inner { display: flex; align-items: center; gap: 20px; padding: 20px 22px; }
+.avatar-wrap { position: relative; flex-shrink: 0; }
+.avatar { width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%); border: 3px solid white; box-shadow: 0 0 0 2px #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: white; }
+.avatar-edit { position: absolute; bottom: 1px; right: 1px; width: 22px; height: 22px; background: white; border: 1.5px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.avatar-edit svg { width: 10px; height: 10px; stroke: #64748b; }
+.hero-info { flex: 1; }
+.hero-name { font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
+.hero-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.hero-chip { background: #f0fdfa; border: 1px solid #99f6e4; color: #0d9488; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+.hero-dot { width: 3px; height: 3px; background: #cbd5e1; border-radius: 50%; }
+.hero-text { font-size: 12px; color: #64748b; }
+.hero-verified { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #0d9488; }
+.photo-btn { font-size: 12px; font-weight: 600; color: #475569; background: white; border: 1.5px solid #e2e8f0; padding: 7px 14px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+
+.hero-stats { display: flex; border-top: 1px solid #f1f5f9; }
+.stat-item { flex: 1; padding: 14px 20px; border-right: 1px solid #f1f5f9; position: relative; transition: background 0.12s; }
+.stat-item:last-child { border-right: none; }
+.stat-item.clickable { cursor: pointer; }
+.stat-item.clickable:hover { background: #f8fafc; }
+.stat-item.clickable:hover .stat-val { color: #0d9488; }
+.stat-live-dot { position: absolute; top: 10px; right: 12px; width: 7px; height: 7px; background: #22c55e; border-radius: 50%; animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+.stat-val { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.03em; line-height: 1; }
+.stat-label { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 4px; }
+.stat-action { font-size: 10px; color: #0d9488; font-weight: 700; margin-top: 3px; }
+.stat-trend { font-size: 10px; font-weight: 700; color: #22c55e; margin-top: 3px; }
+
+/* ACCORDION */
+.acc-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.acc-section.open { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.08); }
+.acc-trigger { display: flex; align-items: center; justify-content: space-between; padding: 15px 22px; cursor: pointer; user-select: none; transition: background 0.1s; }
+.acc-trigger:hover { background: #f8fafc; }
+.acc-section.open .acc-trigger { background: #f0fdfa; border-bottom: 1px solid #e0fdf4; }
+.acc-trigger-left { display: flex; align-items: center; gap: 13px; }
+.section-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.section-icon.teal { background: #f0fdfa; } .section-icon.teal svg { stroke: #0d9488; }
+.section-icon.blue { background: #eff6ff; } .section-icon.blue svg { stroke: #3b82f6; }
+.section-icon.violet { background: #f5f3ff; } .section-icon.violet svg { stroke: #7c3aed; }
+.section-icon svg { width: 16px; height: 16px; }
+.section-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+.section-subtitle { font-size: 11.5px; color: #94a3b8; margin-top: 2px; }
+.acc-trigger-right { display: flex; align-items: center; gap: 10px; }
+.acc-preview { font-size: 12px; color: #94a3b8; text-align: right; max-width: 200px; }
+.acc-chevron { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+.acc-chevron svg { width: 16px; height: 16px; stroke: #94a3b8; }
+.acc-section.open .acc-chevron { transform: rotate(180deg); }
+.acc-section.open .acc-chevron svg { stroke: #0d9488; }
+.acc-body { display: none; }
+.acc-section.open .acc-body { display: block; }
+
+.field-row { display: flex; align-items: center; padding: 13px 22px; border-bottom: 1px solid #f8fafc; gap: 16px; }
+.field-row:last-child { border-bottom: none; }
+.field-label { font-size: 12.5px; color: #94a3b8; width: 160px; flex-shrink: 0; font-weight: 500; }
+.field-value { font-size: 13.5px; font-weight: 600; color: #1e293b; flex: 1; }
+.field-value.empty { color: #cbd5e1; font-style: italic; font-weight: 400; }
+.field-pencil { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.field-pencil svg { width: 13px; height: 13px; stroke: #cbd5e1; }
+.toggle-row { display: flex; align-items: center; padding: 13px 22px; gap: 16px; }
+.toggle-info .t-label { font-size: 13.5px; font-weight: 600; color: #1e293b; }
+.toggle-info .t-desc { font-size: 11.5px; color: #94a3b8; margin-top: 2px; }
+.toggle-switch { width: 40px; height: 23px; background: #0d9488; border-radius: 99px; position: relative; flex-shrink: 0; }
+.toggle-switch::after { content: ''; position: absolute; top: 3.5px; right: 3.5px; width: 16px; height: 16px; background: white; border-radius: 50%; }
+.tags-row { padding: 14px 22px; display: flex; flex-wrap: wrap; gap: 7px; }
+.tag.teal { font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 99px; background: #f0fdfa; color: #0d9488; border: 1px solid #99f6e4; }
+.bio-text { padding: 15px 22px; font-size: 13.5px; color: #475569; line-height: 1.65; }
+
+.toast { position: fixed; bottom: 24px; right: 24px; background: #1e293b; color: white; font-size: 12px; font-weight: 600; padding: 10px 16px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); opacity: 0; transform: translateY(8px); transition: all 0.2s; pointer-events: none; z-index: 999; }
+.toast.show { opacity: 1; transform: translateY(0); }
+</style>
+
+<h2>Elige cómo quieres el saludo en el encabezado</h2>
+<p class="subtitle">Haz click en la opción que más te guste, luego mira cómo queda en la página debajo.</p>
+
+<!-- OPCIONES DE SALUDO -->
+<div class="variants">
+  <div class="variant-label">Elige el estilo de saludo</div>
+
+  <div class="topbar-option" onclick="selectGreeting(this, 'a')" id="opt-a">
+    <div class="greeting">
+      <div class="greeting-main">Hola, <span class="name">María Jesús</span> 👋</div>
+      <div class="greeting-sub">Tu perfil profesional · Última edición hace 2 días</div>
+    </div>
+  </div>
+
+  <div class="topbar-option selected" onclick="selectGreeting(this, 'b')" id="opt-b">
+    <div class="greeting">
+      <div class="greeting-main">Bienvenida, <span class="name">María Jesús</span></div>
+      <div class="greeting-sub">Perfil profesional · Última edición hace 2 días</div>
+    </div>
+  </div>
+
+  <div class="topbar-option" onclick="selectGreeting(this, 'c')" id="opt-c">
+    <div class="greeting">
+      <div class="greeting-main">Hola <span class="name">María Jesús</span> — tu perfil</div>
+      <div class="greeting-sub">Última edición hace 2 días · 40% completado</div>
+    </div>
+  </div>
+
+  <div class="topbar-option" onclick="selectGreeting(this, 'd')" id="opt-d">
+    <div class="greeting">
+      <div class="greeting-main">Mi perfil</div>
+      <div class="greeting-sub">Hola <span class="name" style="color:#0d9488;font-weight:700">María Jesús</span> · Última edición hace 2 días</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE PREVIEW -->
+<div class="page-shell">
+  <div class="page-topbar" id="topbar-preview">
+    <div>
+      <div style="font-size:1.2rem;font-weight:800;color:#0f172a;letter-spacing:-0.02em">Bienvenida, <span style="color:#0d9488">María Jesús</span></div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:2px">Perfil profesional · Última edición hace 2 días</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-outline">Ver perfil público</button>
+      <button class="btn-outline">Editar direcciones</button>
+    </div>
+  </div>
+
+  <div class="completeness-bar">
+    <span class="completeness-label">Completitud del perfil</span>
+    <div class="completeness-track"><div class="completeness-fill"></div></div>
+    <span class="completeness-score">40 / 100</span>
+    <span class="completeness-hint">· Agregar: Premios</span>
+  </div>
+
+  <div class="tabs-row">
+    <div class="tab active">General</div>
+    <div class="tab">Clínica</div>
+    <div class="tab">Estudios</div>
+    <div class="tab">Galería</div>
+    <div class="tab">Precios</div>
+    <div class="tab">Seguridad</div>
+    <div class="tab">Verificación</div>
+  </div>
+
+  <div class="content-area">
+    <div class="profile-hero">
+      <div class="hero-inner">
+        <div class="avatar-wrap">
+          <div class="avatar">MJ</div>
+          <div class="avatar-edit"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div>
+        </div>
+        <div class="hero-info">
+          <div class="hero-name">María Jesús Chavez San Luis</div>
+          <div class="hero-meta">
+            <span class="hero-chip">Ps. · Psicología</span>
+            <span class="hero-dot"></span>
+            <span class="hero-text">5 años de experiencia</span>
+            <span class="hero-dot"></span>
+            <span class="hero-verified">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Verificada
+            </span>
+          </div>
+        </div>
+        <button class="photo-btn">Cambiar foto</button>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><div class="stat-live-dot"></div><div class="stat-val">24</div><div class="stat-label">Pacientes</div><div class="stat-trend">+2 este mes</div></div>
+        <div class="stat-item clickable" onclick="showToast('Ver y responder comentarios')"><div class="stat-live-dot"></div><div class="stat-val">4.9 <span style="font-size:14px;color:#eab308">★</span></div><div class="stat-label">Valoración</div><div class="stat-action">Ver comentarios →</div></div>
+        <div class="stat-item clickable" onclick="goToTab(1,'Clínica → cambiar modalidad')"><div class="stat-live-dot"></div><div class="stat-val">Online</div><div class="stat-label">Modalidad</div><div class="stat-action">Cambiar en Clínica →</div></div>
+        <div class="stat-item clickable" onclick="goToTab(4,'Precios → editar precio por sesión')"><div class="stat-live-dot"></div><div class="stat-val">$35.000</div><div class="stat-label">Por sesión</div><div class="stat-action">Cambiar en Precios →</div></div>
+      </div>
+    </div>
+
+    <div class="acc-section open">
+      <div class="acc-trigger" onclick="this.closest('.acc-section').classList.toggle('open')">
+        <div class="acc-trigger-left">
+          <div class="section-icon teal"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg></div>
+          <div><div class="section-title">Datos personales</div><div class="section-subtitle">Nombre, género y contacto</div></div>
+        </div>
+        <div class="acc-trigger-right">
+          <div class="acc-preview">María Jesús Chavez · Femenino</div>
+          <div class="acc-chevron"><svg fill="none" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg></div>
+        </div>
+      </div>
+      <div class="acc-body">
+        <div class="field-row"><div class="field-label">Nombre</div><div class="field-value">María Jesús</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+        <div class="field-row"><div class="field-label">Apellidos</div><div class="field-value">Chavez San Luis</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+        <div class="field-row"><div class="field-label">Teléfono</div><div class="field-value">+56 9 8765 4321</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="t-label">Mostrar teléfono en perfil público</div><div class="t-desc">Los pacientes podrán ver y contactarte directamente</div></div>
+          <div class="toggle-switch"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc-section">
+      <div class="acc-trigger" onclick="this.closest('.acc-section').classList.toggle('open')">
+        <div class="acc-trigger-left">
+          <div class="section-icon blue"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5z"/></svg></div>
+          <div><div class="section-title">Trayectoria profesional</div><div class="section-subtitle">Título, especialidad y registro</div></div>
+        </div>
+        <div class="acc-trigger-right">
+          <div class="acc-preview">Ps. · Psicología · 5 años</div>
+          <div class="acc-chevron"><svg fill="none" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg></div>
+        </div>
+      </div>
+      <div class="acc-body">
+        <div class="field-row"><div class="field-label">Título abreviado</div><div class="field-value"><span style="background:#f0fdfa;border:1px solid #99f6e4;color:#0d9488;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px">Ps.</span></div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+        <div class="field-row"><div class="field-label">Especialidad</div><div class="field-value">Psicología</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+        <div class="field-row"><div class="field-label">Años de experiencia</div><div class="field-value">5 años</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+        <div class="field-row"><div class="field-label">Institución emisora</div><div class="field-value empty">Sin especificar</div><div class="field-pencil"><svg fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></div></div>
+      </div>
+    </div>
+
+    <div class="acc-section">
+      <div class="acc-trigger" onclick="this.closest('.acc-section').classList.toggle('open')">
+        <div class="acc-trigger-left">
+          <div class="section-icon teal"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg></div>
+          <div><div class="section-title">Biografía profesional</div><div class="section-subtitle">Tu presentación para los pacientes</div></div>
+        </div>
+        <div class="acc-trigger-right">
+          <div class="acc-preview">Acompaño a adolescentes y adultos...</div>
+          <div class="acc-chevron"><svg fill="none" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg></div>
+        </div>
+      </div>
+      <div class="acc-body">
+        <div class="bio-text">Acompaño a adolescentes y personas adultas que están atravesando momentos de malestar emocional, ansiedad, inseguridad personal o procesos de cambio.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const greetings = {
+  a: { main: 'Hola, <span style="color:#0d9488">María Jesús</span> 👋', sub: 'Tu perfil profesional · Última edición hace 2 días' },
+  b: { main: 'Bienvenida, <span style="color:#0d9488">María Jesús</span>', sub: 'Perfil profesional · Última edición hace 2 días' },
+  c: { main: 'Hola <span style="color:#0d9488">María Jesús</span> — tu perfil', sub: 'Última edición hace 2 días · 40% completado' },
+  d: { main: 'Mi perfil', sub: 'Hola <span style="color:#0d9488;font-weight:700">María Jesús</span> · Última edición hace 2 días' }
+};
+function selectGreeting(el, key) {
+  document.querySelectorAll('.topbar-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  const g = greetings[key];
+  document.getElementById('topbar-preview').innerHTML = `
+    <div>
+      <div style="font-size:1.2rem;font-weight:800;color:#0f172a;letter-spacing:-0.02em">${g.main}</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:2px">${g.sub}</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-outline">Ver perfil público</button>
+      <button class="btn-outline">Editar direcciones</button>
+    </div>`;
+}
+function showToast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+function goToTab(i, msg) { showToast(msg); document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i)); }
+</script>
+
+<p class="subtitle" style="text-align:center;margin-top:4px">Haz click en la opción que prefieras — la página de abajo se actualiza en tiempo real.</p>

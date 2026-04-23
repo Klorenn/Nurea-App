@@ -73,7 +73,7 @@ export default function AdminPatientsPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(
-      language === "es" ? "es-ES" : "en-US",
+      language === "es" ? "es-CL" : "en-US",
       { year: "numeric", month: "short", day: "numeric" }
     )
   }

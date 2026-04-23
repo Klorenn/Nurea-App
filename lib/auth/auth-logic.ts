@@ -37,11 +37,20 @@ export async function requireAuth(): Promise<AuthorizationResult> {
   }
 
   // Obtener perfil para verificar rol
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role, blocked')
     .eq('id', user.id)
     .single()
+
+  if (profileError) {
+    console.error("Error fetching profile:", profileError)
+    return {
+      authorized: false,
+      error: 'not_found',
+      message: 'Error al obtener el perfil. Por favor, intenta de nuevo.'
+    }
+  }
 
   if (!profile) {
     return {

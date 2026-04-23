@@ -4,8 +4,6 @@
 
 const monthNamesEs = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 const monthNamesEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-const fullMonthNamesEs = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-const fullMonthNamesEn = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
 
 /**
  * Parsea una fecha del formato "Ene 15" o "Jan 15" a una fecha ISO (YYYY-MM-DD)
@@ -35,7 +33,6 @@ export function parseShortDate(dateString: string, language: "es" | "en" = "es")
   const now = new Date()
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth()
-  const currentDay = now.getDate()
 
   // Crear fecha asumiendo año actual
   let appointmentDate = new Date(currentYear, monthIndex, dayNumber)

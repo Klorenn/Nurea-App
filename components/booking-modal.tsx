@@ -559,7 +559,7 @@ export function BookingModal({
                       {isSpanish ? "Resumen y datos de contacto" : "Review & contact details"}
                     </h3>
                     <div className="rounded-lg border border-border bg-card p-4 space-y-2 text-sm">
-                      <p><span className="text-muted-foreground">{isSpanish ? "Fecha" : "Date"}:</span> {selectedDate?.toLocaleDateString(isSpanish ? "es-ES" : "en-US", { day: "numeric", month: "long", year: "numeric" })}</p>
+                      <p><span className="text-muted-foreground">{isSpanish ? "Fecha" : "Date"}:</span> {selectedDate?.toLocaleDateString(isSpanish ? "es-CL" : "en-US", { day: "numeric", month: "long", year: "numeric" })}</p>
                       <p><span className="text-muted-foreground">{isSpanish ? "Hora" : "Time"}:</span>{" "}
                         {professionalId && selectedSlotId
                           ? (() => { const s = prismaSlots.find((x) => x.id === selectedSlotId); return s ? format(new Date(s.startTime), "HH:mm") : ""; })()

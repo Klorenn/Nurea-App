@@ -91,12 +91,12 @@ export async function GET(request: Request) {
           : 'N/A',
         appointmentId: appointment?.id,
         date: appointment?.appointment_date 
-          ? new Date(appointment.appointment_date).toLocaleDateString('es-ES', {
+          ? new Date(appointment.appointment_date).toLocaleDateString('es-CL', {
               year: 'numeric',
               month: 'short',
               day: 'numeric'
             })
-          : new Date(payment.created_at).toLocaleDateString('es-ES', {
+          : new Date(payment.created_at).toLocaleDateString('es-CL', {
               year: 'numeric',
               month: 'short',
               day: 'numeric'

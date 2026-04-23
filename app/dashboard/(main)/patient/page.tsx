@@ -1,1079 +1,1263 @@
 "use client"
 
-import { useState, useEffect, useRef, ChangeEvent, FormEvent } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { motion, type Variants } from "framer-motion"
-import {
-  Calendar,
-  Clock,
-  Search,
-  Heart,
-  FileText,
-  PillIcon,
-  Video,
-  MapPin,
-  ChevronRight,
-  Stethoscope,
-  Brain,
-  Eye,
-  Bone,
-  Baby,
-  Download,
-  CheckCircle2,
-  XCircle,
-  User,
-  Phone,
-  Loader2,
-  Settings,
-  Shield,
-  CalendarCheck,
-  Sparkles,
-  Camera,
-  Link as LinkIcon,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
-import { cn } from "@/lib/utils"
-import { format, parseISO, isToday, isTomorrow, differenceInHours } from "date-fns"
-import { es, enUS } from "date-fns/locale"
-import { mutate } from "swr"
-import { toast } from "sonner"
-import { getJitsiMeetingUrl } from "@/lib/utils/jitsi"
+import { useAuth } from "@/hooks/use-auth"
+import { useProfile } from "@/hooks/use-profile"
+import { useLanguage } from "@/contexts/language-context"
 
+/* ------------------------------------------------------------------
+ *  Iconos inline
+ * ------------------------------------------------------------------ */
+const icoCalendar = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </svg>
+)
+const icoHeart = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+)
+const icoChat = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+)
+const icoCheckCircle = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <path d="M22 4L12 14.01l-3-3" />
+  </svg>
+)
+const icoPlus = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+const icoArrow = (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M5 12h14M13 5l7 7-7 7" />
+  </svg>
+)
+
+/* ------------------------------------------------------------------
+ *  Design tokens (inline — no tocamos los tokens globales del tema)
+ * ------------------------------------------------------------------ */
+const C = {
+  bg: "oklch(0.985 0.008 150)",
+  bgWarm: "oklch(0.97 0.015 85)",
+  ink: "oklch(0.22 0.025 170)",
+  inkSoft: "oklch(0.42 0.02 170)",
+  inkMute: "oklch(0.58 0.015 170)",
+  line: "oklch(0.88 0.015 150)",
+  lineSoft: "oklch(0.93 0.012 150)",
+  sage50: "oklch(0.97 0.015 170)",
+  sage100: "oklch(0.95 0.025 170)",
+  sage200: "oklch(0.88 0.045 170)",
+  sage300: "oklch(0.78 0.06 170)",
+  sage500: "oklch(0.58 0.07 170)",
+  sage700: "oklch(0.38 0.05 170)",
+  sage900: "oklch(0.22 0.03 170)",
+  terracotta: "oklch(0.68 0.11 45)",
+  terracottaDeep: "oklch(0.52 0.13 40)",
+  terracottaSoft: "oklch(0.92 0.04 55)",
+  amberSoft: "oklch(0.96 0.035 85)",
+  amber: "oklch(0.55 0.1 70)",
+  blueSoft: "oklch(0.94 0.03 230)",
+  blue: "oklch(0.4 0.1 230)",
+  blueMid: "oklch(0.65 0.09 230)",
+}
+
+/* ------------------------------------------------------------------
+ *  Tipos
+ * ------------------------------------------------------------------ */
 interface Appointment {
   id: string
   appointment_date: string
   appointment_time: string
-  type: "online" | "in-person"
-  status: string
-  duration_minutes: number
-  professional: {
-    id: string
-    specialty: string
-    profile: {
-      first_name: string
-      last_name: string
-      avatar_url?: string
-    }
-  }
+  type: string | null
+  status: string | null
+  duration_minutes?: number | null
+  professional?: {
+    id?: string
+    first_name?: string | null
+    last_name?: string | null
+    specialty?: string | null
+  } | null
 }
 
-interface MedicalRecord {
+interface Suggestion {
   id: string
+  first_name: string | null
+  last_name: string | null
+  specialty: string | null
+  years_experience?: number | null
+  base_price?: number | null
+  city?: string | null
+  consultation_type?: string | null
+}
+
+interface MessagePreview {
+  id: string
+  preview: string
   created_at: string
-  diagnosis: string
-  diagnosis_code?: string
-  professional: {
-    first_name: string
-    last_name: string
+  unread: boolean
+  other_name: string
+}
+
+/* ------------------------------------------------------------------
+ *  Helpers
+ * ------------------------------------------------------------------ */
+function greet(isES: boolean): string {
+  const h = new Date().getHours()
+  if (isES) {
+    if (h < 12) return "Buenos días"
+    if (h < 19) return "Buenas tardes"
+    return "Buenas noches"
+  }
+  if (h < 12) return "Good morning"
+  if (h < 19) return "Good afternoon"
+  return "Good evening"
+}
+
+function hourPart(time: string): { h: string; m: string } {
+  const [h = "00", m = "00"] = time.split(":")
+  return { h, m }
+}
+
+function shortDayLabel(dateStr: string, isES: boolean): string {
+  try {
+    const d = new Date(dateStr + "T00:00:00")
+    const today = new Date()
+    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    const diff = Math.round((dDay.getTime() - t.getTime()) / 86400000)
+    if (diff === 0) return isES ? "hoy" : "today"
+    if (diff === 1) return isES ? "mañana" : "tmrw"
+    return d.toLocaleDateString(isES ? "es-CL" : "en-US", { weekday: "short" }).replace(".", "")
+  } catch {
+    return ""
   }
 }
 
-interface Referral {
-  id: string
-  created_at: string
-  reason: string
-  status: string
-  clinical_summary_access: boolean
-  referring_professional: {
-    profiles: {
-      first_name: string
-      last_name: string
-    }
-  }
-  target_specialty?: {
-    name_es: string
-    name_en: string
-  }
-  target_professional?: {
-    profiles: {
-      first_name: string
-      last_name: string
-    }
-  }
+function avatarGradient(seed: string): string {
+  const n = (seed.charCodeAt(0) || 0) % 5
+  const palette = [
+    "linear-gradient(135deg, oklch(0.78 0.06 170), oklch(0.62 0.08 160))",
+    "linear-gradient(135deg, oklch(0.8 0.08 60), oklch(0.68 0.1 45))",
+    "linear-gradient(135deg, oklch(0.75 0.05 230), oklch(0.62 0.07 220))",
+    "linear-gradient(135deg, oklch(0.82 0.05 340), oklch(0.7 0.07 330))",
+    "linear-gradient(135deg, oklch(0.78 0.08 20), oklch(0.65 0.1 10))",
+  ]
+  return palette[n]
 }
 
-export interface UserProfile {
-  id: string
-  first_name: string
-  last_name: string
-  phone?: string
-  avatar_url?: string
+/* ------------------------------------------------------------------
+ *  Styles helpers
+ * ------------------------------------------------------------------ */
+const cardStyle: React.CSSProperties = {
+  background: "white",
+  border: `1px solid ${C.lineSoft}`,
+  borderRadius: 18,
+  padding: 22,
 }
 
-const specialties = [
-  { icon: Stethoscope, label: "Medicina General", labelEn: "General Medicine", slug: "medicina-general" },
-  { icon: Brain, label: "Psicología", labelEn: "Psychology", slug: "psicologia" },
-  { icon: Heart, label: "Cardiología", labelEn: "Cardiology", slug: "cardiologia" },
-  { icon: Eye, label: "Oftalmología", labelEn: "Ophthalmology", slug: "oftalmologia" },
-  { icon: Bone, label: "Traumatología", labelEn: "Orthopedics", slug: "traumatologia" },
-  { icon: Baby, label: "Pediatría", labelEn: "Pediatrics", slug: "pediatria" },
-]
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
-  },
+const chipBase: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: "4px 10px",
+  borderRadius: 999,
+  fontSize: 11,
+  fontWeight: 500,
 }
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { type: "spring", stiffness: 100, damping: 15 },
-  },
+function chipStyle(tone: "sage" | "amber" | "blue" | "terracotta" | "mute"): React.CSSProperties {
+  if (tone === "sage") return { ...chipBase, background: C.sage100, color: C.sage700 }
+  if (tone === "amber") return { ...chipBase, background: C.amberSoft, color: C.amber }
+  if (tone === "blue") return { ...chipBase, background: C.blueSoft, color: C.blue }
+  if (tone === "terracotta") return { ...chipBase, background: C.terracottaSoft, color: C.terracotta }
+  return { ...chipBase, background: C.bgWarm, color: C.inkSoft }
 }
 
-export default function PatientDashboard() {
-  const { language } = useLanguage()
+const dotStyle: React.CSSProperties = { width: 6, height: 6, borderRadius: "50%", background: "currentColor" }
+
+/* ------------------------------------------------------------------
+ *  Patient dashboard
+ * ------------------------------------------------------------------ */
+export default function PatientDashboardPage() {
   const { user } = useAuth()
-  const router = useRouter()
-  const supabase = createClient()
-  const isSpanish = language === "es"
-  const locale = isSpanish ? es : enUS
+  const { profile } = useProfile()
+  const { language } = useLanguage()
+  const isES = language === "es"
+  const supabase = useMemo(() => createClient(), [])
 
   const [loading, setLoading] = useState(true)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
-  const [pastAppointments, setPastAppointments] = useState<Appointment[]>([])
-  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([])
-  const [allReferrals, setAllReferrals] = useState<Referral[]>([])
-  const [pendingReferrals, setPendingReferrals] = useState<Referral[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [editProfileOpen, setEditProfileOpen] = useState(false)
-  const [savingProfile, setSavingProfile] = useState(false)
-  const [editedPhone, setEditedPhone] = useState("")
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [stats, setStats] = useState({ upcoming: 0, completed: 0, professionals: 0, unread: 0 })
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [messages, setMessages] = useState<MessagePreview[]>([])
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!user) {
-        setLoading(false)
-        return
-      }
+    if (!user?.id) return
+    let cancelled = false
 
-      setLoading(true)
+    const run = async () => {
       try {
-        // Load profile (maybeSingle: 0 or 1 row, no throw)
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("id, first_name, last_name, phone, avatar_url")
-          .eq("id", user.id)
-          .maybeSingle()
-
-        if (profileData) {
-          setProfile(profileData as UserProfile)
-          setEditedPhone(profileData.phone || "")
-        }
-
-        // Load upcoming appointments
         const today = new Date().toISOString().split("T")[0]
-        const { data: upcomingData } = await supabase
+
+        // — Próximas citas
+        const { data: nextApts } = await supabase
           .from("appointments")
-          .select(`
-            id,
-            appointment_date,
-            appointment_time,
-            type,
-            status,
-            duration_minutes,
-            professional:professionals!appointments_professional_id_fkey(
-              id,
-              specialty,
-              profile:profiles!professionals_id_fkey(
-                first_name, last_name, avatar_url
-              )
-            )
-          `)
+          .select(
+            `id, appointment_date, appointment_time, type, status, duration_minutes,
+             professional:profiles!appointments_professional_id_fkey(id, first_name, last_name, specialty)`
+          )
           .eq("patient_id", user.id)
           .gte("appointment_date", today)
-          .in("status", ["pending", "confirmed"])
+          .in("status", ["confirmed", "pending"])
           .order("appointment_date", { ascending: true })
           .order("appointment_time", { ascending: true })
           .limit(5)
 
-        if (upcomingData) {
-          const typedAppointments = upcomingData.map((apt) => ({
-            ...apt,
-            professional: apt.professional as unknown as Appointment["professional"],
-          }))
-          setUpcomingAppointments(typedAppointments)
-        }
-
-        // Load past appointments
-        const { data: pastData } = await supabase
+        // — Sesiones completadas (total histórico)
+        const { count: completedCount } = await supabase
           .from("appointments")
-          .select(`
-            id,
-            appointment_date,
-            appointment_time,
-            type,
-            status,
-            duration_minutes,
-            professional:professionals!appointments_professional_id_fkey(
-              id,
-              specialty,
-              profile:profiles!professionals_id_fkey(
-                first_name, last_name, avatar_url
-              )
-            )
-          `)
+          .select("*", { count: "exact", head: true })
           .eq("patient_id", user.id)
-          .in("status", ["completed", "cancelled"])
-          .order("appointment_date", { ascending: false })
-          .limit(5)
+          .eq("status", "completed")
 
-        if (pastData) {
-          const typedPast = pastData.map((apt) => ({
-            ...apt,
-            professional: apt.professional as unknown as Appointment["professional"],
-          }))
-          setPastAppointments(typedPast)
+        // — Profesionales únicos (red personal)
+        const { data: patientPros } = await supabase
+          .from("appointments")
+          .select("professional_id")
+          .eq("patient_id", user.id)
+
+        // — Mensajes sin leer (si la tabla existe)
+        let unreadCount = 0
+        let msgList: MessagePreview[] = []
+        try {
+          const { count } = await supabase
+            .from("messages")
+            .select("*", { count: "exact", head: true })
+            .eq("recipient_id", user.id)
+            .eq("read", false)
+          unreadCount = count || 0
+
+          const { data: recentMsgs } = await supabase
+            .from("messages")
+            .select(
+              `id, body, created_at, read,
+               sender:profiles!messages_sender_id_fkey(first_name, last_name)`
+            )
+            .eq("recipient_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(4)
+
+          msgList =
+            recentMsgs?.map((m: any) => ({
+              id: m.id,
+              preview: (m.body || "").slice(0, 60),
+              created_at: m.created_at,
+              unread: !m.read,
+              other_name: `${m.sender?.first_name ?? ""} ${m.sender?.last_name ?? ""}`.trim() || "Nurea",
+            })) || []
+        } catch {
+          // Tabla inexistente — ignoramos
         }
 
-        // Load medical records (as prescriptions proxy for now)
-        const { data: recordsData } = await supabase
-          .from("medical_records")
-          .select(`
-            id,
-            created_at,
-            diagnosis,
-            diagnosis_code,
-            professional:profiles!medical_records_professional_id_fkey(
-              first_name, last_name
-            )
-          `)
-          .eq("patient_id", user.id)
-          .eq("is_signed", true)
-          .order("created_at", { ascending: false })
-          .limit(10)
+        // — Sugerencias (profesionales verificados)
+        const { data: proPool } = await supabase
+          .from("professionals")
+          .select(
+            `id, specialty, years_experience, base_price, city, consultation_type,
+             profile:profiles!professionals_id_fkey(first_name, last_name)`
+          )
+          .eq("verified", true)
+          .limit(6)
 
-        if (recordsData) {
-          const typedRecords = recordsData.map((r) => ({
-            ...r,
-            professional: r.professional as unknown as MedicalRecord["professional"],
-          }))
-          setMedicalRecords(typedRecords as MedicalRecord[])
-        }
+        const suggs: Suggestion[] = (proPool || []).map((p: any) => ({
+          id: p.id,
+          first_name: p.profile?.first_name ?? null,
+          last_name: p.profile?.last_name ?? null,
+          specialty: p.specialty ?? null,
+          years_experience: p.years_experience ?? null,
+          base_price: p.base_price ?? null,
+          city: p.city ?? null,
+          consultation_type: p.consultation_type ?? null,
+        }))
 
-        // Load all referrals
-        const { data: referralsData } = await supabase
-          .from("referrals")
-          .select(`
-            id, created_at, reason, status, clinical_summary_access,
-            referring_professional:professionals!referrals_referring_professional_id_fkey(
-              profiles!professionals_id_fkey(first_name, last_name)
-            ),
-            target_specialty:specialties(name_es, name_en),
-            target_professional:professionals!referrals_target_professional_id_fkey(
-              profiles!professionals_id_fkey(first_name, last_name)
-            )
-          `)
-          .eq("patient_id", user.id)
-          .order("created_at", { ascending: false })
+        if (cancelled) return
 
-        if (referralsData) {
-          const refs = referralsData as unknown as Referral[]
-          setAllReferrals(refs)
-          setPendingReferrals(refs.filter(r => r.status === "pending" || !r.clinical_summary_access))
-        }
-
-      } catch (error) {
-        console.error("Error loading dashboard data:", error)
+        setAppointments((nextApts as unknown as Appointment[]) || [])
+        setStats({
+          upcoming: (nextApts || []).length,
+          completed: completedCount || 0,
+          professionals: new Set(patientPros?.map((p) => p.professional_id)).size,
+          unread: unreadCount,
+        })
+        setMessages(msgList)
+        setSuggestions(suggs.slice(0, 3))
+      } catch (err) {
+        console.error("[patient dashboard] error", err)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
-    loadData()
-  }, [user, supabase])
-
-  const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error(isSpanish ? "La imagen es muy grande. Máximo 5MB." : "Image too large. Max 5MB.")
-      return
+    run()
+    return () => {
+      cancelled = true
     }
-    setUploadingAvatar(true)
-    try {
-      const ext = file.name.split('.').pop()
-      const path = `avatars/${user.id}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, file, { upsert: true })
-      if (uploadError) throw uploadError
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-      
-      // 1. Update profiles table
-      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
-      
-      // 2. Update auth metadata so the global header / navbar refreshes
-      await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
-      })
-      
-      // 3. Update local state
-      setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : null)
-      toast.success(isSpanish ? "Foto actualizada ✓" : "Photo updated ✓")
-      // Invalidate the unified profile key
-      mutate(["profile", user?.id])
-    } catch (err) {
-      console.error(err)
-      toast.error(isSpanish ? "Error al subir la foto" : "Error uploading photo")
-    } finally {
-      setUploadingAvatar(false)
-    }
-  }
+  }, [supabase, user?.id])
 
-  const handleSaveProfile = async () => {
-    if (!user) return
+  /* — Derivados — */
+  const firstName = profile?.first_name || ""
+  const nextAppt = appointments[0]
+  const todaySummary =
+    nextAppt && nextAppt.appointment_date === new Date().toISOString().split("T")[0]
+      ? isES
+        ? `Tienes una sesión hoy a las ${nextAppt.appointment_time.slice(0, 5)}${
+            nextAppt.professional?.last_name ? ` con ${nextAppt.professional.last_name}` : ""
+          }.`
+        : `You have a session today at ${nextAppt.appointment_time.slice(0, 5)}${
+            nextAppt.professional?.last_name ? ` with ${nextAppt.professional.last_name}` : ""
+          }.`
+      : isES
+      ? "Un día tranquilo para cuidarte."
+      : "A quiet day to care for yourself."
 
-    setSavingProfile(true)
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          phone: editedPhone,
-        })
-        .eq("id", user.id)
-
-      if (error) throw error
-
-      setProfile((prev) => prev ? {
-        ...prev,
-        phone: editedPhone,
-      } : null)
-
-      setEditProfileOpen(false)
-      toast.success(isSpanish ? "Perfil actualizado" : "Profile updated")
-    } catch (error) {
-      console.error("Error updating profile:", error)
-      toast.error(isSpanish ? "Error al guardar" : "Error saving")
-    } finally {
-      setSavingProfile(false)
-    }
-  }
-
-  const authorizeReferral = async (referralId: string) => {
-    try {
-      const { error } = await supabase
-        .from("referrals")
-        .update({ 
-          clinical_summary_access: true,
-          status: 'authorized'
-        })
-        .eq("id", referralId)
-      
-      if (error) throw error
-      
-      toast.success(isSpanish ? "Acceso autorizado exitosamente" : "Access authorized successfully")
-      setPendingReferrals(prev => prev.filter(r => r.id !== referralId))
-    } catch (error) {
-      console.error("Error authorizing referral:", error)
-      toast.error(isSpanish ? "Error al autorizar" : "Error authorizing")
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = parseISO(dateString)
-    if (isToday(date)) return isSpanish ? "Hoy" : "Today"
-    if (isTomorrow(date)) return isSpanish ? "Mañana" : "Tomorrow"
-    return format(date, "EEEE, d MMM", { locale })
-  }
-
-  const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(":").map(Number)
-    const period = hours >= 12 ? "PM" : "AM"
-    const hour12 = hours % 12 || 12
-    return `${hour12}:${minutes.toString().padStart(2, "0")} ${period}`
-  }
-
-  const handleSearch = (e: FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/explore?q=${encodeURIComponent(searchQuery)}`)
-    } else {
-      router.push("/explore")
-    }
-  }
-
-  const openVideoCall = (appointmentId: string) => {
-    const meetingUrl = getJitsiMeetingUrl(appointmentId)
-    window.open(meetingUrl, "_blank")
-  }
-
-  const nextAppointment = upcomingAppointments[0]
-  const firstName = profile?.first_name || user?.user_metadata?.first_name || "Usuario"
-
-  // Check if the next appointment is starting soon (within 30 minutes)
-  const isAppointmentSoon = nextAppointment && (() => {
-    const aptDate = parseISO(`${nextAppointment.appointment_date}T${nextAppointment.appointment_time}`)
-    const hoursUntil = differenceInHours(aptDate, new Date())
-    return hoursUntil <= 0.5 && hoursUntil >= -1 // Within 30 min or just started
-  })()
-
-  if (loading) {
-    return (
-      <div className="space-y-6 p-4 sm:p-6">
-        <Skeleton className="h-32 w-full rounded-2xl" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-40 rounded-xl" />
-          <Skeleton className="h-40 rounded-xl" />
-          <Skeleton className="h-40 rounded-xl" />
-        </div>
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    )
-  }
-
+  /* ------------------------------------------------------------------
+   *  Render
+   * ------------------------------------------------------------------ */
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6 pb-8"
+    <div
+      style={{
+        background: C.bgWarm,
+        color: C.ink,
+        fontFamily: "var(--font-inter), ui-sans-serif, system-ui",
+        minHeight: "100%",
+        padding: "8px 4px 40px",
+      }}
     >
-      {/* Welcome Banner */}
-      <motion.div variants={itemVariants}>
-        <Card className="border-teal-200/50 dark:border-teal-800/30 bg-gradient-to-br from-teal-50 via-emerald-50/30 to-white dark:from-teal-950/40 dark:via-emerald-950/20 dark:to-slate-900 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-teal-400/10 to-transparent rounded-full blur-3xl" />
-          <CardContent className="p-6 sm:p-8 relative">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-teal-600" />
-                  <span className="text-sm font-medium text-teal-700 dark:text-teal-300">
-                    {isSpanish ? "Tu Centro de Salud Digital" : "Your Digital Health Hub"}
-                  </span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  {isSpanish ? "Hola" : "Hello"},{" "}
-                  <span className="text-teal-700 dark:text-teal-400">{firstName}</span> 👋
-                </h1>
-                <p className="text-slate-600 dark:text-slate-400 max-w-md">
-                  {nextAppointment
-                    ? (isSpanish
-                        ? `Tienes una cita ${formatDate(nextAppointment.appointment_date).toLowerCase()} a las ${formatTime(nextAppointment.appointment_time)}`
-                        : `You have an appointment ${formatDate(nextAppointment.appointment_date).toLowerCase()} at ${formatTime(nextAppointment.appointment_time)}`)
-                    : (isSpanish
-                        ? "Aquí tienes el resumen de tu salud. ¿Necesitas agendar una consulta?"
-                        : "Here's your health summary. Need to book a consultation?")}
-                </p>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="flex gap-4 flex-wrap">
-                <div className="flex items-center gap-3 px-4 py-3 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-white/80 dark:border-slate-700/50 backdrop-blur-sm">
-                  <div className="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
-                    <CalendarCheck className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                      {upcomingAppointments.length}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {isSpanish ? "Citas próximas" : "Upcoming"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 px-4 py-3 bg-white/60 dark:bg-slate-800/60 rounded-xl border border-white/80 dark:border-slate-700/50 backdrop-blur-sm">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                      {medicalRecords.length}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {isSpanish ? "Documentos" : "Documents"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 8px" }}>
+        {/* Topbar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 20,
+            marginBottom: 28,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 6,
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: C.sage500,
+                  display: "inline-block",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 11,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  color: C.sage700,
+                  fontWeight: 600,
+                }}
+              >
+                {isES ? "Tu espacio" : "Your space"}
+              </span>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            <h1
+              style={{
+                fontFamily: "var(--font-fraunces), serif",
+                fontSize: "clamp(26px, 3vw, 32px)",
+                letterSpacing: "-0.02em",
+                fontWeight: 400,
+                margin: 0,
+                color: C.ink,
+              }}
+            >
+              {greet(isES)}
+              {firstName ? (
+                <>
+                  ,{" "}
+                  <em style={{ fontStyle: "italic", color: C.sage500, fontWeight: 300 }}>
+                    {firstName}
+                  </em>
+                </>
+              ) : null}
+              .
+            </h1>
+            <p style={{ color: C.inkSoft, fontSize: 14, marginTop: 4 }}>{todaySummary}</p>
+          </div>
 
-      {/* Next Appointment - Featured Card */}
-      {nextAppointment && (
-        <motion.div variants={itemVariants}>
-          <Card className={cn(
-            "overflow-hidden",
-            isAppointmentSoon 
-              ? "border-teal-500 ring-2 ring-teal-500/20 bg-gradient-to-br from-teal-50 to-white dark:from-teal-950/50 dark:to-slate-900" 
-              : "border-slate-200/60 dark:border-slate-800"
-          )}>
-            {isAppointmentSoon && (
-              <div className="bg-teal-600 text-white px-4 py-2 text-sm font-medium flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                {isSpanish ? "Tu cita está a punto de comenzar" : "Your appointment is about to start"}
-              </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Link
+              href="/dashboard/appointments"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 18px",
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.ink,
+                background: "white",
+                border: `1px solid ${C.line}`,
+                borderRadius: 999,
+                textDecoration: "none",
+                transition: "all 0.2s",
+              }}
+            >
+              {icoCalendar}
+              {isES ? "Mi agenda" : "My calendar"}
+            </Link>
+            <Link
+              href="/dashboard/patient/buscar"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 18px",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "white",
+                background: C.ink,
+                borderRadius: 999,
+                textDecoration: "none",
+                transition: "all 0.2s",
+              }}
+            >
+              {icoPlus}
+              {isES ? "Reservar cita" : "Book appointment"}
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats — 4 cards */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+            marginBottom: 16,
+          }}
+        >
+          <StatCard
+            icon={icoCalendar}
+            iconBg={C.sage100}
+            iconColor={C.sage700}
+            label={isES ? "Próximas citas" : "Upcoming"}
+            value={stats.upcoming}
+            delta={
+              nextAppt
+                ? isES
+                  ? `Siguiente · ${nextAppt.appointment_time.slice(0, 5)}`
+                  : `Next · ${nextAppt.appointment_time.slice(0, 5)}`
+                : isES
+                ? "Sin próximas"
+                : "None yet"
+            }
+            deltaTone="up"
+          />
+          <StatCard
+            icon={icoHeart}
+            iconBg={C.terracottaSoft}
+            iconColor={C.terracotta}
+            label={isES ? "Profesionales" : "Professionals"}
+            value={stats.professionals}
+            delta={isES ? "En tu red" : "In your network"}
+            deltaTone="neutral"
+          />
+          <StatCard
+            icon={icoChat}
+            iconBg={C.blueSoft}
+            iconColor={C.blueMid}
+            label={isES ? "Mensajes" : "Messages"}
+            value={messages.length}
+            delta={
+              stats.unread
+                ? `${stats.unread} ${isES ? "sin leer" : "unread"}`
+                : isES
+                ? "Al día"
+                : "All read"
+            }
+            deltaTone="up"
+          />
+          <StatCard
+            icon={icoCheckCircle}
+            iconBg={C.amberSoft}
+            iconColor={C.amber}
+            label={isES ? "Sesiones completadas" : "Completed"}
+            value={stats.completed}
+            delta={isES ? "Total" : "Total"}
+            deltaTone="neutral"
+          />
+        </div>
+
+        {/* Agenda + Wellness */}
+        <div
+          className="nurea-grid-hh"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)",
+            gap: 16,
+            marginBottom: 16,
+          }}
+        >
+          <section style={cardStyle}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "var(--font-fraunces), serif",
+                  fontSize: 18,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  fontWeight: 400,
+                }}
+              >
+                {isES ? "Agenda de hoy" : "Today's agenda"}
+              </h2>
+              <Link
+                href="/dashboard/appointments"
+                style={{
+                  fontSize: 12,
+                  color: C.sage700,
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                {isES ? "Ver todo" : "View all"} →
+              </Link>
+            </div>
+
+            {loading ? (
+              <LoadingRow />
+            ) : appointments.length === 0 ? (
+              <EmptyState
+                title={isES ? "Sin citas próximas" : "No upcoming appointments"}
+                message={
+                  isES
+                    ? "Cuando reserves tu próxima cita aparecerá aquí."
+                    : "Your next appointment will show up here."
+                }
+                ctaLabel={isES ? "Explorar profesionales" : "Explore professionals"}
+                ctaHref="/dashboard/patient/buscar"
+              />
+            ) : (
+              appointments.slice(0, 4).map((apt) => <AppointmentRow key={apt.id} apt={apt} isES={isES} />)
             )}
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16 border-2 border-teal-500/20">
-                    <AvatarImage src={nextAppointment.professional?.profile?.avatar_url} />
-                    <AvatarFallback className="bg-teal-100 text-teal-700 text-lg">
-                      {nextAppointment.professional?.profile?.first_name?.[0]}
-                      {nextAppointment.professional?.profile?.last_name?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold text-lg text-slate-900 dark:text-white">
-                      Dr. {nextAppointment.professional?.profile?.first_name} {nextAppointment.professional?.profile?.last_name}
-                    </p>
-                    <p className="text-slate-500 dark:text-slate-400">
-                      {nextAppointment.professional?.specialty}
-                    </p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <Badge variant="outline" className="border-teal-200 text-teal-700 dark:border-teal-800 dark:text-teal-300">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {formatDate(nextAppointment.appointment_date)}
-                      </Badge>
-                      <Badge variant="outline" className="border-teal-200 text-teal-700 dark:border-teal-800 dark:text-teal-300">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {formatTime(nextAppointment.appointment_time)}
-                      </Badge>
-                      <Badge className={cn(
-                        "text-xs",
-                        nextAppointment.type === "online"
-                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                      )}>
-                        {nextAppointment.type === "online" ? (
-                          <><Video className="h-3 w-3 mr-1" /> Online</>
-                        ) : (
-                          <><MapPin className="h-3 w-3 mr-1" /> Presencial</>
-                        )}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
+          </section>
 
-                {nextAppointment.type === "online" && (
-                  <Button
-                    size="lg"
-                    onClick={() => openVideoCall(nextAppointment.id)}
-                    className={cn(
-                      "gap-2 rounded-xl h-14 px-8 text-base font-semibold shadow-lg",
-                      isAppointmentSoon
-                        ? "bg-teal-600 hover:bg-teal-700 animate-pulse"
-                        : "bg-teal-600 hover:bg-teal-700"
-                    )}
-                  >
-                    <Video className="h-5 w-5" />
-                    {isSpanish ? "Unirse a la Llamada" : "Join Call"}
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Quick Search */}
-      <motion.div variants={itemVariants}>
-        <Card className="border-slate-200/60 dark:border-slate-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Search className="h-4 w-4 text-teal-600" />
-              {isSpanish ? "Buscar Especialista" : "Find a Specialist"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <form onSubmit={handleSearch}>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                  <Input
-                    placeholder={
-                      isSpanish
-                        ? "Buscar por especialidad, nombre o síntoma..."
-                        : "Search by specialty, name, or symptom..."
-                    }
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-12 h-12 rounded-xl text-base bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:border-teal-500"
-                  />
-                </div>
-                <Button type="submit" className="h-12 rounded-xl px-5 bg-teal-600 hover:bg-teal-700 text-white shrink-0">
-                  {isSpanish ? "Buscar" : "Search"}
-                </Button>
-              </div>
-            </form>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {specialties.map((specialty) => (
-                <Link key={specialty.slug} href={`/explore?specialty=${specialty.slug}`}>
-                  <motion.div
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-teal-500/50 hover:bg-teal-50/50 dark:hover:bg-teal-950/20 transition-all cursor-pointer group"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/50 flex items-center justify-center transition-colors">
-                      <specialty.icon className="h-6 w-6 text-slate-500 group-hover:text-teal-600 transition-colors" />
-                    </div>
-                    <span className="text-sm font-medium text-center text-slate-600 dark:text-slate-400 group-hover:text-teal-700 dark:group-hover:text-teal-300 transition-colors">
-                      {isSpanish ? specialty.label : specialty.labelEn}
-                    </span>
-                  </motion.div>
-                </Link>
-              ))}
+          <section style={cardStyle}>
+            <div style={{ marginBottom: 16 }}>
+              <h2
+                style={{
+                  fontFamily: "var(--font-fraunces), serif",
+                  fontSize: 18,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  fontWeight: 400,
+                }}
+              >
+                {isES ? "Tu progreso" : "Your progress"}
+              </h2>
+              <p style={{ fontSize: 12, color: C.inkMute, marginTop: 4 }}>
+                {isES ? "Basado en tu historial real de citas" : "Based on your real appointment history"}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
 
-      {/* Pending Referrals (Derivaciones) */}
-      {pendingReferrals.length > 0 && (
-        <motion.div variants={itemVariants}>
-          <Card className="border-indigo-200/60 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-950/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
-                <LinkIcon className="h-5 w-5" />
-                {isSpanish ? "Derivaciones Pendientes" : "Pending Referrals"}
-              </CardTitle>
-              <CardDescription>
-                {isSpanish ? "Tienes nuevas derivaciones de tus doctores. Autoriza el acceso a tu ficha." : "You have new referrals. Authorize access to your medical record."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {pendingReferrals.map((ref) => (
-                <div key={ref.id} className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-indigo-100 dark:border-indigo-800/50 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="border-indigo-200 text-indigo-700">
-                        Dr. {ref.referring_professional?.profiles?.first_name} {ref.referring_professional?.profiles?.last_name}
-                      </Badge>
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
-                      <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-300">
-                        {ref.target_specialty
-                          ? (isSpanish ? ref.target_specialty.name_es : ref.target_specialty.name_en)
-                          : "Especialista"}{ref.target_professional ? ` - Dr. ${ref.target_professional?.profiles?.first_name} ${ref.target_professional?.profiles?.last_name}` : ""}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-                      <strong>Motivo:</strong> {ref.reason}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {formatDate(ref.created_at)}
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={() => authorizeReferral(ref.id)}
-                    className="shrink-0 gap-2 bg-indigo-600 hover:bg-indigo-700"
-                  >
-                    <Shield className="h-4 w-4" />
-                    {isSpanish ? "Autorizar acceso a mi ficha" : "Authorize record access"}
-                  </Button>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+            {/* Sesiones completadas — dato real */}
+            <ProgressStat
+              label={isES ? "Sesiones completadas" : "Completed sessions"}
+              value={stats.completed}
+              hint={
+                stats.completed === 0
+                  ? isES
+                    ? "Aún no hay sesiones"
+                    : "No sessions yet"
+                  : isES
+                  ? `${stats.completed} ${stats.completed === 1 ? "sesión" : "sesiones"}`
+                  : `${stats.completed} ${stats.completed === 1 ? "session" : "sessions"}`
+              }
+            />
+            <ProgressStat
+              label={isES ? "Profesionales de tu red" : "Professionals in your network"}
+              value={stats.professionals}
+              hint={
+                stats.professionals === 0
+                  ? isES
+                    ? "Sin profesionales aún"
+                    : "None yet"
+                  : `${stats.professionals}`
+              }
+            />
+            <ProgressStat
+              label={isES ? "Próximas citas" : "Upcoming appointments"}
+              value={stats.upcoming}
+              hint={
+                stats.upcoming === 0
+                  ? isES
+                    ? "Agenda libre"
+                    : "Calendar open"
+                  : `${stats.upcoming}`
+              }
+              warm
+            />
 
-      {/* Two Column Layout for Documents and History */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Medical Documents / Prescriptions */}
-        <motion.div variants={itemVariants}>
-          <Card className="border-slate-200/60 dark:border-slate-800 h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <div>
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-emerald-600" />
-                  {isSpanish ? "Mis Recetas y Órdenes" : "My Prescriptions & Orders"}
-                </CardTitle>
-                <CardDescription>
-                  {isSpanish ? "Documentos médicos recientes" : "Recent medical documents"}
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" className="text-teal-600" asChild>
-                <Link href="/dashboard/documents">
-                  {isSpanish ? "Ver todo" : "View all"}
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {medicalRecords.length > 0 || allReferrals.length > 0 ? (
-                <div className="space-y-3">
-                  {medicalRecords.slice(0, 3).map((record) => (
-                    <div
-                      key={record.id}
-                      className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                          <PillIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white text-sm">
-                            Dr. {record.professional?.first_name} {record.professional?.last_name}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                            {format(parseISO(record.created_at), "d MMM yyyy", { locale })}
-                            {record.diagnosis_code && (
-                              <Badge variant="outline" className="text-[10px] h-4">
-                                {record.diagnosis_code}
-                              </Badge>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1 text-teal-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                        asChild
-                      >
-                        <Link href={`/api/documents/prescription/${record.id}`} target="_blank">
-                          <Download className="h-4 w-4" />
-                          PDF
-                        </Link>
-                      </Button>
-                    </div>
-                  ))}
+            <div
+              style={{
+                marginTop: 8,
+                padding: 14,
+                background: C.sage50,
+                borderRadius: 12,
+                fontSize: 12.5,
+                color: C.sage700,
+                lineHeight: 1.55,
+              }}
+            >
+              <strong>{isES ? "Próximo paso" : "Next step"}</strong>
+              <br />
+              {nextAppt
+                ? isES
+                  ? `Tienes una sesión el ${nextAppt.appointment_date} a las ${nextAppt.appointment_time.slice(0, 5)}. Prepara lo que quieras comentar.`
+                  : `You have a session on ${nextAppt.appointment_date} at ${nextAppt.appointment_time.slice(0, 5)}. Prepare what you want to discuss.`
+                : isES
+                ? "Cuando tengas una cita reservada, aparecerán aquí los próximos pasos."
+                : "When you have an appointment booked, next steps will appear here."}
+            </div>
+          </section>
+        </div>
 
-                  {/* Referrals */}
-                  {allReferrals.slice(0, 2).map((ref) => (
-                    <div
-                      key={ref.id}
-                      className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
-                          <LinkIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white text-sm">
-                            Interconsulta
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {formatDate(ref.created_at)}
-                            <Badge variant="outline" className="ml-2 text-[10px] h-4 border-indigo-200 text-indigo-700">
-                              Dr. {ref.referring_professional?.profiles?.first_name} {ref.referring_professional?.profiles?.last_name}
-                            </Badge>
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1 text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                        asChild
-                      >
-                        <Link href={`/api/documents/referral/${ref.id}`} target="_blank">
-                          <Download className="h-4 w-4" />
-                          PDF
-                        </Link>
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400 dark:text-slate-500">
-                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">
-                    {isSpanish 
-                      ? "Aún no tienes documentos médicos" 
-                      : "No medical documents yet"}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+        {/* Suggested pros + recent messages */}
+        <div
+          className="nurea-grid-hh"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)",
+            gap: 16,
+          }}
+        >
+          <section style={cardStyle}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "var(--font-fraunces), serif",
+                  fontSize: 18,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  fontWeight: 400,
+                }}
+              >
+                {isES ? "Profesionales sugeridos para ti" : "Suggested professionals"}
+              </h2>
+              <Link
+                href="/dashboard/patient/buscar"
+                style={{
+                  fontSize: 12,
+                  color: C.sage700,
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                {isES ? "Explorar red" : "Explore"} →
+              </Link>
+            </div>
 
-        {/* Appointment History */}
-        <motion.div variants={itemVariants}>
-          <Card className="border-slate-200/60 dark:border-slate-800 h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <div>
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-600" />
-                  {isSpanish ? "Historial de Citas" : "Appointment History"}
-                </CardTitle>
-                <CardDescription>
-                  {isSpanish ? "Citas pasadas" : "Past appointments"}
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" className="text-teal-600" asChild>
-                <Link href="/dashboard/appointments">
-                  {isSpanish ? "Ver todo" : "View all"}
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {pastAppointments.length > 0 ? (
-                <div className="space-y-3">
-                  {pastAppointments.slice(0, 4).map((apt) => (
-                    <div
-                      key={apt.id}
-                      className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={apt.professional?.profile?.avatar_url} />
-                          <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-sm">
-                            {apt.professional?.profile?.first_name?.[0]}
-                            {apt.professional?.profile?.last_name?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white text-sm">
-                            Dr. {apt.professional?.profile?.first_name} {apt.professional?.profile?.last_name}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {format(parseISO(apt.appointment_date), "d MMM yyyy", { locale })}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge className={cn(
-                        "text-xs",
-                        apt.status === "completed"
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                      )}>
-                        {apt.status === "completed" ? (
-                          <><CheckCircle2 className="h-3 w-3 mr-1" /> {isSpanish ? "Completada" : "Completed"}</>
-                        ) : (
-                          <><XCircle className="h-3 w-3 mr-1" /> {isSpanish ? "Cancelada" : "Cancelled"}</>
-                        )}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400 dark:text-slate-500">
-                  <Calendar className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">
-                    {isSpanish 
-                      ? "No tienes citas pasadas" 
-                      : "No past appointments"}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Upcoming Appointments List */}
-      {upcomingAppointments.length > 1 && (
-        <motion.div variants={itemVariants}>
-          <Card className="border-slate-200/60 dark:border-slate-800">
-            <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <div>
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  <CalendarCheck className="h-4 w-4 text-teal-600" />
-                  {isSpanish ? "Otras Citas Programadas" : "Other Scheduled Appointments"}
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {upcomingAppointments.slice(1).map((apt) => (
-                  <div
-                    key={apt.id}
-                    className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-teal-500/50 transition-colors"
-                  >
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={apt.professional?.profile?.avatar_url} />
-                      <AvatarFallback className="bg-teal-100 text-teal-700">
-                        {apt.professional?.profile?.first_name?.[0]}
-                        {apt.professional?.profile?.last_name?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-slate-900 dark:text-white truncate">
-                        Dr. {apt.professional?.profile?.first_name} {apt.professional?.profile?.last_name}
-                      </p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {formatDate(apt.appointment_date)} • {formatTime(apt.appointment_time)}
-                      </p>
-                    </div>
-                    <Badge className={cn(
-                      "shrink-0",
-                      apt.type === "online"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-amber-100 text-amber-700"
-                    )}>
-                      {apt.type === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
-                    </Badge>
-                  </div>
+            {loading ? (
+              <LoadingRow />
+            ) : suggestions.length === 0 ? (
+              <EmptyState
+                title={isES ? "Pronto aparecerán recomendaciones" : "Recommendations coming soon"}
+                message={
+                  isES
+                    ? "Explora la red y guarda tus favoritos para recibir sugerencias personalizadas."
+                    : "Browse the network and save favorites to get personalized suggestions."
+                }
+                ctaLabel={isES ? "Buscar profesionales" : "Find professionals"}
+                ctaHref="/dashboard/patient/buscar"
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {suggestions.map((p) => (
+                  <SuggestionRow key={p.id} p={p} isES={isES} />
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+            )}
+          </section>
 
-      {/* Profile & Settings Section */}
-      <motion.div variants={itemVariants}>
-        <Card className="border-slate-200/60 dark:border-slate-800">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Settings className="h-4 w-4 text-slate-600" />
-              {isSpanish ? "Mi Perfil y Ajustes" : "My Profile & Settings"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50">
-              <div className="flex items-center gap-4">
-                <div className="relative group/avatar cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
-                  <Avatar className="h-14 w-14 border-2 border-teal-500/20">
-                    <AvatarImage src={profile?.avatar_url} />
-                    <AvatarFallback className="bg-teal-100 text-teal-700 text-lg">
-                      {profile?.first_name?.[0]}{profile?.last_name?.[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
-                    {uploadingAvatar ? (
-                      <Loader2 className="h-5 w-5 text-white animate-spin" />
-                    ) : (
-                      <Camera className="h-5 w-5 text-white" />
-                    )}
-                  </div>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-900 dark:text-white">
-                    {profile?.first_name || user?.user_metadata?.first_name} {profile?.last_name || user?.user_metadata?.last_name}
-                  </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{user?.email}</p>
-                  {profile?.phone && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                      <Phone className="h-3 w-3" /> {profile.phone}
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <User className="h-4 w-4" />
-                      {isSpanish ? "Editar" : "Edit"}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <User className="h-5 w-5 text-teal-600" />
-                        {isSpanish ? "Actualizar Información" : "Update Information"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {isSpanish 
-                          ? "Actualiza tu información de contacto" 
-                          : "Update your contact information"}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-sm font-medium">
-                          {isSpanish ? "Teléfono" : "Phone"}
-                        </Label>
-                        <Input
-                          id="phone"
-                          value={editedPhone}
-                          onChange={(e) => setEditedPhone(e.target.value)}
-                          placeholder="+56 9 1234 5678"
-                          className="h-11 border-teal-200 dark:border-teal-800 focus-visible:ring-teal-500"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter className="gap-2 sm:gap-0 mt-4">
-                      <Button variant="outline" onClick={() => setEditProfileOpen(false)}>
-                        {isSpanish ? "Cancelar" : "Cancel"}
-                      </Button>
-                      <Button 
-                        onClick={handleSaveProfile} 
-                        disabled={savingProfile}
-                        className="bg-teal-600 hover:bg-teal-700"
-                      >
-                        {savingProfile ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          isSpanish ? "Guardar" : "Save"
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-                
-                <Button variant="outline" size="sm" className="gap-2" asChild>
-                  <Link href="/dashboard/settings">
-                    <Shield className="h-4 w-4" />
-                    {isSpanish ? "Seguridad" : "Security"}
-                  </Link>
-                </Button>
-              </div>
+          <section style={cardStyle}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "var(--font-fraunces), serif",
+                  fontSize: 18,
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  fontWeight: 400,
+                }}
+              >
+                {isES ? "Mensajes recientes" : "Recent messages"}
+              </h2>
+              <Link
+                href="/dashboard/chat"
+                style={{
+                  fontSize: 12,
+                  color: C.sage700,
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                {isES ? "Abrir chat" : "Open chat"} →
+              </Link>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
 
-      {/* CTA if no appointments */}
-      {upcomingAppointments.length === 0 && (
-        <motion.div variants={itemVariants}>
-          <Card className="border-dashed border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20">
-            <CardContent className="p-8 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center mx-auto mb-4">
-                <Stethoscope className="h-8 w-8 text-teal-600" />
+            {loading ? (
+              <LoadingRow />
+            ) : messages.length === 0 ? (
+              <EmptyState
+                small
+                title={isES ? "Bandeja vacía" : "Inbox empty"}
+                message={
+                  isES
+                    ? "Cuando tengas mensajes nuevos de un profesional, aparecerán aquí."
+                    : "New messages from a professional will appear here."
+                }
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {messages.slice(0, 4).map((m) => (
+                  <MessageRow key={m.id} m={m} isES={isES} />
+                ))}
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                {isSpanish ? "¿Necesitas una consulta?" : "Need a consultation?"}
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-sm mx-auto">
-                {isSpanish 
-                  ? "Encuentra especialistas verificados y agenda tu cita en minutos" 
-                  : "Find verified specialists and book your appointment in minutes"}
-              </p>
-              <Button size="lg" className="bg-teal-600 hover:bg-teal-700 gap-2 rounded-xl h-12 px-6" asChild>
-                <Link href="/search">
-                  <Search className="h-5 w-5" />
-                  {isSpanish ? "Buscar Especialista" : "Find a Specialist"}
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
+            )}
+          </section>
+        </div>
+      </div>
+
+      {/* Responsive stack */}
+      <style jsx global>{`
+        @media (max-width: 900px) {
+          .nurea-grid-hh {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  StatCard
+ * ------------------------------------------------------------------ */
+function StatCard({
+  icon,
+  iconBg,
+  iconColor,
+  label,
+  value,
+  delta,
+  deltaTone,
+}: {
+  icon: React.ReactNode
+  iconBg: string
+  iconColor: string
+  label: string
+  value: number | string
+  delta: string
+  deltaTone: "up" | "neutral" | "down"
+}) {
+  const deltaBg =
+    deltaTone === "up" ? C.sage100 : deltaTone === "down" ? "oklch(0.95 0.03 15)" : C.bgWarm
+  const deltaFg =
+    deltaTone === "up" ? C.sage700 : deltaTone === "down" ? "oklch(0.45 0.12 15)" : C.inkSoft
+
+  return (
+    <div style={{ ...cardStyle, padding: 20, overflow: "hidden", position: "relative" }}>
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 14,
+          background: iconBg,
+          color: iconColor,
+        }}
+      >
+        {icon}
+      </div>
+      <div
+        style={{
+          fontSize: 12,
+          color: C.inkMute,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-fraunces), serif",
+          fontSize: 36,
+          fontWeight: 400,
+          letterSpacing: "-0.025em",
+          lineHeight: 1,
+          color: C.ink,
+        }}
+      >
+        {value}
+      </div>
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          fontSize: 12,
+          marginTop: 8,
+          padding: "3px 8px",
+          borderRadius: 999,
+          background: deltaBg,
+          color: deltaFg,
+        }}
+      >
+        {delta}
+      </span>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  AppointmentRow
+ * ------------------------------------------------------------------ */
+function AppointmentRow({ apt, isES }: { apt: Appointment; isES: boolean }) {
+  const { h, m } = hourPart(apt.appointment_time || "00:00")
+  const proName =
+    `${apt.professional?.first_name ?? ""} ${apt.professional?.last_name ?? ""}`.trim() ||
+    (isES ? "Profesional" : "Professional")
+  const isOnline =
+    (apt.type || "").toLowerCase().includes("online") ||
+    (apt.type || "").toLowerCase().includes("video")
+  const chip = isOnline ? chipStyle("sage") : chipStyle("blue")
+  const isToday = apt.appointment_date === new Date().toISOString().split("T")[0]
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "64px 1fr auto",
+        gap: 14,
+        alignItems: "center",
+        padding: 14,
+        borderRadius: 14,
+        background: C.bgWarm,
+        marginBottom: 8,
+        transition: "all 0.2s",
+        border: "1px solid transparent",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div
+          style={{
+            fontFamily: "var(--font-fraunces), serif",
+            fontSize: 22,
+            lineHeight: 1,
+            fontWeight: 400,
+          }}
+        >
+          {h}
+          <span style={{ fontSize: 14, color: C.inkMute }}>:{m}</span>
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: C.inkMute,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            marginTop: 2,
+          }}
+        >
+          {shortDayLabel(apt.appointment_date, isES)}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 3, color: C.ink }}>
+          {isES ? "Sesión con " : "Session with "}
+          {proName}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: C.inkSoft,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <span style={chip}>
+            <span style={dotStyle} />
+            {isOnline ? (isES ? "Videoconsulta" : "Video call") : isES ? "Presencial" : "In-person"}
+          </span>
+          <span>
+            {apt.professional?.specialty || (isES ? "Consulta" : "Consultation")} ·{" "}
+            {apt.duration_minutes ?? 45} min
+          </span>
+        </div>
+      </div>
+
+      {isToday && isOnline ? (
+        <Link
+          href={`/consulta/${apt.id}`}
+          style={{
+            padding: "6px 12px",
+            fontSize: 12,
+            fontWeight: 500,
+            borderRadius: 999,
+            background: C.terracotta,
+            color: "white",
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          {isES ? "Unirse" : "Join"}
+        </Link>
+      ) : (
+        <Link
+          href={`/dashboard/appointments?id=${apt.id}`}
+          style={{
+            padding: "6px 12px",
+            fontSize: 12,
+            fontWeight: 500,
+            borderRadius: 999,
+            background: "white",
+            border: `1px solid ${C.line}`,
+            color: C.ink,
+            textDecoration: "none",
+          }}
+        >
+          {isES ? "Detalles" : "Details"}
+        </Link>
       )}
-    </motion.div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  SuggestionRow
+ * ------------------------------------------------------------------ */
+function SuggestionRow({ p, isES }: { p: Suggestion; isES: boolean }) {
+  const name = `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "Nurea"
+  const meta = [
+    p.specialty || "",
+    p.years_experience ? `${p.years_experience} ${isES ? "años" : "yrs"}` : "",
+    p.city || p.consultation_type || (isES ? "Online" : "Online"),
+  ]
+    .filter(Boolean)
+    .join(" · ")
+
+  return (
+    <Link
+      href={`/professionals/${p.id}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: 12,
+        borderRadius: 12,
+        transition: "background 0.15s",
+        textDecoration: "none",
+        color: C.ink,
+      }}
+    >
+      <div
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: avatarGradient(name || "N"),
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 2 }}>{name}</div>
+        <div
+          style={{
+            fontSize: 12,
+            color: C.inkMute,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {meta}
+        </div>
+      </div>
+      <div style={{ textAlign: "right", fontSize: 12, color: C.inkSoft }}>
+        <span style={chipStyle("sage")}>
+          <span style={dotStyle} />
+          {isES ? "Disponible" : "Available"}
+        </span>
+        {p.base_price ? (
+          <div
+            style={{
+              fontFamily: "var(--font-jetbrains-mono), monospace",
+              fontSize: 11,
+              color: C.inkMute,
+              marginTop: 4,
+            }}
+          >
+            {isES ? "Desde" : "From"} ${p.base_price.toLocaleString(isES ? "es-CL" : "en-US")}
+          </div>
+        ) : null}
+      </div>
+    </Link>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  MessageRow
+ * ------------------------------------------------------------------ */
+function MessageRow({ m, isES }: { m: MessagePreview; isES: boolean }) {
+  const when = new Date(m.created_at)
+  const now = new Date()
+  const today = when.toDateString() === now.toDateString()
+  const label = today
+    ? when.toLocaleTimeString(isES ? "es-CL" : "en-US", { hour: "2-digit", minute: "2-digit" })
+    : when.toLocaleDateString(isES ? "es-CL" : "en-US", { weekday: "short" })
+
+  return (
+    <Link
+      href="/dashboard/chat"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: 12,
+        borderRadius: 12,
+        textDecoration: "none",
+        color: C.ink,
+      }}
+    >
+      <div
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: "50%",
+          flexShrink: 0,
+          background: avatarGradient(m.other_name),
+        }}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 13.5,
+            fontWeight: 600,
+            marginBottom: 2,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          {m.other_name}
+          {m.unread && <span style={chipStyle("sage")}>{isES ? "nuevo" : "new"}</span>}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: C.inkMute,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {m.preview || (isES ? "Mensaje" : "Message")}…
+        </div>
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-jetbrains-mono), monospace",
+          fontSize: 11,
+          color: C.inkMute,
+        }}
+      >
+        {label}
+      </div>
+    </Link>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  ProgressStat — muestra un contador real (no porcentajes falsos)
+ * ------------------------------------------------------------------ */
+function ProgressStat({
+  label,
+  value,
+  hint,
+  warm,
+}: {
+  label: string
+  value: number
+  hint: string
+  warm?: boolean
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "10px 0",
+        borderBottom: `1px solid ${C.lineSoft}`,
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: C.ink, marginBottom: 2 }}>
+          {label}
+        </div>
+        <div style={{ fontSize: 11, color: C.inkMute }}>{hint}</div>
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-fraunces), serif",
+          fontSize: 24,
+          letterSpacing: "-0.02em",
+          color: warm ? C.terracotta : C.sage700,
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------
+ *  Utility rows
+ * ------------------------------------------------------------------ */
+function LoadingRow() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: C.inkMute,
+        fontSize: 13,
+        padding: "22px 0",
+      }}
+    >
+      Cargando…
+    </div>
+  )
+}
+
+function EmptyState({
+  title,
+  message,
+  ctaLabel,
+  ctaHref,
+  small,
+}: {
+  title: string
+  message: string
+  ctaLabel?: string
+  ctaHref?: string
+  small?: boolean
+}) {
+  return (
+    <div
+      style={{
+        padding: small ? "18px 6px" : "32px 10px",
+        textAlign: "center",
+        color: C.inkSoft,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--font-fraunces), serif",
+          fontSize: small ? 15 : 17,
+          color: C.ink,
+          marginBottom: 6,
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ fontSize: 13, color: C.inkMute, marginBottom: ctaLabel ? 14 : 0 }}>{message}</div>
+      {ctaLabel && ctaHref && (
+        <Link
+          href={ctaHref}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 12,
+            fontWeight: 500,
+            padding: "8px 14px",
+            borderRadius: 999,
+            background: C.sage900,
+            color: "white",
+            textDecoration: "none",
+          }}
+        >
+          {ctaLabel} {icoArrow}
+        </Link>
+      )}
+    </div>
   )
 }

@@ -77,7 +77,7 @@ function formatDate(dateString: string, isSpanish: boolean): string {
     return isSpanish ? "Mañana" : "Tomorrow"
   }
 
-  return date.toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
+  return date.toLocaleDateString(isSpanish ? "es-CL" : "en-US", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -503,7 +503,7 @@ function CancelledAppointmentCard({
   const doctor = appointment.professional?.profile || {}
   const dateStr = appointment.appointment_date || appointment.date
   const date = new Date(dateStr)
-  const formattedDate = date.toLocaleDateString(isSpanish ? "es-ES" : "en-US", {
+  const formattedDate = date.toLocaleDateString(isSpanish ? "es-CL" : "en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -603,7 +603,7 @@ export default function PatientAppointmentsPage() {
 
   useEffect(() => {
     if (user) loadAppointments()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }, [user?.id])
 
   // Handle auto-open review from URL

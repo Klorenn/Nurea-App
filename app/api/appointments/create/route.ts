@@ -213,6 +213,10 @@ export async function POST(request: Request) {
           : null
 
     // Usar función RPC atómica para crear la cita (previene race conditions)
+    // Si la RPC no existe, caer a INSERT directo
+    let appointmentId: string | null = null
+    let useRpc = true
+    
     const { data: rpcResult, error: rpcError } = await supabase.rpc('create_appointment_atomic', {
       p_professional_id: professionalId,
       p_patient_id: user.id,
@@ -226,42 +230,90 @@ export async function POST(request: Request) {
       p_payment_status: 'pending',
     })
 
+    // Si RPC falla (no existe la función), usar INSERT directo
     if (rpcError) {
-      console.error('Error calling create_appointment_atomic RPC:', rpcError)
+      console.warn('RPC create_appointment_atomic not available, falling back to INSERT:', rpcError.message)
+      useRpc = false
+      
+      const { data: insertResult, error: insertError } = await supabase
+        .from('appointments')
+        .insert({
+          patient_id: user.id,
+          professional_id: professionalId,
+          appointment_date: appointmentDate,
+          appointment_time: appointmentTime,
+          duration_minutes: duration,
+          status: 'pending',
+          is_online: type === 'online',
+          notes: normalizedConsultationReason || null,
+          price: price,
+          payment_status: 'pending',
+        })
+        .select('id')
+        .single()
+      
+      if (insertError) {
+        console.error('Error creating appointment (INSERT):', insertError)
+        return NextResponse.json(
+          { 
+            error: 'creation_failed',
+            message: 'No pudimos crear la cita. Por favor, intenta nuevamente.'
+          },
+          { status: 500 }
+        )
+      }
+      
+      appointmentId = insertResult.id
+    }
+
+    if (useRpc) {
+      if (rpcError) {
+        console.error('Error calling create_appointment_atomic RPC:', rpcError)
+        return NextResponse.json(
+          { 
+            error: 'creation_failed',
+            message: 'No pudimos crear la cita. Por favor, intenta nuevamente.'
+          },
+          { status: 500 }
+        )
+      }
+
+      // Verificar resultado de la función RPC
+      if (!rpcResult?.success) {
+        console.error('Appointment creation failed:', rpcResult)
+        
+        const errorCodeMap: Record<string, { status: number, message: string }> = {
+          'SAME_USER': { status: 400, message: 'No puedes agendar una cita contigo mismo.' },
+          'PAST_DATE': { status: 400, message: 'No se pueden crear citas en fechas pasadas.' },
+          'INVALID_DURATION': { status: 400, message: 'La duración debe ser entre 15 y 180 minutos.' },
+          'SLOT_OCCUPIED': { status: 409, message: 'Este horario ya está ocupado. Por favor, selecciona otro horario.' },
+          'INTERNAL_ERROR': { status: 500, message: 'Error interno. Por favor, intenta nuevamente.' },
+        }
+
+        const errorInfo = errorCodeMap[rpcResult?.error_code] || { status: 400, message: rpcResult?.error_message || 'Error al crear la cita.' }
+        
+        return NextResponse.json(
+          { 
+            error: rpcResult?.error_code || 'creation_failed',
+            message: errorInfo.message
+          },
+          { status: errorInfo.status }
+        )
+      }
+
+      // La cita fue creada exitosamente por la función RPC
+      appointmentId = rpcResult.appointment?.id
+    }
+
+    if (!appointmentId) {
       return NextResponse.json(
         { 
           error: 'creation_failed',
-          message: 'No pudimos crear la cita. Por favor, intenta nuevamente.'
+          message: 'No pudimos obtener el ID de la cita creada.'
         },
         { status: 500 }
       )
     }
-
-    // Verificar resultado de la función RPC
-    if (!rpcResult?.success) {
-      console.error('Appointment creation failed:', rpcResult)
-      
-      const errorCodeMap: Record<string, { status: number, message: string }> = {
-        'SAME_USER': { status: 400, message: 'No puedes agendar una cita contigo mismo.' },
-        'PAST_DATE': { status: 400, message: 'No se pueden crear citas en fechas pasadas.' },
-        'INVALID_DURATION': { status: 400, message: 'La duración debe ser entre 15 y 180 minutos.' },
-        'SLOT_OCCUPIED': { status: 409, message: 'Este horario ya está ocupado. Por favor, selecciona otro horario.' },
-        'INTERNAL_ERROR': { status: 500, message: 'Error interno. Por favor, intenta nuevamente.' },
-      }
-
-      const errorInfo = errorCodeMap[rpcResult?.error_code] || { status: 400, message: rpcResult?.error_message || 'Error al crear la cita.' }
-      
-      return NextResponse.json(
-        { 
-          error: rpcResult?.error_code || 'creation_failed',
-          message: errorInfo.message
-        },
-        { status: errorInfo.status }
-      )
-    }
-
-    // La cita fue creada exitosamente por la función RPC
-    const appointment = rpcResult.appointment
 
     // Formatear fecha y hora para el mensaje y la caducidad
     const appointmentDateObj = new Date(`${appointmentDate}T${appointmentTime}`)
@@ -275,8 +327,8 @@ export async function POST(request: Request) {
       try {
         const { getJitsiMeetingUrl } = await import('@/lib/utils/jitsi')
         
-        meetingLink = getJitsiMeetingUrl(appointment.id)
-        meetingRoomId = `nurea-${appointment.id}`
+        meetingLink = getJitsiMeetingUrl(appointmentId)
+        meetingRoomId = `nurea-${appointmentId}`
 
         // Jitsi no tiene expiración estricta, pero ponemos 2 horas después como referencia
         const appointmentEndTime = new Date(appointmentDateObj.getTime() + duration * 60 * 1000)
@@ -292,7 +344,7 @@ export async function POST(request: Request) {
             video_platform: 'jitsi',
             meeting_expires_at: meetingExpiresAt.toISOString(),
           })
-          .eq('id', appointment.id)
+          .eq('id', appointmentId)
 
         if (updateError) {
           console.error('Error actualizando cita con meeting link:', updateError)
@@ -318,7 +370,7 @@ export async function POST(request: Request) {
     const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Paciente'
     const professionalName = professionalProfile ? `${professionalProfile.first_name || ''} ${professionalProfile.last_name || ''}`.trim() : professional.specialty || 'Profesional'
 
-    const formattedDate = appointmentDateObj.toLocaleDateString('es-ES', {
+    const formattedDate = appointmentDateObj.toLocaleDateString('es-CL', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -470,13 +522,20 @@ export async function POST(request: Request) {
       }
     }
 
+    // Obtener la cita creada para incluir en la respuesta
+    const { data: createdAppointment } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('id', appointmentId)
+      .single()
+
     // Incluir meeting_link en la respuesta si existe (para que el frontend pueda usarlo inmediatamente)
     return NextResponse.json({
       success: true,
       appointment: {
-        ...appointment,
-        meeting_link: meetingLink || appointment.meeting_link || null,
-        meeting_room_id: meetingRoomId || appointment.meeting_room_id || null,
+        ...createdAppointment,
+        meeting_link: meetingLink || createdAppointment?.meeting_link || null,
+        meeting_room_id: meetingRoomId || createdAppointment?.meeting_room_id || null,
       },
       meetingLink: meetingLink || null, // Incluir explícitamente para fácil acceso
       message: type === 'online' && !meetingLink

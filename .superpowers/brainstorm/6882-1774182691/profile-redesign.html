@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perfil Profesional — Propuesta de Diseño</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #0f172a; min-height: 100vh; }
+
+  .page-wrap { max-width: 860px; margin: 0 auto; padding: 24px 20px 48px; }
+
+  /* ── Header ── */
+  .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .page-header h1 { font-size: 20px; font-weight: 800; color: #0f172a; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; border: 1.5px solid #e2e8f0; background: white; color: #475569; cursor: pointer; transition: all .15s; }
+  .btn:hover { border-color: #0d9488; color: #0d9488; }
+  .btn-primary { background: #0d9488; color: white; border-color: #0d9488; }
+  .btn-primary:hover { background: #0b7c72; border-color: #0b7c72; color: white; }
+
+  /* ── Completeness bar ── */
+  .completeness { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
+  .completeness-label { font-size: 13px; font-weight: 700; color: #0f172a; white-space: nowrap; }
+  .completeness-bar-wrap { flex: 1; background: #f1f5f9; border-radius: 99px; height: 8px; }
+  .completeness-bar { background: linear-gradient(90deg, #0d9488, #14b8a6); height: 8px; border-radius: 99px; width: 72%; }
+  .completeness-pct { font-size: 14px; font-weight: 800; color: #0d9488; white-space: nowrap; }
+  .completeness-hint { font-size: 12px; color: #64748b; white-space: nowrap; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 2px; background: #e2e8f0; padding: 3px; border-radius: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .tab { display: flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .tab.active { background: white; color: #0d9488; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .tab svg { width: 14px; height: 14px; }
+
+  /* ── Cards ── */
+  .card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 12px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fafafa; border-bottom: 1px solid #f1f5f9; }
+  .card-header-left { display: flex; align-items: center; gap: 10px; }
+  .card-icon { width: 30px; height: 30px; border-radius: 8px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .card-icon svg { width: 15px; height: 15px; color: #0d9488; }
+  .card-title { font-size: 14px; font-weight: 800; color: #0f172a; }
+  .card-desc { font-size: 12px; color: #64748b; margin-top: 1px; }
+  .card-edit { font-size: 12px; font-weight: 600; color: #0d9488; cursor: pointer; padding: 4px 10px; border-radius: 7px; border: 1px solid #e2e8f0; background: white; }
+  .card-body { padding: 14px 16px; }
+
+  /* ── Preview card: Información básica ── */
+  .profile-preview { display: flex; align-items: center; gap: 14px; }
+  .avatar { width: 56px; height: 56px; border-radius: 12px; background: linear-gradient(135deg, #0d9488, #14b8a6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 20px; flex-shrink: 0; }
+  .profile-meta { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 20px; }
+  .meta-item { }
+  .meta-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; }
+  .meta-value { font-size: 13px; font-weight: 600; color: #0f172a; margin-top: 1px; }
+
+  /* ── Form grid ── */
+  .form-section { margin-bottom: 18px; }
+  .form-section:last-child { margin-bottom: 0; }
+  .form-grid { display: grid; gap: 12px; }
+  .form-grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .form-field { }
+  .form-label { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #64748b; margin-bottom: 5px; }
+  .form-label svg { width: 12px; height: 12px; color: #0d9488; }
+  .form-input { width: 100%; height: 36px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0 10px; font-size: 13px; font-weight: 600; background: #f8fafc; color: #0f172a; outline: none; transition: all .15s; }
+  .form-input:focus { border-color: #0d9488; background: white; box-shadow: 0 0 0 3px rgba(13,148,136,.08); }
+  .form-input.center { text-align: center; }
+  .form-select { width: 100%; height: 36px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 0 10px; font-size: 13px; font-weight: 600; background: #f8fafc; color: #0f172a; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+  .form-textarea { width: 100%; min-height: 80px; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 500; background: #f8fafc; color: #0f172a; outline: none; resize: vertical; font-family: inherit; }
+
+  /* ── Title pills ── */
+  .title-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #475569; cursor: pointer; transition: all .15s; }
+  .pill:hover { border-color: #0d9488; color: #0d9488; }
+  .pill.active { background: #0d9488; color: white; border-color: #0d9488; }
+  .pill .desc { font-size: 10px; font-weight: 500; margin-left: 3px; opacity: .75; }
+
+  /* ── Phone input ── */
+  .phone-wrap { display: flex; }
+  .phone-prefix { display: flex; align-items: center; padding: 0 10px; border: 1.5px solid #e2e8f0; border-right: none; border-radius: 8px 0 0 8px; background: #f1f5f9; font-size: 13px; font-weight: 700; color: #475569; white-space: nowrap; }
+  .phone-input { flex: 1; height: 36px; border: 1.5px solid #e2e8f0; border-left: none; border-radius: 0 8px 8px 0; padding: 0 10px; font-size: 13px; background: #f8fafc; outline: none; font-weight: 600; }
+
+  /* ── Switch row ── */
+  .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid #f1f5f9; margin-top: 8px; }
+  .switch-info p { font-size: 13px; font-weight: 600; color: #334155; }
+  .switch-info small { font-size: 11px; color: #94a3b8; }
+  .switch { width: 36px; height: 20px; border-radius: 99px; background: #0d9488; position: relative; flex-shrink: 0; }
+  .switch::after { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: white; top: 2px; right: 2px; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+
+  /* ── Card footer ── */
+  .card-footer { padding: 10px 16px; background: #fafafa; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; }
+
+  /* ── Section divider ── */
+  .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+
+  /* ── Bio preview ── */
+  .bio-preview { font-size: 13px; color: #475569; line-height: 1.6; font-style: italic; }
+
+  /* ── Annotation ── */
+  .annotation { position: absolute; background: #f59e0b; color: white; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+  .annotated { position: relative; }
+
+  /* ── Compare note ── */
+  .compare-note { background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: #92400e; display: flex; align-items: flex-start; gap: 8px; }
+  .compare-note strong { display: block; font-weight: 700; margin-bottom: 2px; }
+
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #f0fdf4; color: #0d9488; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 11px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="compare-note">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div>
+      <strong>Propuesta de rediseño — Pestaña General</strong>
+      Cards más compactas, padding reducido de 24px → 14px, headers más slim, sin espacio muerto. Mismo contenido, mucho mejor densidad.
+    </div>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <h1>Dr. Pau González</h1>
+    <div class="btn-row">
+      <button class="btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Editar direcciones
+      </button>
+      <button class="btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Ver perfil público
+      </button>
+    </div>
+  </div>
+
+  <!-- Completeness -->
+  <div class="completeness">
+    <span class="completeness-label">Perfil completo</span>
+    <div class="completeness-bar-wrap"><div class="completeness-bar"></div></div>
+    <span class="completeness-pct">72%</span>
+    <span class="completeness-hint">· Agrega foto para llegar al 87%</span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      General
+    </div>
+    <div class="tab">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Clínica
+    </div>
+    <div class="tab">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      Estudios
+    </div>
+    <div class="tab">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Galería
+    </div>
+    <div class="tab">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Precios
+    </div>
+    <div class="tab">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Seguridad
+    </div>
+    <div class="tab">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Verificación
+    </div>
+  </div>
+
+  <!-- ─── Preview: Información básica ─── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-icon">
+          <svg fill="none" stroke="#0d9488" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <div class="card-title">Información básica</div>
+          <div class="card-desc">Datos visibles en tu perfil público</div>
+        </div>
+      </div>
+      <button class="card-edit">Cambiar foto</button>
+    </div>
+    <div class="card-body">
+      <div class="profile-preview">
+        <div class="avatar">P</div>
+        <div class="profile-meta">
+          <div class="meta-item">
+            <div class="meta-label">Título</div>
+            <div class="meta-value">Ps.</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Nombre</div>
+            <div class="meta-value">Pau</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Apellidos</div>
+            <div class="meta-value">González</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Especialidad</div>
+            <div class="meta-value" style="color:#0d9488;">Psicología Clínica</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Experiencia</div>
+            <div class="meta-value">—</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">Modalidad</div>
+            <div class="meta-value"><span class="tag">Online</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Preview: Introducción ─── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-icon">
+          <svg fill="none" stroke="#0d9488" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div>
+          <div class="card-title">Introducción</div>
+          <div class="card-desc">Así te verán los pacientes</div>
+        </div>
+      </div>
+      <button class="card-edit">Editar</button>
+    </div>
+    <div class="card-body">
+      <p class="bio-preview">Sin descripción. Edita en la sección General para añadir tu biografía profesional.</p>
+    </div>
+  </div>
+
+  <!-- ─── Form: Información General ─── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-left">
+        <div class="card-icon">
+          <svg fill="none" stroke="#0d9488" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <div class="card-title">Información General</div>
+          <div class="card-desc">Detalles básicos sobre tu trayectoria profesional</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <!-- Avatar upload compact -->
+        <div style="flex-shrink:0;text-align:center;">
+          <div style="width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,#0d9488,#14b8a6);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:24px;margin-bottom:6px;">P</div>
+          <button class="btn" style="font-size:11px;padding:4px 8px;gap:4px;">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Subir foto
+          </button>
+        </div>
+
+        <!-- Fields -->
+        <div style="flex:1;">
+          <!-- Row 1: 3 cols -->
+          <div class="form-grid form-grid-3" style="margin-bottom:12px;">
+            <div class="form-field">
+              <div class="form-label">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Años de exp.
+              </div>
+              <input class="form-input center" type="number" placeholder="5" value="">
+            </div>
+            <div class="form-field">
+              <div class="form-label">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Nº Registro
+              </div>
+              <input class="form-input" placeholder="123456-7">
+            </div>
+            <div class="form-field">
+              <div class="form-label">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                Institución emisora
+              </div>
+              <input class="form-input" placeholder="Ej: Colegio Médico">
+            </div>
+          </div>
+
+          <!-- Title pills -->
+          <div class="form-field" style="margin-bottom:12px;">
+            <div class="form-label">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+              Título profesional
+            </div>
+            <div class="title-pills">
+              <div class="pill">Dr. <span class="desc">Médico</span></div>
+              <div class="pill">Dra. <span class="desc">Médica</span></div>
+              <div class="pill active">Ps. <span class="desc">Psicólogo/a</span></div>
+              <div class="pill">Nut. <span class="desc">Nutricionista</span></div>
+              <div class="pill">Kines. <span class="desc">Kinesiólogo/a</span></div>
+              <div class="pill">Fono. <span class="desc">Fonoaudiólogo/a</span></div>
+              <div class="pill">Enf. <span class="desc">Enfermero/a</span></div>
+              <div class="pill">Otro</div>
+            </div>
+          </div>
+
+          <!-- Row 2: Specialty + Gender -->
+          <div class="form-grid form-grid-2" style="margin-bottom:12px;">
+            <div class="form-field">
+              <div class="form-label">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+                Especialidad Principal
+              </div>
+              <select class="form-select"><option>Psicología Clínica</option></select>
+            </div>
+            <div class="form-field">
+              <div class="form-label">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Género
+              </div>
+              <select class="form-select"><option>Selecciona</option><option>Hombre</option><option>Mujer</option></select>
+            </div>
+          </div>
+
+          <!-- Phone -->
+          <div class="form-field" style="margin-bottom:0;">
+            <div class="form-label">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.61 4.35 2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.02z"/></svg>
+              Teléfono de contacto
+            </div>
+            <div class="phone-wrap">
+              <div class="phone-prefix">+56</div>
+              <input class="phone-input" placeholder="9 1234 5678">
+            </div>
+            <div class="switch-row">
+              <div class="switch-info">
+                <p>Mostrar teléfono en perfil público</p>
+                <small>Los pacientes podrán ver y llamarte directamente</small>
+              </div>
+              <div class="switch"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bio -->
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid #f1f5f9;">
+        <div class="form-label">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Biografía Profesional
+        </div>
+        <textarea class="form-textarea" placeholder="Describe tu enfoque, especialidad y lo que ofreces a tus pacientes..."></textarea>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button class="btn btn-primary">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Guardar Cambios
+      </button>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

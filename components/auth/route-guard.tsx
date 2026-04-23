@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import type { UserRole } from "@/lib/auth/utils"
+import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 interface RouteGuardProps {
   children: React.ReactNode
@@ -168,9 +169,13 @@ export function RouteGuard({
   // Mostrar loading mientras se verifica o mientras se redirige
   if (authLoading || profileLoading || onboardingComplete === null || postLoadRedirect) {
     return (
-      <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">
+      <div
+        className={loadingDashboardInsetClassName("bg-background")}
+        role="status"
+        aria-live="polite"
+      >
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" aria-hidden="true"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" aria-hidden="true" />
           <p className="text-muted-foreground">Verificando acceso...</p>
         </div>
       </div>

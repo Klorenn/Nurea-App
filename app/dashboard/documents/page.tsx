@@ -30,7 +30,7 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     loadDocuments()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }, [categoryFilter])
 
   const loadDocuments = async () => {
@@ -90,7 +90,7 @@ export default function DocumentsPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString(
-      language === "es" ? "es-ES" : "en-US",
+      language === "es" ? "es-CL" : "en-US",
       { year: "numeric", month: "short", day: "numeric" }
     )
   }

@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, ShieldCheck } from "lucide-react"
+import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -45,8 +46,8 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
 
   if (loading || checking) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
+      <div className={loadingFullViewportClassName("bg-slate-50 dark:bg-slate-950")}>
+        <div className="flex flex-col items-center gap-4 text-center">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/25">
             <Loader2 className="h-6 w-6 text-white animate-spin" />
           </div>
