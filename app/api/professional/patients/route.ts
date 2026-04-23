@@ -59,7 +59,6 @@ export async function GET(request: Request) {
       .from('profiles')
       .select('id')
       .eq('created_by_professional_id', user.id)
-    console.log('[patients API] createdPatients:', createdPatients, 'createdError:', createdError)
     if (appointmentsError) {
       console.error('Error fetching appointments patient IDs:', appointmentsError)
     }
@@ -71,7 +70,6 @@ export async function GET(request: Request) {
       .map((a: any) => a?.patient_id)
       .filter(Boolean)
     const patientIdsFromCreated = createdPatients?.map((p: any) => p.id) || []
-    console.log('[patients API] patientIdsFromCreated:', patientIdsFromCreated)
 
     // Fallback/extra sync: traer el "otro participante" desde conversaciones de chat.
     // Esto ayuda cuando el appointment se refleja con retraso en la UI,
@@ -119,10 +117,8 @@ export async function GET(request: Request) {
         ...patientIdsFromConversations,
       ]),
     ]
-    console.log('[patients API] uniquePatientIds:', uniquePatientIds)
 
     if (uniquePatientIds.length === 0) {
-      console.log('[patients API] No uniquePatientIds, returning empty array')
       return NextResponse.json({
         success: true,
         patients: [],

@@ -8,8 +8,6 @@ export async function POST(request: Request) {
   try {
     const { professionalId, appointmentDate, appointmentTime, type, duration = 60, consultationReason, isFirstVisit } = await request.json()
 
-    console.log("[APPOINTMENTS:CREATE]", { professionalId, patientId: "(resolved after auth)", date: appointmentDate, time: appointmentTime, type, duration })
-
     if (!professionalId || !appointmentDate || !appointmentTime || !type) {
       return NextResponse.json(
         { 
@@ -513,8 +511,6 @@ export async function POST(request: Request) {
         if (!success) {
           console.error('Error enviando email de confirmación:', emailError)
           // No fallar la creación de la cita si el email falla
-        } else {
-          console.log('Email de confirmación enviado exitosamente a:', patientProfile.email)
         }
       } catch (emailError) {
         console.error('Error preparando o enviando email:', emailError)
