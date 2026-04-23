@@ -348,13 +348,14 @@ function UpcomingAppointmentCard({
             {/* Secondary Actions */}
             <div className="flex gap-3">
               <Button
+                asChild
                 variant="outline"
-                className="flex-1 rounded-xl h-10 opacity-50 cursor-not-allowed"
-                disabled
-                title={isSpanish ? "La reprogramación estará disponible próximamente" : "Rescheduling coming soon"}
+                className="flex-1 rounded-xl h-10"
               >
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                {isSpanish ? "Reprogramar" : "Reschedule"}
+                <Link href={`/booking/${appointment.professional_id}?reschedule=${appointment.id}`}>
+                  <RefreshCcw className="h-4 w-4 mr-2" />
+                  {isSpanish ? "Reprogramar" : "Reschedule"}
+                </Link>
               </Button>
               <Button
                 variant="ghost"

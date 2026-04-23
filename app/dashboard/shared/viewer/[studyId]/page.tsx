@@ -30,19 +30,11 @@ export default async function ViewerPage({
     .eq("id", params.studyId)
     .single();
 
-  // Graceful mock for demo or if table not yet migrated
-  const studyData = error || !study
-    ? {
-        id: params.studyId,
-        patient_id: "mock",
-        study_type: "RX",
-        modality: "DX",
-        accession_number: "981273912",
-        dicom_web_endpoint: "wado-rs://mock",
-        report_text: "",
-        report_status: "pending",
-      }
-    : study;
+  if (error || !study) {
+    redirect("/dashboard");
+  }
+
+  const studyData = study;
 
   // Fetch user role
   const { data: profile } = await supabase

@@ -140,12 +140,13 @@ export default function ProfessionalLayout({
         }
       } catch (error) {
         console.error("Error:", error)
-        setProfileInfo({ 
-          subscription_status: "inactive", 
+        setProfileInfo({
+          subscription_status: "inactive",
           stripe_subscription_id: null,
           trial_end_date: null,
           selected_plan_id: null,
-          is_onboarded: false 
+          is_onboarded: false,
+          onboarding_completed: false
         })
       } finally {
         setLoading(false)

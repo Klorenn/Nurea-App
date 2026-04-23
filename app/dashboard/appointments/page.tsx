@@ -379,13 +379,14 @@ function AppointmentsContent() {
                             )}
                             {appointment.mode !== "Online Video" && (
                               <Button
+                                asChild
                                 variant="outline"
-                                className="rounded-xl w-full sm:w-auto lg:w-full opacity-60"
-                                disabled
-                                title={isSpanish ? "Chat con el profesional próximamente" : "Chat with professional coming soon"}
+                                className="rounded-xl w-full sm:w-auto lg:w-full"
                               >
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                {isSpanish ? "Abrir Chat" : "Open chat"}
+                                <Link href={`/dashboard/chat?to=${appointment.professionalId}`}>
+                                  <MessageSquare className="h-4 w-4 mr-2" />
+                                  {isSpanish ? "Abrir Chat" : "Open chat"}
+                                </Link>
                               </Button>
                             )}
                             <QuickActions
