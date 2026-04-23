@@ -1195,7 +1195,7 @@ function Features() {
             >
               <span style={{ color: "var(--ink-mute)" }}>{Ico.search(16)}</span>
               <span className="text-[14px]" style={{ color: "var(--ink-soft)" }}>
-                Psicóloga especializada en ansiedad, online
+                Busca por especialidad, condición o precio
               </span>
               <span
                 className="animate-nurea-blink ml-1 inline-block"
@@ -1204,11 +1204,11 @@ function Features() {
             </div>
             <div className="flex flex-wrap gap-2">
               {[
-                { t: "Ansiedad", active: true },
-                { t: "Terapia cognitiva" },
-                { t: "Online" },
-                { t: "Español" },
+                { t: "Psicología", active: true },
+                { t: "Ansiedad" },
+                { t: "Terapia online" },
                 { t: "$20.000–$45.000" },
+                { t: "Español" },
               ].map((c) => (
                 <span
                   key={c.t}
