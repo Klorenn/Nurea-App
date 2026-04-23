@@ -241,7 +241,7 @@ function LoginContent() {
             }}
           >
             <span style={{ width: 20, height: 1, background: "var(--sage-200)" }} />
-            {isES ? "Bienvenido de vuelta" : "Welcome back"}
+            {isES ? "Voces de la red" : "Voices from the network"}
           </div>
           <h2
             style={{
@@ -255,14 +255,11 @@ function LoginContent() {
           >
             {isES ? (
               <>
-                Tu espacio para{" "}
-                <em style={{ fontStyle: "italic", color: "var(--sage-200)" }}>cuidarte</em>{" "}
-                sigue aquí.
+                Volver a Nurea es volver a <em style={{ fontStyle: "italic", color: "var(--sage-200)" }}>un lugar tranquilo</em>.
               </>
             ) : (
               <>
-                Your space for{" "}
-                <em style={{ fontStyle: "italic", color: "var(--sage-200)" }}>care</em> is still here.
+                Coming back to Nurea is coming back to <em style={{ fontStyle: "italic", color: "var(--sage-200)" }}>a calm place</em>.
               </>
             )}
           </h2>
@@ -275,8 +272,8 @@ function LoginContent() {
             }}
           >
             {isES
-              ? "Plataforma de cuidado y bienestar. Profesionales verificados, agenda tranquila, sin ruido."
-              : "A platform for care and wellbeing. Verified professionals, a calm agenda, no noise."}
+              ? "Un lugar tranquilo donde tus pacientes ya saben que los esperas con tiempo."
+              : "A calm place where your patients already know you wait for them with time."}
           </p>
         </div>
 
@@ -287,7 +284,48 @@ function LoginContent() {
             color: "color-mix(in oklab, var(--bg) 50%, transparent)",
           }}
         >
-          © {new Date().getFullYear()} Nurea · Temuco, Chile
+          © {new Date().getFullYear()} Nurea Health
+        </div>
+
+        {/* Stats */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 16,
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: "1px solid color-mix(in oklab, var(--bg) 15%, transparent)",
+          }}
+        >
+          {[
+            { num: "12,400+", label: isES ? "Profesionales" : "Professionals" },
+            { num: "340K+", label: isES ? "Consultas" : "Consultations" },
+            { num: "98%", label: isES ? "Satisfacción" : "Satisfaction" },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <div
+                style={{
+                  fontFamily: "var(--font-fraunces)",
+                  fontSize: 22,
+                  fontWeight: 400,
+                  marginBottom: 4,
+                }}
+              >
+                {stat.num}
+              </div>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  color: "color-mix(in oklab, var(--bg) 50%, transparent)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                {stat.label}
+              </div>
+            </div>
+          ))}
         </div>
       </aside>
 
