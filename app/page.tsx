@@ -359,6 +359,8 @@ const Ico = {
 
 /* ─── NAV ────────────────────────────────────────────────────────────────── */
 
+import Image from "next/image"
+
 function Logo() {
   return (
     <Link
@@ -373,19 +375,15 @@ function Logo() {
       }}
       aria-label="Nurea — Inicio"
     >
-      <span
-        className="nurea-logo-mark relative inline-block h-[26px] w-[26px] rounded-full"
-        style={{
-          background:
-            "radial-gradient(circle at 30% 30%, var(--sage-200), var(--sage-500) 70%, var(--sage-700))",
-        }}
-      >
-        <span
-          aria-hidden
-          className="absolute top-[6px] left-[6px] h-2 w-2 rounded-full"
-          style={{ background: "var(--bg)", opacity: 0.55 }}
+      <div className="relative inline-block h-[32px] w-[32px]">
+        <Image
+          src="/logo.png"
+          alt="Nurea"
+          fill
+          className="object-contain"
+          sizes="32px"
         />
-      </span>
+      </div>
       <span>Nurea</span>
     </Link>
   )
