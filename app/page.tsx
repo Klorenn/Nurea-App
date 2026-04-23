@@ -779,26 +779,39 @@ function Hero({ timeLeft }: { timeLeft: TimeLeft }) {
         aria-hidden
         className="animate-nurea-drift pointer-events-none absolute rounded-full"
         style={{
-          width: 460,
-          height: 460,
+          width: 600,
+          height: 600,
           background: "var(--sage-200)",
-          top: -180,
-          right: -80,
-          filter: "blur(60px)",
-          opacity: 0.35,
+          top: -250,
+          right: -150,
+          filter: "blur(100px)",
+          opacity: 0.6,
         }}
       />
       <div
         aria-hidden
         className="animate-nurea-drift-rev pointer-events-none absolute rounded-full"
         style={{
-          width: 380,
-          height: 380,
+          width: 480,
+          height: 480,
           background: "var(--terracotta)",
-          bottom: -100,
-          left: -80,
-          filter: "blur(60px)",
-          opacity: 0.18,
+          bottom: -150,
+          left: -120,
+          filter: "blur(100px)",
+          opacity: 0.3,
+        }}
+      />
+      <div
+        aria-hidden
+        className="animate-nurea-float pointer-events-none absolute rounded-full"
+        style={{
+          width: 200,
+          height: 200,
+          background: "var(--sage-300)",
+          top: "25%",
+          left: "5%",
+          filter: "blur(50px)",
+          opacity: 0.25,
         }}
       />
 
