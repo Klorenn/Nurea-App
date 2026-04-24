@@ -116,13 +116,13 @@ export default function DashboardLayoutClient({
   const isSpanish = language === "es"
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
+    <div className="app">
       <DashboardSidebar role={role} language={language} />
 
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <header className="h-14 flex items-center justify-between px-4 md:px-6 bg-background/80 backdrop-blur-xl border-b border-border/40 sticky top-0 z-30 shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="hidden sm:block text-sm font-medium text-muted-foreground">
+      <div className="main">
+        <header className="topbar">
+          <div className="greeting">
+            <h1>
               {role === "admin"
                 ? isSpanish ? "Panel de Administración" : "Admin Panel"
                 : role === "professional"
@@ -131,7 +131,7 @@ export default function DashboardLayoutClient({
             </h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="topbar-actions">
             <ThemeToggle />
             <NotificationsDropdown role={role} />
             <UserDropdown
@@ -152,10 +152,8 @@ export default function DashboardLayoutClient({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-            {children}
-          </div>
+        <main>
+          {children}
         </main>
         <SupportTicketSheet />
       </div>
