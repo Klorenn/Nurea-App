@@ -29,7 +29,7 @@ interface Profile {
 }
 
 function ExplorePageInner() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, isLoaded: authLoading } = useUser()
   const { language } = useLanguage()
   const supabase = createClient()
 

@@ -19,7 +19,7 @@ import { loadingFullViewportClassName } from "@/lib/loading-layout"
 export default function ConsultaPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, isLoaded: authLoading } = useUser()
   const [displayName, setDisplayName] = useState<string>("")
   const [allowed, setAllowed] = useState<boolean | null>(null)
   const appointmentId = typeof params.appointmentId === "string" ? params.appointmentId : null

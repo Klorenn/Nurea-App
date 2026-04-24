@@ -1,0 +1,550 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "Nurea Nurea" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "Nurea" [ref=e5]
+        - generic [ref=e6]: Nurea
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Plataforma" [ref=e9] [cursor=pointer]:
+            - /url: "#features"
+        - listitem [ref=e10]:
+          - link "Cómo funciona" [ref=e11] [cursor=pointer]:
+            - /url: "#how"
+        - listitem [ref=e12]:
+          - link "Precios" [ref=e13] [cursor=pointer]:
+            - /url: "#pricing"
+        - listitem [ref=e14]:
+          - link "Recursos" [ref=e15] [cursor=pointer]:
+            - /url: "#blog"
+        - listitem [ref=e16]:
+          - link "Ayuda" [ref=e17] [cursor=pointer]:
+            - /url: "#faq"
+      - generic [ref=e18]:
+        - link "Iniciar sesión" [ref=e19] [cursor=pointer]:
+          - /url: login.html
+        - link "Empezar gratis" [ref=e20] [cursor=pointer]:
+          - /url: register.html
+          - text: Empezar gratis
+          - img [ref=e22]
+  - generic [ref=e25]:
+    - generic [ref=e26]:
+      - generic [ref=e27]: Mercado de salud para profesionales verificados
+      - heading "El puente entre pacientes y profesionales de la salud." [level=1] [ref=e29]:
+        - text: El puente entre
+        - text: pacientes y
+        - emphasis [ref=e30]:
+          - text: profesionales
+          - text: de la salud
+        - text: .
+      - paragraph [ref=e31]: Una plataforma serena y segura donde quienes buscan cuidado se encuentran con quienes mejor pueden ofrecerlo. Menos fricción, más accesibilidad, y todo el tiempo que la salud merece.
+      - generic [ref=e32]:
+        - link "Crear mi cuenta" [ref=e33] [cursor=pointer]:
+          - /url: register.html
+          - text: Crear mi cuenta
+          - img [ref=e34]
+        - link "Soy profesional" [ref=e36] [cursor=pointer]:
+          - /url: register.html?role=pro
+      - generic [ref=e43]:
+        - strong [ref=e44]: +12,400 profesionales
+        - text: ya acompañan a sus pacientes con Nurea.
+    - generic [ref=e45]:
+      - generic [ref=e47]:
+        - generic [ref=e48]: Disponible hoy
+        - generic [ref=e50]: Encontrar el cuidado adecuado, sin la ansiedad.
+        - generic [ref=e51]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: Dra. Laura Mendoza
+            - generic [ref=e55]: Psicología clínica · 4.9 ★
+          - generic [ref=e56]: Reservar
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]: Reserva tu cita
+          - generic [ref=e60]: Abril
+        - generic [ref=e61]:
+          - generic [ref=e62]: L
+          - generic [ref=e63]: M
+          - generic [ref=e64]: X
+          - generic [ref=e65]: J
+          - generic [ref=e66]: V
+          - generic [ref=e67]: S
+          - generic [ref=e68]: D
+          - generic [ref=e69]: "14"
+          - generic [ref=e70]: "15"
+          - generic [ref=e71]: "16"
+          - generic [ref=e72]: "17"
+          - generic [ref=e73]: "18"
+          - generic [ref=e74]: "19"
+          - generic [ref=e75]: "20"
+        - generic [ref=e76]:
+          - generic [ref=e77]: 09:00
+          - generic [ref=e78]: 11:30
+          - generic [ref=e79]: 16:00
+          - generic [ref=e80]: 18:30
+      - generic [ref=e81]:
+        - img [ref=e83]
+        - generic [ref=e85]:
+          - generic [ref=e86]: 98%
+          - generic [ref=e87]: Pacientes satisfechos
+  - generic [ref=e89]:
+    - generic [ref=e90]: Respaldados por instituciones de salud líderes en habla hispana
+    - generic [ref=e91]:
+      - generic [ref=e92]: Vidalta
+      - generic [ref=e94]: MediCentro
+      - generic [ref=e96]: Serena
+      - generic [ref=e98]: Orbe Salud
+      - generic [ref=e100]: Calma
+  - generic [ref=e103]:
+    - generic [ref=e104]:
+      - generic [ref=e105]: Impacto real
+      - heading "Acortamos la distancia entre la necesidad y el cuidado." [level=2] [ref=e106]:
+        - text: Acortamos la distancia entre
+        - text: la
+        - emphasis [ref=e107]: necesidad
+        - text: y el
+        - emphasis [ref=e108]: cuidado
+        - text: .
+    - generic [ref=e109]:
+      - generic [ref=e110]:
+        - generic [ref=e111]: 0+
+        - generic [ref=e112]: Profesionales verificados en la red
+      - generic [ref=e113]:
+        - generic [ref=e114]: 0+
+        - generic [ref=e115]: Consultas facilitadas desde 2022
+      - generic [ref=e116]:
+        - generic [ref=e117]: 0h
+        - generic [ref=e118]: Tiempo medio hasta primera cita
+      - generic [ref=e119]:
+        - generic [ref=e120]: 0%
+        - generic [ref=e121]: Pacientes que recomendarían Nurea
+  - generic [ref=e123]:
+    - generic [ref=e124]:
+      - generic [ref=e125]:
+        - generic [ref=e126]: La plataforma
+        - heading "Todo lo que necesitas para cuidar mejor, o ser mejor cuidado." [level=2] [ref=e127]:
+          - text: Todo lo que necesitas para
+          - text: cuidar
+          - emphasis [ref=e128]: mejor
+          - text: ", o ser"
+          - emphasis [ref=e129]: mejor cuidado
+          - text: .
+      - paragraph [ref=e130]: "Un espacio pensado con detalle, donde cada herramienta responde a una realidad del cuidado: descubrir, reservar, conversar, acompañar."
+    - generic [ref=e131]:
+      - generic [ref=e132]:
+        - img [ref=e134]
+        - heading "Descubre al profesional adecuado, sin la ansiedad de empezar." [level=3] [ref=e137]
+        - paragraph [ref=e138]: Búsqueda contextual por especialidad, enfoque terapéutico, idioma, modalidad y presupuesto. Los resultados aprenden de lo que valoras.
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - img [ref=e141]
+            - generic [ref=e144]: Psicóloga especializada en ansiedad, online
+          - generic [ref=e146]:
+            - generic [ref=e147]: Ansiedad
+            - generic [ref=e148]: Terapia cognitiva
+            - generic [ref=e149]: Online
+            - generic [ref=e150]: Español · Catalán
+            - generic [ref=e151]: 35€–60€
+      - generic [ref=e152]:
+        - img [ref=e154]
+        - heading "Verificación real." [level=3] [ref=e157]
+        - paragraph [ref=e158]: Cada profesional pasa por validación de colegiatura, antecedentes y referencias. Confianza, no marketing.
+        - generic [ref=e159]:
+          - generic [ref=e160]:
+            - img [ref=e162]
+            - text: Colegiatura activa
+          - generic [ref=e164]:
+            - img [ref=e166]
+            - text: Identidad verificada
+          - generic [ref=e168]:
+            - img [ref=e170]
+            - text: Especialidades validadas
+          - generic [ref=e172]:
+            - img [ref=e174]
+            - text: Ética profesional vigente
+      - generic [ref=e176]:
+        - img [ref=e178]
+        - heading "Conversaciones privadas y cifradas." [level=3] [ref=e180]
+        - paragraph [ref=e181]: Mensajes, notas y expedientes protegidos con cifrado extremo a extremo.
+        - generic [ref=e182]:
+          - generic [ref=e183]: Hola Laura, ¿podríamos mover la cita del jueves?
+          - generic [ref=e184]: Claro, tengo disponible a las 17:00. ¿Te funciona?
+      - generic [ref=e185]:
+        - img [ref=e187]
+        - heading "Agenda que respira contigo." [level=3] [ref=e190]
+        - paragraph [ref=e191]: Sincronización con Google, iCloud y Outlook. Recordatorios amables, no invasivos.
+        - generic [ref=e192]:
+          - generic [ref=e193]:
+            - generic [ref=e195]:
+              - generic [ref=e196]: Martes, 16:00
+              - generic [ref=e197]: Dra. Mendoza · 50 min
+            - generic [ref=e198]: Confirmada
+          - generic [ref=e199]:
+            - generic [ref=e201]:
+              - generic [ref=e202]: Viernes, 11:30
+              - generic [ref=e203]: Dr. Ruiz · 30 min
+            - generic [ref=e204]: Próxima
+      - generic [ref=e205]:
+        - img [ref=e207]
+        - heading "Pagos transparentes." [level=3] [ref=e209]
+        - paragraph [ref=e210]: Una tarifa clara, facturación automática y devoluciones sin preguntas incómodas.
+      - generic [ref=e211]:
+        - img [ref=e213]
+        - heading "Seguimiento compartido." [level=3] [ref=e216]
+        - paragraph [ref=e217]: Notas, tareas entre sesiones y un espejo amable del progreso, solo entre tú y tu profesional.
+      - generic [ref=e218]:
+        - img [ref=e220]
+        - heading "Dentro o fuera del consultorio." [level=3] [ref=e223]
+        - paragraph [ref=e224]: Videoconsulta integrada con calidad clínica. O presencial, cuando eso acerque más.
+  - generic [ref=e226]:
+    - generic [ref=e227]:
+      - generic [ref=e228]: Cómo funciona
+      - heading "Tres pasos, y el tiempo que necesites para decidir." [level=2] [ref=e229]:
+        - text: Tres pasos, y el tiempo que
+        - text: necesites para
+        - emphasis [ref=e230]: decidir
+        - text: .
+    - generic [ref=e231]:
+      - generic [ref=e232]:
+        - generic [ref=e233]: "01"
+        - heading "Cuéntanos qué buscas" [level=3] [ref=e234]
+        - paragraph [ref=e235]: Responde unas preguntas cuidadas. Sin cuestionarios invasivos, sin venderte nada.
+      - generic [ref=e236]:
+        - generic [ref=e237]: "02"
+        - heading "Descubre profesionales afines" [level=3] [ref=e238]
+        - paragraph [ref=e239]: Recibe una selección hecha a medida. Lee sus enfoques, escucha su voz, mira su disponibilidad.
+      - generic [ref=e240]:
+        - generic [ref=e241]: "03"
+        - heading "Empieza cuando estés listo" [level=3] [ref=e242]
+        - paragraph [ref=e243]: Reserva en segundos. Paga solo al confirmar. Cancela o mueve la cita sin culpa.
+  - generic [ref=e245]:
+    - generic [ref=e246]:
+      - generic [ref=e247]:
+        - generic [ref=e248]: Especialidades
+        - heading "Una red amplia, un cuidado cercano." [level=2] [ref=e249]:
+          - text: Una red amplia,
+          - text: un cuidado
+          - emphasis [ref=e250]: cercano
+          - text: .
+      - link "Explorar todas" [ref=e251] [cursor=pointer]:
+        - /url: "#"
+        - text: Explorar todas
+        - img [ref=e252]
+    - generic [ref=e254]:
+      - generic [ref=e255] [cursor=pointer]:
+        - generic [ref=e256]: "01"
+        - generic [ref=e257]: Psicología clínica
+        - generic [ref=e258]: 3,240 profesionales
+      - generic [ref=e260] [cursor=pointer]:
+        - generic [ref=e261]: "02"
+        - generic [ref=e262]: Nutrición y dietética
+        - generic [ref=e263]: 1,820 profesionales
+      - generic [ref=e265] [cursor=pointer]:
+        - generic [ref=e266]: "03"
+        - generic [ref=e267]: Fisioterapia
+        - generic [ref=e268]: 2,105 profesionales
+      - generic [ref=e270] [cursor=pointer]:
+        - generic [ref=e271]: "04"
+        - generic [ref=e272]: Medicina general
+        - generic [ref=e273]: 1,290 profesionales
+      - generic [ref=e275] [cursor=pointer]:
+        - generic [ref=e276]: "05"
+        - generic [ref=e277]: Terapia de pareja
+        - generic [ref=e278]: 680 profesionales
+      - generic [ref=e280] [cursor=pointer]:
+        - generic [ref=e281]: "06"
+        - generic [ref=e282]: Logopedia
+        - generic [ref=e283]: 540 profesionales
+      - generic [ref=e285] [cursor=pointer]:
+        - generic [ref=e286]: "07"
+        - generic [ref=e287]: Coaching de salud
+        - generic [ref=e288]: 920 profesionales
+      - generic [ref=e290] [cursor=pointer]:
+        - generic [ref=e291]: "08"
+        - generic [ref=e292]: Medicina integrativa
+        - generic [ref=e293]: 410 profesionales
+  - generic [ref=e297]:
+    - generic [ref=e298]:
+      - generic [ref=e299]: Ver en acción
+      - heading "Una demostración de dos minutos." [level=2] [ref=e300]:
+        - text: Una demostración de
+        - emphasis [ref=e301]: dos minutos
+        - text: .
+      - paragraph [ref=e302]: Mira cómo una paciente encuentra a su nutricionista ideal, reserva su primera cita y recibe acompañamiento entre sesiones — todo dentro de Nurea.
+    - generic [ref=e303] [cursor=pointer]:
+      - generic [ref=e304]: "[ Placeholder · Video demo 1920×1080 ]"
+      - img [ref=e306]
+      - generic [ref=e308]:
+        - generic [ref=e309]: Recorrido por la plataforma
+        - generic [ref=e310]: 02:14
+  - generic [ref=e312]:
+    - generic [ref=e313]:
+      - generic [ref=e314]: Voces de la red
+      - heading "Profesionales que eligen a Nurea." [level=2] [ref=e315]:
+        - text: Profesionales que
+        - emphasis [ref=e316]: eligen
+        - text: a Nurea.
+    - generic [ref=e317]:
+      - generic [ref=e318]:
+        - paragraph [ref=e319]: “Nurea me devolvió horas cada semana. Lo que antes era gestión ahora es tiempo con mis pacientes.”
+        - generic [ref=e322]:
+          - generic [ref=e323]: Laura Mendoza
+          - generic [ref=e324]: Psicóloga clínica · Madrid
+      - generic [ref=e325]:
+        - paragraph [ref=e326]: “La verificación me da tranquilidad. Sé que cada profesional de la red comparte los mismos estándares.”
+        - generic [ref=e329]:
+          - generic [ref=e330]: Carlos Ruiz
+          - generic [ref=e331]: Nutricionista · Barcelona
+      - generic [ref=e332]:
+        - paragraph [ref=e333]: “Por primera vez siento que una plataforma entiende que el cuidado es un proceso, no una transacción.”
+        - generic [ref=e336]:
+          - generic [ref=e337]: María Alonso
+          - generic [ref=e338]: Fisioterapeuta · Valencia
+  - generic [ref=e340]:
+    - generic [ref=e341]:
+      - generic [ref=e342]: Precios
+      - heading "Transparente para pacientes, justo para profesionales." [level=2] [ref=e343]:
+        - text: Transparente para pacientes,
+        - emphasis [ref=e344]: justo
+        - text: para profesionales.
+      - generic [ref=e345]:
+        - button "Mensual" [ref=e346] [cursor=pointer]
+        - button "Anual −20%" [ref=e347] [cursor=pointer]
+    - generic [ref=e348]:
+      - generic [ref=e349]:
+        - generic [ref=e350]: Exploración
+        - generic [ref=e351]: Para pacientes que inician su camino.
+        - generic [ref=e352]:
+          - generic [ref=e353]: €
+          - generic [ref=e354]: "0"
+        - generic [ref=e355]: Siempre gratis
+        - link "Crear cuenta" [ref=e356] [cursor=pointer]:
+          - /url: register.html
+        - list [ref=e357]:
+          - listitem [ref=e358]:
+            - img [ref=e360]
+            - text: Acceso completo a la red
+          - listitem [ref=e362]:
+            - img [ref=e364]
+            - text: Reserva de citas sin comisión
+          - listitem [ref=e366]:
+            - img [ref=e368]
+            - text: Historial privado de sesiones
+          - listitem [ref=e370]:
+            - img [ref=e372]
+            - text: Soporte por correo
+      - generic [ref=e374]:
+        - generic [ref=e375]: Más elegido
+        - generic [ref=e376]: Profesional
+        - generic [ref=e377]: Para consultas independientes que crecen.
+        - generic [ref=e378]:
+          - generic [ref=e379]: €
+          - generic [ref=e380]: "29"
+        - generic [ref=e381]: por profesional / mes
+        - link "Empezar 14 días gratis" [ref=e382] [cursor=pointer]:
+          - /url: register.html?role=pro
+        - list [ref=e383]:
+          - listitem [ref=e384]:
+            - img [ref=e386]
+            - text: Perfil verificado y destacado
+          - listitem [ref=e388]:
+            - img [ref=e390]
+            - text: Agenda con sincronización total
+          - listitem [ref=e392]:
+            - img [ref=e394]
+            - text: Videoconsulta ilimitada
+          - listitem [ref=e396]:
+            - img [ref=e398]
+            - text: Cobros y facturación automática
+          - listitem [ref=e400]:
+            - img [ref=e402]
+            - text: Soporte prioritario 7 días
+      - generic [ref=e404]:
+        - generic [ref=e405]: Clínica
+        - generic [ref=e406]: Equipos y centros de salud multidisciplinares.
+        - generic [ref=e408]: A medida
+        - generic [ref=e409]: Desde 5 profesionales
+        - link "Agendar una llamada" [ref=e410] [cursor=pointer]:
+          - /url: "#"
+        - list [ref=e411]:
+          - listitem [ref=e412]:
+            - img [ref=e414]
+            - text: Todo lo del plan Profesional
+          - listitem [ref=e416]:
+            - img [ref=e418]
+            - text: Panel multi-profesional
+          - listitem [ref=e420]:
+            - img [ref=e422]
+            - text: Informes clínicos agregados
+          - listitem [ref=e424]:
+            - img [ref=e426]
+            - text: Integraciones con HCE
+          - listitem [ref=e428]:
+            - img [ref=e430]
+            - text: Gestor de cuenta dedicado
+  - generic [ref=e433]:
+    - generic [ref=e434]:
+      - generic [ref=e435]:
+        - generic [ref=e436]: Diario de Nurea
+        - heading "Lecturas que acompañan la práctica del cuidado." [level=2] [ref=e437]:
+          - text: Lecturas que
+          - emphasis [ref=e438]: acompañan
+          - text: la práctica del cuidado.
+      - link "Ver todos los artículos" [ref=e439] [cursor=pointer]:
+        - /url: "#"
+        - text: Ver todos los artículos
+        - img [ref=e440]
+    - generic [ref=e442]:
+      - article [ref=e443] [cursor=pointer]:
+        - generic [ref=e445]: Guía clínica · 8 min
+        - heading "Cómo construir una primera sesión que invite a volver (sin que se sienta un interrogatorio)." [level=3] [ref=e446]
+        - paragraph [ref=e447]: Tres marcos prácticos para abrir el espacio terapéutico con calma, basados en evidencia y en las voces de 200 profesionales de la red.
+      - article [ref=e448] [cursor=pointer]:
+        - generic [ref=e450]: Tendencias · 5 min
+        - 'heading "El nuevo lenguaje del bienestar: qué buscan los pacientes en 2026." [level=3] [ref=e451]'
+      - article [ref=e452] [cursor=pointer]:
+        - generic [ref=e454]: Práctica profesional · 6 min
+        - 'heading "Fijar tarifas sin ansiedad: una conversación honesta sobre el valor del cuidado." [level=3] [ref=e455]'
+  - generic [ref=e458]:
+    - generic [ref=e459]:
+      - generic [ref=e460]: Preguntas frecuentes
+      - heading "Todo lo que quizá te estás preguntando." [level=2] [ref=e461]:
+        - text: Todo lo que quizá
+        - text: te estás
+        - emphasis [ref=e462]: preguntando
+        - text: .
+      - paragraph [ref=e463]: ¿Algo más que resolver? Hablamos contigo, sin apuros.
+      - link "Contactar con el equipo" [ref=e464] [cursor=pointer]:
+        - /url: "#"
+        - text: Contactar con el equipo
+        - img [ref=e465]
+    - generic [ref=e467]:
+      - generic [ref=e468] [cursor=pointer]:
+        - generic [ref=e469]:
+          - text: ¿Cómo verifican a los profesionales?
+          - img [ref=e471]
+        - generic: Cada profesional presenta su colegiatura activa, documentos de identidad y referencias profesionales. Nuestro equipo clínico revisa manualmente cada caso antes de la incorporación a la red, y realiza revisiones periódicas cada seis meses.
+      - generic [ref=e473] [cursor=pointer]:
+        - generic [ref=e474]:
+          - text: ¿Los pacientes pagan alguna comisión?
+          - img [ref=e476]
+        - generic: No. Los pacientes solo pagan la tarifa que el profesional ha definido, sin costos adicionales de plataforma ni suscripciones ocultas.
+      - generic [ref=e478] [cursor=pointer]:
+        - generic [ref=e479]:
+          - text: ¿Qué pasa si necesito cancelar una cita?
+          - img [ref=e481]
+        - generic: Puedes cancelar hasta 24 horas antes sin coste alguno. Con menos de 24 horas, la política la define cada profesional y siempre es visible antes de reservar.
+      - generic [ref=e483] [cursor=pointer]:
+        - generic [ref=e484]:
+          - text: ¿La información clínica está protegida?
+          - img [ref=e486]
+        - generic: Sí. Todas las conversaciones, notas y archivos están cifrados extremo a extremo. Cumplimos con RGPD y los estándares ISO 27001 y SOC 2 Tipo II.
+      - generic [ref=e488] [cursor=pointer]:
+        - generic [ref=e489]:
+          - text: ¿Puedo ofrecer atención presencial además de online?
+          - img [ref=e491]
+        - generic: Por supuesto. Cada profesional define su modalidad — presencial, online o mixta — y los pacientes filtran sus búsquedas en función de esa preferencia.
+      - generic [ref=e493] [cursor=pointer]:
+        - generic [ref=e494]:
+          - text: ¿Hay permanencia si contrato un plan de pago?
+          - img [ref=e496]
+        - generic: Ninguna. Puedes cambiar o cancelar tu plan cuando quieras, y tus datos se conservan durante 60 días por si decides volver.
+  - generic [ref=e500]:
+    - heading "El cuidado empieza con una conversación tranquila." [level=2] [ref=e503]:
+      - text: El cuidado empieza con una
+      - text: conversación
+      - emphasis [ref=e504]: tranquila
+      - text: .
+    - paragraph [ref=e505]: Únete a Nurea hoy. Gratis para pacientes, catorce días sin coste para profesionales.
+    - generic [ref=e506]:
+      - link "Crear mi cuenta" [ref=e507] [cursor=pointer]:
+        - /url: register.html
+        - text: Crear mi cuenta
+        - img [ref=e508]
+      - link "Hablar con el equipo" [ref=e510] [cursor=pointer]:
+        - /url: "#"
+  - contentinfo [ref=e511]:
+    - generic [ref=e512]:
+      - generic [ref=e513]:
+        - generic [ref=e514]:
+          - link "Nurea Nurea" [ref=e515] [cursor=pointer]:
+            - /url: /
+            - img "Nurea" [ref=e516]
+            - generic [ref=e517]: Nurea
+          - paragraph [ref=e518]: El mercado de salud que conecta pacientes y profesionales con el cuidado que la salud merece.
+          - generic [ref=e519]:
+            - textbox "Tu correo" [ref=e520]
+            - button "Suscribirme" [ref=e521] [cursor=pointer]
+        - generic [ref=e522]:
+          - heading "Plataforma" [level=4] [ref=e523]
+          - list [ref=e524]:
+            - listitem [ref=e525]:
+              - link "Para pacientes" [ref=e526] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e527]:
+              - link "Para profesionales" [ref=e528] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e529]:
+              - link "Para clínicas" [ref=e530] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e531]:
+              - link "Integraciones" [ref=e532] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e533]:
+          - heading "Recursos" [level=4] [ref=e534]
+          - list [ref=e535]:
+            - listitem [ref=e536]:
+              - link "Diario" [ref=e537] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e538]:
+              - link "Guías clínicas" [ref=e539] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e540]:
+              - link "Centro de ayuda" [ref=e541] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e542]:
+              - link "Estado del servicio" [ref=e543] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e544]:
+          - heading "Empresa" [level=4] [ref=e545]
+          - list [ref=e546]:
+            - listitem [ref=e547]:
+              - link "Sobre Nurea" [ref=e548] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e549]:
+              - link "Manifiesto" [ref=e550] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e551]:
+              - link "Carreras" [ref=e552] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e553]:
+              - link "Prensa" [ref=e554] [cursor=pointer]:
+                - /url: "#"
+        - generic [ref=e555]:
+          - heading "Legal" [level=4] [ref=e556]
+          - list [ref=e557]:
+            - listitem [ref=e558]:
+              - link "Privacidad" [ref=e559] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e560]:
+              - link "Condiciones" [ref=e561] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e562]:
+              - link "Cookies" [ref=e563] [cursor=pointer]:
+                - /url: "#"
+            - listitem [ref=e564]:
+              - link "Código ético" [ref=e565] [cursor=pointer]:
+                - /url: "#"
+      - generic [ref=e566]:
+        - generic [ref=e567]: © 2026 Nurea Health, S.L. — Hecho con cuidado en Madrid y Ciudad de México.
+        - generic [ref=e568]:
+          - link "RGPD" [ref=e569] [cursor=pointer]:
+            - /url: "#"
+          - link "ISO 27001" [ref=e570] [cursor=pointer]:
+            - /url: "#"
+          - link "SOC 2" [ref=e571] [cursor=pointer]:
+            - /url: "#"
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e577] [cursor=pointer]:
+    - img [ref=e578]
+  - alert [ref=e581]

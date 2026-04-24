@@ -53,7 +53,7 @@ export function PatientAppointments({
 }: PatientAppointmentsProps) {
   const { language } = useLanguage()
   const isSpanish = language === "es"
-  const { user } = useAuth()
+  const { user } = useUser()
   const supabase = createClient()
 
   const [appointments, setAppointments] = useState<AppointmentData[]>(

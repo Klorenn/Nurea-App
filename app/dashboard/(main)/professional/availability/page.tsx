@@ -92,7 +92,7 @@ function calculateSlots(startTime: string, endTime: string, duration: number): n
 
 export default function AvailabilityPage() {
   const { language } = useLanguage()
-  const { user } = useAuth()
+  const { user } = useUser()
   const supabase = createClient()
   const isSpanish = language === "es"
 

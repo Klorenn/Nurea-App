@@ -34,7 +34,7 @@ export default function DashboardLayoutClient({
 }: {
   children: React.ReactNode
 }) {
-  const { user, loading: authLoading } = useAuth()
+  const { user, isLoaded: authLoading } = useUser()
   const router = useRouter()
   const pathname = usePathname()
   const { language } = useLanguage()

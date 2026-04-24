@@ -572,7 +572,7 @@ export default function PatientAppointmentsPage() {
   
   const searchParams = useSearchParams()
   const supabase = createClient()
-  const { user } = useAuth()
+  const { user } = useUser()
 
   const loadAppointments = async () => {
     if (!user) return

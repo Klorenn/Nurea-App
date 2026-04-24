@@ -14,7 +14,7 @@ function CompleteProfileContent() {
   const t = useTranslations(language)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, loading: authLoading } = useAuth()
+  const { user, isLoaded: authLoading } = useUser()
   const [dateOfBirth, setDateOfBirth] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

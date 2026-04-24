@@ -55,7 +55,7 @@ export default function ProfessionalProfileClient({
   const t = useTranslations(language)
   const router = useRouter()
   const pathname = usePathname()
-  const { user, loading: authLoading } = useAuth()
+  const { user, isLoaded: authLoading } = useUser()
 
   const [professional, setProfessional] = useState<any>(initialProfessional)
   const [reviews, setReviews] = useState<any[]>(initialReviews)

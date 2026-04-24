@@ -188,7 +188,7 @@ const dotStyle: React.CSSProperties = { width: 6, height: 6, borderRadius: "50%"
  *  Patient dashboard
  * ------------------------------------------------------------------ */
 export default function PatientDashboardPage() {
-  const { user } = useAuth()
+  const { user } = useUser()
   const { profile } = useProfile()
   const { language } = useLanguage()
   const isES = language === "es"

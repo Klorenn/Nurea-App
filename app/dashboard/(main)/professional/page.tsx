@@ -206,7 +206,7 @@ const dotStyle: React.CSSProperties = {
  *  Professional dashboard
  * ------------------------------------------------------------------ */
 export default function ProfessionalDashboardPage() {
-  const { user } = useAuth()
+  const { user } = useUser()
   const { profile } = useProfile()
   const { language } = useLanguage()
   const isES = language === "es"

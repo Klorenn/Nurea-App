@@ -511,7 +511,7 @@ function StepHeader({ step, total, title, subtitle }: { step: number; total: num
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ProfessionalOnboardingPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, isLoaded: authLoading } = useUser()
   const router = useRouter()
   const supabase = useRef(createClient()).current
   const fileInputRef = useRef<HTMLInputElement>(null)

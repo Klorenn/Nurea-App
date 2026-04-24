@@ -96,7 +96,7 @@ const plans: PricingPlan[] = [
 
 export default function PreciosPage() {
   const { language } = useLanguage()
-  const { user } = useAuth()
+  const { user } = useUser()
   const router = useRouter()
   const isSpanish = language === "es"
   

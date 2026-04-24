@@ -28,7 +28,7 @@ import { es } from "date-fns/locale"
 
 export default function PatientPaymentsPage() {
   const { language } = useLanguage()
-  const { user } = useAuth()
+  const { user } = useUser()
   const isSpanish = language === "es"
   const supabase = createClient()
 

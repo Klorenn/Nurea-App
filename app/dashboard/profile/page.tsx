@@ -19,7 +19,7 @@ import { mutate } from "swr"
 export default function ProfilePage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const { user } = useAuth()
+  const { user } = useUser()
   const [isEditing, setIsEditing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)

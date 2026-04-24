@@ -28,7 +28,7 @@ export default function ProfessionalProfilePremiumClient({
   const isSpanish = language === "es"
   const router = useRouter()
   const pathname = usePathname()
-  const { user, loading: authLoading } = useAuth()
+  const { user, isLoaded: authLoading } = useUser()
   const [activeTab, setActiveTab] = useState("experiencia")
 
   const professional = initialProfessional

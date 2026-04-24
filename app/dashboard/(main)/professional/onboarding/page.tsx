@@ -88,7 +88,7 @@ const DAY_LABELS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "
  * ------------------------------------------------------------------ */
 export default function ProfessionalOnboardingPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user } = useUser()
   const { language } = useLanguage()
   const isES = language === "es"
   const supabase = useMemo(() => createClient(), [])

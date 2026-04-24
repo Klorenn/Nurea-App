@@ -488,7 +488,7 @@ function BioAccordion({ generalForm, onSaveGeneral, onSaveFieldDirect, saving }:
 export default function ProfessionalProfilePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user } = useAuth()
+  const { user } = useUser()
   const { profile, mutate: mutateProfile } = useProfile()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)

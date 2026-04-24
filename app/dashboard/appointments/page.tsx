@@ -84,7 +84,7 @@ async function fetchMyAppointments(
 function AppointmentsContent() {
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const { user } = useAuth()
+  const { user } = useUser()
   const router = useRouter()
   const [appointments, setAppointments] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<"upcoming" | "history">("upcoming")

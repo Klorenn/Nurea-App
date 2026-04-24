@@ -53,7 +53,7 @@ export function BookingCalendarClient() {
   const professionalId = searchParams.get("professionalId");
   const typeParam = searchParams.get("type") as "online" | "in-person" | null;
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoaded: authLoading } = useUser();
   const [info, setInfo] = useState<ProfessionalInfo | null>(null);
   const [loadingProfessional, setLoadingProfessional] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();

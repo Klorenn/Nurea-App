@@ -11,7 +11,7 @@ import { loadingFullViewportClassName } from "@/lib/loading-layout"
  * Ensures users are sent to their role-specific dashboard.
  */
 export default function DashboardRootPage() {
-  const { user, loading } = useAuth()
+  const { user, isLoaded: loading } = useUser()
   const router = useRouter()
   const supabase = createClient()
 

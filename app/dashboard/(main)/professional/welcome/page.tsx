@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react"
 import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 export default function ProfessionalWelcomePage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, isLoaded: authLoading } = useUser()
   const [profData, setProfData] = useState<{ name: string; slug: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()

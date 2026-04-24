@@ -10,7 +10,7 @@ import { loadingFullViewportClassName } from "@/lib/loading-layout"
 export default function UnauthorizedPage() {
   const { language } = useLanguage()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user } = useUser()
   const isSpanish = language === "es"
 
   return (

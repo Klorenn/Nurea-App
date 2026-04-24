@@ -48,7 +48,7 @@ export default function ForumPostPage() {
   const params = useParams()
   const router = useRouter()
   const { language } = useLanguage()
-  const { user } = useAuth()
+  const { user } = useUser()
   const postId = params.id as string
 
   const [post, setPost] = useState<Post | null>(null)

@@ -34,7 +34,7 @@ const PRO_PRICE_CLP = 29990
 
 export default function ProfessionalSubscriptionPage() {
   const { language } = useLanguage()
-  const { user } = useAuth()
+  const { user } = useUser()
   const isSpanish = language === "es"
   const supabase = createClient()
 

@@ -59,7 +59,7 @@ interface PatientRecord {
 
 export default function ClinicalRecordsDashboard() {
   const { language } = useLanguage()
-  const { user } = useAuth()
+  const { user } = useUser()
   const router = useRouter()
   const isSpanish = language === "es"
   const supabase = createClient()

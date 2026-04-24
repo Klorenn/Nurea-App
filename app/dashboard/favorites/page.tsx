@@ -16,7 +16,7 @@ import Link from "next/link"
 export default function FavoritesPage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const { user } = useAuth()
+  const { user } = useUser()
   const [favorites, setFavorites] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
