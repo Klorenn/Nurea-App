@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from './use-auth'
+import { useUser } from '@clerk/nextjs'
 
 export interface Payment {
   id: string
@@ -23,7 +23,7 @@ export interface UsePaymentsOptions {
 }
 
 export function usePayments(options: UsePaymentsOptions = {}) {
-  const { user } = useAuth()
+  const { user } = useUser()
   const [payments, setPayments] = useState<Payment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

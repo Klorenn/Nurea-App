@@ -2,7 +2,7 @@
 
 import useSWR from "swr"
 import { createClient } from "@/lib/supabase/client"
-import { useAuth } from "./use-auth"
+import { useUser } from "@clerk/nextjs"
 
 const supabase = createClient()
 
@@ -20,7 +20,7 @@ export interface Profile {
 }
 
 export function useProfile() {
-  const { user } = useAuth()
+  const { user } = useUser()
 
   const { data: profile, error, isLoading, mutate } = useSWR(
     user?.id ? ["profile", user.id] : null,
