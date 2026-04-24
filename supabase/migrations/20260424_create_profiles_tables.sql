@@ -1,5 +1,5 @@
--- Create clerk_profiles table (base user data for Clerk auth)
-CREATE TABLE IF NOT EXISTS clerk_profiles (
+-- Create profiles table (base user data for Clerk auth)
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT UNIQUE NOT NULL,
   user_type TEXT CHECK (user_type IN ('professional', 'patient')) NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS clerk_profiles (
 -- Create professional_profiles table
 CREATE TABLE IF NOT EXISTS professional_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id UUID NOT NULL REFERENCES clerk_profiles(id) ON DELETE CASCADE,
+  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   specialty TEXT NOT NULL,
   license_number TEXT NOT NULL,
   license_file_url TEXT,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS professional_profiles (
 -- Create patient_profiles table
 CREATE TABLE IF NOT EXISTS patient_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  profile_id UUID NOT NULL REFERENCES clerk_profiles(id) ON DELETE CASCADE,
+  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   allergies JSONB DEFAULT '{}',
   current_medications TEXT,
   family_medical_history TEXT,
@@ -44,15 +44,15 @@ CREATE TABLE IF NOT EXISTS patient_profiles (
 );
 
 -- Enable Row Level Security (RLS)
-ALTER TABLE clerk_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE professional_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE patient_profiles ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies for clerk_profiles table
-CREATE POLICY "Users can read own clerk profile" ON clerk_profiles
+-- Create RLS policies for profiles table
+CREATE POLICY "Users can read own profile" ON profiles
   FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
 
-CREATE POLICY "Users can update own clerk profile" ON clerk_profiles
+CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id)
   WITH CHECK (auth.jwt() ->> 'sub' = user_id);
 
@@ -60,25 +60,25 @@ CREATE POLICY "Users can update own clerk profile" ON clerk_profiles
 CREATE POLICY "Users can read own professional profile" ON professional_profiles
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM clerk_profiles
-      WHERE clerk_profiles.id = professional_profiles.profile_id
-      AND clerk_profiles.user_id = auth.jwt() ->> 'sub'
+      SELECT 1 FROM profiles
+      WHERE profiles.id = professional_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
     )
   );
 
 CREATE POLICY "Users can update own professional profile" ON professional_profiles
   FOR UPDATE USING (
     EXISTS (
-      SELECT 1 FROM clerk_profiles
-      WHERE clerk_profiles.id = professional_profiles.profile_id
-      AND clerk_profiles.user_id = auth.jwt() ->> 'sub'
+      SELECT 1 FROM profiles
+      WHERE profiles.id = professional_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
     )
   )
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM clerk_profiles
-      WHERE clerk_profiles.id = professional_profiles.profile_id
-      AND clerk_profiles.user_id = auth.jwt() ->> 'sub'
+      SELECT 1 FROM profiles
+      WHERE profiles.id = professional_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
     )
   );
 
@@ -86,24 +86,24 @@ CREATE POLICY "Users can update own professional profile" ON professional_profil
 CREATE POLICY "Users can read own patient profile" ON patient_profiles
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM clerk_profiles
-      WHERE clerk_profiles.id = patient_profiles.profile_id
-      AND clerk_profiles.user_id = auth.jwt() ->> 'sub'
+      SELECT 1 FROM profiles
+      WHERE profiles.id = patient_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
     )
   );
 
 CREATE POLICY "Users can update own patient profile" ON patient_profiles
   FOR UPDATE USING (
     EXISTS (
-      SELECT 1 FROM clerk_profiles
-      WHERE clerk_profiles.id = patient_profiles.profile_id
-      AND clerk_profiles.user_id = auth.jwt() ->> 'sub'
+      SELECT 1 FROM profiles
+      WHERE profiles.id = patient_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
     )
   )
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM clerk_profiles
-      WHERE clerk_profiles.id = patient_profiles.profile_id
-      AND clerk_profiles.user_id = auth.jwt() ->> 'sub'
+      SELECT 1 FROM profiles
+      WHERE profiles.id = patient_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
     )
   );
