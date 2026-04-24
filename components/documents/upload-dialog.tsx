@@ -18,7 +18,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Upload, FileText, Shield, AlertCircle, CheckCircle2, X } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { useAuth } from "@/hooks/use-auth"
 
 interface UploadDialogProps {
   isOpen: boolean

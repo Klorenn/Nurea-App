@@ -29,6 +29,7 @@ import {
   X,
   ChevronRight,
   MessageSquare,
+  MessageSquarePlus,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -58,6 +59,7 @@ const adminNavigation: NavGroup[] = [
     titleEn: "Management",
     items: [
       { icon: LayoutDashboard, label: "Resumen Global", labelEn: "Global Overview", href: "/dashboard/admin" },
+      { icon: MessageSquarePlus, label: "Feedback", labelEn: "Feedback", href: "/dashboard/admin/feedback", isNew: true },
       { icon: Stethoscope, label: "Médicos", labelEn: "Doctors", href: "/dashboard/admin/professionals" },
       { icon: Users, label: "Pacientes", labelEn: "Patients", href: "/dashboard/admin/users" },
       { icon: Calendar, label: "Citas", labelEn: "Appointments", href: "/dashboard/admin/appointments" },
@@ -195,78 +197,36 @@ export function DashboardSidebar({ role, language = "es", className }: Dashboard
     return pathname.startsWith(href)
   }
 
-  const sidebarContent = (
-    <div className="flex flex-col h-full">
+const sidebarContent = (
+    <div className="sidebar">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-3 py-4 mb-2">
-        <div
-          className={cn(
-            "relative shrink-0 w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-md",
-            `bg-gradient-to-br ${theme.logoGradient}`
-          )}
-        >
-          <Image
-            src="/logo.png"
-            alt="NUREA"
-            width={36}
-            height={36}
-            className="h-9 w-9 object-contain"
-            onError={(e) => {
-              ;(e.target as HTMLImageElement).style.display = "none"
-            }}
-          />
-        </div>
-
-        <AnimatePresence>
-          {open && (
-            <motion.div
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -6 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="overflow-hidden"
-            >
-              <div className="flex flex-col leading-none">
-                <span className="font-bold text-[15px] tracking-tight text-foreground whitespace-nowrap">
-                  NUREA
-                  <span className="text-[9px] font-normal text-muted-foreground ml-1 align-super">beta</span>
-                </span>
-                {role === "admin" && (
-                  <span className="text-[10px] font-medium text-violet-500 flex items-center gap-0.5">
-                    <Shield className="h-2.5 w-2.5" /> Admin
-                  </span>
-                )}
-                {role === "professional" && (
-                  <span className="text-[10px] text-teal-600 dark:text-teal-400">Panel Profesional</span>
-                )}
-                {role === "patient" && (
-                  <span className="text-[10px] text-teal-600 dark:text-teal-400">Mi Salud</span>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <div className="sidebar-logo">
+        <Image
+          src="/logo.png"
+          alt="NUREA"
+          width={36}
+          height={36}
+          className="sidebar-logo-mark"
+        />
+        {open && <span>NUREA</span>}
       </div>
 
       {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 space-y-1 scrollbar-none">
+      <nav className="flex-1 overflow-y-auto px-2">
         {navigation.map((group, gi) => (
           <div key={group.title}>
-            {/* Group label */}
             <AnimatePresence>
               {open && (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 whitespace-nowrap"
+                  className="sidebar-section"
                 >
                   {isSpanish ? group.title : group.titleEn}
                 </motion.p>
               )}
             </AnimatePresence>
-            {!open && gi > 0 && <div className="h-px mx-3 my-2 bg-border/40" />}
 
             {/* Items */}
             {group.items.map((item) => {
@@ -389,9 +349,7 @@ export function DashboardSidebar({ role, language = "es", className }: Dashboard
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
         className={cn(
-          "hidden md:flex flex-col h-screen sticky top-0 shrink-0 overflow-hidden z-40",
-          "bg-card/60 dark:bg-card/40 backdrop-blur-xl",
-          "border-r border-border/40",
+          "hidden md:flex sidebar",
           className
         )}
       >

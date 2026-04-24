@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
-import type { UserRole } from "@/lib/auth/utils"
 import { loadingDashboardInsetClassName } from "@/lib/loading-layout"
 
 interface RouteGuardProps {

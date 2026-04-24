@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import type { UserRole } from "@/lib/auth/utils"
 

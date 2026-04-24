@@ -7,11 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { Mail, CheckCircle2, AlertCircle } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { authMessages } from "@/lib/auth/messages"
 
 function VerifyEmailContent() {
   const { language } = useLanguage()
-  const messages = authMessages[language]
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)

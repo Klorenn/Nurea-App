@@ -1,0 +1,101 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "Nurea Nurea" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "Nurea" [ref=e5]
+        - generic [ref=e6]: Nurea
+      - generic [ref=e7]:
+        - generic [ref=e8]: Voces de la red
+        - blockquote [ref=e9]:
+          - text: "\"Volver a Nurea es volver a"
+          - emphasis [ref=e10]: un lugar tranquilo
+          - text: donde mis pacientes ya saben que los espero con tiempo."
+        - generic [ref=e13]:
+          - generic [ref=e14]: Dra. Laura Mendoza
+          - generic [ref=e15]: Psicóloga clínica · Madrid
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e18]: 12,400+
+          - generic [ref=e19]: Profesionales
+        - generic [ref=e20]:
+          - generic [ref=e21]: 340K+
+          - generic [ref=e22]: Consultas
+        - generic [ref=e23]:
+          - generic [ref=e24]: 98%
+          - generic [ref=e25]: Satisfacción
+    - main [ref=e26]:
+      - generic [ref=e27]:
+        - link "Volver" [ref=e28] [cursor=pointer]:
+          - /url: /
+          - img [ref=e29]
+          - text: Volver
+        - generic [ref=e31]:
+          - text: ¿Primera vez?
+          - link "Crear cuenta" [ref=e32] [cursor=pointer]:
+            - /url: /signup
+      - generic [ref=e33]:
+        - heading "Hola de nuevo." [level=1] [ref=e34]:
+          - text: Hola de
+          - emphasis [ref=e35]: nuevo
+          - text: .
+        - paragraph [ref=e36]: Retoma donde lo dejaste. Tus próximas citas, mensajes y notas te esperan.
+        - generic [ref=e37]:
+          - button "Google" [ref=e38] [cursor=pointer]:
+            - img [ref=e39]
+            - text: Google
+          - button "Apple" [ref=e44] [cursor=pointer]:
+            - img [ref=e45]
+            - text: Apple
+        - generic [ref=e47]: o continúa con correo
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]: Correo profesional
+            - generic [ref=e51]:
+              - textbox "Correo profesional" [ref=e52]:
+                - /placeholder: nombre@clinica.com
+                - text: sanluismaria05@gmail.com
+              - generic:
+                - img
+          - generic [ref=e53]:
+            - generic [ref=e54]: Contraseña
+            - generic [ref=e55]:
+              - textbox "Contraseña" [ref=e56]:
+                - /placeholder: Tu contraseña
+                - text: misakki12_
+              - generic:
+                - img
+              - button "Mostrar contraseña" [ref=e57] [cursor=pointer]:
+                - img [ref=e58]
+          - generic [ref=e61]:
+            - generic [ref=e62] [cursor=pointer]:
+              - checkbox "Mantener sesión iniciada" [checked]
+              - img [ref=e64]
+              - generic [ref=e66]: Mantener sesión iniciada
+            - link "¿Olvidaste tu contraseña?" [ref=e67] [cursor=pointer]:
+              - /url: /forgot-password
+          - button "Iniciar sesión" [ref=e68] [cursor=pointer]:
+            - generic [ref=e69]: Iniciar sesión
+            - img [ref=e70]
+          - generic [ref=e72]:
+            - text: ¿No tienes una cuenta?
+            - link "Crear cuenta gratis" [ref=e73] [cursor=pointer]:
+              - /url: /signup
+      - generic [ref=e74]:
+        - generic [ref=e75]: © 2026 Nurea Health
+        - generic [ref=e76]:
+          - link "Privacidad" [ref=e77] [cursor=pointer]:
+            - /url: /privacy
+          - link "Términos" [ref=e78] [cursor=pointer]:
+            - /url: /terms
+          - link "Ayuda" [ref=e79] [cursor=pointer]:
+            - /url: mailto:hola@nurea.app
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e85] [cursor=pointer]:
+    - generic [ref=e88]:
+      - text: Compiling
+      - generic [ref=e89]:
+        - generic [ref=e90]: .
+        - generic [ref=e91]: .
+        - generic [ref=e92]: .
+  - alert [ref=e93]

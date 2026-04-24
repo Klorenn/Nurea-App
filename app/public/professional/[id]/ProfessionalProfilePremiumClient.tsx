@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Navbar } from "@/components/navbar"
-import { useAuth } from "@/hooks/use-auth"
 import { Footer } from "@/components/footer"
 import { ProfileAuthorityHeader } from "@/components/professionals/premium/ProfileAuthorityHeader"
 import { BentoGridProfile } from "@/components/professionals/premium/BentoGridProfile"

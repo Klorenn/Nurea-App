@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { createClient } from "@/lib/supabase/client"
-import { useAuth } from "@/hooks/use-auth"
 import { useLanguage } from "@/contexts/language-context"
 import { Button } from "@/components/ui/button"
 import { 

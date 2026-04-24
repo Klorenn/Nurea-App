@@ -205,75 +205,225 @@ export function ExploreContent() {
   )
 
   const labels = {
-    title: lang === "es" ? "Explorar Especialistas" : "Explore Specialists",
-    subtitle: lang === "es" 
-      ? "Encuentra al profesional de salud ideal para ti"
-      : "Find the ideal health professional for you",
-    searchPlaceholder: lang === "es" 
-      ? "Buscar por nombre, especialidad o ubicación..."
-      : "Search by name, specialty or location...",
+    heroTitle:
+      lang === "es"
+        ? { a: "Encuentra a tu profesional", b: "de salud", em: "ideal" }
+        : { a: "Find your ideal", b: "health", em: "professional" },
+    heroSub:
+      lang === "es"
+        ? "+12.400 profesionales verificados en Chile y España. Sin necesidad de registrarse."
+        : "+12,400 verified professionals in Chile and Spain. No registration required.",
+    searchPlaceholder:
+      lang === "es"
+        ? "Especialidad, nombre o síntoma..."
+        : "Specialty, name or symptom...",
+    searchCta: lang === "es" ? "Buscar profesional" : "Find professional",
   }
 
+  const popularTags =
+    lang === "es"
+      ? ["Psicología", "Nutrición", "Fisioterapia", "Ansiedad", "Terapia de pareja", "Depresión"]
+      : ["Psychology", "Nutrition", "Physiotherapy", "Anxiety", "Couples therapy", "Depression"]
+
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <main style={{ minHeight: "100vh", background: "var(--bg-warm, oklch(0.97 0.015 85))" }}>
       <div className="min-h-screen flex flex-col">
         <Navbar sticky={false} />
 
-        {/* Hero + buscador principal — mantener mismo color de fondo */}
-        <section className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
-            <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50 tracking-tight mb-1">
-              {labels.title}
+        {/* HERO — Nurea sage (dark) */}
+        <section
+          style={{
+            background: "oklch(0.22 0.03 170)",
+            color: "var(--bg, oklch(0.985 0.008 150))",
+            padding: "56px 28px",
+            textAlign: "center",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          {/* radial glow */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(ellipse at 30% 50%, oklch(0.58 0.07 170 / 0.3), transparent 60%), radial-gradient(ellipse at 80% 20%, oklch(0.68 0.11 45 / 0.15), transparent 50%)",
+              pointerEvents: "none",
+            }}
+          />
+          <div style={{ maxWidth: 760, margin: "0 auto", position: "relative" }}>
+            <h1
+              className="serif"
+              style={{
+                fontFamily: "var(--font-fraunces), Fraunces, serif",
+                fontSize: "clamp(34px, 5vw, 58px)",
+                lineHeight: 1.05,
+                letterSpacing: "-0.03em",
+                fontWeight: 400,
+                marginBottom: 14,
+              }}
+            >
+              {labels.heroTitle.a}
+              <br />
+              {labels.heroTitle.b}{" "}
+              <em
+                style={{
+                  fontStyle: "italic",
+                  color: "oklch(0.78 0.06 170)",
+                  fontWeight: 300,
+                }}
+              >
+                {labels.heroTitle.em}
+              </em>
+              .
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-xl">
-              {labels.subtitle}
+            <p
+              style={{
+                fontSize: 17,
+                color: "oklch(0.82 0.02 150)",
+                marginBottom: 32,
+              }}
+            >
+              {labels.heroSub}
             </p>
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                <Input
-                  ref={searchInputRef}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={labels.searchPlaceholder}
-                  className="pl-10 h-11 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-teal-500/20 focus-visible:border-teal-500/40"
-                  aria-label={lang === "es" ? "Buscar por especialidad o nombre" : "Search by specialty or name"}
-                />
-              </div>
-              <Input
-                placeholder={lang === "es" ? "Ciudad" : "City"}
+            <div
+              style={{
+                display: "flex",
+                background: "var(--bg, white)",
+                borderRadius: 16,
+                padding: 6,
+                boxShadow: "0 20px 40px oklch(0.1 0.03 170 / 0.3)",
+                maxWidth: 700,
+                margin: "0 auto",
+                flexWrap: "wrap",
+                gap: 6,
+              }}
+            >
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={labels.searchPlaceholder}
+                style={{
+                  flex: 1,
+                  minWidth: 180,
+                  padding: "12px 18px",
+                  border: "none",
+                  background: "transparent",
+                  fontFamily: "inherit",
+                  fontSize: 15,
+                  color: "var(--ink, oklch(0.22 0.025 170))",
+                  outline: "none",
+                }}
+                aria-label={lang === "es" ? "Buscar por especialidad o nombre" : "Search by specialty or name"}
+              />
+              <select
                 value={currentFilters.location || ""}
                 onChange={(e) => handleFilterChange({ location: e.target.value || undefined })}
-                className="sm:w-40 h-11 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-teal-500/20"
-              />
-              <Button
-                onClick={() => handleFilterChange({ search: searchTerm || undefined })}
-                className="h-11 px-5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium shadow-sm border-0"
+                style={{
+                  padding: "10px 14px",
+                  border: "none",
+                  background: "var(--bg-warm, oklch(0.97 0.015 85))",
+                  borderRadius: 10,
+                  fontFamily: "inherit",
+                  fontSize: 14,
+                  color: "var(--ink, oklch(0.22 0.025 170))",
+                  outline: "none",
+                  cursor: "pointer",
+                }}
               >
-                <Search className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">{lang === "es" ? "Buscar" : "Search"}</span>
-              </Button>
+                <option value="">{lang === "es" ? "Toda Chile" : "All Chile"}</option>
+                <option>Santiago</option>
+                <option>Valparaíso</option>
+                <option>Concepción</option>
+                <option>Antofagasta</option>
+                <option>Online</option>
+              </select>
+              <button
+                onClick={() => handleFilterChange({ search: searchTerm || undefined })}
+                style={{
+                  padding: "12px 22px",
+                  background: "oklch(0.22 0.03 170)",
+                  color: "var(--bg, white)",
+                  border: "none",
+                  borderRadius: 10,
+                  fontFamily: "inherit",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {labels.searchCta}
+              </button>
             </div>
 
-            <div className="mt-6">
-              <CategoryTabs
-                categories={categories}
-                selectedCategory={currentFilters.categorySlug || null}
-                onSelect={handleCategoryChange}
-                loading={categoriesLoading}
-                lang={lang}
-              />
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                justifyContent: "center",
+                flexWrap: "wrap",
+                marginTop: 20,
+              }}
+            >
+              {popularTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    setSearchTerm(tag)
+                    handleFilterChange({ search: tag })
+                  }}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    border: "1px solid oklch(0.4 0.03 170)",
+                    background: "transparent",
+                    fontSize: 12.5,
+                    color: "oklch(0.75 0.02 160)",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "oklch(0.3 0.04 170)"
+                    e.currentTarget.style.color = "var(--bg, white)"
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent"
+                    e.currentTarget.style.color = "oklch(0.75 0.02 160)"
+                  }}
+                >
+                  {tag}
+                </button>
+              ))}
             </div>
+          </div>
+        </section>
 
-            {/* Condiciones por especialidad (filtros rápidos) */}
-            <div className="mt-4">
+        {/* Categories + quick filters */}
+        <section
+          style={{
+            background: "var(--bg, white)",
+            borderBottom: "1px solid var(--line-soft, oklch(0.93 0.012 150))",
+            padding: "20px 28px",
+          }}
+        >
+          <div style={{ maxWidth: 1300, margin: "0 auto" }}>
+            <CategoryTabs
+              categories={categories}
+              selectedCategory={currentFilters.categorySlug || null}
+              onSelect={handleCategoryChange}
+              loading={categoriesLoading}
+              lang={lang}
+            />
+            <div style={{ marginTop: 16 }}>
               <SearchFilters
                 onChange={(filters) =>
                   handleFilterChange({
                     specialtySlug: filters.specialty,
-                    // guardamos las condiciones seleccionadas en el campo search como texto
-                    // para que el backend pueda usarlas mientras definimos un API más rico
                     search:
                       filters.conditions.length > 0
                         ? `${searchTerm} ${filters.conditions.join(" ")}`

@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nurea — Salud profesional, al alcance de todos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Palette — verde agua pastel, organic */
+    --bg: oklch(0.985 0.008 150);
+    --bg-warm: oklch(0.97 0.015 85);
+    --bg-sage: oklch(0.93 0.035 170);
+    --sage-100: oklch(0.95 0.025 170);
+    --sage-200: oklch(0.88 0.045 170);
+    --sage-300: oklch(0.78 0.06 170);
+    --sage-500: oklch(0.58 0.07 170);
+    --sage-700: oklch(0.38 0.05 170);
+    --sage-900: oklch(0.22 0.03 170);
+    --ink: oklch(0.22 0.025 170);
+    --ink-soft: oklch(0.42 0.02 170);
+    --ink-mute: oklch(0.58 0.015 170);
+    --line: oklch(0.88 0.015 150);
+    --line-soft: oklch(0.93 0.012 150);
+    --terracotta: oklch(0.68 0.11 45);
+    --terracotta-deep: oklch(0.52 0.13 40);
+    --cream: oklch(0.96 0.02 90);
+
+    --r-sm: 12px;
+    --r-md: 20px;
+    --r-lg: 28px;
+    --r-xl: 40px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  .serif { font-family: 'Fraunces', Georgia, serif; font-weight: 400; letter-spacing: -0.02em; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ========== NAV ========== */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    background: color-mix(in oklab, var(--bg) 75%, transparent);
+    border-bottom: 1px solid transparent;
+    transition: all 0.3s;
+  }
+  .nav.scrolled {
+    border-bottom-color: var(--line-soft);
+    background: color-mix(in oklab, var(--bg) 92%, transparent);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+    gap: 32px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .logo-mark {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, var(--sage-200), var(--sage-500) 70%, var(--sage-700));
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.2,0.9,0.3,1);
+  }
+  .logo:hover .logo-mark { transform: rotate(90deg) scale(1.05); }
+  .logo-mark::after {
+    content: ''; position: absolute;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--bg);
+    top: 6px; left: 6px;
+    opacity: 0.55;
+  }
+  .nav-links {
+    display: flex;
+    gap: 6px;
+    list-style: none;
+    background: var(--bg-warm);
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    padding: 5px;
+    position: relative;
+  }
+  .nav-links a {
+    display: inline-block;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 999px;
+    transition: all 0.25s cubic-bezier(0.2,0.9,0.3,1);
+    position: relative;
+  }
+  .nav-links a:hover {
+    color: var(--ink);
+    background: var(--bg);
+  }
+
+  .nav-cta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .nav-cta .btn { padding: 10px 18px; font-size: 13.5px; }
+  .nav-cta .btn-primary { padding-right: 10px; }
+  .nav-cta .btn-primary .btn-arrow {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--sage-500);
+    margin-left: 2px;
+    transition: transform 0.3s;
+  }
+  .nav-cta .btn-primary:hover .btn-arrow { transform: translateX(3px) rotate(-45deg); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 22px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+    font-family: inherit;
+  }
+  .btn-ghost {
+    background: transparent; color: var(--ink);
+  }
+  .btn-ghost:hover { background: var(--sage-100); }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .btn-primary:hover {
+    background: var(--sage-900);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px -8px oklch(0.25 0.03 170 / 0.4);
+  }
+
+  .btn-terracotta {
+    background: var(--terracotta);
+    color: white;
+  }
+  .btn-terracotta:hover {
+    background: var(--terracotta-deep);
+    transform: translateY(-1px);
+  }
+
+  .btn-large { padding: 16px 28px; font-size: 15px; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .btn-outline:hover { border-color: var(--ink); background: var(--bg-warm); }
+
+  /* ========== HERO ========== */
+  .hero {
+    position: relative;
+    padding: 80px 0 120px;
+    overflow: hidden;
+  }
+  .hero-grid { overflow: visible; }
+  .hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .hero-blob-1 {
+    width: 460px; height: 460px;
+    background: var(--sage-200);
+    top: -180px; right: -80px;
+    animation: drift 22s ease-in-out infinite;
+    opacity: 0.35;
+  }
+  .hero-blob-2 {
+    width: 380px; height: 380px;
+    background: var(--terracotta);
+    opacity: 0.18;
+    bottom: -100px; left: -80px;
+    animation: drift 28s ease-in-out infinite reverse;
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(40px, -30px) scale(1.1); }
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 80px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 6px 14px 6px 8px;
+    background: var(--sage-100);
+    border: 1px solid var(--sage-200);
+    border-radius: 999px;
+    font-size: 13px;
+    color: var(--sage-700);
+    margin-bottom: 28px;
+  }
+  .hero-eyebrow-dot {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--sage-500);
+    position: relative;
+  }
+  .hero-eyebrow-dot::after {
+    content: ''; position: absolute; inset: 4px;
+    border-radius: 50%;
+    background: white;
+  }
+
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(44px, 6vw, 76px);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    font-weight: 400;
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+  .hero h1 em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--sage-500);
+  }
+
+  .hero-sub {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 520px;
+    margin-bottom: 40px;
+  }
+
+  .hero-ctas { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+  .hero-trust {
+    margin-top: 48px;
+    display: flex; align-items: center; gap: 20px;
+    font-size: 13px;
+    color: var(--ink-mute);
+  }
+  .trust-avatars { display: flex; }
+  .trust-avatars > div {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    margin-left: -8px;
+    background-size: cover; background-position: center;
+  }
+  .trust-avatars > div:first-child { margin-left: 0; }
+  .av1 { background: linear-gradient(135deg, oklch(0.78 0.06 170), oklch(0.65 0.08 160)); }
+  .av2 { background: linear-gradient(135deg, oklch(0.8 0.08 60), oklch(0.68 0.1 45)); }
+  .av3 { background: linear-gradient(135deg, oklch(0.75 0.05 230), oklch(0.62 0.07 220)); }
+  .av4 { background: linear-gradient(135deg, oklch(0.82 0.05 340), oklch(0.7 0.07 330)); }
+
+  /* Hero visual — organic composition */
+  .hero-visual {
+    position: relative;
+    aspect-ratio: 0.95;
+    width: 100%;
+    max-width: 520px;
+    justify-self: end;
+  }
+  .hv-card {
+    position: absolute;
+    background: white;
+    border-radius: var(--r-lg);
+    box-shadow: 0 30px 60px -30px oklch(0.3 0.04 170 / 0.2),
+                0 10px 20px -10px oklch(0.3 0.04 170 / 0.12);
+    transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .hv-main {
+    top: 0; left: 0;
+    width: 68%; height: 78%;
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--sage-100), var(--sage-200));
+  }
+  .hv-main-inner {
+    padding: 28px;
+    height: 100%;
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+  }
+  .hv-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    background: white;
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--sage-700);
+    align-self: flex-start;
+  }
+  .hv-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sage-500); }
+  .hv-prof {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px;
+    background: color-mix(in oklab, white 70%, transparent);
+    backdrop-filter: blur(8px);
+    border-radius: var(--r-md);
+  }
+  .hv-prof-img {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, oklch(0.7 0.07 60), oklch(0.55 0.09 45));
+    flex-shrink: 0;
+  }
+  .hv-prof-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+  .hv-prof-role { font-size: 12px; color: var(--ink-mute); }
+  .hv-prof-book {
+    margin-left: auto;
+    padding: 8px 14px;
+    background: var(--ink);
+    color: white;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .hv-booking {
+    bottom: 8%; right: 0;
+    width: 58%;
+    padding: 22px;
+    background: white;
+  }
+  .hv-booking-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .hv-booking-title { font-size: 14px; font-weight: 600; }
+  .hv-booking-month { font-size: 12px; color: var(--ink-mute); }
+  .hv-calendar {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .hv-cal-day {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    border-radius: 8px;
+    color: var(--ink-soft);
+  }
+  .hv-cal-day.header { color: var(--ink-mute); font-weight: 500; font-size: 10px; }
+  .hv-cal-day.active { background: var(--ink); color: white; font-weight: 600; }
+  .hv-cal-day.avail { background: var(--sage-100); color: var(--sage-700); }
+  .hv-time {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .hv-time-slot {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--bg-warm);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .hv-time-slot.picked { background: var(--terracotta); color: white; }
+
+  .hv-stat {
+    top: 4%; right: 2%;
+    padding: 16px 20px;
+    background: white;
+    display: flex; align-items: center; gap: 14px;
+    animation: float-stat 6s ease-in-out infinite;
+    z-index: 3;
+  }
+  @keyframes float-stat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .hv-stat-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: var(--sage-100);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hv-stat-num { font-family: 'Fraunces'; font-size: 22px; font-weight: 500; line-height: 1; }
+  .hv-stat-label { font-size: 11px; color: var(--ink-mute); margin-top: 2px; }
+
+  /* ========== LOGOS ========== */
+  .logos {
+    padding: 60px 0;
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .logos-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .logos-label {
+    font-size: 13px;
+    color: var(--ink-mute);
+    max-width: 200px;
+  }
+  .logos-row {
+    display: flex; align-items: center; gap: 48px;
+    flex-wrap: wrap;
+    opacity: 0.65;
+  }
+  .client-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--ink-soft);
+    display: flex; align-items: center; gap: 8px;
+    transition: opacity 0.2s;
+  }
+  .client-logo:hover { opacity: 0.6; }
+  .client-logo-mark {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    background: var(--ink-soft);
+  }
+  .client-logo-mark.round { border-radius: 50%; }
+  .client-logo-mark.diamond { transform: rotate(45deg); border-radius: 4px; }
+
+  /* ========== STATS ========== */
+  .stats {
+    padding: 120px 0;
+    position: relative;
+  }
+  .stats-head {
+    max-width: 680px;
+    margin-bottom: 72px;
+  }
+  .section-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--sage-500);
+    margin-bottom: 20px;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .section-eyebrow::before {
+    content: '';
+    width: 24px; height: 1px;
+    background: var(--sage-500);
+  }
+  .section-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(34px, 4.5vw, 52px);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 400;
+    color: var(--ink);
+  }
+  .section-title em { font-style: italic; color: var(--sage-500); font-weight: 300; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border-top: 1px solid var(--line);
+  }
+  .stat-cell {
+    padding: 36px 28px 36px 0;
+    border-right: 1px solid var(--line);
+    position: relative;
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-cell:not(:first-child) { padding-left: 32px; }
+
+  .stat-num {
+    font-family: 'Fraunces', serif;
+    font-size: 64px;
+    font-weight: 400;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+  .stat-num .unit { font-size: 32px; color: var(--sage-500); margin-left: 4px; }
+  .stat-label {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+
+  /* ========== FEATURES ========== */
+  .features {
+    padding: 120px 0;
+    background: var(--bg-warm);
+    border-radius: 48px 48px 0 0;
+  }
+  .features-head {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: end;
+    margin-bottom: 80px;
+  }
+  .features-intro { font-size: 17px; color: var(--ink-soft); max-width: 460px; }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 20px;
+    grid-auto-rows: minmax(260px, auto);
+  }
+  .feature-card {
+    background: var(--bg);
+    border-radius: var(--r-lg);
+    padding: 32px;
+    border: 1px solid var(--line-soft);
+    display: flex; flex-direction: column;
+    transition: all 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--sage-200);
+    box-shadow: 0 30px 60px -30px oklch(0.3 0.04 170 / 0.15);
+  }
+
+  .f-large { grid-column: span 4; grid-row: span 2; }
+  .f-tall { grid-column: span 2; grid-row: span 2; }
+  .f-wide { grid-column: span 3; }
+  .f-half { grid-column: span 3; }
+  .f-third { grid-column: span 2; }
+
+  .feature-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--sage-100);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    color: var(--sage-700);
+  }
+  .feature-title {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    letter-spacing: -0.02em;
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+  .feature-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+
+  .feature-card.large .feature-title { font-size: 36px; }
+  .feature-card.large .feature-desc { font-size: 16px; max-width: 440px; }
+
+  /* Feature illustrations */
+  .f-illus {
+    margin-top: auto;
+    padding-top: 28px;
+  }
+
+  .search-mock {
+    padding: 14px 16px;
+    background: var(--bg-warm);
+    border-radius: 999px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+  }
+  .search-mock svg { color: var(--ink-mute); flex-shrink: 0; }
+  .search-mock span { font-size: 14px; color: var(--ink-soft); }
+  .search-mock .cursor {
+    width: 1.5px; height: 14px; background: var(--sage-500);
+    animation: blink 1.2s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    padding: 7px 13px;
+    border-radius: 999px;
+    background: var(--bg-warm);
+    font-size: 12px;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .chip:hover { background: var(--sage-100); color: var(--sage-700); border-color: var(--sage-200); }
+  .chip.active { background: var(--ink); color: white; border-color: var(--ink); }
+
+  .prof-mini {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 16px;
+    margin-bottom: 8px;
+    border: 1px solid var(--line-soft);
+  }
+  .prof-mini-av {
+    width: 36px; height: 36px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .prof-mini-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .prof-mini-specialty { font-size: 11px; color: var(--ink-mute); }
+  .prof-mini-badge {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--sage-100);
+    color: var(--sage-700);
+  }
+
+  .chat-bubble {
+    max-width: 80%;
+    padding: 12px 16px;
+    background: var(--bg-warm);
+    border-radius: 18px 18px 18px 4px;
+    font-size: 13px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .chat-bubble.you {
+    margin-left: auto;
+    background: var(--sage-200);
+    border-radius: 18px 18px 4px 18px;
+    color: var(--sage-900);
+  }
+
+  .secure-lines {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .secure-line {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .secure-check {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--sage-200);
+    color: var(--sage-700);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ========== HOW IT WORKS ========== */
+  .how {
+    padding: 140px 0 120px;
+    background: var(--bg-warm);
+  }
+  .how-head { text-align: center; margin-bottom: 80px; }
+  .how-head .section-eyebrow { justify-content: center; }
+  .how-head .section-eyebrow::before, .how-head .section-eyebrow::after {
+    content: '';
+    width: 24px; height: 1px;
+    background: var(--sage-500);
+  }
+  .how-head .section-title { max-width: 720px; margin: 0 auto; }
+
+  .how-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    position: relative;
+  }
+  .how-steps::before {
+    content: '';
+    position: absolute;
+    top: 54px; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(to right,
+      transparent, var(--sage-200), var(--sage-200), transparent);
+  }
+  .how-step {
+    text-align: center;
+    padding: 0 24px;
+    position: relative;
+  }
+  .how-step-num {
+    width: 108px; height: 108px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 28px;
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 400;
+    color: var(--sage-700);
+    position: relative;
+    transition: all 0.3s;
+  }
+  .how-step:hover .how-step-num {
+    background: var(--sage-100);
+    border-color: var(--sage-200);
+    transform: scale(1.04);
+  }
+  .how-step-num::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px dashed var(--sage-200);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .how-step:hover .how-step-num::before { opacity: 1; }
+  .how-step h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .how-step p {
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 280px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  /* ========== DEMO ========== */
+  .demo {
+    padding: 120px 0;
+    background: var(--sage-900);
+    color: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+  .demo-glow {
+    position: absolute;
+    width: 800px; height: 800px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--sage-500), transparent 70%);
+    opacity: 0.15;
+    top: -400px; right: -300px;
+    filter: blur(80px);
+  }
+  .demo-head {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto 64px;
+    position: relative;
+  }
+  .demo-head .section-eyebrow { color: var(--sage-200); justify-content: center; }
+  .demo-head .section-eyebrow::before { background: var(--sage-200); }
+  .demo-head .section-title { color: var(--bg); margin-bottom: 20px; }
+  .demo-head .section-title em { color: var(--sage-200); }
+  .demo-sub { font-size: 17px; color: color-mix(in oklab, var(--bg) 70%, transparent); }
+
+  .demo-player {
+    position: relative;
+    max-width: 960px;
+    margin: 0 auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 24px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--sage-700), var(--sage-500));
+    cursor: pointer;
+    box-shadow: 0 40px 80px -40px oklch(0.4 0.08 170 / 0.6);
+    transition: transform 0.4s;
+  }
+  .demo-player:hover { transform: translateY(-4px); }
+
+  .demo-player::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(45deg, transparent 0 24px, oklch(0.4 0.05 170 / 0.15) 24px 25px);
+    opacity: 0.6;
+  }
+
+  .demo-placeholder-label {
+    position: absolute;
+    top: 24px; left: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: color-mix(in oklab, white 70%, transparent);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  .play-btn {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sage-900);
+    transition: transform 0.3s;
+  }
+  .demo-player:hover .play-btn { transform: translate(-50%, -50%) scale(1.08); }
+  .play-btn::before {
+    content: '';
+    position: absolute; inset: -12px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in oklab, white 40%, transparent);
+    animation: pulse-ring 2.2s ease-out infinite;
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+
+  .demo-caption {
+    position: absolute;
+    bottom: 24px; left: 24px; right: 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: white;
+    font-size: 13px;
+  }
+  .demo-duration { font-family: 'JetBrains Mono', monospace; }
+
+  /* ========== SPECIALTIES ========== */
+  .specs { padding: 120px 0; background: var(--bg); }
+  .specs-head { display: flex; justify-content: space-between; align-items: end; margin-bottom: 56px; gap: 40px; flex-wrap: wrap; }
+  .specs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .spec-card {
+    position: relative;
+    padding: 28px 24px;
+    background: var(--bg-warm);
+    border-radius: var(--r-md);
+    border: 1px solid var(--line-soft);
+    aspect-ratio: 1;
+    display: flex; flex-direction: column; justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+    overflow: hidden;
+  }
+  .spec-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 80% 120%, var(--sage-200), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .spec-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--sage-300);
+    background: var(--sage-100);
+  }
+  .spec-card:hover::before { opacity: 0.7; }
+  .spec-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-mute); position: relative; }
+  .spec-name { font-family: 'Fraunces', serif; font-size: 22px; line-height: 1.1; letter-spacing: -0.02em; color: var(--ink); position: relative; }
+  .spec-meta { font-size: 12px; color: var(--ink-soft); position: relative; display: flex; align-items: center; gap: 8px; }
+  .spec-meta-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sage-500); }
+
+  /* ========== TESTIMONIALS ========== */
+  .testis {
+    padding: 120px 0;
+  }
+  .testis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-top: 60px;
+  }
+  .testi {
+    padding: 32px;
+    background: var(--bg);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-lg);
+    display: flex; flex-direction: column;
+    transition: all 0.3s;
+  }
+  .testi:hover { border-color: var(--sage-200); background: var(--sage-100); }
+  .testi-quote {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    margin-bottom: 24px;
+    flex-grow: 1;
+  }
+  .testi-author {
+    display: flex; align-items: center; gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .testi-av {
+    width: 40px; height: 40px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .testi-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .testi-role { font-size: 12px; color: var(--ink-mute); }
+
+  /* ========== PRICING ========== */
+  .pricing {
+    padding: 120px 0;
+    background: var(--bg-warm);
+  }
+  .pricing-head {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 72px;
+  }
+  .pricing-head .section-eyebrow { justify-content: center; }
+  .pricing-head .section-eyebrow::before, .pricing-head .section-eyebrow::after {
+    content: '';
+    width: 24px; height: 1px;
+    background: var(--sage-500);
+  }
+
+  .pricing-toggle {
+    display: inline-flex;
+    padding: 4px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    margin-top: 32px;
+    position: relative;
+  }
+  .pricing-toggle button {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.3s;
+    position: relative;
+    z-index: 2;
+  }
+  .pricing-toggle button.active { color: var(--bg); }
+  .pricing-toggle-pill {
+    position: absolute;
+    top: 4px;
+    height: calc(100% - 8px);
+    background: var(--ink);
+    border-radius: 999px;
+    transition: all 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+    z-index: 1;
+  }
+  .toggle-save {
+    margin-left: 6px;
+    font-size: 11px;
+    padding: 2px 7px;
+    background: var(--sage-200);
+    color: var(--sage-700);
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  .plans {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .plan {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 36px 32px;
+    display: flex; flex-direction: column;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .plan:hover { transform: translateY(-4px); }
+  .plan.featured {
+    background: var(--sage-900);
+    color: var(--bg);
+    border-color: var(--sage-900);
+  }
+  .plan-badge {
+    position: absolute;
+    top: -12px; left: 32px;
+    padding: 4px 12px;
+    background: var(--terracotta);
+    color: white;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .plan-name {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .plan-desc {
+    font-size: 13px;
+    color: var(--ink-mute);
+    margin-bottom: 28px;
+    min-height: 36px;
+  }
+  .plan.featured .plan-desc { color: color-mix(in oklab, var(--bg) 60%, transparent); }
+
+  .plan-price {
+    font-family: 'Fraunces', serif;
+    font-size: 54px;
+    font-weight: 400;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 4px;
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .plan-price .curr { font-size: 24px; color: var(--ink-mute); }
+  .plan.featured .plan-price .curr { color: var(--sage-200); }
+  .plan-period { font-size: 13px; color: var(--ink-mute); margin-bottom: 28px; }
+  .plan.featured .plan-period { color: color-mix(in oklab, var(--bg) 60%, transparent); }
+
+  .plan-cta {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .plan.featured .btn-outline {
+    border-color: color-mix(in oklab, white 30%, transparent);
+    color: white;
+  }
+  .plan.featured .btn-outline:hover {
+    background: var(--sage-700);
+    border-color: var(--sage-700);
+  }
+
+  .plan-features {
+    list-style: none;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .plan-features li {
+    font-size: 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+    color: var(--ink-soft);
+  }
+  .plan.featured .plan-features li { color: color-mix(in oklab, var(--bg) 80%, transparent); }
+  .check-mini {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--sage-100);
+    color: var(--sage-700);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .plan.featured .check-mini { background: var(--sage-700); color: var(--sage-100); }
+
+  /* ========== BLOG ========== */
+  .blog {
+    padding: 120px 0;
+  }
+  .blog-head {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 60px;
+    gap: 40px;
+  }
+  .blog-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 24px;
+  }
+  .blog-card {
+    cursor: pointer;
+    display: flex; flex-direction: column;
+    transition: transform 0.3s;
+  }
+  .blog-card:hover { transform: translateY(-4px); }
+  .blog-card:hover .blog-img::after {
+    opacity: 1;
+  }
+  .blog-img {
+    aspect-ratio: 16/10;
+    border-radius: var(--r-md);
+    background-size: cover; background-position: center;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .blog-img::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 50%, oklch(0.22 0.03 170 / 0.3));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .blog-card.featured .blog-img { aspect-ratio: 4/3; }
+  .blog-img-1 {
+    background: linear-gradient(135deg, oklch(0.82 0.06 170), oklch(0.62 0.08 160));
+  }
+  .blog-img-1::before {
+    content: '';
+    position: absolute;
+    width: 60%; height: 60%;
+    top: 20%; left: 20%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, oklch(0.95 0.02 90 / 0.7), transparent);
+  }
+  .blog-img-2 { background: linear-gradient(160deg, oklch(0.78 0.08 60), oklch(0.6 0.1 40)); }
+  .blog-img-3 { background: linear-gradient(160deg, oklch(0.75 0.05 230), oklch(0.55 0.07 220)); }
+
+  .blog-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--sage-500);
+    margin-bottom: 12px;
+  }
+  .blog-title {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+    color: var(--ink);
+  }
+  .blog-card.featured .blog-title { font-size: 30px; }
+  .blog-excerpt {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  /* ========== FAQ ========== */
+  .faq {
+    padding: 120px 0;
+    background: var(--bg-warm);
+  }
+  .faq-grid {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 80px;
+  }
+  .faq-side .section-title {
+    margin-bottom: 24px;
+  }
+  .faq-side p { font-size: 16px; color: var(--ink-soft); margin-bottom: 28px; }
+
+  .faq-items { }
+  .faq-item {
+    border-top: 1px solid var(--line);
+    padding: 24px 0;
+    cursor: pointer;
+  }
+  .faq-item:last-child { border-bottom: 1px solid var(--line); }
+  .faq-q {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    transition: color 0.2s;
+  }
+  .faq-item:hover .faq-q { color: var(--sage-700); }
+  .faq-toggle {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .faq-item.open .faq-toggle {
+    background: var(--sage-900);
+    border-color: var(--sage-900);
+    color: white;
+    transform: rotate(45deg);
+  }
+  .faq-a {
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, margin-top 0.3s, padding-top 0.3s;
+    padding-right: 48px;
+  }
+  .faq-item.open .faq-a {
+    max-height: 300px;
+    margin-top: 16px;
+  }
+
+  /* ========== CTA ========== */
+  .cta {
+    padding: 120px 0;
+    text-align: center;
+  }
+  .cta-inner {
+    position: relative;
+    padding: 100px 40px;
+    background: var(--sage-900);
+    color: var(--bg);
+    border-radius: 48px;
+    overflow: hidden;
+  }
+  .cta-blob {
+    position: absolute;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--sage-500), transparent 70%);
+    opacity: 0.3;
+    filter: blur(60px);
+  }
+  .cta-blob.one { top: -200px; left: -100px; }
+  .cta-blob.two { bottom: -200px; right: -100px; background: radial-gradient(circle, var(--terracotta), transparent 70%); opacity: 0.2; }
+
+  .cta-inner h2 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(38px, 5vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 400;
+    margin-bottom: 24px;
+    position: relative;
+    max-width: 780px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cta-inner h2 em { font-style: italic; color: var(--sage-200); font-weight: 300; }
+  .cta-inner p {
+    font-size: 18px;
+    color: color-mix(in oklab, var(--bg) 70%, transparent);
+    max-width: 540px;
+    margin: 0 auto 40px;
+    position: relative;
+  }
+  .cta-actions {
+    display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+    position: relative;
+  }
+  .cta-inner .btn-outline {
+    border-color: color-mix(in oklab, white 30%, transparent);
+    color: white;
+  }
+  .cta-inner .btn-outline:hover {
+    background: var(--sage-700);
+    border-color: var(--sage-700);
+  }
+
+  /* ========== FOOTER ========== */
+  footer {
+    padding: 80px 0 40px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr;
+    gap: 48px;
+    margin-bottom: 60px;
+  }
+  .footer-col h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .footer-col ul a {
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-col ul a:hover { color: var(--sage-700); }
+
+  .footer-brand .logo { margin-bottom: 20px; }
+  .footer-brand p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    max-width: 280px;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .newsletter {
+    display: flex;
+    max-width: 280px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px;
+    background: var(--bg);
+    transition: border-color 0.2s;
+  }
+  .newsletter:focus-within { border-color: var(--sage-500); }
+  .newsletter input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+  }
+  .newsletter button {
+    padding: 8px 14px;
+    border: none;
+    background: var(--ink);
+    color: white;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .newsletter button:hover { background: var(--sage-900); }
+
+  .footer-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-top: 40px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 13px;
+    color: var(--ink-mute);
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .footer-legal {
+    display: flex; gap: 24px;
+  }
+  .footer-legal a { color: var(--ink-mute); text-decoration: none; }
+  .footer-legal a:hover { color: var(--ink); }
+
+  /* Scroll reveal */
+  .reveal { opacity: 1; transform: none; transition: opacity 0.8s cubic-bezier(0.2,0.9,0.3,1), transform 0.8s cubic-bezier(0.2,0.9,0.3,1); }
+  html.js-ready .reveal:not(.in) { opacity: 0; transform: translateY(20px); }
+  .hero .reveal { opacity: 1 !important; transform: none !important; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .specs-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero-grid, .features-head, .faq-grid, .blog-grid, .stats-grid, .how-steps, .plans, .testis-grid { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .f-large, .f-tall, .f-wide, .f-half, .f-third { grid-column: span 2; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+    .stat-cell { border-right: none; border-bottom: 1px solid var(--line); padding: 28px 0; }
+    .nav-links { display: none; }
+    .hero-visual { justify-self: center; max-width: 100%; }
+    .how-steps::before { display: none; }
+    .stat-num { font-size: 48px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="container nav-inner">
+    <a href="#" class="logo">
+      <span class="logo-mark"></span>
+      <span>Nurea</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Plataforma</a></li>
+      <li><a href="#how">Cómo funciona</a></li>
+      <li><a href="#pricing">Precios</a></li>
+      <li><a href="#blog">Recursos</a></li>
+      <li><a href="#faq">Ayuda</a></li>
+    </ul>
+    <div class="nav-cta">
+      <a href="login.html" class="btn btn-ghost">Iniciar sesión</a>
+      <a href="register.html" class="btn btn-primary">Empezar gratis
+        <span class="btn-arrow">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-blob hero-blob-1"></div>
+  <div class="hero-blob hero-blob-2"></div>
+  <div class="container hero-grid">
+    <div class="hero-content reveal">
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        Mercado de salud para profesionales verificados
+      </div>
+      <h1 class="serif">
+        El puente entre<br>pacientes y <em>profesionales<br>de la salud</em>.
+      </h1>
+      <p class="hero-sub">
+        Una plataforma serena y segura donde quienes buscan cuidado se encuentran con quienes mejor pueden ofrecerlo. Menos fricción, más accesibilidad, y todo el tiempo que la salud merece.
+      </p>
+      <div class="hero-ctas">
+        <a href="register.html" class="btn btn-primary btn-large">Crear mi cuenta
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+        <a href="register.html?role=pro" class="btn btn-outline btn-large">Soy profesional</a>
+      </div>
+      <div class="hero-trust">
+        <div class="trust-avatars">
+          <div class="av1"></div><div class="av2"></div><div class="av3"></div><div class="av4"></div>
+        </div>
+        <div>
+          <strong style="color:var(--ink); font-weight:600">+12,400 profesionales</strong> ya acompañan a sus pacientes con Nurea.
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual reveal">
+      <div class="hv-card hv-main">
+        <div class="hv-main-inner">
+          <div class="hv-badge">
+            <span class="hv-badge-dot"></span>
+            Disponible hoy
+          </div>
+          <div style="font-family: 'Fraunces', serif; font-size: 26px; line-height:1.1; color: var(--sage-900); max-width: 90%;">
+            Encontrar el cuidado adecuado, sin la ansiedad.
+          </div>
+          <div class="hv-prof">
+            <div class="hv-prof-img"></div>
+            <div>
+              <div class="hv-prof-name">Dra. Laura Mendoza</div>
+              <div class="hv-prof-role">Psicología clínica · 4.9 ★</div>
+            </div>
+            <div class="hv-prof-book">Reservar</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hv-card hv-booking">
+        <div class="hv-booking-head">
+          <div class="hv-booking-title">Reserva tu cita</div>
+          <div class="hv-booking-month">Abril</div>
+        </div>
+        <div class="hv-calendar">
+          <div class="hv-cal-day header">L</div><div class="hv-cal-day header">M</div><div class="hv-cal-day header">X</div><div class="hv-cal-day header">J</div><div class="hv-cal-day header">V</div><div class="hv-cal-day header">S</div><div class="hv-cal-day header">D</div>
+          <div class="hv-cal-day avail">14</div><div class="hv-cal-day avail">15</div><div class="hv-cal-day avail">16</div><div class="hv-cal-day active">17</div><div class="hv-cal-day avail">18</div><div class="hv-cal-day">19</div><div class="hv-cal-day">20</div>
+        </div>
+        <div class="hv-time">
+          <div class="hv-time-slot">09:00</div>
+          <div class="hv-time-slot">11:30</div>
+          <div class="hv-time-slot picked">16:00</div>
+          <div class="hv-time-slot">18:30</div>
+        </div>
+      </div>
+
+      <div class="hv-card hv-stat">
+        <div class="hv-stat-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div>
+          <div class="hv-stat-num serif">98%</div>
+          <div class="hv-stat-label">Pacientes satisfechos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGOS -->
+<section class="logos">
+  <div class="container logos-inner">
+    <div class="logos-label">Respaldados por instituciones de salud líderes en habla hispana</div>
+    <div class="logos-row">
+      <div class="client-logo"><span class="client-logo-mark round"></span>Vidalta</div>
+      <div class="client-logo"><span class="client-logo-mark"></span>MediCentro</div>
+      <div class="client-logo"><span class="client-logo-mark diamond"></span>Serena</div>
+      <div class="client-logo"><span class="client-logo-mark round"></span>Orbe Salud</div>
+      <div class="client-logo"><span class="client-logo-mark"></span>Calma</div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="container">
+    <div class="stats-head reveal">
+      <div class="section-eyebrow">Impacto real</div>
+      <h2 class="section-title">Acortamos la distancia entre<br>la <em>necesidad</em> y el <em>cuidado</em>.</h2>
+    </div>
+    <div class="stats-grid reveal">
+      <div class="stat-cell">
+        <div class="stat-num" data-count="12400">0<span class="unit">+</span></div>
+        <div class="stat-label">Profesionales verificados en la red</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" data-count="340000">0<span class="unit">+</span></div>
+        <div class="stat-label">Consultas facilitadas desde 2022</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" data-count="48">0<span class="unit">h</span></div>
+        <div class="stat-label">Tiempo medio hasta primera cita</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" data-count="98">0<span class="unit">%</span></div>
+        <div class="stat-label">Pacientes que recomendarían Nurea</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="features-head">
+      <div class="reveal">
+        <div class="section-eyebrow">La plataforma</div>
+        <h2 class="section-title">Todo lo que necesitas para<br>cuidar <em>mejor</em>, o ser <em>mejor cuidado</em>.</h2>
+      </div>
+      <p class="features-intro reveal">Un espacio pensado con detalle, donde cada herramienta responde a una realidad del cuidado: descubrir, reservar, conversar, acompañar.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card f-large large reveal">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+        <h3 class="feature-title">Descubre al profesional adecuado, sin la ansiedad de empezar.</h3>
+        <p class="feature-desc">Búsqueda contextual por especialidad, enfoque terapéutico, idioma, modalidad y presupuesto. Los resultados aprenden de lo que valoras.</p>
+        <div class="f-illus">
+          <div class="search-mock">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <span>Psicóloga especializada en ansiedad, online</span>
+            <div class="cursor"></div>
+          </div>
+          <div class="chip-row">
+            <div class="chip active">Ansiedad</div>
+            <div class="chip">Terapia cognitiva</div>
+            <div class="chip">Online</div>
+            <div class="chip">Español · Catalán</div>
+            <div class="chip">35€–60€</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card f-tall reveal">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><path d="M12 2l8.5 4.5v5c0 5-3.5 9.5-8.5 10.5-5-1-8.5-5.5-8.5-10.5v-5L12 2z"/></svg>
+        </div>
+        <h3 class="feature-title">Verificación real.</h3>
+        <p class="feature-desc">Cada profesional pasa por validación de colegiatura, antecedentes y referencias. Confianza, no marketing.</p>
+        <div class="f-illus secure-lines">
+          <div class="secure-line"><span class="secure-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Colegiatura activa</div>
+          <div class="secure-line"><span class="secure-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Identidad verificada</div>
+          <div class="secure-line"><span class="secure-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Especialidades validadas</div>
+          <div class="secure-line"><span class="secure-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Ética profesional vigente</div>
+        </div>
+      </div>
+
+      <div class="feature-card f-half reveal">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h3 class="feature-title">Conversaciones privadas y cifradas.</h3>
+        <p class="feature-desc">Mensajes, notas y expedientes protegidos con cifrado extremo a extremo.</p>
+        <div class="f-illus">
+          <div class="chat-bubble">Hola Laura, ¿podríamos mover la cita del jueves?</div>
+          <div class="chat-bubble you">Claro, tengo disponible a las 17:00. ¿Te funciona?</div>
+        </div>
+      </div>
+
+      <div class="feature-card f-half reveal">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+        <h3 class="feature-title">Agenda que respira contigo.</h3>
+        <p class="feature-desc">Sincronización con Google, iCloud y Outlook. Recordatorios amables, no invasivos.</p>
+        <div class="f-illus">
+          <div class="prof-mini">
+            <div class="prof-mini-av" style="background:linear-gradient(135deg,oklch(0.78 0.06 170),oklch(0.65 0.08 160))"></div>
+            <div>
+              <div class="prof-mini-name">Martes, 16:00</div>
+              <div class="prof-mini-specialty">Dra. Mendoza · 50 min</div>
+            </div>
+            <div class="prof-mini-badge">Confirmada</div>
+          </div>
+          <div class="prof-mini">
+            <div class="prof-mini-av" style="background:linear-gradient(135deg,oklch(0.8 0.08 60),oklch(0.68 0.1 45))"></div>
+            <div>
+              <div class="prof-mini-name">Viernes, 11:30</div>
+              <div class="prof-mini-specialty">Dr. Ruiz · 30 min</div>
+            </div>
+            <div class="prof-mini-badge">Próxima</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card f-third reveal">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <h3 class="feature-title">Pagos transparentes.</h3>
+        <p class="feature-desc">Una tarifa clara, facturación automática y devoluciones sin preguntas incómodas.</p>
+      </div>
+
+      <div class="feature-card f-third reveal">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></svg>
+        </div>
+        <h3 class="feature-title">Seguimiento compartido.</h3>
+        <p class="feature-desc">Notas, tareas entre sesiones y un espejo amable del progreso, solo entre tú y tu profesional.</p>
+      </div>
+
+      <div class="feature-card f-third reveal">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>
+        </div>
+        <h3 class="feature-title">Dentro o fuera del consultorio.</h3>
+        <p class="feature-desc">Videoconsulta integrada con calidad clínica. O presencial, cuando eso acerque más.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="container">
+    <div class="how-head reveal">
+      <div class="section-eyebrow">Cómo funciona</div>
+      <h2 class="section-title">Tres pasos, y el tiempo que<br>necesites para <em>decidir</em>.</h2>
+    </div>
+    <div class="how-steps">
+      <div class="how-step reveal">
+        <div class="how-step-num">01</div>
+        <h3>Cuéntanos qué buscas</h3>
+        <p>Responde unas preguntas cuidadas. Sin cuestionarios invasivos, sin venderte nada.</p>
+      </div>
+      <div class="how-step reveal">
+        <div class="how-step-num">02</div>
+        <h3>Descubre profesionales afines</h3>
+        <p>Recibe una selección hecha a medida. Lee sus enfoques, escucha su voz, mira su disponibilidad.</p>
+      </div>
+      <div class="how-step reveal">
+        <div class="how-step-num">03</div>
+        <h3>Empieza cuando estés listo</h3>
+        <p>Reserva en segundos. Paga solo al confirmar. Cancela o mueve la cita sin culpa.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SPECIALTIES -->
+<section class="specs">
+  <div class="container">
+    <div class="specs-head">
+      <div class="reveal">
+        <div class="section-eyebrow">Especialidades</div>
+        <h2 class="section-title">Una red amplia,<br>un cuidado <em>cercano</em>.</h2>
+      </div>
+      <a href="#" class="btn btn-outline reveal">Explorar todas
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    <div class="specs-grid">
+      <div class="spec-card reveal"><div class="spec-num">01</div><div class="spec-name">Psicología clínica</div><div class="spec-meta"><span class="spec-meta-dot"></span>3,240 profesionales</div></div>
+      <div class="spec-card reveal"><div class="spec-num">02</div><div class="spec-name">Nutrición y dietética</div><div class="spec-meta"><span class="spec-meta-dot"></span>1,820 profesionales</div></div>
+      <div class="spec-card reveal"><div class="spec-num">03</div><div class="spec-name">Fisioterapia</div><div class="spec-meta"><span class="spec-meta-dot"></span>2,105 profesionales</div></div>
+      <div class="spec-card reveal"><div class="spec-num">04</div><div class="spec-name">Medicina general</div><div class="spec-meta"><span class="spec-meta-dot"></span>1,290 profesionales</div></div>
+      <div class="spec-card reveal"><div class="spec-num">05</div><div class="spec-name">Terapia de pareja</div><div class="spec-meta"><span class="spec-meta-dot"></span>680 profesionales</div></div>
+      <div class="spec-card reveal"><div class="spec-num">06</div><div class="spec-name">Logopedia</div><div class="spec-meta"><span class="spec-meta-dot"></span>540 profesionales</div></div>
+      <div class="spec-card reveal"><div class="spec-num">07</div><div class="spec-name">Coaching de salud</div><div class="spec-meta"><span class="spec-meta-dot"></span>920 profesionales</div></div>
+      <div class="spec-card reveal"><div class="spec-num">08</div><div class="spec-name">Medicina integrativa</div><div class="spec-meta"><span class="spec-meta-dot"></span>410 profesionales</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo">
+  <div class="demo-glow"></div>
+  <div class="container">
+    <div class="demo-head reveal">
+      <div class="section-eyebrow">Ver en acción</div>
+      <h2 class="section-title">Una demostración de <em>dos minutos</em>.</h2>
+      <p class="demo-sub">Mira cómo una paciente encuentra a su nutricionista ideal, reserva su primera cita y recibe acompañamiento entre sesiones — todo dentro de Nurea.</p>
+    </div>
+    <div class="demo-player reveal">
+      <div class="demo-placeholder-label">[ Placeholder · Video demo 1920×1080 ]</div>
+      <div class="play-btn">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <div class="demo-caption">
+        <span>Recorrido por la plataforma</span>
+        <span class="demo-duration">02:14</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testis">
+  <div class="container">
+    <div class="reveal" style="max-width:680px; margin-bottom:20px;">
+      <div class="section-eyebrow">Voces de la red</div>
+      <h2 class="section-title">Profesionales que <em>eligen</em> a Nurea.</h2>
+    </div>
+    <div class="testis-grid">
+      <div class="testi reveal">
+        <p class="testi-quote">“Nurea me devolvió horas cada semana. Lo que antes era gestión ahora es tiempo con mis pacientes.”</p>
+        <div class="testi-author">
+          <div class="testi-av" style="background:linear-gradient(135deg,oklch(0.78 0.06 170),oklch(0.65 0.08 160))"></div>
+          <div>
+            <div class="testi-name">Laura Mendoza</div>
+            <div class="testi-role">Psicóloga clínica · Madrid</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi reveal">
+        <p class="testi-quote">“La verificación me da tranquilidad. Sé que cada profesional de la red comparte los mismos estándares.”</p>
+        <div class="testi-author">
+          <div class="testi-av" style="background:linear-gradient(135deg,oklch(0.8 0.08 60),oklch(0.68 0.1 45))"></div>
+          <div>
+            <div class="testi-name">Carlos Ruiz</div>
+            <div class="testi-role">Nutricionista · Barcelona</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi reveal">
+        <p class="testi-quote">“Por primera vez siento que una plataforma entiende que el cuidado es un proceso, no una transacción.”</p>
+        <div class="testi-author">
+          <div class="testi-av" style="background:linear-gradient(135deg,oklch(0.82 0.05 340),oklch(0.7 0.07 330))"></div>
+          <div>
+            <div class="testi-name">María Alonso</div>
+            <div class="testi-role">Fisioterapeuta · Valencia</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="container">
+    <div class="pricing-head reveal">
+      <div class="section-eyebrow">Precios</div>
+      <h2 class="section-title">Transparente para pacientes,<br><em>justo</em> para profesionales.</h2>
+      <div class="pricing-toggle" id="pricing-toggle">
+        <span class="pricing-toggle-pill" id="toggle-pill"></span>
+        <button class="active" data-period="mensual">Mensual</button>
+        <button data-period="anual">Anual <span class="toggle-save">−20%</span></button>
+      </div>
+    </div>
+    <div class="plans">
+      <div class="plan reveal">
+        <div class="plan-name serif">Exploración</div>
+        <div class="plan-desc">Para pacientes que inician su camino.</div>
+        <div class="plan-price"><span class="curr">€</span><span>0</span></div>
+        <div class="plan-period">Siempre gratis</div>
+        <a href="register.html" class="btn btn-outline plan-cta">Crear cuenta</a>
+        <ul class="plan-features">
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Acceso completo a la red</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Reserva de citas sin comisión</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Historial privado de sesiones</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Soporte por correo</li>
+        </ul>
+      </div>
+
+      <div class="plan featured reveal">
+        <div class="plan-badge">Más elegido</div>
+        <div class="plan-name serif">Profesional</div>
+        <div class="plan-desc">Para consultas independientes que crecen.</div>
+        <div class="plan-price" data-monthly="29" data-yearly="23"><span class="curr">€</span><span>29</span></div>
+        <div class="plan-period">por profesional / mes</div>
+        <a href="register.html?role=pro" class="btn btn-terracotta plan-cta">Empezar 14 días gratis</a>
+        <ul class="plan-features">
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Perfil verificado y destacado</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Agenda con sincronización total</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Videoconsulta ilimitada</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Cobros y facturación automática</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Soporte prioritario 7 días</li>
+        </ul>
+      </div>
+
+      <div class="plan reveal">
+        <div class="plan-name serif">Clínica</div>
+        <div class="plan-desc">Equipos y centros de salud multidisciplinares.</div>
+        <div class="plan-price"><span>A medida</span></div>
+        <div class="plan-period">Desde 5 profesionales</div>
+        <a href="#" class="btn btn-outline plan-cta">Agendar una llamada</a>
+        <ul class="plan-features">
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Todo lo del plan Profesional</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Panel multi-profesional</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Informes clínicos agregados</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Integraciones con HCE</li>
+          <li><span class="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>Gestor de cuenta dedicado</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BLOG -->
+<section class="blog" id="blog">
+  <div class="container">
+    <div class="blog-head">
+      <div class="reveal">
+        <div class="section-eyebrow">Diario de Nurea</div>
+        <h2 class="section-title">Lecturas que <em>acompañan</em><br>la práctica del cuidado.</h2>
+      </div>
+      <a href="#" class="btn btn-outline reveal">Ver todos los artículos
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    <div class="blog-grid">
+      <article class="blog-card featured reveal">
+        <div class="blog-img blog-img-1"></div>
+        <div class="blog-meta">Guía clínica · 8 min</div>
+        <h3 class="blog-title">Cómo construir una primera sesión que invite a volver (sin que se sienta un interrogatorio).</h3>
+        <p class="blog-excerpt">Tres marcos prácticos para abrir el espacio terapéutico con calma, basados en evidencia y en las voces de 200 profesionales de la red.</p>
+      </article>
+      <article class="blog-card reveal">
+        <div class="blog-img blog-img-2"></div>
+        <div class="blog-meta">Tendencias · 5 min</div>
+        <h3 class="blog-title">El nuevo lenguaje del bienestar: qué buscan los pacientes en 2026.</h3>
+      </article>
+      <article class="blog-card reveal">
+        <div class="blog-img blog-img-3"></div>
+        <div class="blog-meta">Práctica profesional · 6 min</div>
+        <h3 class="blog-title">Fijar tarifas sin ansiedad: una conversación honesta sobre el valor del cuidado.</h3>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="container">
+    <div class="faq-grid">
+      <div class="faq-side reveal">
+        <div class="section-eyebrow">Preguntas frecuentes</div>
+        <h2 class="section-title">Todo lo que quizá<br>te estás <em>preguntando</em>.</h2>
+        <p>¿Algo más que resolver? Hablamos contigo, sin apuros.</p>
+        <a href="#" class="btn btn-outline">Contactar con el equipo
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="faq-items reveal" id="faq-items">
+        <div class="faq-item">
+          <div class="faq-q">¿Cómo verifican a los profesionales?
+            <div class="faq-toggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div class="faq-a">Cada profesional presenta su colegiatura activa, documentos de identidad y referencias profesionales. Nuestro equipo clínico revisa manualmente cada caso antes de la incorporación a la red, y realiza revisiones periódicas cada seis meses.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">¿Los pacientes pagan alguna comisión?
+            <div class="faq-toggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div class="faq-a">No. Los pacientes solo pagan la tarifa que el profesional ha definido, sin costos adicionales de plataforma ni suscripciones ocultas.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">¿Qué pasa si necesito cancelar una cita?
+            <div class="faq-toggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div class="faq-a">Puedes cancelar hasta 24 horas antes sin coste alguno. Con menos de 24 horas, la política la define cada profesional y siempre es visible antes de reservar.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">¿La información clínica está protegida?
+            <div class="faq-toggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div class="faq-a">Sí. Todas las conversaciones, notas y archivos están cifrados extremo a extremo. Cumplimos con RGPD y los estándares ISO 27001 y SOC 2 Tipo II.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">¿Puedo ofrecer atención presencial además de online?
+            <div class="faq-toggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div class="faq-a">Por supuesto. Cada profesional define su modalidad — presencial, online o mixta — y los pacientes filtran sus búsquedas en función de esa preferencia.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">¿Hay permanencia si contrato un plan de pago?
+            <div class="faq-toggle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div class="faq-a">Ninguna. Puedes cambiar o cancelar tu plan cuando quieras, y tus datos se conservan durante 60 días por si decides volver.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container">
+    <div class="cta-inner reveal">
+      <div class="cta-blob one"></div>
+      <div class="cta-blob two"></div>
+      <h2 class="serif">El cuidado empieza con una<br>conversación <em>tranquila</em>.</h2>
+      <p>Únete a Nurea hoy. Gratis para pacientes, catorce días sin coste para profesionales.</p>
+      <div class="cta-actions">
+        <a href="register.html" class="btn btn-terracotta btn-large">Crear mi cuenta
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#" class="btn btn-outline btn-large">Hablar con el equipo</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="logo">
+          <span class="logo-mark"></span>
+          <span>Nurea</span>
+        </a>
+        <p>El mercado de salud que conecta pacientes y profesionales con el cuidado que la salud merece.</p>
+        <form class="newsletter" onsubmit="event.preventDefault(); this.querySelector('button').textContent='Gracias ✓'; this.querySelector('input').value='';">
+          <input type="email" placeholder="Tu correo" required>
+          <button type="submit">Suscribirme</button>
+        </form>
+      </div>
+      <div class="footer-col">
+        <h4>Plataforma</h4>
+        <ul>
+          <li><a href="#">Para pacientes</a></li>
+          <li><a href="#">Para profesionales</a></li>
+          <li><a href="#">Para clínicas</a></li>
+          <li><a href="#">Integraciones</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Recursos</h4>
+        <ul>
+          <li><a href="#">Diario</a></li>
+          <li><a href="#">Guías clínicas</a></li>
+          <li><a href="#">Centro de ayuda</a></li>
+          <li><a href="#">Estado del servicio</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Empresa</h4>
+        <ul>
+          <li><a href="#">Sobre Nurea</a></li>
+          <li><a href="#">Manifiesto</a></li>
+          <li><a href="#">Carreras</a></li>
+          <li><a href="#">Prensa</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#">Privacidad</a></li>
+          <li><a href="#">Condiciones</a></li>
+          <li><a href="#">Cookies</a></li>
+          <li><a href="#">Código ético</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>© 2026 Nurea Health, S.L. — Hecho con cuidado en Madrid y Ciudad de México.</div>
+      <div class="footer-legal">
+        <a href="#">RGPD</a>
+        <a href="#">ISO 27001</a>
+        <a href="#">SOC 2</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Nav scroll shadow
+  document.documentElement.classList.add('js-ready');
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 8);
+  }, { passive: true });
+
+  // Scroll reveal
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('in'), i * 40);
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Animated counters
+  function animateCount(el) {
+    const target = parseInt(el.dataset.count, 10);
+    const unit = el.querySelector('.unit')?.outerHTML || '';
+    const duration = 1600;
+    const start = performance.now();
+    function fmt(n) {
+      if (target >= 1000) return Math.floor(n).toLocaleString('es-ES');
+      return Math.floor(n).toString();
+    }
+    function tick(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.innerHTML = fmt(target * eased) + unit;
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  const countIo = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        animateCount(e.target);
+        countIo.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  document.querySelectorAll('[data-count]').forEach(el => countIo.observe(el));
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const wasOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+      if (!wasOpen) item.classList.add('open');
+    });
+  });
+  // Open first FAQ by default
+  document.querySelector('.faq-item')?.classList.add('open');
+
+  // Pricing toggle
+  const toggle = document.getElementById('pricing-toggle');
+  const pill = document.getElementById('toggle-pill');
+  function positionPill() {
+    const active = toggle.querySelector('button.active');
+    if (!active) return;
+    pill.style.left = active.offsetLeft + 'px';
+    pill.style.width = active.offsetWidth + 'px';
+  }
+  setTimeout(positionPill, 50);
+  window.addEventListener('resize', positionPill);
+
+  toggle.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      toggle.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      positionPill();
+      const isYearly = b.dataset.period === 'anual';
+      document.querySelectorAll('.plan-price[data-monthly]').forEach(p => {
+        const num = p.querySelector('span:last-child');
+        num.textContent = isYearly ? p.dataset.yearly : p.dataset.monthly;
+      });
+    });
+  });
+
+  // Parallax on hero cards
+  const heroVisual = document.querySelector('.hero-visual');
+  if (heroVisual && window.matchMedia('(hover: hover)').matches) {
+    heroVisual.addEventListener('mousemove', (e) => {
+      const r = heroVisual.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      heroVisual.querySelector('.hv-main').style.transform = `translate(${x*-10}px, ${y*-10}px)`;
+      heroVisual.querySelector('.hv-booking').style.transform = `translate(${x*12}px, ${y*12}px)`;
+      heroVisual.querySelector('.hv-stat').style.transform = `translate(${x*15}px, ${y*-8}px)`;
+    });
+    heroVisual.addEventListener('mouseleave', () => {
+      heroVisual.querySelector('.hv-main').style.transform = '';
+      heroVisual.querySelector('.hv-booking').style.transform = '';
+      heroVisual.querySelector('.hv-stat').style.transform = '';
+    });
+  }
+</script>
+</body>
+</html>

@@ -16,8 +16,8 @@ export default async function OnboardingPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('user_type, onboarding_completed')
-    .eq('user_id', userId)
+    .select('role')
+    .eq('id', userId)
     .single();
 
   if (!profile) {
@@ -25,12 +25,8 @@ export default async function OnboardingPage() {
     redirect('/auth/register');
   }
 
-  if (profile.onboarding_completed) {
-    redirect('/dashboard');
-  }
-
-  // Redirect to appropriate onboarding based on user type
-  if (profile.user_type === 'professional') {
+  // Redirect to appropriate onboarding based on user role
+  if (profile.role === 'professional') {
     redirect('/onboarding/professional');
   } else {
     redirect('/onboarding/patient');

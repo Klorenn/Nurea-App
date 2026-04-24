@@ -8,7 +8,6 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, Paperclip, Phone, Video, MoreVertical, Circle } from "lucide-react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 
 const supabase = createClient()

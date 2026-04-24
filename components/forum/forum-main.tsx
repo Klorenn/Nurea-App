@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { MessageCircle, Clock, CheckCircle } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"

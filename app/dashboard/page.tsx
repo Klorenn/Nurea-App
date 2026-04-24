@@ -2,7 +2,6 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
 import { loadingFullViewportClassName } from "@/lib/loading-layout"

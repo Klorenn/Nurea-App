@@ -24,7 +24,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { NoPhysicalConsultationDisplay } from "@/components/no-physical-consultation-display"
 import { createClient } from "@/lib/supabase/client"
-import { useAuth } from "@/hooks/use-auth"
 import { bookAppointment } from "@/actions/appointments"
 import { format } from "date-fns"
 

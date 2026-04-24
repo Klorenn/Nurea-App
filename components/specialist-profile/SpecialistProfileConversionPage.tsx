@@ -2,7 +2,6 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/use-auth'
 import { useLanguage } from '@/contexts/language-context'
 import { trackBookingEvent } from '@/lib/analytics'
 import { Navbar } from '@/components/navbar'

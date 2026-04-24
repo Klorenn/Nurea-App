@@ -208,6 +208,7 @@ function RegisterContent() {
       if (result) {
         setSuccess(true)
         // Redirect to onboarding after a brief delay
+        // Clerk webhook will create the profile in Supabase
         setTimeout(() => {
           router.push("/onboarding")
         }, 2000)

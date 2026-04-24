@@ -9,7 +9,6 @@ import { Send, Paperclip, Circle, AlertTriangle, Clock, Shield, FileText, X, Che
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"

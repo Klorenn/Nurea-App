@@ -40,7 +40,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
-import { useAuth } from "@/hooks/use-auth"
 import { es, enUS } from "date-fns/locale"
 import { AddAppointmentDialog } from "./add-appointment-dialog"
 import { useRouter } from "next/navigation"

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
 import { toast } from "sonner"
 import { ArrowLeft, Clock, Eye, MessageCircle, Send, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"

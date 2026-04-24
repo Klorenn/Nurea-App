@@ -7,7 +7,6 @@ import { useTheme } from "next-themes"
 import { Mail, ArrowLeft, CheckCircle2, AlertCircle, Loader2, ArrowRight } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { authMessages } from "@/lib/auth/messages"
 import { AuthPageBackground } from "@/components/ui/login-form"
 import ThemeSwitch from "@/components/ui/theme-switch"
 import { LanguageSelector } from "@/components/ui/language-selector"
@@ -15,7 +14,6 @@ import { LanguageSelector } from "@/components/ui/language-selector"
 export default function ForgotPasswordPage() {
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const messages = authMessages[language]
   const router = useRouter()
   const { resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -109,7 +107,7 @@ export default function ForgotPasswordPage() {
                   {language === "es" ? "Revisa tu Email" : "Check Your Email"}
                 </h2>
                 <p className={subtitleClass}>
-                  {messages.passwordResetSent}
+                  {language === "es" ? "Se envió un enlace de recuperación" : "Recovery link sent"}
                 </p>
               </div>
               <p className={isDark ? "text-sm text-slate-400" : "text-sm text-slate-600"}>

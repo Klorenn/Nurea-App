@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react"
 import { ExploreContent } from "./explore-content"
 import { Navbar } from "@/components/navbar"
 import { Loader2 } from "lucide-react"
-import { useAuth } from "@/hooks/use-auth"
 import { useLanguage } from "@/contexts/language-context"
 import { createClient } from "@/lib/supabase/client"
 import {

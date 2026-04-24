@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { GoogleAddressInput } from "@/components/ui/google-address-input"
 import { zodResolver } from "@hookform/resolvers/zod"

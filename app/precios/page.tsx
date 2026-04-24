@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
 import {
   Check,
   Sparkles,

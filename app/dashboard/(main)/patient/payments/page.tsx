@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/table"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 

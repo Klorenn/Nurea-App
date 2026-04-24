@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardTitle } from "@/components/ui/card"
 import { Lock, ArrowLeft, CheckCircle2, AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { authMessages } from "@/lib/auth/messages"
 
 function ResetPasswordPageContent() {
   const { language } = useLanguage()
@@ -22,8 +21,6 @@ function ResetPasswordPageContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-
-  const messages = authMessages[language]
 
   useEffect(() => {
     // Verificar que hay un token en la URL (viene del email)
@@ -95,7 +92,7 @@ function ResetPasswordPageContent() {
               {language === "es" ? "¡Contraseña Actualizada!" : "Password Updated!"}
             </CardTitle>
             <CardDescription className="text-white/80 font-medium mt-2">
-              {messages.passwordResetSuccess}
+              {language === "es" ? "Tu contraseña ha sido actualizada correctamente" : "Your password has been updated successfully"}
             </CardDescription>
           </div>
 

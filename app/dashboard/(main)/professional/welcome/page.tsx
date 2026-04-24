@@ -1,7 +1,6 @@
 "use client"
 
 import { ProfessionalWelcomeGuide } from "@/components/professional/ProfessionalWelcomeGuide"
-import { useAuth } from "@/hooks/use-auth"
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"

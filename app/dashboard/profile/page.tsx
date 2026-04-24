@@ -10,7 +10,6 @@ import { User, Mail, Phone, Calendar, MapPin, Save, Edit2, Loader2, Shield, Eye 
 import { Switch } from "@/components/ui/switch"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { useAuth } from "@/hooks/use-auth"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { createClient } from "@/lib/supabase/client"
 import { AvatarCropDialog } from "@/components/profile/AvatarCropDialog"

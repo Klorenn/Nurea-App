@@ -29,7 +29,6 @@ import { useLanguage } from '@/contexts/language-context';
 import { useTranslations } from '@/lib/i18n';
 import ThemeSwitch from '@/components/ui/theme-switch';
 import { LanguageSelector } from '@/components/ui/language-selector';
-import { useAuth } from '@/hooks/use-auth';
 import { UserDropdown } from '@/components/ui/user-dropdown';
 
 type LinkItem = {

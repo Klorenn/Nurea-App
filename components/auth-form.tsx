@@ -4,8 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { getHumanErrorMessage } from "@/lib/auth/utils"
-import { signUp } from "@/actions/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -109,12 +107,12 @@ export function AuthForm() {
         password,
       })
       if (authError) {
-        setError(getHumanErrorMessage(authError.message, "es"))
+        setError(authError.message || "Error al iniciar sesión")
         setLoading(false)
         return
       }
       if (data.user && !data.user.email_confirmed_at) {
-        setError(getHumanErrorMessage("Email not confirmed", "es"))
+        setError("Por favor verifica tu email antes de iniciar sesión")
         setLoading(false)
         return
       }
@@ -134,24 +132,7 @@ export function AuthForm() {
     if (!validateRegister()) return
     setLoading(true)
     try {
-      const result = await signUp({
-        email: email.trim(),
-        password,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        dateOfBirth,
-        role,
-        specialty: isProfessional ? specialty : undefined,
-        registrationNumber: isProfessional ? registrationNumber.trim() : undefined,
-      })
-      if (result.success) {
-        setRegisteredEmail(email.trim())
-        setRegistrationSuccess(true)
-      } else {
-        setError(result.error ?? "No se pudo crear la cuenta.")
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al registrarse")
+      setError("La funcionalidad de registro ha sido migrada a Clerk. Por favor, usa el flujo de Clerk para registrarte.")
     } finally {
       setLoading(false)
     }

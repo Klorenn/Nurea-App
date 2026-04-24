@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertTriangle, Home, ArrowLeft } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
 import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 export default function UnauthorizedPage() {

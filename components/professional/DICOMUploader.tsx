@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import { CloudUpload, User, Activity, FileText, Ban, CheckCircle2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";

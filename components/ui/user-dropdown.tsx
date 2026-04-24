@@ -35,7 +35,6 @@ import {
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 

@@ -3,7 +3,6 @@
 import * as React from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useAuth } from "@/hooks/use-auth"
 import { UserDropdown } from "@/components/ui/user-dropdown"
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown"
 import { useLanguage } from "@/contexts/language-context"

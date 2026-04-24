@@ -450,6 +450,110 @@ a { color: inherit; }
 .auth-footer a { color: var(--ink-mute); text-decoration: none; margin-left: 18px; }
 .auth-footer a:hover { color: var(--ink); }
 
+/* Steps indicator (register) */
+.steps {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+.step {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  transition: background 0.3s;
+}
+.step.done { background: var(--sage-500); }
+.step.active { background: var(--sage-300); }
+
+/* Professional extra fields */
+.pro-fields { display: none; }
+.pro-fields.show { display: block; }
+.pro-section-lbl {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+  margin: 18px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pro-section-lbl::before,
+.pro-section-lbl::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Field hint states */
+.field-hint.ok { color: var(--sage-500); }
+.field-hint.err { color: var(--danger); }
+
+/* Pending approval / success screen */
+.pending-screen {
+  text-align: center;
+  padding: 24px 0;
+}
+.pending-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--sage-100);
+  color: var(--sage-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+.pending-title {
+  font-family: 'Fraunces', serif;
+  font-size: 28px;
+  margin-bottom: 12px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+.pending-title em {
+  font-style: italic;
+  color: var(--sage-500);
+  font-weight: 300;
+}
+.pending-steps {
+  text-align: left;
+  background: var(--bg-warm);
+  border-radius: 14px;
+  padding: 18px;
+  margin: 20px 0;
+}
+.pending-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.pending-step:last-child { margin-bottom: 0; }
+.pending-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--sage-100);
+  color: var(--sage-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.pending-step-num.done {
+  background: var(--sage-500);
+  color: #fff;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .auth { grid-template-columns: 1fr; }

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Calendar, Mail, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 
 function CompleteProfileContent() {

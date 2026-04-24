@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Gift, Copy, CheckCircle2, AlertCircle } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { useAuth } from "@/hooks/use-auth"
 import { cn } from "@/lib/utils"
 
 export function ReferralProgram() {

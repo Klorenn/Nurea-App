@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { useAuth } from "@/hooks/use-auth"
 import { useProfile } from "@/hooks/use-profile"
 import { loadingFullViewportClassName } from "@/lib/loading-layout"
 

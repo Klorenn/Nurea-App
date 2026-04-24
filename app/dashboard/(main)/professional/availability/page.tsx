@@ -25,7 +25,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useLanguage } from "@/contexts/language-context"
-import { useAuth } from "@/hooks/use-auth"
 import { createClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"

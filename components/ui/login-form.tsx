@@ -11,7 +11,6 @@ import { EyeToggleIcon } from "@/components/ui/animated-state-icons"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { createClient } from "@/lib/supabase/client"
-import { getHumanErrorMessage } from "@/lib/auth/utils"
 
 // Vertex shader source code
 const vertexSmokeySource = `
@@ -323,14 +322,14 @@ export function LoginForm() {
       })
 
       if (authError) {
-        const message = getHumanErrorMessage(authError.message, language === "es" ? "es" : "en")
+        const message = authError.message || (language === "es" ? "Error al iniciar sesión" : "Sign in error")
         setError(message)
         setLoading(false)
         return
       }
 
       if (data.user && !data.user.email_confirmed_at) {
-        setError(getHumanErrorMessage("Email not confirmed", language === "es" ? "es" : "en"))
+        setError(language === "es" ? "Por favor verifica tu email antes de iniciar sesión" : "Please verify your email before signing in")
         setLoading(false)
         return
       }
@@ -358,7 +357,7 @@ export function LoginForm() {
       router.refresh()
     } catch (err) {
       const message = err instanceof Error ? err.message : language === "es" ? "Error al iniciar sesión" : "Error signing in"
-      setError(getHumanErrorMessage(message, language === "es" ? "es" : "en") || message)
+      setError(message)
     } finally {
       setLoading(false)
     }

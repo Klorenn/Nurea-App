@@ -10,7 +10,6 @@ import { toast } from "sonner"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
-import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 
 

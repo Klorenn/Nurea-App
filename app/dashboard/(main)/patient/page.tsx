@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { useAuth } from "@/hooks/use-auth"
 import { useProfile } from "@/hooks/use-profile"
 import { useLanguage } from "@/contexts/language-context"
 
