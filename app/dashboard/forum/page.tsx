@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic'
 
 import { ForumMain } from "@/components/forum/forum-main"
 

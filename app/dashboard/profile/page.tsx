@@ -1,8 +1,7 @@
-export const dynamic = 'force-dynamic'
-
 "use client"
-import { useUser } from "@clerk/nextjs"
 
+
+import { useUser } from "@clerk/nextjs"
 import { useState, useEffect, useRef } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,8 +37,7 @@ export default function ProfilePage() {
   const supabase = createClient()
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    fullName: "",
     email: "",
     phone: "",
     dateOfBirth: "",
@@ -72,8 +70,7 @@ export default function ProfilePage() {
         
         if (data.profile) {
           setFormData({
-            firstName: data.profile.first_name || user.user_metadata?.first_name || "",
-            lastName: data.profile.last_name || user.user_metadata?.last_name || "",
+            fullName: data.profile.full_name || "",
             email: user.email || "",
             phone: data.profile.phone || "",
             dateOfBirth: data.profile.date_of_birth || "",
@@ -83,13 +80,9 @@ export default function ProfilePage() {
             showPhone: data.profile.show_phone !== false,
           })
           setInitialEmail(user.email || "")
-          if (data.profile.avatar_url) {
-            setAvatarUrl(data.profile.avatar_url)
-          }
         } else {
           setFormData({
-            firstName: user.user_metadata?.first_name || "",
-            lastName: user.user_metadata?.last_name || "",
+            fullName: "",
             email: user.email || "",
             phone: "",
             dateOfBirth: "",
@@ -102,10 +95,8 @@ export default function ProfilePage() {
         }
       } catch (error) {
         console.error("Error loading profile:", error)
-        // Fallback a user_metadata
         setFormData({
-          firstName: user.user_metadata?.first_name || "",
-          lastName: user.user_metadata?.last_name || "",
+          fullName: "",
           email: user.email || "",
           phone: "",
           dateOfBirth: "",
@@ -174,8 +165,7 @@ export default function ProfilePage() {
 
       // Preparar datos solo con valores definidos
       const updateData: any = {}
-      if (formData.firstName?.trim()) updateData.first_name = formData.firstName.trim()
-      if (formData.lastName?.trim()) updateData.last_name = formData.lastName.trim()
+      if (formData.fullName?.trim()) updateData.full_name = formData.fullName.trim()
       if (formData.phone?.trim()) updateData.phone = formData.phone.trim()
       if (formData.dateOfBirth) updateData.date_of_birth = formData.dateOfBirth
       if (formData.address?.trim()) updateData.address = formData.address.trim()
@@ -348,40 +338,14 @@ export default function ProfilePage() {
             <CardContent className="p-6">
               <div className="flex flex-col items-center space-y-4">
                 <Avatar className="h-32 w-32 rounded-2xl border-2 border-border/40">
-                  <AvatarImage src={avatarUrl || user?.user_metadata?.avatar_url || undefined} />
+                  <AvatarImage src={undefined} />
                   <AvatarFallback className="text-2xl">
-                    {formData.firstName?.[0] || ""}{formData.lastName?.[0] || ""}
+                    {formData.fullName?.[0] || ""}
                   </AvatarFallback>
                 </Avatar>
-                {isEditing && (
-                  <>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarChange}
-                    />
-                    <Button
-                      variant="outline"
-                      className="rounded-xl w-full"
-                      onClick={handleAvatarButtonClick}
-                      disabled={uploadingAvatar}
-                    >
-                      {uploadingAvatar ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {language === "es" ? "Subiendo..." : "Uploading..."}
-                        </>
-                      ) : (
-                        <>{language === "es" ? "Cambiar Foto" : "Change Photo"}</>
-                      )}
-                    </Button>
-                  </>
-                )}
                 <div className="text-center">
                   <p className="font-bold text-lg">
-                    {formData.firstName} {formData.lastName}
+                    {formData.fullName}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {language === "es" ? "Paciente" : "Patient"}
@@ -399,42 +363,22 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {language === "es" ? "Nombre" : "First Name"}
-                  </Label>
-                  {isEditing ? (
-                    <Input
-                      id="firstName"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="rounded-xl"
-                      disabled={loading}
-                    />
-                  ) : (
-                    <p className="text-sm font-medium py-2">{formData.firstName}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    {language === "es" ? "Apellido" : "Last Name"}
-                  </Label>
-                  {isEditing ? (
-                    <Input
-                      id="lastName"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="rounded-xl"
-                      disabled={loading}
-                    />
-                  ) : (
-                    <p className="text-sm font-medium py-2">{formData.lastName}</p>
-                  )}
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="fullName" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {language === "es" ? "Nombre Completo" : "Full Name"}
+                </Label>
+                {isEditing ? (
+                  <Input
+                    id="fullName"
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    className="rounded-xl"
+                    disabled={loading}
+                  />
+                ) : (
+                  <p className="text-sm font-medium py-2">{formData.fullName}</p>
+                )}
               </div>
 
               <div className="space-y-2">

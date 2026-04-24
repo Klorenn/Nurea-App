@@ -1,8 +1,8 @@
+"use client"
+
 export const dynamic = 'force-dynamic'
 
-"use client"
 import { useUser } from "@clerk/nextjs"
-
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion } from "framer-motion"

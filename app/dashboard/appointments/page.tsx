@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic'
 
 "use client"
 import { useUser } from "@clerk/nextjs"
@@ -42,7 +41,7 @@ async function fetchMyAppointments(
   const { data: rows, error } = await supabase
     .from("appointments")
     .select(
-      "*, professional:professionals!appointments_professional_id_fkey(id, specialty, profile:profiles!professionals_id_fkey(first_name, last_name, avatar_url))"
+      "*, professional:professionals!appointments_professional_id_fkey(id, specialty, profile:profiles!professionals_id_fkey(full_name))"
     )
     .eq("patient_id", userId)
     .order("appointment_date", { ascending: true })
@@ -54,9 +53,7 @@ async function fetchMyAppointments(
   return (rows || []).map((apt: any) => {
     const prof = apt.professional
     const profile = prof?.profile
-    const professionalName = profile
-      ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
-      : ""
+    const professionalName = profile?.full_name || ""
     const displayName = professionalName ? `Dr. ${professionalName}` : "Profesional"
 
     return {
@@ -73,7 +70,7 @@ async function fetchMyAppointments(
       status: apt.status,
       paymentStatus: apt.payment_status ?? "pending",
       price: apt.price ?? 0,
-      image: profile?.avatar_url || DEFAULT_AVATAR,
+      image: DEFAULT_AVATAR,
       professionalId: apt.professional_id,
       appointmentDate: apt.appointment_date,
       appointmentTime: formatTime(apt.appointment_time),

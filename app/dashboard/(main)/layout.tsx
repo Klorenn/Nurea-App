@@ -1,8 +1,7 @@
-export const dynamic = 'force-dynamic'
-
 "use client"
-import { useUser } from "@clerk/nextjs"
 
+
+import { useUser } from "@clerk/nextjs"
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
@@ -24,8 +23,7 @@ export default function DashboardMainLayout({
     if (authLoading || profileLoading || redirecting) return
     if (!user || !profile) return
 
-    const userRole = profile.role
-    const isAdminRoute = pathname.startsWith("/dashboard/admin")
+    const userRole = profile.user_type
     const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
     const isPatientRoute = pathname.startsWith("/dashboard/patient")
 
@@ -45,12 +43,6 @@ export default function DashboardMainLayout({
       "/dashboard/support",
     ]
     const isSharedRoute = sharedRoutes.some((route) => pathname.startsWith(route))
-
-    if (userRole === "admin" && !isAdminRoute) {
-      setRedirecting(true)
-      router.push("/dashboard/admin")
-      return
-    }
 
     if (userRole === "professional" && !isProfessionalRoute && !isSharedRoute) {
       setRedirecting(true)

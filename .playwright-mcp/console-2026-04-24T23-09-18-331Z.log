@@ -67,3 +67,94 @@
 [  794802ms] [LOG] [Fast Refresh] done in 125ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
 [  801327ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
 [  801332ms] [LOG] [Fast Refresh] done in 106ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  955113ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[  955185ms] [LOG] [Fast Refresh] done in 173ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1014285ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1014628ms] [LOG] [Fast Refresh] done in 445ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1017606ms] [WARNING] The resource http://localhost:3000/logo.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/:0
+[ 1028196ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1028214ms] [LOG] [Fast Refresh] done in 120ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1042218ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1042334ms] [LOG] [Fast Refresh] done in 217ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1049892ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1049907ms] [LOG] [Fast Refresh] done in 117ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1056518ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1056559ms] [LOG] [Fast Refresh] done in 142ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1125732ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:2297
+[ 1129039ms] [WARNING] The resource http://localhost:3000/logo.png was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally. @ http://localhost:3000/:0
+[ 1729348ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:3000/?_rsc=1ch6o:0
+[ 1729356ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:2588:24)
+    at fetchServerResponse (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:2490:27)
+    at fetchMissingDynamicData (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:3654:75)
+    at spawnDynamicRequests (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:3501:35)
+    at navigateToSeededRoute (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:7741:50)
+    at refreshDynamicData (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:8347:58)
+    at hmrRefreshReducer (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:8513:51)
+    at clientReducer (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9081:65)
+    at Object.action (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9310:55)
+    at runAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9215:38)
+    at dispatchAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9278:9)
+    at Object.dispatch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9308:40)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1489:29
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:5500:31)
+    at dispatch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1488:13)
+    at dispatchAppRouterAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1470:5)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9439:61
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:1279:31)
+    at Object.hmrRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9438:40)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:11620:64
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:1279:31)
+    at processMessage (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:11619:44)
+    at WebSocket.handleMessage (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10914:52) @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 1729366ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:3000/?_rsc=1ch6o:0
+[ 1729366ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:2588:24)
+    at fetchServerResponse (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:2490:27)
+    at fetchMissingDynamicData (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:3654:75)
+    at spawnDynamicRequests (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:3501:35)
+    at navigateToSeededRoute (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:7741:50)
+    at refreshDynamicData (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:8347:58)
+    at hmrRefreshReducer (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:8513:51)
+    at clientReducer (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9081:65)
+    at Object.action (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9310:55)
+    at runAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9215:38)
+    at dispatchAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9278:9)
+    at Object.dispatch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9308:40)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1489:29
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:5500:31)
+    at dispatch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1488:13)
+    at dispatchAppRouterAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1470:5)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9439:61
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:1279:31)
+    at Object.hmrRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9438:40)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:11620:64
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:1279:31)
+    at processMessage (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:11619:44)
+    at WebSocket.handleMessage (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10914:52) @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 1729367ms] [ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://localhost:3000/?_rsc=1ch6o:0
+[ 1729367ms] [ERROR] Failed to fetch RSC payload for http://localhost:3000/. Falling back to browser navigation. TypeError: Failed to fetch
+    at createFetch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:2588:24)
+    at fetchServerResponse (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:2490:27)
+    at fetchMissingDynamicData (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:3654:75)
+    at spawnDynamicRequests (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:3501:35)
+    at navigateToSeededRoute (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:7741:50)
+    at refreshDynamicData (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:8347:58)
+    at hmrRefreshReducer (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:8513:51)
+    at clientReducer (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9081:65)
+    at Object.action (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9310:55)
+    at runAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9215:38)
+    at dispatchAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9278:9)
+    at Object.dispatch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9308:40)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1489:29
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:5500:31)
+    at dispatch (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1488:13)
+    at dispatchAppRouterAction (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:1470:5)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9439:61
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:1279:31)
+    at Object.hmrRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:9438:40)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:11620:64
+    at startTransition (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:1279:31)
+    at processMessage (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:11619:44)
+    at WebSocket.handleMessage (http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10914:52) @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 1729437ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/__nextjs_original-stack-frames:0

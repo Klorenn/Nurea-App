@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { Navbar } from "@/components/navbar"
 import { ProfessionalsHero } from "@/components/professionals/professionals-hero"
 import { ProfessionalsBenefits } from "@/components/professionals/professionals-benefits"

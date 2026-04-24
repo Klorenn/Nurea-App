@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { useAuth } from "@/hooks/use-auth"
 import { useProfile } from "@/hooks/use-profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {

@@ -64,17 +64,10 @@ export default function DashboardLayoutClient({
       return
     }
 
-    const { role: userRole } = profile
-    const isAdminRoute = pathname.startsWith("/dashboard/admin")
+    const userRole = profile.user_type
     const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
     const isPatientRoute = pathname.startsWith("/dashboard/patient")
     const isSharedRoute = sharedRoutes.some((route) => pathname.startsWith(route))
-
-    if (userRole === "admin" && !isAdminRoute) {
-      setRedirecting(true)
-      router.push("/dashboard/admin")
-      return
-    }
 
     if (userRole === "professional" && !isProfessionalRoute && !isSharedRoute) {
       setRedirecting(true)
@@ -119,7 +112,7 @@ export default function DashboardLayoutClient({
     return null
   }
 
-  const role = profile.role || "patient"
+  const role = profile.user_type || "patient"
   const isSpanish = language === "es"
 
   return (
@@ -130,9 +123,7 @@ export default function DashboardLayoutClient({
         <header className="topbar">
           <div className="greeting">
             <h1>
-              {role === "admin"
-                ? isSpanish ? "Panel de Administración" : "Admin Panel"
-                : role === "professional"
+              {role === "professional"
                 ? isSpanish ? "Panel Profesional" : "Professional Dashboard"
                 : isSpanish ? "Mi Dashboard" : "My Dashboard"}
             </h1>
@@ -144,13 +135,13 @@ export default function DashboardLayoutClient({
             <UserDropdown
               role={role}
               user={{
-                name: profile.first_name
-                  ? `${profile.first_name} ${profile.last_name || ""}`.trim()
+                name: profile.full_name
+                  ? profile.full_name
                   : user.email?.split("@")[0] || "Usuario",
                 email: user.email || "",
-                avatar: profile.avatar_url || undefined,
+                avatar: undefined,
                 initials:
-                  profile.first_name?.[0]?.toUpperCase() ||
+                  profile.full_name?.[0]?.toUpperCase() ||
                   user.email?.[0]?.toUpperCase() ||
                   "U",
                 status: "online",

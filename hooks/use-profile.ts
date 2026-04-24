@@ -8,15 +8,13 @@ const supabase = createClient()
 
 export interface Profile {
   id: string
-  role: "patient" | "professional" | "admin"
-  first_name: string | null
-  last_name: string | null
-  avatar_url: string | null
-  email_verified: boolean
-  onboarding_completed?: boolean
-  status?: string
-  last_seen?: string
-  response_time?: string
+  user_id: string
+  user_type: "patient" | "professional"
+  full_name: string
+  rut: string
+  date_of_birth: string
+  gender: string
+  onboarding_completed: boolean
 }
 
 export function useProfile() {
@@ -27,8 +25,8 @@ export function useProfile() {
     async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, role, first_name, last_name, avatar_url, email_verified, onboarding_completed, status, last_seen, response_time")
-        .eq("id", user!.id)
+        .select("id, user_id, user_type, full_name, rut, date_of_birth, gender, onboarding_completed")
+        .eq("user_id", user!.id)
         .single()
 
       if (error) throw error

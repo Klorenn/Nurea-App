@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useAuth } from "@/hooks/use-auth"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserDropdown } from "@/components/ui/user-dropdown"

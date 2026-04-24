@@ -1,6 +1,5 @@
-export const dynamic = 'force-dynamic'
-
 "use client"
+
 
 import { useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
