@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Inter, Fraunces, JetBrains_Mono } from "next/font/google"
+import { ClerkProvider } from "@clerk/nextjs"
 import { LanguageProvider } from "@/contexts/language-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/providers/query-provider"
@@ -9,8 +10,6 @@ import { AnalyticsClient } from "@/components/analytics-client"
 import "./globals.css"
 import "./auth.css"
 import "./dashboard.css"
-
-import { NuraChatDynamic } from "@/components/nura/nura-chat-wrapper"
 
 /* ─── Rebrand abril 2026 ─────────────────────────────────────────────
    Inter         → body / UI                           (--font-inter)
@@ -104,103 +103,104 @@ export default function RootLayout({
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nurea.app'
   
   return (
-    <html lang="es" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/logo.png" type="image/png" sizes="any" />
-        <link rel="apple-touch-icon" href="/logo.png" />
-        <meta name="theme-color" content="#3d4f48" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="NUREA" />
-        <link rel="apple-touch-startup-image" href="/icons/splash.png" />
-        {/* Preconnect to external domains for performance */}
-        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://images.unsplash.com" />
-        
-        {/* Preconnect to Supabase if using */}
-        {process.env.NEXT_PUBLIC_SUPABASE_URL && (
-          <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
-        )}
-        
-        {/* Structured Data (JSON-LD) */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "NUREA",
-              "description": "Plataforma que conecta pacientes con profesionales de la salud confiables en Chile",
-              "url": siteUrl,
-              "logo": `${siteUrl}/logo.png`,
-              "sameAs": [
-                // Add social media URLs when available
-              ],
-              "contactPoint": {
-                "@type": "ContactPoint",
-                "contactType": "Atención al Cliente",
-                "areaServed": "CL",
-                "availableLanguage": ["es", "en"]
-              }
-            })
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              "name": "NUREA",
-              "url": siteUrl,
-              "description": "Conecta con profesionales de la salud confiables en Chile",
-              "potentialAction": {
-                "@type": "SearchAction",
-                "target": {
-                  "@type": "EntryPoint",
-                  "urlTemplate": `${siteUrl}/search?q={search_term_string}`
+    <ClerkProvider>
+      <html lang="es" suppressHydrationWarning>
+        <head>
+          <link rel="icon" href="/logo.png" type="image/png" sizes="any" />
+          <link rel="apple-touch-icon" href="/logo.png" />
+          <meta name="theme-color" content="#3d4f48" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+          <meta name="apple-mobile-web-app-title" content="NUREA" />
+          <link rel="apple-touch-startup-image" href="/icons/splash.png" />
+          {/* Preconnect to external domains for performance */}
+          <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+          <link rel="dns-prefetch" href="https://images.unsplash.com" />
+
+          {/* Preconnect to Supabase if using */}
+          {process.env.NEXT_PUBLIC_SUPABASE_URL && (
+            <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
+          )}
+
+          {/* Structured Data (JSON-LD) */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                "name": "NUREA",
+                "description": "Plataforma que conecta pacientes con profesionales de la salud confiables en Chile",
+                "url": siteUrl,
+                "logo": `${siteUrl}/logo.png`,
+                "sameAs": [
+                  // Add social media URLs when available
+                ],
+                "contactPoint": {
+                  "@type": "ContactPoint",
+                  "contactType": "Atención al Cliente",
+                  "areaServed": "CL",
+                  "availableLanguage": ["es", "en"]
+                }
+              })
+            }}
+          />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "name": "NUREA",
+                "url": siteUrl,
+                "description": "Conecta con profesionales de la salud confiables en Chile",
+                "potentialAction": {
+                  "@type": "SearchAction",
+                  "target": {
+                    "@type": "EntryPoint",
+                    "urlTemplate": `${siteUrl}/search?q={search_term_string}`
+                  },
+                  "query-input": "required name=search_term_string"
+                }
+              })
+            }}
+          />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "MedicalBusiness",
+                "name": "NUREA - Tu Plataforma de Salud",
+                "description": "Plataforma online para conectar pacientes con profesionales de la salud en Chile",
+                "url": siteUrl,
+                "areaServed": {
+                  "@type": "Country",
+                  "name": "Chile"
                 },
-                "query-input": "required name=search_term_string"
-              }
-            })
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "MedicalBusiness",
-              "name": "NUREA - Tu Plataforma de Salud",
-              "description": "Plataforma online para conectar pacientes con profesionales de la salud en Chile",
-              "url": siteUrl,
-              "areaServed": {
-                "@type": "Country",
-                "name": "Chile"
-              },
-              "medicalSpecialty": [
-                "Medicina General",
-                "Psicología",
-                "Cardiología",
-                "Dermatología"
-              ]
-            })
-          }}
-        />
-      </head>
-      <body className={`${InterFont.variable} ${FrauncesFont.variable} ${JetBrainsMonoFont.variable} font-sans antialiased`} suppressHydrationWarning>
-        <ThemeProvider>
-          <QueryProvider>
-            <LanguageProvider>
-              {children}
-              <Toaster position="top-right" richColors closeButton />
-              <AnalyticsClient />
-              <NuraChatDynamic />
-            </LanguageProvider>
-          </QueryProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+                "medicalSpecialty": [
+                  "Medicina General",
+                  "Psicología",
+                  "Cardiología",
+                  "Dermatología"
+                ]
+              })
+            }}
+          />
+        </head>
+        <body className={`${InterFont.variable} ${FrauncesFont.variable} ${JetBrainsMonoFont.variable} font-sans antialiased`} suppressHydrationWarning>
+          <ThemeProvider>
+            <QueryProvider>
+              <LanguageProvider>
+                {children}
+                <Toaster position="top-right" richColors closeButton />
+                <AnalyticsClient />
+              </LanguageProvider>
+            </QueryProvider>
+          </ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }
