@@ -144,7 +144,7 @@ export async function uploadLicenseFile(formData: FormData): Promise<{ url: stri
   const fileName = `${user.id}/${Date.now()}-${file.name}`;
 
   const uploadResult = await supabase.storage
-    .from('license-documents')
+    .from('credentials')
     .upload(fileName, buffer, {
       contentType: file.type,
     });
@@ -154,7 +154,7 @@ export async function uploadLicenseFile(formData: FormData): Promise<{ url: stri
   }
 
   const { data: publicUrl } = supabase.storage
-    .from('license-documents')
+    .from('credentials')
     .getPublicUrl(fileName);
 
   return { url: publicUrl.publicUrl };
