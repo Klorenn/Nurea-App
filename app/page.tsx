@@ -132,7 +132,7 @@ export default function Page() {
 <nav className="nav" id="nav">
   <div className="container nav-inner">
     <a href="/" className="logo">
-      <img src="/logo.png" alt="Nurea" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+      <img src="/nurea-logo.svg" alt="Nurea" style={{ width: '28px', height: '32px', objectFit: 'contain' }} />
       <span>Nurea</span>
     </a>
     <ul className="nav-links">
@@ -159,6 +159,9 @@ export default function Page() {
   <div className="hero-blob hero-blob-2"></div>
   <div className="container hero-grid">
     <div className="hero-content reveal">
+      <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'flex-start' }}>
+        <img src="/nurea-logo.svg" alt="Nurea" style={{ width: '120px', height: '140px', objectFit: 'contain' }} />
+      </div>
       <div className="hero-eyebrow">
         <span className="hero-eyebrow-dot"></span>
         Mercado de salud para profesionales verificados
@@ -679,7 +682,7 @@ export default function Page() {
     <div className="footer-grid">
       <div className="footer-brand">
         <a href="/" className="logo">
-          <img src="/logo.png" alt="Nurea" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+          <img src="/nurea-logo.svg" alt="Nurea" style={{ width: '28px', height: '32px', objectFit: 'contain' }} />
           <span>Nurea</span>
         </a>
         <p>El mercado de salud que conecta pacientes y profesionales con el cuidado que la salud merece.</p>
