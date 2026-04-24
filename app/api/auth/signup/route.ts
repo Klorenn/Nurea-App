@@ -56,12 +56,10 @@ export async function POST(request: Request) {
   })
 
   if (error) {
-    const { getHumanErrorMessage } = await import('@/lib/auth/utils')
-    const humanMessage = getHumanErrorMessage(error.message, 'es')
     return NextResponse.json(
-      { 
+      {
         error: error.message,
-        message: humanMessage
+        message: error.message || 'Error al crear la cuenta'
       },
       { status: 400 }
     )

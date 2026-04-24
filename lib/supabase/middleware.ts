@@ -1,6 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { validateRouteAccess } from '@/lib/auth/auth-logic'
 
 export async function updateSession(request: NextRequest) {
   // Skip Supabase if not configured (for development/testing)
@@ -121,13 +120,13 @@ export async function updateSession(request: NextRequest) {
       return redirectWithCookies(redirectPath)
     }
 
-    // Verificar acceso a la ruta con validación estricta
-    const routeValidation = validateRouteAccess(pathname, userRole)
-    
-    if (!routeValidation.allowed) {
-      const redirectPath = routeValidation.redirectTo ||
-        (userRole === 'professional' ? '/dashboard/professional' : (userRole === 'admin' ? '/dashboard/admin' : '/dashboard/patient'))
-      return redirectWithCookies(redirectPath)
+    // Route access validation moved to Clerk middleware in middleware.ts
+    // Basic dashboard role-based routing
+    if (pathname.startsWith('/dashboard/professional') && userRole !== 'professional') {
+      return redirectWithCookies('/dashboard/patient')
+    }
+    if (pathname.startsWith('/dashboard/admin') && userRole !== 'admin') {
+      return redirectWithCookies('/dashboard/patient')
     }
 
     if (pathname === '/complete-profile') {
