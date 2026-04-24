@@ -12,6 +12,7 @@ import { UserDropdown } from "@/components/ui/user-dropdown"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useUser } from "@clerk/nextjs"
 
 const navLinkClass =
   "text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-sm active:opacity-80 transition-colors"
@@ -23,7 +24,7 @@ interface NavbarProps {
 export function Navbar({ sticky = true }: NavbarProps) {
   const { language } = useLanguage()
   const t = useTranslations(language)
-  const { user, loading } = useAuth()
+  const { user, isLoaded } = useUser()
   const [menuOpen, setMenuOpen] = useState(false)
   const [hasMounted, setHasMounted] = useState(false)
 
@@ -86,18 +87,18 @@ export function Navbar({ sticky = true }: NavbarProps) {
           <div className="flex items-center gap-2 ml-auto lg:ml-0">
             <LanguageSelector />
             <ThemeSwitch />
-            {loading ? (
+            {!isLoaded ? (
               <div className="h-9 w-9 rounded-full bg-muted animate-pulse" aria-hidden="true" />
             ) : user ? (
               <UserDropdown
-                role={user.user_metadata?.role || "patient"}
+                role={((user.unsafeMetadata?.userType as string) || "patient") as "patient" | "professional" | "admin"}
                 user={{
-                  name: user.user_metadata?.first_name
-                    ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ""}`
-                    : user.email?.split("@")[0] || "Usuario",
-                  email: user.email || "",
-                  avatar: user.user_metadata?.avatar_url,
-                  initials: user.user_metadata?.first_name?.[0] || user.email?.charAt(0).toUpperCase() || "U",
+                  name: user.firstName
+                    ? `${user.firstName} ${user.lastName || ""}`
+                    : user.primaryEmailAddress?.emailAddress?.split("@")[0] || "Usuario",
+                  email: user.primaryEmailAddress?.emailAddress || "",
+                  avatar: user.imageUrl,
+                  initials: user.firstName?.[0] || user.primaryEmailAddress?.emailAddress?.charAt(0).toUpperCase() || "U",
                   status: "online",
                 }}
               />
