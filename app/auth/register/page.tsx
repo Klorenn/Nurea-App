@@ -2,13 +2,12 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
+import { useSignUp } from "@clerk/nextjs"
 import { useLanguage } from "@/contexts/language-context"
-import { signUp } from "@/actions/auth"
-import { getHumanErrorMessage } from "@/lib/auth/utils"
 
 /* ------------------------------------------------------------------
- *  Iconos inline (sin lucide-react)
+ *  Inline icons (no lucide-react)
  * ------------------------------------------------------------------ */
 const IcoArrowLeft = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -32,17 +31,6 @@ const IcoLock = (
     <path d="M8 11V7a4 4 0 1 1 8 0v4" />
   </svg>
 )
-const IcoShield = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M12 2l8.5 4.5v5c0 5-3.5 9.5-8.5 10.5-5-1-8.5-5.5-8.5-10.5v-5L12 2z" />
-  </svg>
-)
-const IcoIdCard = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <path d="M7 10h4M7 14h8M15 10h2" />
-  </svg>
-)
 const IcoEye = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
@@ -58,12 +46,6 @@ const IcoEyeOff = (
 const IcoCheck = (
   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
     <path d="M5 13l4 4L19 7" />
-  </svg>
-)
-const IcoCheckCircle = (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <path d="m9 11 3 3L22 4" />
   </svg>
 )
 const IcoGoogle = (
@@ -93,40 +75,6 @@ const IcoApple = (
 )
 
 /* ------------------------------------------------------------------
- *  Data
- * ------------------------------------------------------------------ */
-const SPECIALTIES = [
-  "Medicina General",
-  "Psicología",
-  "Psiquiatría",
-  "Nutrición",
-  "Kinesiología",
-  "Odontología",
-  "Dermatología",
-  "Ginecología y Obstetricia",
-  "Pediatría",
-  "Cardiología",
-  "Traumatología y Ortopedia",
-  "Oftalmología",
-  "Otorrinolaringología",
-  "Urología",
-  "Neurología",
-  "Endocrinología",
-  "Gastroenterología",
-  "Oncología",
-  "Reumatología",
-  "Neumología",
-  "Fisiatría",
-  "Medicina Interna",
-  "Medicina Deportiva",
-  "Medicina Estética",
-  "Fonoaudiología",
-  "Terapia Ocupacional",
-  "Matrona",
-  "Otra",
-]
-
-/* ------------------------------------------------------------------
  *  Password strength
  * ------------------------------------------------------------------ */
 function scorePassword(v: string): number {
@@ -139,53 +87,21 @@ function scorePassword(v: string): number {
 }
 
 /* ------------------------------------------------------------------
- *  Componentes auxiliares
+ *  RegisterContent (Clerk-based)
  * ------------------------------------------------------------------ */
-function Logo() {
-  return (
-    <Link
-      href="/"
-      className="inline-flex items-center gap-3"
-      style={{ color: "white", textDecoration: "none" }}
-    >
-      <span
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
-          background: "white",
-          padding: 4,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 8px 20px -12px oklch(0 0 0 / 0.35)",
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo.png"
-          alt="Nurea"
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        />
-      </span>
-      <span style={{ fontFamily: "var(--font-fraunces), serif", fontSize: 22, fontWeight: 500 }}>
-        Nurea
-      </span>
-    </Link>
-  )
-}
-
 function RegisterContent() {
   const { language } = useLanguage()
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const { signUp } = useSignUp()
   const isES = language === "es"
 
   /* —— Role toggle —— */
-  const initialRole: "patient" | "professional" =
+  const initialRole: "paciente" | "profesional" =
     searchParams.get("role") === "pro" || searchParams.get("role") === "professional"
-      ? "professional"
-      : "patient"
-  const [role, setRole] = useState<"patient" | "professional">(initialRole)
+      ? "profesional"
+      : "paciente"
+  const [role, setRole] = useState<"paciente" | "profesional">(initialRole)
 
   const toggleRef = useRef<HTMLDivElement | null>(null)
   const patientBtnRef = useRef<HTMLButtonElement | null>(null)
@@ -194,7 +110,7 @@ function RegisterContent() {
 
   useEffect(() => {
     const positionPill = () => {
-      const btn = role === "patient" ? patientBtnRef.current : proBtnRef.current
+      const btn = role === "paciente" ? patientBtnRef.current : proBtnRef.current
       if (!btn) return
       setPillStyle({ left: btn.offsetLeft, width: btn.offsetWidth })
     }
@@ -213,19 +129,16 @@ function RegisterContent() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
-  const [specialty, setSpecialty] = useState("")
-  const [otherSpecialty, setOtherSpecialty] = useState("")
-  const [registrationNumber, setRegistrationNumber] = useState("")
-  const [nationalId, setNationalId] = useState("")
+  const [rut, setRut] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState("")
   const [acceptedTerms, setAcceptedTerms] = useState(false)
-  const [newsletter, setNewsletter] = useState(false)
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   const strength = useMemo(() => scorePassword(password), [password])
-  const isProfessional = role === "professional"
 
   /* —— Helpers —— */
   const formatRUT = (value: string): string => {
@@ -246,6 +159,7 @@ function RegisterContent() {
     e.preventDefault()
     setError(null)
 
+    // Validation
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password) {
       setError(isES ? "Completa todos los campos requeridos." : "Please complete all required fields.")
       return
@@ -254,51 +168,55 @@ function RegisterContent() {
       setError(isES ? "La contraseña debe tener mínimo 8 caracteres." : "Password must be at least 8 characters.")
       return
     }
+    if (!rut.trim()) {
+      setError(isES ? "Ingresa tu RUT." : "Please enter your RUT.")
+      return
+    }
+    if (!dateOfBirth) {
+      setError(isES ? "Ingresa tu fecha de nacimiento." : "Please enter your date of birth.")
+      return
+    }
     if (!acceptedTerms) {
       setError(isES ? "Debes aceptar los términos para continuar." : "You must accept the terms to continue.")
       return
     }
-    if (isProfessional) {
-      if (!specialty.trim()) {
-        setError(isES ? "Selecciona tu especialidad principal." : "Please select your main specialty.")
-        return
-      }
-      if (specialty === "Otra" && !otherSpecialty.trim()) {
-        setError(isES ? "Indica cuál es tu especialidad." : "Please specify your specialty.")
-        return
-      }
-      if (!registrationNumber.trim()) {
-        setError(isES ? "Ingresa tu número de registro profesional." : "Please enter your professional registration number.")
-        return
-      }
-    } else {
-      if (!nationalId.trim()) {
-        setError(isES ? "Ingresa tu RUT o DNI." : "Please enter your national ID.")
-        return
-      }
+    if (!acceptedPrivacy) {
+      setError(isES ? "Debes aceptar la política de privacidad para continuar." : "You must accept the privacy policy to continue.")
+      return
+    }
+
+    if (!signUp) {
+      setError(isES ? "Error de autenticación." : "Authentication error.")
+      return
     }
 
     setLoading(true)
     try {
-      const result = await signUp({
-        email: email.trim(),
+      // Create user with Clerk
+      const result = await signUp.create({
+        emailAddress: email.trim(),
         password,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        role,
-        specialty: isProfessional ? (specialty === "Otra" ? otherSpecialty.trim() : specialty) : undefined,
-        registrationNumber: isProfessional ? registrationNumber.trim() : undefined,
-        nationalId: nationalId.trim() || undefined,
+        unsafeMetadata: {
+          userType: role,
+          rut: rut.trim(),
+          dateOfBirth: dateOfBirth,
+        },
       })
 
-      if (result.success) {
+      if (result) {
         setSuccess(true)
+        // Redirect to onboarding after a brief delay
+        setTimeout(() => {
+          router.push("/onboarding")
+        }, 2000)
       } else {
-        setError(result.error || (isES ? "No se pudo crear la cuenta." : "Failed to create account."))
+        setError(isES ? "No se pudo crear la cuenta." : "Failed to create account.")
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : (isES ? "Error al registrarse" : "Error signing up")
-      setError(getHumanErrorMessage(msg, isES ? "es" : "en") || msg)
+      const msg = err instanceof Error ? err.message : isES ? "Error al registrarse" : "Error signing up"
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -307,7 +225,7 @@ function RegisterContent() {
   const handleGoogle = async () => {
     setLoading(true)
     try {
-      const next = role === "professional" ? "/onboarding?role=professional" : "/onboarding?role=patient"
+      const next = role === "profesional" ? "/onboarding?role=profesional" : "/onboarding?role=paciente"
       window.location.href = `/api/auth/google?next=${encodeURIComponent(next)}`
     } catch {
       setError(isES ? "No se pudo iniciar Google." : "Could not start Google sign-up.")
@@ -316,298 +234,187 @@ function RegisterContent() {
   }
 
   /* ------------------------------------------------------------------
-   *  Pantalla de éxito
+   *  Success / Pending screen
    * ------------------------------------------------------------------ */
   if (success) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          display: "grid",
-          placeItems: "center",
-          background: "oklch(0.985 0.005 90)",
-          padding: 24,
-          fontFamily: "var(--font-inter), ui-sans-serif, system-ui",
-          color: "oklch(0.25 0.03 170)",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 460,
-            width: "100%",
-            background: "white",
-            borderRadius: 24,
-            border: "1px solid oklch(0.92 0.01 90)",
-            padding: "40px 32px",
-            textAlign: "center",
-            boxShadow: "0 20px 60px -30px oklch(0.3 0.04 170 / 0.2)",
-          }}
-        >
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 16,
-              margin: "0 auto 20px",
-              background: "oklch(0.94 0.04 150)",
-              color: "oklch(0.45 0.09 150)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {IcoCheckCircle}
-          </div>
-          <h1
-            style={{
-              fontFamily: "var(--font-fraunces), serif",
-              fontSize: "clamp(28px, 4vw, 36px)",
-              fontWeight: 400,
-              lineHeight: 1.1,
-              margin: "0 0 10px",
-              color: "oklch(0.20 0.03 170)",
-            }}
-          >
-            {isES ? "¡Casi listo!" : "Almost there!"}
-          </h1>
-          <p style={{ color: "oklch(0.45 0.03 170)", fontSize: 15, lineHeight: 1.55, margin: "0 0 18px" }}>
-            {isES
-              ? "Te enviamos un enlace de verificación a"
-              : "We sent a verification link to"}
-            <br />
-            <strong style={{ color: "oklch(0.45 0.09 150)" }}>{email.trim()}</strong>
-          </p>
-          <div
-            style={{
-              textAlign: "left",
-              background: "oklch(0.97 0.01 90)",
-              borderRadius: 14,
-              padding: 16,
-              fontSize: 13,
-              color: "oklch(0.35 0.03 170)",
-              lineHeight: 1.6,
-              marginBottom: 22,
-            }}
-          >
-            <p style={{ margin: 0 }}>
-              1. {isES ? "Abre tu correo y haz clic en el enlace." : "Open your email and click the link."}
-            </p>
-            <p style={{ margin: "6px 0 0" }}>
-              2. {isES ? "Completa tu perfil para comenzar." : "Complete your profile to get started."}
-            </p>
-            <p style={{ margin: "10px 0 0", color: "oklch(0.55 0.02 170)", fontSize: 12 }}>
-              {isES ? "¿No lo ves? Revisa spam o promociones." : "Don't see it? Check spam or promotions."}
-            </p>
-          </div>
-          <Link
-            href="/login"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "12px 22px",
-              background: "oklch(0.20 0.03 170)",
-              color: "white",
-              borderRadius: 999,
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            {isES ? "Ir a iniciar sesión" : "Go to sign in"} {IcoArrow}
+      <div className="auth">
+        <aside className="auth-side">
+          <div className="auth-side-blob one" />
+          <div className="auth-side-blob two" />
+          <Link href="/" className="auth-logo">
+            <img src="/logo.png" alt="Nurea" style={{ width: 32, height: 32, objectFit: "contain" }} />
+            <span>Nurea</span>
           </Link>
-        </div>
-      </main>
+          <div className="auth-quote">
+            <div className="auth-quote-eyebrow">{isES ? "Por qué Nurea" : "Why Nurea"}</div>
+            <blockquote>
+              {isES ? (
+                <>
+                  Una plataforma que entiende que el cuidado es un proceso, no una{" "}
+                  <em>transacción</em>.
+                </>
+              ) : (
+                <>
+                  A platform that understands care is a process, not a <em>transaction</em>.
+                </>
+              )}
+            </blockquote>
+            <div className="auth-quote-author">
+              <div className="auth-quote-av" />
+              <div>
+                <div className="auth-quote-name">Dra. Laura Mendoza</div>
+                <div className="auth-quote-role">
+                  {isES ? "Psicóloga clínica · Madrid" : "Clinical psychologist · Madrid"}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="auth-side-stats">
+            <div>
+              <div className="auth-side-stat-num serif">14 {isES ? "días" : "days"}</div>
+              <div className="auth-side-stat-label">{isES ? "Gratis pro" : "Free pro"}</div>
+            </div>
+            <div>
+              <div className="auth-side-stat-num serif">48h</div>
+              <div className="auth-side-stat-label">{isES ? "Primera cita" : "First visit"}</div>
+            </div>
+            <div>
+              <div className="auth-side-stat-num serif">0%</div>
+              <div className="auth-side-stat-label">{isES ? "Permanencia" : "Commitment"}</div>
+            </div>
+          </div>
+        </aside>
+
+        <main className="auth-main">
+          <div className="auth-top">
+            <Link
+              href="/"
+              style={{
+                border: "none",
+                padding: 0,
+                color: "var(--ink-soft)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                textDecoration: "none",
+                fontWeight: 500,
+              }}
+            >
+              {IcoArrowLeft}
+              {isES ? "Volver" : "Back"}
+            </Link>
+            <div>
+              {isES ? "¿Ya tienes cuenta?" : "Already have an account?"}{" "}
+              <Link
+                href="/login"
+                style={{
+                  color: "var(--sage-700)",
+                  fontWeight: 600,
+                  border: "none",
+                  padding: 0,
+                }}
+              >
+                {isES ? "Iniciar sesión" : "Sign in"}
+              </Link>
+            </div>
+          </div>
+
+          <div className="auth-form-wrap">
+            <div style={{ textAlign: "center", paddingTop: 40 }}>
+              <div style={{ fontSize: 48, marginBottom: 20 }}>✓</div>
+              <h1 className="serif" style={{ marginBottom: 16 }}>
+                {isES ? "¡Cuenta creada!" : "Account created!"}
+              </h1>
+              <p style={{ fontSize: 15, color: "var(--ink-soft)", marginBottom: 24 }}>
+                {isES
+                  ? "Tu cuenta ha sido creada exitosamente. Redirigiendo a la página de perfil..."
+                  : "Your account has been created successfully. Redirecting to your profile..."}
+              </p>
+            </div>
+          </div>
+
+          <div className="auth-footer">
+            <div>© {new Date().getFullYear()} Nurea Health</div>
+            <div>
+              <Link href="/legal/privacy">{isES ? "Privacidad" : "Privacy"}</Link>
+              <Link href="/legal/terms">{isES ? "Términos" : "Terms"}</Link>
+              <Link href="/help">{isES ? "Ayuda" : "Help"}</Link>
+            </div>
+          </div>
+        </main>
+      </div>
     )
   }
 
   /* ------------------------------------------------------------------
-   *  Layout principal — split aside + form
+   *  Main form screen
    * ------------------------------------------------------------------ */
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        fontFamily: "var(--font-inter), ui-sans-serif, system-ui",
-        color: "oklch(0.25 0.03 170)",
-        background: "oklch(0.985 0.005 90)",
-      }}
-      className="grid grid-cols-1 lg:grid-cols-2"
-    >
-      {/* ------------ ASIDE ------------ */}
-      <aside
-        className="hidden lg:flex"
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          background:
-            "linear-gradient(165deg, oklch(0.28 0.035 170) 0%, oklch(0.20 0.03 170) 50%, oklch(0.15 0.025 165) 100%)",
-          color: "white",
-          padding: "56px 56px 48px",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        }}
-      >
-        {/* Blobs animadas */}
-        <div
-          className="animate-nurea-drift"
-          aria-hidden
-          style={{
-            position: "absolute",
-            width: 520,
-            height: 520,
-            borderRadius: "50%",
-            top: "-120px",
-            right: "-140px",
-            background: "radial-gradient(circle, oklch(0.72 0.12 150 / 0.35) 0%, transparent 65%)",
-            filter: "blur(6px)",
-            pointerEvents: "none",
-          }}
-        />
-        <div
-          className="animate-nurea-drift-rev"
-          aria-hidden
-          style={{
-            position: "absolute",
-            width: 440,
-            height: 440,
-            borderRadius: "50%",
-            bottom: "-120px",
-            left: "-100px",
-            background: "radial-gradient(circle, oklch(0.65 0.12 45 / 0.22) 0%, transparent 70%)",
-            filter: "blur(4px)",
-            pointerEvents: "none",
-          }}
-        />
+    <div className="auth">
+      {/* LEFT — brand side */}
+      <aside className="auth-side">
+        <div className="auth-side-blob one" />
+        <div className="auth-side-blob two" />
 
-        <div style={{ position: "relative", zIndex: 1 }}>
-          <Logo />
-        </div>
+        <Link href="/" className="auth-logo">
+          <img src="/logo.png" alt="Nurea" style={{ width: 32, height: 32, objectFit: "contain" }} />
+          <span>Nurea</span>
+        </Link>
 
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 440 }}>
-          <div
-            style={{
-              fontFamily: "var(--font-jetbrains-mono), monospace",
-              fontSize: 11,
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: "oklch(0.72 0.12 150)",
-              marginBottom: 18,
-            }}
-          >
-            {isES ? "Por qué Nurea" : "Why Nurea"}
-          </div>
-          <blockquote
-            style={{
-              fontFamily: "var(--font-fraunces), serif",
-              fontSize: "clamp(22px, 2.4vw, 30px)",
-              lineHeight: 1.35,
-              fontWeight: 400,
-              margin: 0,
-              color: "oklch(0.96 0.01 90)",
-            }}
-          >
+        <div className="auth-quote">
+          <div className="auth-quote-eyebrow">{isES ? "Por qué Nurea" : "Why Nurea"}</div>
+          <blockquote>
             {isES ? (
               <>
-                Un mercado de salud que respeta el tiempo del cuidado.{" "}
-                <em style={{ color: "oklch(0.72 0.12 150)", fontStyle: "italic" }}>Sin fricciones</em>, sin marketing
-                agresivo — solo encuentros reales entre quien cuida y quien busca ser cuidado.
+                "Una plataforma que entiende que el cuidado es un proceso, no una{" "}
+                <em>transacción</em>."
               </>
             ) : (
               <>
-                A health marketplace that respects the time it takes to care.{" "}
-                <em style={{ color: "oklch(0.72 0.12 150)", fontStyle: "italic" }}>Without friction</em>, without
-                aggressive marketing — just real encounters between carers and those seeking care.
+                "A platform that understands care is a process, not a <em>transaction</em>."
               </>
             )}
           </blockquote>
+          <div className="auth-quote-author">
+            <div className="auth-quote-av" />
+            <div>
+              <div className="auth-quote-name">Dra. Laura Mendoza</div>
+              <div className="auth-quote-role">
+                {isES ? "Psicóloga clínica · Madrid" : "Clinical psychologist · Madrid"}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Stats */}
-        {isES && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 16,
-              marginTop: 24,
-              paddingTop: 20,
-              borderTop: "1px solid oklch(1 0 0 0 / 0.15)",
-            }}
-          >
-            {[
-              { num: "14 días", label: "Prueba gratis" },
-              { num: "48h", label: "Primera cita" },
-              { num: "0%", label: "Permanencia" },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <div
-                  style={{
-                    fontFamily: "var(--font-fraunces), serif",
-                    fontSize: 26,
-                    fontWeight: 400,
-                    marginBottom: 4,
-                    color: "white",
-                  }}
-                >
-                  {stat.num}
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "oklch(0.72 0.03 170 / 0.6)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  {stat.label}
-                </div>
-              </div>
-            ))}
+        <div className="auth-side-stats">
+          <div>
+            <div className="auth-side-stat-num serif">14 {isES ? "días" : "days"}</div>
+            <div className="auth-side-stat-label">{isES ? "Gratis pro" : "Free pro"}</div>
           </div>
-        )}
-
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-            fontSize: 11,
-            color: "oklch(0.72 0.03 170)",
-          }}
-        >
-          © {new Date().getFullYear()} Nurea · Plataforma de cuidado y bienestar
+          <div>
+            <div className="auth-side-stat-num serif">48h</div>
+            <div className="auth-side-stat-label">{isES ? "Primera cita" : "First visit"}</div>
+          </div>
+          <div>
+            <div className="auth-side-stat-num serif">0%</div>
+            <div className="auth-side-stat-label">{isES ? "Permanencia" : "Commitment"}</div>
+          </div>
         </div>
       </aside>
 
-      {/* ------------ FORM ------------ */}
-      <section
-        style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "column",
-          padding: "20px clamp(18px, 4vw, 44px) 24px",
-          height: "100dvh",
-          overflowY: "auto",
-        }}
-      >
-        {/* Top bar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            fontSize: 13,
-            color: "oklch(0.45 0.03 170)",
-            marginBottom: 16,
-          }}
-        >
+      {/* RIGHT — form side */}
+      <main className="auth-main">
+        <div className="auth-top">
           <Link
             href="/"
             style={{
+              border: "none",
+              padding: 0,
+              color: "var(--ink-soft)",
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              color: "oklch(0.45 0.03 170)",
               textDecoration: "none",
               fontWeight: 500,
             }}
@@ -619,116 +426,68 @@ function RegisterContent() {
             {isES ? "¿Ya tienes cuenta?" : "Already have an account?"}{" "}
             <Link
               href="/login"
-              style={{ color: "oklch(0.45 0.09 150)", fontWeight: 600, textDecoration: "none" }}
+              style={{
+                color: "var(--sage-700)",
+                fontWeight: 600,
+                border: "none",
+                padding: 0,
+              }}
             >
               {isES ? "Iniciar sesión" : "Sign in"}
             </Link>
           </div>
         </div>
 
-        <div style={{ maxWidth: 460, width: "100%", margin: "0 auto", flex: 1 }}>
-          <h1
-            style={{
-              fontFamily: "var(--font-fraunces), serif",
-              fontSize: "clamp(22px, 2.8vw, 28px)",
-              lineHeight: 1.05,
-              fontWeight: 400,
-              margin: "0 0 4px",
-              color: "oklch(0.20 0.03 170)",
-              letterSpacing: "-0.01em",
-            }}
-          >
+        <div className="auth-form-wrap">
+          <h1 className="serif">
             {isES ? (
               <>
-                Empieza tu{" "}
-                <em style={{ color: "oklch(0.45 0.09 150)", fontStyle: "italic" }}>camino</em>.
+                Empieza tu <em>camino</em>.
               </>
             ) : (
               <>
-                Begin your{" "}
-                <em style={{ color: "oklch(0.45 0.09 150)", fontStyle: "italic" }}>journey</em>.
+                Begin your <em>journey</em>.
               </>
             )}
           </h1>
-          <p style={{ color: "oklch(0.45 0.03 170)", fontSize: 12.5, lineHeight: 1.35, marginBottom: 10 }}>
+          <p className="sub">
             {isES
-              ? "Crea tu cuenta en menos de un minuto. Sin tarjeta, sin permanencia."
-              : "Create your account in under a minute. No credit card, no lock-in."}
+              ? "Crea tu cuenta en menos de dos minutos."
+              : "Create your account in less than two minutes."}
           </p>
 
           {/* Role toggle */}
-          <div
-            ref={toggleRef}
-            style={{
-              position: "relative",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              padding: 3,
-              background: "oklch(0.97 0.005 90)",
-              border: "1px solid oklch(0.92 0.01 90)",
-              borderRadius: 12,
-              marginBottom: 14,
-            }}
-          >
+          <div className="role-toggle" ref={toggleRef}>
             <div
-              aria-hidden
-              style={{
-                position: "absolute",
-                top: 4,
-                bottom: 4,
-                left: pillStyle.left,
-                width: pillStyle.width,
-                background: "white",
-                borderRadius: 10,
-                boxShadow: "0 4px 10px -4px oklch(0.3 0.04 170 / 0.15)",
-                transition: "all 0.35s cubic-bezier(0.2, 0.9, 0.3, 1)",
-                zIndex: 1,
-              }}
+              className="role-pill"
+              style={{ left: pillStyle.left, width: pillStyle.width }}
             />
             <button
               ref={patientBtnRef}
               type="button"
-              onClick={() => setRole("patient")}
-              aria-pressed={role === "patient"}
-              style={{
-                position: "relative",
-                zIndex: 2,
-                padding: "7px 10px",
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                textAlign: "center",
-                color: role === "patient" ? "oklch(0.20 0.03 170)" : "oklch(0.45 0.03 170)",
-                transition: "color 0.3s",
-                fontFamily: "inherit",
-              }}
+              className={role === "paciente" ? "active" : ""}
+              onClick={() => setRole("paciente")}
+              aria-pressed={role === "paciente"}
             >
-              <strong style={{ display: "block", fontSize: 13, fontWeight: 600 }}>
-                {isES ? "Soy paciente" : "I'm a patient"}
-              </strong>
+              <strong>{isES ? "Soy paciente" : "I'm a patient"}</strong>
+              <span>{isES ? "Busco profesionales" : "Looking for professionals"}</span>
             </button>
             <button
               ref={proBtnRef}
               type="button"
-              onClick={() => setRole("professional")}
-              aria-pressed={role === "professional"}
-              style={{
-                position: "relative",
-                zIndex: 2,
-                padding: "7px 10px",
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                textAlign: "center",
-                color: role === "professional" ? "oklch(0.20 0.03 170)" : "oklch(0.45 0.03 170)",
-                transition: "color 0.3s",
-                fontFamily: "inherit",
-              }}
+              className={role === "profesional" ? "active" : ""}
+              onClick={() => setRole("profesional")}
+              aria-pressed={role === "profesional"}
             >
-              <strong style={{ display: "block", fontSize: 13, fontWeight: 600 }}>
-                {isES ? "Soy profesional" : "I'm a professional"}
-              </strong>
+              <strong>{isES ? "Soy profesional" : "I'm a professional"}</strong>
+              <span>{isES ? "Ofrezco mis servicios" : "I offer my services"}</span>
             </button>
+          </div>
+
+          {/* Step indicator */}
+          <div className="steps">
+            <div className="step done" />
+            <div className="step" />
           </div>
 
           {/* Error */}
@@ -745,7 +504,7 @@ function RegisterContent() {
                 color: "oklch(0.40 0.15 25)",
                 borderRadius: 10,
                 fontSize: 12.5,
-                marginBottom: 10,
+                marginBottom: 14,
               }}
             >
               <span style={{ fontSize: 14 }}>⚠</span>
@@ -753,81 +512,28 @@ function RegisterContent() {
             </div>
           )}
 
-          {/* Social row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-            <button
-              type="button"
-              onClick={handleGoogle}
-              disabled={loading}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                padding: "9px 12px",
-                background: "white",
-                border: "1px solid oklch(0.92 0.01 90)",
-                borderRadius: 10,
-                fontSize: 12.5,
-                fontWeight: 500,
-                color: "oklch(0.25 0.03 170)",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.6 : 1,
-                transition: "all 0.2s",
-              }}
-            >
+          {/* Social */}
+          <div className="social-row">
+            <button type="button" className="social-btn" onClick={handleGoogle} disabled={loading}>
               {IcoGoogle}
-              Google
+              {isES ? "Continuar con Google" : "Continue with Google"}
             </button>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={handleGoogle}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                padding: "9px 12px",
-                background: "white",
-                border: "1px solid oklch(0.92 0.01 90)",
-                borderRadius: 10,
-                fontSize: 12.5,
-                fontWeight: 500,
-                color: "oklch(0.25 0.03 170)",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.6 : 1,
-                transition: "all 0.2s",
-              }}
-            >
+            <button type="button" className="social-btn" onClick={handleGoogle} disabled={loading}>
               {IcoApple}
-              Apple
+              {isES ? "Continuar con Apple" : "Continue with Apple"}
             </button>
           </div>
 
-          {/* Divider */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              fontSize: 11,
-              color: "oklch(0.55 0.02 170)",
-              margin: "8px 0 12px",
-            }}
-          >
-            <div style={{ flex: 1, height: 1, background: "oklch(0.92 0.01 90)" }} />
-            <span>{isES ? "o regístrate con correo" : "or sign up with email"}</span>
-            <div style={{ flex: 1, height: 1, background: "oklch(0.92 0.01 90)" }} />
+          <div className="divider">
+            {isES ? "o regístrate con correo" : "or sign up with email"}
           </div>
 
           <form onSubmit={handleSubmit} noValidate>
-            {/* Nombres */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-              <Field
-                label={isES ? "Nombre" : "First name"}
-                htmlFor="first"
-                input={
+            {/* Names */}
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor="first">{isES ? "Nombre" : "First name"}</label>
+                <div className="field-input-wrap">
                   <input
                     id="first"
                     type="text"
@@ -837,14 +543,12 @@ function RegisterContent() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     disabled={loading}
-                    style={inputStyle()}
                   />
-                }
-              />
-              <Field
-                label={isES ? "Apellido" : "Last name"}
-                htmlFor="last"
-                input={
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="last">{isES ? "Apellido" : "Last name"}</label>
+                <div className="field-input-wrap">
                   <input
                     id="last"
                     type="text"
@@ -854,18 +558,15 @@ function RegisterContent() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     disabled={loading}
-                    style={inputStyle()}
                   />
-                }
-              />
+                </div>
+              </div>
             </div>
 
             {/* Email */}
-            <Field
-              label={isES ? "Correo electrónico" : "Email"}
-              htmlFor="email"
-              icon={IcoMail}
-              input={
+            <div className="field">
+              <label htmlFor="email">{isES ? "Correo electrónico" : "Email"}</label>
+              <div className="field-input-wrap has-icon">
                 <input
                   id="email"
                   type="email"
@@ -875,144 +576,15 @@ function RegisterContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
-                  style={inputStyle(true)}
                 />
-              }
-              mb={10}
-            />
-
-            {/* RUT/DNI — sólo paciente */}
-            {!isProfessional && (
-              <Field
-                label={isES ? "RUT / DNI" : "National ID"}
-                htmlFor="national-id"
-                icon={IcoIdCard}
-                input={
-                  <input
-                    id="national-id"
-                    type="text"
-                    required
-                    placeholder={isES ? "Ej: 12.345.678-9" : "e.g. 12.345.678-9"}
-                    value={nationalId}
-                    onChange={(e) => setNationalId(formatRUT(e.target.value))}
-                    disabled={loading}
-                    style={inputStyle(true)}
-                  />
-                }
-                mb={10}
-              />
-            )}
-
-            {/* Profesional */}
-            {isProfessional && (
-              <>
-                <Field
-                  label={isES ? "Especialidad principal" : "Main specialty"}
-                  htmlFor="specialty"
-                  icon={IcoShield}
-                  input={
-                    <select
-                      id="specialty"
-                      required
-                      value={specialty}
-                      onChange={(e) => {
-                        setSpecialty(e.target.value)
-                        if (e.target.value !== "Otra") setOtherSpecialty("")
-                      }}
-                      disabled={loading}
-                      style={{
-                        ...inputStyle(true),
-                        appearance: "none",
-                        background:
-                          "white url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23234e3f' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>\") no-repeat right 14px center",
-                      }}
-                    >
-                      <option value="">
-                        {isES ? "Selecciona una especialidad" : "Select a specialty"}
-                      </option>
-                      {SPECIALTIES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  }
-                  hint={
-                    isES
-                      ? "Verificaremos tu registro profesional antes de publicar tu perfil."
-                      : "We'll verify your professional registration before publishing your profile."
-                  }
-                  mb={specialty === "Otra" ? 12 : 16}
-                />
-
-                {specialty === "Otra" && (
-                  <Field
-                    label={isES ? "¿Cuál es tu especialidad?" : "What is your specialty?"}
-                    htmlFor="other-specialty"
-                    input={
-                      <input
-                        id="other-specialty"
-                        type="text"
-                        required
-                        placeholder={isES ? "Ej: Podología" : "e.g. Podiatry"}
-                        value={otherSpecialty}
-                        onChange={(e) => setOtherSpecialty(e.target.value)}
-                        disabled={loading}
-                        style={inputStyle()}
-                      />
-                    }
-                    mb={10}
-                  />
-                )}
-
-                <Field
-                  label={isES ? "Nº de registro profesional" : "Professional registration No."}
-                  htmlFor="registration"
-                  input={
-                    <input
-                      id="registration"
-                      type="text"
-                      required
-                      placeholder={isES ? "Ej: 123456" : "e.g. 123456"}
-                      value={registrationNumber}
-                      onChange={(e) => setRegistrationNumber(e.target.value)}
-                      disabled={loading}
-                      style={inputStyle()}
-                    />
-                  }
-                  mb={10}
-                />
-              </>
-            )}
+                <span className="field-icon">{IcoMail}</span>
+              </div>
+            </div>
 
             {/* Password */}
-            <div style={{ marginBottom: 12 }}>
-              <label
-                htmlFor="pw"
-                style={{
-                  display: "block",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "oklch(0.35 0.03 170)",
-                  marginBottom: 4,
-                }}
-              >
-                {isES ? "Crear contraseña" : "Create password"}
-              </label>
-              <div style={{ position: "relative" }}>
-                <span
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    left: 14,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "oklch(0.55 0.02 170)",
-                    pointerEvents: "none",
-                  }}
-                >
-                  {IcoLock}
-                </span>
+            <div className="field">
+              <label htmlFor="pw">{isES ? "Contraseña" : "Password"}</label>
+              <div className="field-input-wrap has-icon">
                 <input
                   id="pw"
                   type={showPassword ? "text" : "password"}
@@ -1022,319 +594,151 @@ function RegisterContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
-                  style={{
-                    ...inputStyle(true),
-                    paddingRight: 44,
-                  }}
                 />
+                <span className="field-icon">{IcoLock}</span>
                 <button
                   type="button"
+                  className="toggle-pw"
                   onClick={() => setShowPassword((p) => !p)}
-                  aria-label={showPassword ? (isES ? "Ocultar" : "Hide") : (isES ? "Mostrar" : "Show")}
-                  style={{
-                    position: "absolute",
-                    right: 8,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: 32,
-                    height: 32,
-                    background: "transparent",
-                    border: "none",
-                    borderRadius: 8,
-                    color: "oklch(0.55 0.02 170)",
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  aria-label={showPassword ? (isES ? "Ocultar" : "Hide") : isES ? "Mostrar" : "Show"}
                 >
                   {showPassword ? IcoEyeOff : IcoEye}
                 </button>
               </div>
-
               {/* Strength */}
-              <div style={{ marginTop: 6 }}>
-                <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-                  {[1, 2, 3, 4].map((i) => {
-                    const on = strength >= i
-                    const colors = [
-                      "oklch(0.65 0.18 25)", // 1 — danger
-                      "oklch(0.72 0.12 70)", // 2 — amber
-                      "oklch(0.68 0.11 120)", // 3 — olive
-                      "oklch(0.72 0.12 150)", // 4 — sage-500
-                    ]
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          flex: 1,
-                          height: 3,
-                          borderRadius: 2,
-                          background: on ? colors[strength - 1] : "oklch(0.92 0.01 90)",
-                          transition: "background 0.3s",
-                        }}
-                      />
-                    )
-                  })}
-                </div>
-                <div style={{ fontSize: 12, color: "oklch(0.55 0.02 170)" }}>
-                  {password.length === 0
-                    ? (isES ? "Escribe una contraseña para ver su fortaleza" : "Type a password to see its strength")
-                    : [
-                        "",
-                        isES ? "Débil — mejórala un poco" : "Weak — improve it",
-                        isES ? "Aceptable" : "Acceptable",
-                        isES ? "Fuerte" : "Strong",
-                        isES ? "Excelente" : "Excellent",
-                      ][strength]}
-                </div>
+              <div className="pw-bars">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className={`pw-bar${strength >= i ? ` on-${strength}` : ""}`}
+                  />
+                ))}
+              </div>
+              <div className="pw-label">
+                {password.length === 0
+                  ? isES
+                    ? "Elige una contraseña segura"
+                    : "Choose a secure password"
+                  : [
+                      "",
+                      isES ? "Débil — mejórala" : "Weak — improve it",
+                      isES ? "Aceptable" : "Acceptable",
+                      isES ? "Fuerte" : "Strong",
+                      isES ? "Excelente" : "Excellent",
+                    ][strength]}
               </div>
             </div>
 
-            {/* Checkboxes */}
-            <CheckLine
-              checked={acceptedTerms}
-              onChange={() => setAcceptedTerms((v) => !v)}
-              disabled={loading}
-            >
-              {isES ? (
-                <>
-                  Acepto los{" "}
-                  <Link href="/legal/terms" style={linkStyle}>
-                    términos del servicio
-                  </Link>{" "}
-                  y la{" "}
-                  <Link href="/legal/privacy" style={linkStyle}>
-                    política de privacidad
-                  </Link>{" "}
-                  de Nurea.
-                </>
-              ) : (
-                <>
-                  I accept Nurea's{" "}
-                  <Link href="/legal/terms" style={linkStyle}>
-                    terms of service
-                  </Link>{" "}
-                  and{" "}
-                  <Link href="/legal/privacy" style={linkStyle}>
-                    privacy policy
-                  </Link>
-                  .
-                </>
-              )}
-            </CheckLine>
+            {/* RUT */}
+            <div className="field">
+              <label htmlFor="rut">{isES ? "RUT" : "RUT"}</label>
+              <div className="field-input-wrap">
+                <input
+                  id="rut"
+                  type="text"
+                  required
+                  placeholder={isES ? "12.345.678-9" : "e.g. 12.345.678-9"}
+                  value={rut}
+                  onChange={(e) => setRut(formatRUT(e.target.value))}
+                  disabled={loading}
+                />
+              </div>
+              <div className="field-hint">
+                {isES ? "Tu RUT (número de identificación chileno)" : "Your RUT (Chilean ID number)"}
+              </div>
+            </div>
 
-            <CheckLine
-              checked={newsletter}
-              onChange={() => setNewsletter((v) => !v)}
-              disabled={loading}
-            >
-              {isES
-                ? "Recibir el Diario de Nurea — una carta mensual, nunca spam."
-                : "Get the Nurea Journal — a monthly letter, never spam."}
-            </CheckLine>
+            {/* Date of Birth */}
+            <div className="field">
+              <label htmlFor="dob">{isES ? "Fecha de nacimiento" : "Date of birth"}</label>
+              <div className="field-input-wrap">
+                <input
+                  id="dob"
+                  type="date"
+                  required
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                marginTop: 6,
-                width: "100%",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                padding: "11px 18px",
-                background: loading ? "oklch(0.45 0.09 150)" : "oklch(0.20 0.03 170)",
-                color: "white",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 13.5,
-                fontWeight: 600,
-                cursor: loading ? "not-allowed" : "pointer",
-                transition: "all 0.25s",
-                boxShadow: "0 10px 24px -14px oklch(0.3 0.04 170 / 0.5)",
-              }}
-            >
-              {loading ? (
-                <>{isES ? "Creando tu cuenta…" : "Creating account…"}</>
-              ) : (
-                <>
-                  {isES ? "Crear mi cuenta" : "Create my account"}
-                  {IcoArrow}
-                </>
-              )}
+            {/* Terms checkbox */}
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={() => setAcceptedTerms((v) => !v)}
+                disabled={loading}
+                required
+              />
+              <span className="check-box">{IcoCheck}</span>
+              <span>
+                {isES ? (
+                  <>
+                    Acepto los <Link href="/terms">{isES ? "términos del servicio" : "terms of service"}</Link>
+                  </>
+                ) : (
+                  <>
+                    I accept the <Link href="/terms">terms of service</Link>
+                  </>
+                )}
+              </span>
+            </label>
+
+            {/* Privacy checkbox */}
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={acceptedPrivacy}
+                onChange={() => setAcceptedPrivacy((v) => !v)}
+                disabled={loading}
+                required
+              />
+              <span className="check-box">{IcoCheck}</span>
+              <span>
+                {isES ? (
+                  <>
+                    Acepto la <Link href="/privacy">{isES ? "política de privacidad" : "privacy policy"}</Link>
+                  </>
+                ) : (
+                  <>
+                    I accept the <Link href="/privacy">privacy policy</Link>
+                  </>
+                )}
+              </span>
+            </label>
+
+            <button type="submit" className="submit-btn" disabled={loading}>
+              <span>
+                {loading
+                  ? isES
+                    ? "Creando cuenta..."
+                    : "Creating account..."
+                  : isES
+                  ? "Crear mi cuenta"
+                  : "Create my account"}
+              </span>
+              {!loading && IcoArrow}
             </button>
 
+            <div className="swap-link">
+              {isES ? "¿Ya tienes cuenta?" : "Already have an account?"}{" "}
+              <Link href="/login">{isES ? "Iniciar sesión" : "Sign in"}</Link>
+            </div>
           </form>
         </div>
 
-        {/* Footer */}
-        <div
-          style={{
-            marginTop: 10,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            fontSize: 11,
-            color: "oklch(0.55 0.02 170)",
-            flexWrap: "wrap",
-            gap: 8,
-          }}
-        >
-          <div>© {new Date().getFullYear()} Nurea</div>
-          <div style={{ display: "flex", gap: 14 }}>
-            <Link href="/legal/privacy" style={{ color: "inherit", textDecoration: "none" }}>
-              {isES ? "Privacidad" : "Privacy"}
-            </Link>
-            <Link href="/legal/terms" style={{ color: "inherit", textDecoration: "none" }}>
-              {isES ? "Términos" : "Terms"}
-            </Link>
-            <Link href="/help" style={{ color: "inherit", textDecoration: "none" }}>
-              {isES ? "Ayuda" : "Help"}
-            </Link>
+        <div className="auth-footer">
+          <div>© {new Date().getFullYear()} Nurea Health</div>
+          <div>
+            <Link href="/privacy">{isES ? "Privacidad" : "Privacy"}</Link>
+            <Link href="/terms">{isES ? "Términos" : "Terms"}</Link>
+            <Link href="/help">{isES ? "Ayuda" : "Help"}</Link>
           </div>
         </div>
-      </section>
-    </main>
-  )
-}
-
-/* ------------------------------------------------------------------
- *  Field wrapper
- * ------------------------------------------------------------------ */
-function Field({
-  label,
-  htmlFor,
-  icon,
-  input,
-  hint,
-  mb = 0,
-}: {
-  label: string
-  htmlFor: string
-  icon?: React.ReactNode
-  input: React.ReactNode
-  hint?: string
-  mb?: number
-}) {
-  return (
-    <div style={{ marginBottom: mb }}>
-      <label
-        htmlFor={htmlFor}
-        style={{
-          display: "block",
-          fontSize: 12,
-          fontWeight: 500,
-          color: "oklch(0.35 0.03 170)",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </label>
-      <div style={{ position: "relative" }}>
-        {icon && (
-          <span
-            aria-hidden
-            style={{
-              position: "absolute",
-              left: 14,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "oklch(0.55 0.02 170)",
-              pointerEvents: "none",
-            }}
-          >
-            {icon}
-          </span>
-        )}
-        {input}
-      </div>
-      {hint && (
-        <div style={{ marginTop: 6, fontSize: 12, color: "oklch(0.55 0.02 170)" }}>{hint}</div>
-      )}
+      </main>
     </div>
-  )
-}
-
-function inputStyle(withIcon = false): React.CSSProperties {
-  return {
-    width: "100%",
-    height: 40,
-    border: "1px solid oklch(0.92 0.01 90)",
-    background: "oklch(0.98 0.005 90)",
-    borderRadius: 10,
-    padding: withIcon ? "0 14px 0 40px" : "0 14px",
-    fontSize: 13.5,
-    color: "oklch(0.20 0.03 170)",
-    outline: "none",
-    transition: "all 0.2s",
-    fontFamily: "inherit",
-  }
-}
-
-const linkStyle: React.CSSProperties = {
-  color: "oklch(0.45 0.09 150)",
-  textDecoration: "none",
-  fontWeight: 500,
-}
-
-/* ------------------------------------------------------------------
- *  Checkbox
- * ------------------------------------------------------------------ */
-function CheckLine({
-  checked,
-  onChange,
-  disabled,
-  children,
-}: {
-  checked: boolean
-  onChange: () => void
-  disabled?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <label
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 9,
-        cursor: disabled ? "not-allowed" : "pointer",
-        fontSize: 12.5,
-        color: "oklch(0.35 0.03 170)",
-        lineHeight: 1.4,
-        marginBottom: 8,
-      }}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
-        style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}
-      />
-      <span
-        aria-hidden
-        style={{
-          width: 18,
-          height: 18,
-          border: `1.5px solid ${checked ? "oklch(0.20 0.03 170)" : "oklch(0.92 0.01 90)"}`,
-          borderRadius: 5,
-          background: checked ? "oklch(0.20 0.03 170)" : "white",
-          flexShrink: 0,
-          marginTop: 1,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "white",
-          transition: "all 0.2s",
-        }}
-      >
-        {checked && IcoCheck}
-      </span>
-      <span>{children}</span>
-    </label>
   )
 }
 
@@ -1350,8 +754,8 @@ export default function RegisterPage() {
             minHeight: "100vh",
             display: "grid",
             placeItems: "center",
-            background: "oklch(0.985 0.005 90)",
-            color: "oklch(0.35 0.03 170)",
+            background: "var(--bg)",
+            color: "var(--ink-soft)",
             fontFamily: "var(--font-inter), ui-sans-serif, system-ui",
             fontSize: 14,
           }}
