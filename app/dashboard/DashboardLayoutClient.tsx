@@ -57,6 +57,13 @@ export default function DashboardLayoutClient({
       return
     }
 
+    // Check if onboarding is completed
+    if (!profile.onboarding_completed) {
+      setRedirecting(true)
+      router.push("/onboarding")
+      return
+    }
+
     const { role: userRole } = profile
     const isAdminRoute = pathname.startsWith("/dashboard/admin")
     const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
