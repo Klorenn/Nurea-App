@@ -1,4 +1,5 @@
 "use client"
+import { useUser } from "@clerk/nextjs"
 
 import { ProfessionalWelcomeGuide } from "@/components/professional/ProfessionalWelcomeGuide"
 import { useEffect, useState } from "react"

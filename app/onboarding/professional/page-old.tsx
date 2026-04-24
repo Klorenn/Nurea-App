@@ -1,4 +1,5 @@
 "use client"
+import { useUser } from "@clerk/nextjs"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Switch } from "@/components/ui/switch"
