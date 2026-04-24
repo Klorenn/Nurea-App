@@ -9,7 +9,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   gender TEXT CHECK (gender IN ('masculino', 'femenino', 'no_binario', 'prefiero_no')) NOT NULL,
   onboarding_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_profiles PRIMARY KEY (id),
+  CONSTRAINT uq_profiles_user_id UNIQUE (user_id),
+  CONSTRAINT uq_profiles_rut UNIQUE (rut)
 );
 
 -- Create professional_profiles table
@@ -24,9 +27,12 @@ CREATE TABLE IF NOT EXISTS professional_profiles (
   office_hours JSONB DEFAULT '{}',
   services TEXT[] DEFAULT '{}',
   insurance_accepted TEXT[] DEFAULT '{}',
-  secondary_specialties TEXT,
+  secondary_specialties TEXT[] DEFAULT '{}',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_professional_profiles PRIMARY KEY (id),
+  CONSTRAINT fk_professional_profiles_profile_id FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
+  CONSTRAINT uq_professional_profiles_profile_id UNIQUE (profile_id)
 );
 
 -- Create patient_profiles table
@@ -40,7 +46,10 @@ CREATE TABLE IF NOT EXISTS patient_profiles (
   reason_for_consultation TEXT NOT NULL,
   lifestyle_habits JSONB DEFAULT '{}',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_patient_profiles PRIMARY KEY (id),
+  CONSTRAINT fk_patient_profiles_profile_id FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
+  CONSTRAINT uq_patient_profiles_profile_id UNIQUE (profile_id)
 );
 
 -- Enable Row Level Security (RLS)
@@ -52,13 +61,28 @@ ALTER TABLE patient_profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can read own profile" ON profiles
   FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
 
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id)
   WITH CHECK (auth.jwt() ->> 'sub' = user_id);
 
+CREATE POLICY "Users can delete own profile" ON profiles
+  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
+
 -- Create RLS policies for professional_profiles table
 CREATE POLICY "Users can read own professional profile" ON professional_profiles
   FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = professional_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
+    )
+  );
+
+CREATE POLICY "Users can insert own professional profile" ON professional_profiles
+  FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = professional_profiles.profile_id
@@ -82,9 +106,27 @@ CREATE POLICY "Users can update own professional profile" ON professional_profil
     )
   );
 
+CREATE POLICY "Users can delete own professional profile" ON professional_profiles
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = professional_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
+    )
+  );
+
 -- Create RLS policies for patient_profiles table
 CREATE POLICY "Users can read own patient profile" ON patient_profiles
   FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = patient_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
+    )
+  );
+
+CREATE POLICY "Users can insert own patient profile" ON patient_profiles
+  FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = patient_profiles.profile_id
@@ -101,6 +143,15 @@ CREATE POLICY "Users can update own patient profile" ON patient_profiles
     )
   )
   WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = patient_profiles.profile_id
+      AND profiles.user_id = auth.jwt() ->> 'sub'
+    )
+  );
+
+CREATE POLICY "Users can delete own patient profile" ON patient_profiles
+  FOR DELETE USING (
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = patient_profiles.profile_id
