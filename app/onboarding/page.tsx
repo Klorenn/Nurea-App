@@ -1,39 +1,38 @@
-"use client"
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 
-import { useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
-import { createClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export default function OnboardingRootPage() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
-  const supabase = useRef(createClient()).current
+export default async function OnboardingPage() {
+  const { userId } = await auth();
 
-  useEffect(() => {
-    if (loading || !user) return
+  if (!userId) {
+    redirect('/login');
+  }
 
-    supabase
-      .from("profiles")
-      .select("role, onboarding_completed")
-      .eq("id", user.id)
-      .single()
-      .then(({ data }) => {
-        if (!data) { router.replace("/login"); return }
-        if (data.onboarding_completed) {
-          router.replace(`/dashboard/${data.role ?? "patient"}`)
-          return
-        }
-        router.replace(
-          data.role === "professional" ? "/onboarding/professional" : "/onboarding/patient"
-        )
-      })
-  }, [user, loading, router, supabase])
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('user_type, onboarding_completed')
+    .eq('user_id', userId)
+    .single();
 
-  return (
-    <div className="flex-1 flex items-center justify-center">
-      <Loader2 className="h-8 w-8 text-teal-600 animate-spin" />
-    </div>
-  )
+  if (!profile) {
+    // No profile found, shouldn't happen (created during signup)
+    redirect('/auth/register');
+  }
+
+  if (profile.onboarding_completed) {
+    redirect('/dashboard');
+  }
+
+  // Redirect to appropriate onboarding based on user type
+  if (profile.user_type === 'professional') {
+    redirect('/onboarding/professional');
+  } else {
+    redirect('/onboarding/patient');
+  }
 }
