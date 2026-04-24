@@ -8,27 +8,27 @@ const supabase = createClient(
 );
 
 export default async function OnboardingPage() {
-  const { userId } = await auth();
+  try {
+    const { userId } = await auth();
 
-  if (!userId) {
+    if (!userId) {
+      redirect('/login');
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    // Redirect to appropriate onboarding based on user role
+    if (profile?.role === 'professional') {
+      redirect('/onboarding/professional');
+    } else {
+      redirect('/onboarding/patient');
+    }
+  } catch (error) {
+    console.error('Onboarding page error:', error);
     redirect('/login');
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single();
-
-  if (!profile) {
-    // No profile found, shouldn't happen (created during signup)
-    redirect('/auth/register');
-  }
-
-  // Redirect to appropriate onboarding based on user role
-  if (profile.role === 'professional') {
-    redirect('/onboarding/professional');
-  } else {
-    redirect('/onboarding/patient');
   }
 }

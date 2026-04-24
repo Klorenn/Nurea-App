@@ -18,19 +18,35 @@ export default async function OnboardingLayout({
     redirect('/login');
   }
 
-  // Check if onboarding already completed
-  const { data: profile } = await supabase
+  // Check if profile exists
+  const { data: profile, error } = await supabase
     .from('profiles')
-    .select('user_type, onboarding_completed')
-    .eq('user_id', userId)
+    .select('id, role')
+    .eq('id', userId)
     .single();
 
-  if (profile?.onboarding_completed) {
-    redirect('/dashboard');
-  }
+  if (error || !profile) {
+    // Profile doesn't exist yet - create a temporary one or redirect
+    // Try to create a default profile
+    try {
+      const { error: createError } = await supabase.from('profiles').insert({
+        id: userId,
+        first_name: '',
+        last_name: '',
+        role: 'patient',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
 
-  // If profile exists but no onboarding_completed, show appropriate form
-  // If no profile, redirect to choose type (handle in page.tsx)
+      if (createError) {
+        console.error('Failed to create profile:', createError);
+        redirect('/auth/register');
+      }
+    } catch (err) {
+      console.error('Error creating profile:', err);
+      redirect('/auth/register');
+    }
+  }
 
   return <>{children}</>;
 }

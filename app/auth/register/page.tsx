@@ -137,6 +137,7 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [successData, setSuccessData] = useState<{ firstName: string; lastName: string; role: string; dateOfBirth: string } | null>(null)
 
   const strength = useMemo(() => scorePassword(password), [password])
 
@@ -206,12 +207,13 @@ function RegisterContent() {
       })
 
       if (result) {
+        setSuccessData({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          role,
+          dateOfBirth,
+        })
         setSuccess(true)
-        // Redirect to onboarding after a brief delay
-        // Clerk webhook will create the profile in Supabase
-        setTimeout(() => {
-          router.push("/onboarding")
-        }, 2000)
       } else {
         setError(isES ? "No se pudo crear la cuenta." : "Failed to create account.")
       }
@@ -233,6 +235,46 @@ function RegisterContent() {
       setLoading(false)
     }
   }
+
+  /* Create profile on success */
+  useEffect(() => {
+    if (success && successData) {
+      const createProfile = async () => {
+        try {
+          const res = await fetch('/api/profiles/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              firstName: successData.firstName,
+              lastName: successData.lastName,
+              role: successData.role,
+              dateOfBirth: successData.dateOfBirth,
+            }),
+          })
+
+          if (res.ok) {
+            // Wait a moment then redirect
+            setTimeout(() => {
+              router.push("/onboarding")
+            }, 1500)
+          } else {
+            // Still redirect even if profile creation fails
+            setTimeout(() => {
+              router.push("/onboarding")
+            }, 1500)
+          }
+        } catch (err) {
+          console.error('Failed to create profile:', err)
+          // Still redirect
+          setTimeout(() => {
+            router.push("/onboarding")
+          }, 1500)
+        }
+      }
+
+      createProfile()
+    }
+  }, [success, successData, router])
 
   /* ------------------------------------------------------------------
    *  Success / Pending screen
