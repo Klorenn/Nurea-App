@@ -1,38 +1,57 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createBrowserClient } from "@supabase/ssr"
 import type { User } from "@supabase/supabase-js"
 
+// Lazy-load supabase client
+let supabaseClient: ReturnType<typeof import> | null = null
+
+async function getSupabase() {
+  if (!supabaseClient) {
+    supabaseClient = await import("@supabase/ssr")
+  }
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+  return supabaseClient.createBrowserClient(url, key)
+}
+
 export function useAuth() {
-  console.log("[useAuth] hook")
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
-    )
+    let cancelled = false
 
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data?.session?.user ?? null)
-      setLoading(false)
+    getSupabase().then(supabase => {
+      if (cancelled) return
+
+      supabase.auth.getSession().then(({ data }) => {
+        if (cancelled) return
+        setUser(data?.session?.user ?? null)
+        setLoading(false)
+      })
+
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (cancelled) return
+        setUser(session?.user ?? null)
+        setLoading(false)
+      })
+
+      return () => {
+        cancelled = true
+        data.subscription.unsubscribe()
+      }
+    }).catch(() => {
+      if (!cancelled) setLoading(false)
     })
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    return () => data.subscription.unsubscribe()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const signOut = async () => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
-    )
+    const supabase = await getSupabase()
     await supabase.auth.signOut()
   }
 

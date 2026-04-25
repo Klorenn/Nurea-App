@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createBrowserClient } from "@supabase/ssr"
 import type { User } from "@supabase/supabase-js"
 
 type DecoratedUser = User & {
@@ -19,39 +18,57 @@ function decorate(user: User | null): DecoratedUser | null {
   })
 }
 
+type SsModule = ReturnType<typeof import("@supabase/ssr">
+let supabaseClient: SsModule | null = null
+
+async function getSupabase(): Promise<ReturnType<SsModule["createBrowserClient"]>> {
+  if (!supabaseClient) {
+    supabaseClient = await import("@supabase/ssr")
+  }
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+  return supabaseClient.createBrowserClient(url, key)
+}
+
 export function useUser() {
   const [user, setUser] = useState<DecoratedUser | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     let mounted = false
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
-    )
 
-    const safety = setTimeout(() => {
-      if (mounted) setIsLoaded(true)
-    }, 4000)
-
-    supabase.auth.getSession().then(({ data }) => {
+    getSupabase().then(supabase => {
       if (!mounted) return
-      setUser(decorate(data?.session?.user ?? null))
-      setIsLoaded(true)
-    })
 
-    const { data } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      const safety = setTimeout(() => {
+        if (mounted) setIsLoaded(true)
+      }, 4000)
+
+      supabase.auth.getSession().then(({ data }) => {
         if (!mounted) return
-        setUser(decorate(session ?? null))
+        setUser(decorate(data?.session?.user ?? null))
         setIsLoaded(true)
+      })
+
+      const { data } = supabase.auth.onAuthStateChange(
+        (_event, session) => {
+          if (!mounted) return
+          setUser(decorate(session ?? null))
+          setIsLoaded(true)
+        }
+      )
+
+      return () => {
+        mounted = false
+        clearTimeout(safety)
+        data.subscription.unsubscribe()
       }
-    )
+    }).catch(() => {
+      if (!mounted) setIsLoaded(true)
+    })
 
     return () => {
       mounted = false
-      clearTimeout(safety)
-      data.subscription.unsubscribe()
     }
   }, [])
 
