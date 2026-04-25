@@ -1,18 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { createBrowserClient } from "@supabase/ssr"
 import type { User } from "@supabase/supabase-js"
 
-// Lazy-load supabase client
-let supabaseClient: ReturnType<typeof import> | null = null
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
 
-async function getSupabase() {
-  if (!supabaseClient) {
-    supabaseClient = await import("@supabase/ssr")
+function getSupabase() {
+  if (!supabaseInstance) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+    supabaseInstance = createBrowserClient(url, key)
   }
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
-  return supabaseClient.createBrowserClient(url, key)
+  return supabaseInstance
 }
 
 export function useAuth() {
@@ -22,13 +22,15 @@ export function useAuth() {
   useEffect(() => {
     let cancelled = false
 
-    getSupabase().then(supabase => {
-      if (cancelled) return
-
+    try {
+      const supabase = getSupabase()
+      
       supabase.auth.getSession().then(({ data }) => {
         if (cancelled) return
         setUser(data?.session?.user ?? null)
         setLoading(false)
+      }).catch(() => {
+        if (!cancelled) setLoading(false)
       })
 
       const { data } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -41,17 +43,14 @@ export function useAuth() {
         cancelled = true
         data.subscription.unsubscribe()
       }
-    }).catch(() => {
+    } catch (error) {
+      console.error("[useAuth] Error:", error)
       if (!cancelled) setLoading(false)
-    })
-
-    return () => {
-      cancelled = true
     }
   }, [])
 
   const signOut = async () => {
-    const supabase = await getSupabase()
+    const supabase = getSupabase()
     await supabase.auth.signOut()
   }
 

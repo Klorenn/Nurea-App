@@ -1,19 +1,18 @@
 "use client"
 
 import useSWR from "swr"
+import { createBrowserClient } from "@supabase/ssr"
 import { useUser } from "@/hooks/use-user"
 
-type SsModule = ReturnType<typeof import("@supabase/ssr")>
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
 
-let supabaseClient: SsModule | null = null
-
-async function getSupabase() {
-  if (!supabaseClient) {
-    supabaseClient = await import("@supabase/ssr")
+function getSupabase() {
+  if (!supabaseInstance) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+    supabaseInstance = createBrowserClient(url, key)
   }
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
-  return supabaseClient.createBrowserClient(url, key)
+  return supabaseInstance
 }
 
 /**
@@ -21,7 +20,7 @@ async function getSupabase() {
  */
 export interface Profile {
   id: string
-  userRole: "patient" | "professional" | "admin"
+  role: "patient" | "professional" | "admin"
   first_name: string | null
   last_name: string | null
   email: string | null
@@ -41,11 +40,11 @@ export function useProfile() {
   const { data: profile, error, isLoading, mutate } = useSWR(
     user?.id ? ["profile", user.id] : null,
     async () => {
-      const supabase = await getSupabase()
+      const supabase = getSupabase()
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "id, userRole, first_name, last_name, email, date_of_birth, gender, avatar_url, is_onboarded"
+          "id, role, first_name, last_name, email, date_of_birth, gender, avatar_url, is_onboarded"
         )
         .eq("id", user!.id)
         .maybeSingle()
@@ -53,13 +52,13 @@ export function useProfile() {
       if (error) throw error
       if (!data) return null
 
-      const userRole = (data.userRole || "patient") as "patient" | "professional" | "admin"
+      const userRole = (data.role || "patient") as "patient" | "professional" | "admin"
       const fullName =
         [data.first_name, data.last_name].filter(Boolean).join(" ").trim() || ""
 
       return {
         ...data,
-        userRole,
+        role: userRole,
         is_onboarded: !!data.is_onboarded,
         user_id: data.id,
         user_type: userRole,
