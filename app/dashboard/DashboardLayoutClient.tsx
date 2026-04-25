@@ -1,5 +1,5 @@
 "use client"
-import { useUser } from "@/lib/clerk-shim"
+import { useAuth } from "@/hooks/use-auth"
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
@@ -35,7 +35,7 @@ export default function DashboardLayoutClient({
 }: {
   children: React.ReactNode
 }) {
-  const { user, isLoaded: authLoading } = useUser()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const { language } = useLanguage()
@@ -84,23 +84,29 @@ export default function DashboardLayoutClient({
 
   if (authLoading || profileLoading || redirecting) {
     return (
-      <div className={loadingFullViewportClassName("bg-background")}>
+      <div className={loadingFullViewportClassName("bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900")}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-4"
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="text-center space-y-6"
         >
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 flex items-center justify-center mx-auto">
-              <Loader2 className="h-8 w-8 text-[#0f766e] animate-spin" />
+          <div className="relative inline-block">
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur-xl opacity-20"
+              animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.3, 0.2] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mx-auto shadow-lg">
+              <Loader2 className="h-10 w-10 text-white animate-spin" strokeWidth={2} />
             </div>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">
+          <div className="space-y-2">
+            <p className="text-lg font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
               {language === "es" ? "Cargando tu dashboard" : "Loading your dashboard"}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {language === "es" ? "Un momento por favor..." : "Just a moment..."}
+            <p className="text-sm text-muted-foreground font-medium">
+              {language === "es" ? "Preparando tu espacio..." : "Setting things up..."}
             </p>
           </div>
         </motion.div>
