@@ -94,12 +94,20 @@ export async function updateSession(request: NextRequest) {
     // Obtener el rol del usuario desde el perfil con fallback al JWT
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, blocked, date_of_birth, email_verified, onboarding_completed')
+      .select('role, blocked, date_of_birth, email_verified, is_onboarded')
       .eq('id', user.id)
       .maybeSingle()
 
     const jwtRole = user.app_metadata?.role || user.user_metadata?.role
-    const userRole = (profile?.role || jwtRole || 'patient') as 'patient' | 'professional' | 'admin'
+    // IMPORTANT: do NOT default to 'patient' when role is missing.
+    // A missing role means the user just signed in via OAuth and still
+    // needs to pick patient vs professional in /complete-profile.
+    const rawRole = (profile?.role || jwtRole) as
+      | 'patient'
+      | 'professional'
+      | 'admin'
+      | undefined
+      | null
 
     // Verificar si la cuenta está bloqueada
     if (profile?.blocked) {
@@ -111,28 +119,58 @@ export async function updateSession(request: NextRequest) {
       return res
     }
 
+    // Si está dentro del dashboard pero todavía no eligió rol, mandar a
+    // /complete-profile para que escoja paciente o profesional.
+    if (!rawRole && pathname.startsWith('/dashboard')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/complete-profile'
+      url.searchParams.set('from', 'oauth')
+      const res = NextResponse.redirect(url)
+      supabaseResponse.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value, c))
+      return res
+    }
+
+    const userRole = rawRole as 'patient' | 'professional' | 'admin' | undefined
+
     // Redirigir /dashboard exacto al dashboard por rol
-    if (pathname === '/dashboard') {
-      const redirectPath = userRole === 'professional' 
-        ? '/dashboard/professional' 
-        : userRole === 'admin' 
-          ? '/dashboard/admin' 
-          : '/dashboard/patient'
+    if (pathname === '/dashboard' && userRole) {
+      const redirectPath =
+        userRole === 'professional'
+          ? '/dashboard/professional'
+          : userRole === 'admin'
+            ? '/dashboard/admin'
+            : '/dashboard/patient'
       return redirectWithCookies(redirectPath)
     }
 
     // Route access validation moved to Clerk middleware in middleware.ts
     // Basic dashboard role-based routing
-    if (pathname.startsWith('/dashboard/professional') && userRole !== 'professional') {
+    if (
+      pathname.startsWith('/dashboard/professional') &&
+      userRole &&
+      userRole !== 'professional' &&
+      userRole !== 'admin'
+    ) {
       return redirectWithCookies('/dashboard/patient')
     }
-    if (pathname.startsWith('/dashboard/admin') && userRole !== 'admin') {
+    if (
+      pathname.startsWith('/dashboard/admin') &&
+      userRole &&
+      userRole !== 'admin'
+    ) {
       return redirectWithCookies('/dashboard/patient')
     }
 
     if (pathname === '/complete-profile') {
+      // Si el usuario todavía no tiene rol, lo dejamos pasar para que
+      // pueda elegir paciente vs profesional en el role picker.
+      if (!userRole) {
+        return supabaseResponse
+      }
+
+      // Ya tiene rol; si además ya completó onboarding, lo mandamos al dashboard.
       const emailVerified = user.email_confirmed_at !== null || profile?.email_verified
-      const onboardingCompleted = !!profile?.onboarding_completed
+      const onboardingCompleted = !!profile?.is_onboarded
 
       if (onboardingCompleted && emailVerified) {
         const redirectPath =
@@ -144,8 +182,9 @@ export async function updateSession(request: NextRequest) {
         return redirectWithCookies(redirectPath)
       }
 
-      // Wizard v2 will handle the rest.
-      return redirectWithCookies('/onboarding')
+      // Tiene rol pero falta completar onboarding → seguimos en /complete-profile
+      // (la página tiene el formulario de DOB / datos básicos).
+      return supabaseResponse
     }
   }
 
