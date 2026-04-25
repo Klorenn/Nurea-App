@@ -105,10 +105,14 @@ function LoginContent() {
     setLoading(true)
     setError(null)
 
+    console.log("[login] attempting:", { email: email.trim() })
+
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     })
+
+    console.log("[login] result:", { error: signInError?.message })
 
     if (signInError) {
       setError(signInError.message)
