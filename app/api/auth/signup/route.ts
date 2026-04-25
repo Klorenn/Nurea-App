@@ -1,25 +1,26 @@
-import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   const { email, password, firstName, lastName, role } = await request.json()
 
   if (!email || !password || !firstName || !lastName || !role) {
     return NextResponse.json(
-      { 
-        error: 'Missing required fields',
-        message: 'Por favor, completa todos los campos requeridos, incluyendo el tipo de cuenta.'
+      {
+        error: "Missing required fields",
+        message: "Por favor, completa todos los campos requeridos, incluyendo el tipo de cuenta.",
       },
       { status: 400 }
     )
   }
 
   // Validar que el rol sea válido
-  if (!['patient', 'professional'].includes(role)) {
+  if (!["patient", "professional"].includes(role)) {
     return NextResponse.json(
-      { 
-        error: 'Invalid role',
-        message: 'El rol debe ser "patient" o "professional".'
+      {
+        error: "Invalid role",
+        message: 'El rol debe ser "patient" o "professional".',
       },
       { status: 400 }
     )
@@ -31,16 +32,45 @@ export async function POST(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !anonKey) {
     return NextResponse.json(
-      { error: 'Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY) in .env.local' },
+      {
+        error:
+          "Supabase not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY) in .env.local",
+      },
       { status: 500 }
     )
   }
 
-  const supabase = await createClient()
+  // Use cookies() for server client
+  const cookieStore = await cookies()
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    anonKey,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
 
   // Sign up the user
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-  
+  const isDev =
+    process.env.NODE_ENV === "development" || process.env.VERCEL === undefined
+  const siteUrl = isDev
+    ? "http://localhost:3000"
+    : process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      "https://nurea.app"
+
+  console.log("[signup] siteUrl:", siteUrl)
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -48,9 +78,8 @@ export async function POST(request: Request) {
       data: {
         first_name: firstName,
         last_name: lastName,
-        role: role, // 'patient' or 'professional'
+        role: role,
       },
-      // IMPORTANTE: Debe apuntar a /auth/callback para el intercambio de código PKCE
       emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   })
