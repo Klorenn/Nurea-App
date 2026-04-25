@@ -1,8 +1,7 @@
 "use client"
 
-
 import { useUser } from "@/lib/clerk-shim"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2 } from "lucide-react"
@@ -10,78 +9,95 @@ import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 /**
  * Root Dashboard Redirector
- * Ensures users are sent to their role-specific dashboard.
+ * Decides where to send the user based on their stored role.
+ *
+ * Critical bug fix from previous version: the auth state was checked with
+ * `if (loading) return` after renaming `isLoaded` -> `loading`, which meant
+ * the effect bailed out the moment auth finished loading and the page hung
+ * forever on the spinner. Now we wait for `isLoaded === true` and add a
+ * hard 6s safety timeout that falls back to /dashboard/patient.
  */
 export default function DashboardRootPage() {
-  const { user, isLoaded: loading } = useUser()
+  const { user, isLoaded } = useUser()
   const router = useRouter()
-  const supabase = createClient()
+  const [statusMsg, setStatusMsg] = useState("")
 
   useEffect(() => {
-    if (loading) return
+    // Wait for the auth state to load
+    if (!isLoaded) return
 
+    // No user → send to login
     if (!user) {
-      router.push("/login")
+      router.replace("/login")
       return
     }
 
-    const redirectByRole = async () => {
+    let cancelled = false
+    const supabase = createClient()
+
+    // Hard safety net: never hang for more than 6s
+    const safety = setTimeout(() => {
+      if (cancelled) return
+      console.warn("[dashboard] redirect timeout — falling back to /dashboard/patient")
+      router.replace("/dashboard/patient")
+    }, 6000)
+
+    const run = async () => {
       try {
-        // Fetch profile with direct query to ensure freshest data
+        setStatusMsg("Detectando tu perfil…")
+
         const { data: profile, error: dbError } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, is_onboarded")
           .eq("id", user.id)
           .maybeSingle()
 
-        if (dbError) {
-          console.error("DB Fetch error in redirector:", dbError)
-        }
+        if (cancelled) return
+        if (dbError) console.error("[dashboard] profile fetch error:", dbError)
 
-        const jwtRole = user.user_metadata?.role
+        const jwtRole = (user.user_metadata as any)?.role
         const role = profile?.role || jwtRole
 
-        console.log("Redirector - Detected Role:", { 
-          fromDB: profile?.role, 
-          fromJWT: jwtRole, 
-          final: role 
-        })
+        // No profile yet → first time after Google sign-in.
+        // Send the user to the role-selection screen.
+        if (!profile && !jwtRole) {
+          clearTimeout(safety)
+          router.replace("/complete-profile?from=oauth")
+          return
+        }
 
+        clearTimeout(safety)
         if (role === "admin") {
-          router.push("/dashboard/admin")
-          return
-        } 
-        
-        if (role === "professional") {
-          router.push("/dashboard/professional")
-          return
-        }
-
-        // Default or explicit patient
-        router.push("/dashboard/patient")
-      } catch (error) {
-        console.error("Redirect error catch:", error)
-        // Final fallback to JWT only
-        const backupRole = user.app_metadata?.role || user.user_metadata?.role
-        if (backupRole === "admin") {
-          router.push("/dashboard/admin")
-        } else if (backupRole === "professional") {
-          router.push("/dashboard/professional")
+          router.replace("/dashboard/admin")
+        } else if (role === "professional") {
+          router.replace("/dashboard/professional")
         } else {
-          router.push("/dashboard/patient")
+          router.replace("/dashboard/patient")
         }
+      } catch (err) {
+        console.error("[dashboard] redirect error:", err)
+        clearTimeout(safety)
+        const backup = (user.app_metadata as any)?.role || (user.user_metadata as any)?.role
+        if (backup === "admin") router.replace("/dashboard/admin")
+        else if (backup === "professional") router.replace("/dashboard/professional")
+        else router.replace("/dashboard/patient")
       }
     }
 
-    redirectByRole()
-  }, [user, loading, router, supabase])
+    run()
+
+    return () => {
+      cancelled = true
+      clearTimeout(safety)
+    }
+  }, [user, isLoaded, router])
 
   return (
     <div className={loadingFullViewportClassName("bg-background")}>
       <div className="text-center space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-[#0f766e] mx-auto" />
         <p className="text-sm text-muted-foreground animate-pulse font-medium">
-          Cargando tu espacio personalizado...
+          {statusMsg || "Cargando tu espacio personalizado…"}
         </p>
       </div>
     </div>

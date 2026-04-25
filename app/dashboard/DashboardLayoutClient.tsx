@@ -42,32 +42,36 @@ export default function DashboardLayoutClient({
   const { profile, isLoading: profileLoading } = useProfile()
   const [redirecting, setRedirecting] = useState(false)
 
+  // Hard timeout — never hang in loading state for more than 6s
+  const [timedOut, setTimedOut] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 6000)
+    return () => clearTimeout(t)
+  }, [])
+
   useEffect(() => {
     if (authLoading || profileLoading || redirecting) return
 
     if (!user) {
       setRedirecting(true)
-      router.push(`/login?redirect=${pathname}`)
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`)
       return
     }
 
-    if (!profile) {
+    // Missing profile or no role yet → go choose role
+    if (!profile || !profile.role) {
       setRedirecting(true)
-      router.push("/complete-profile")
+      router.push("/complete-profile?from=oauth")
       return
     }
 
-    // Check if onboarding is completed
-    if (!profile.onboarding_completed) {
-      setRedirecting(true)
-      router.push("/onboarding")
-      return
-    }
-
-    const userRole = profile.user_type
+    const userRole = profile.role
     const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
     const isPatientRoute = pathname.startsWith("/dashboard/patient")
+    const isAdminRoute = pathname.startsWith("/dashboard/admin")
     const isSharedRoute = sharedRoutes.some((route) => pathname.startsWith(route))
+
+    if (userRole === "admin") return
 
     if (userRole === "professional" && !isProfessionalRoute && !isSharedRoute) {
       setRedirecting(true)
@@ -80,9 +84,18 @@ export default function DashboardLayoutClient({
       router.push("/dashboard/patient")
       return
     }
+
+    if (userRole === "patient" && isAdminRoute) {
+      setRedirecting(true)
+      router.push("/dashboard/patient")
+      return
+    }
   }, [user, authLoading, profile, profileLoading, pathname, router, redirecting])
 
-  if (authLoading || profileLoading || redirecting) {
+  const stillLoading =
+    !timedOut && (authLoading || (!!user && profileLoading) || redirecting)
+
+  if (stillLoading) {
     return (
       <div className={loadingFullViewportClassName("bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900")}>
         <motion.div
@@ -118,7 +131,7 @@ export default function DashboardLayoutClient({
     return null
   }
 
-  const role = profile.user_type || "patient"
+  const role = (profile.role || profile.user_type || "patient") as UserRole
   const isSpanish = language === "es"
 
   return (

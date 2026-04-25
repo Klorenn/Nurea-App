@@ -91,14 +91,14 @@ export function Navbar({ sticky = true }: NavbarProps) {
               <div className="h-9 w-9 rounded-full bg-muted animate-pulse" aria-hidden="true" />
             ) : user ? (
               <UserDropdown
-                role={((user.unsafeMetadata?.userType as string) || "patient") as "patient" | "professional" | "admin"}
+                role={(((user.user_metadata as any)?.role as string) || "patient") as "patient" | "professional" | "admin"}
                 user={{
                   name: user.firstName
                     ? `${user.firstName} ${user.lastName || ""}`
-                    : user.primaryEmailAddress?.emailAddress?.split("@")[0] || "Usuario",
-                  email: user.primaryEmailAddress?.emailAddress || "",
-                  avatar: user.imageUrl,
-                  initials: user.firstName?.[0] || user.primaryEmailAddress?.emailAddress?.charAt(0).toUpperCase() || "U",
+                    : user.email?.split("@")[0] || "Usuario",
+                  email: user.email || "",
+                  avatar: (user.user_metadata as any)?.avatar_url || (user.user_metadata as any)?.picture,
+                  initials: user.firstName?.[0] || user.email?.charAt(0).toUpperCase() || "U",
                   status: "online",
                 }}
               />
