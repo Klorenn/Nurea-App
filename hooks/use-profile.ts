@@ -1,10 +1,13 @@
 "use client"
 
 import useSWR from "swr"
-import { createClient } from "@/lib/supabase/client"
-import { useUser } from "@/lib/clerk-shim"
+import { createBrowserClient } from "@supabase/ssr"
+import { useUser } from "@/hooks/use-user"
 
-const supabase = createClient()
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 /**
  * Profile shape used across the dashboard. The underlying `profiles`

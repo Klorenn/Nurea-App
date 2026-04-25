@@ -1,7 +1,7 @@
 "use client"
 
-import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState } from "react"
+import { createBrowserClient } from "@supabase/ssr"
 import type { User } from "@supabase/supabase-js"
 
 type DecoratedUser = User & {
@@ -25,7 +25,10 @@ export function useUser() {
 
   useEffect(() => {
     let mounted = false
-    const supabase = createClient()
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
     const safety = setTimeout(() => {
       if (mounted) setIsLoaded(true)
