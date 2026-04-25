@@ -43,6 +43,8 @@ export async function GET(request: Request) {
 
   const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code)
 
+  console.log("[auth/callback] code exchange:", { hasError: !!error, userId: user?.id, hasCode: !!code })
+
   if (error) {
     console.error("Auth callback error:", error)
     return NextResponse.redirect(`${origin}/login?error=exchange_failed`)
@@ -58,6 +60,8 @@ export async function GET(request: Request) {
     .select("id, role, is_onboarded")
     .eq("id", user.id)
     .maybeSingle()
+
+  console.log("[auth/callback] profile lookup:", { userId: user.id, existingRole: existingProfile?.role })
 
   // Helpers from Google metadata
   const fullName = (user.user_metadata?.full_name as string | undefined)?.split(" ") || []

@@ -102,12 +102,16 @@ export async function updateSession(request: NextRequest) {
     // IMPORTANT: do NOT default to 'patient' when role is missing.
     // A missing role means the user just signed in via OAuth and still
     // needs to pick patient vs professional in /complete-profile.
-    const rawRole = (profile?.role || jwtRole) as
+    const profileRole = profile?.role
+    const effectiveRole = profileRole || jwtRole
+    const rawRole = (effectiveRole || null) as
       | 'patient'
       | 'professional'
       | 'admin'
       | undefined
       | null
+
+    console.log("[middleware] role check:", { userId: user.id, profileRole, jwtRole, rawRole, pathname })
 
     // Verificar si la cuenta está bloqueada
     if (profile?.blocked) {
