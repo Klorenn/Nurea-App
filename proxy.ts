@@ -1,43 +1,42 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-const isPublicRoute = createRouteMatcher([
-  '/login(.*)',
-  '/auth(.*)',
-  '/terms',
-  '/privacy',
-  '/',
-  '/profesionales',
-  '/pacientes',
-  '/search(.*)',
-  '/explore(.*)',
-  '/blog(.*)',
-]);
+export async function proxy(request: NextRequest) {
+  const response = NextResponse.next({
+    request,
+  })
 
-const isOnboardingRoute = createRouteMatcher(['/onboarding(.*)']);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
 
-export default clerkMiddleware(async (auth, req) => {
-  const { userId } = await auth();
-
-  // Allow public routes
-  if (isPublicRoute(req)) {
-    return;
+  if (!supabaseUrl || !supabaseKey) {
+    return response
   }
 
-  // Require auth for everything else
-  if (!userId) {
-    return NextResponse.redirect(new URL('/login', req.url));
-  }
+  const supabase = createServerClient(
+    supabaseUrl,
+    supabaseKey,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookies) {
+          cookies.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
 
-  // Require onboarding before accessing dashboard/protected routes
-  if (!isOnboardingRoute(req) && req.nextUrl.pathname.startsWith('/dashboard')) {
-    // Check if onboarding is complete (will be checked in layout/page components)
-    // Redirect happens in layout/page components
-  }
-});
+  await supabase.auth.getUser()
+
+  return response
+}
 
 export const config = {
   matcher: [
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest))(?:.*)|api|trpc)(.*)',
   ],
-};
+}

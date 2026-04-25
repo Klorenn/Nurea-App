@@ -1,15 +1,15 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useLanguage } from "@/contexts/language-context"
 
 /* ============================================================================
-   /login · rediseño Nurea (abril 2026)
-   Layout del mockup login.html — utiliza las clases compartidas de app/auth.css
-============================================================================ */
+   /login · Supabase Auth (abril 2026)
+   ============================================================================ */
 
 function isSafeCallbackUrl(url: string | null): boolean {
   if (!url || typeof url !== "string") return false
@@ -65,11 +65,6 @@ const IcoGoogle = (
     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
   </svg>
 )
-const IcoApple = (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-  </svg>
-)
 
 /* ────────────────────────────────────────────────────────────────────── */
 
@@ -89,6 +84,8 @@ function LoginContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const supabase = createClient()
+
   useEffect(() => {
     if (!queryError) return
     if (queryError === "oauth_error") {
@@ -102,60 +99,47 @@ function LoginContent() {
     }
   }, [queryError, queryMessage, isES])
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault()
     if (!email || !password) return
     setLoading(true)
     setError(null)
-    try {
-      const supabase = createClient()
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      })
-      if (authError) {
-        setError(authError.message || (isES ? "Error al iniciar sesión" : "Sign in error"))
-        setLoading(false)
-        return
-      }
-      if (data.user && !data.user.email_confirmed_at) {
-        setError(isES ? "Por favor verifica tu email antes de iniciar sesión" : "Please verify your email before signing in")
-        setLoading(false)
-        return
-      }
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user!.id)
-        .single()
-      const role = profile?.role || "patient"
-      let redirectPath = "/dashboard"
-      if (isSafeCallbackUrl(callbackUrl)) {
-        redirectPath = decodeURIComponent(callbackUrl!)
-      } else if (role === "professional") {
-        redirectPath = "/dashboard/professional"
-      } else if (role === "admin") {
-        redirectPath = "/dashboard/admin"
-      } else {
-        redirectPath = "/dashboard/patient"
-      }
-      router.push(redirectPath)
-      router.refresh()
-    } catch (err) {
-      const m = err instanceof Error ? err.message : isES ? "Error al iniciar sesión" : "Error signing in"
-      setError(m)
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    })
+
+    if (signInError) {
+      setError(signInError.message)
       setLoading(false)
+      return
     }
+
+    let redirectPath = "/dashboard"
+    if (isSafeCallbackUrl(callbackUrl)) {
+      redirectPath = decodeURIComponent(callbackUrl!)
+    }
+    router.push(redirectPath)
+    router.refresh()
   }
 
-  async function handleGoogle() {
+  async function handleGoogle(e?: React.MouseEvent) {
+    if (e) e.preventDefault()
     setLoading(true)
-    try {
-      const next = isSafeCallbackUrl(callbackUrl) ? callbackUrl : undefined
-      window.location.href = next
-        ? "/api/auth/google?next=" + encodeURIComponent(next!)
-        : "/api/auth/google"
-    } catch {
+    setError(null)
+
+    const next = isSafeCallbackUrl(callbackUrl) ? decodeURIComponent(callbackUrl!) : "/dashboard"
+
+    const { error: signInError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
+    })
+
+    if (signInError) {
+      console.error("Google auth error:", signInError)
       setError(isES ? "No se pudo iniciar sesión con Google" : "Failed to initiate Google sign in")
       setLoading(false)
     }
@@ -169,47 +153,35 @@ function LoginContent() {
         <div className="auth-side-blob two" />
 
         <Link href="/" className="auth-logo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Nurea" style={{ width: 32, height: 32, objectFit: "contain" }} />
+          <Image src="/logos/nurea-logo.svg" alt="Logo Nurea" width={32} height={32} priority />
           <span>Nurea</span>
         </Link>
 
         <div className="auth-quote">
-          <div className="auth-quote-eyebrow">{isES ? "Voces de la red" : "Voices from the network"}</div>
+          <div className="auth-quote-eyebrow">Founder de Nurea</div>
           <blockquote>
-            {isES ? (
-              <>
-                &quot;Volver a Nurea es volver a <em>un lugar tranquilo</em> donde mis pacientes ya saben que los espero con tiempo.&quot;
-              </>
-            ) : (
-              <>
-                &quot;Coming back to Nurea is coming back to <em>a calm place</em> where my patients know I&apos;ll wait for them.&quot;
-              </>
-            )}
+            &quot;Nurea es un espacio <em>seguro</em> y <em>tranquilo</em> para su proceso profesional. El <em>bienestar que todos buscaban</em>.&quot;
           </blockquote>
-          <div className="auth-quote-author">
-            <div className="auth-quote-av" />
+          <div className="auth-quote-author" style={{ marginTop: -8 }}>
+            <Image
+              src="/Pau Koh Founder.png"
+              alt="Pau Koh"
+              width={56}
+              height={56}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                objectFit: "cover",
+                display: "block",
+                border: "2px solid rgba(255,255,255,0.2)",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+              }}
+            />
             <div>
-              <div className="auth-quote-name">Dra. Laura Mendoza</div>
-              <div className="auth-quote-role">
-                {isES ? "Psicóloga clínica · Madrid" : "Clinical psychologist · Madrid"}
-              </div>
+              <div className="auth-quote-name">Pau Koh</div>
+              <div className="auth-quote-role">Founder · Temuco, Chile</div>
             </div>
-          </div>
-        </div>
-
-        <div className="auth-side-stats">
-          <div>
-            <div className="auth-side-stat-num serif">12,400+</div>
-            <div className="auth-side-stat-label">{isES ? "Profesionales" : "Professionals"}</div>
-          </div>
-          <div>
-            <div className="auth-side-stat-num serif">340K+</div>
-            <div className="auth-side-stat-label">{isES ? "Consultas" : "Consultations"}</div>
-          </div>
-          <div>
-            <div className="auth-side-stat-num serif">98%</div>
-            <div className="auth-side-stat-label">{isES ? "Satisfacción" : "Satisfaction"}</div>
           </div>
         </div>
       </aside>
@@ -235,7 +207,7 @@ function LoginContent() {
           </Link>
           <div>
             {isES ? "¿Primera vez?" : "First time?"}{" "}
-            <Link href="/signup" style={{ color: "var(--sage-700)", fontWeight: 600, border: "none", padding: 0 }}>
+            <Link href="/register" style={{ color: "var(--sage-700)", fontWeight: 600, border: "none", padding: 0 }}>
               {isES ? "Crear cuenta" : "Create account"}
             </Link>
           </div>
@@ -276,22 +248,28 @@ function LoginContent() {
             </div>
           )}
 
-          <div className="social-row">
-            <button type="button" className="social-btn" onClick={handleGoogle} disabled={loading}>
-              {IcoGoogle}
-              Google
-            </button>
-            <button type="button" className="social-btn" disabled={loading}>
-              {IcoApple}
-              Apple
-            </button>
-          </div>
+          {/* Google OAuth - BIG BUTTON */}
+          <button
+            type="button"
+            className="social-btn"
+            onClick={handleGoogle}
+            disabled={loading}
+            style={{
+              width: "100%",
+              height: "56px",
+              fontSize: "16px",
+              marginBottom: 0,
+            }}
+          >
+            {IcoGoogle}
+            {isES ? "Continuar con Google" : "Continue with Google"}
+          </button>
 
           <div className="divider">{isES ? "o continúa con correo" : "or continue with email"}</div>
 
-          <form onSubmit={handleSubmit} noValidate>
+          <form onSubmit={handleEmailLogin} noValidate>
             <div className="field">
-              <label htmlFor="email">{isES ? "Correo profesional" : "Email"}</label>
+              <label htmlFor="email">{isES ? "Correo electrónico" : "Email"}</label>
               <div className="field-input-wrap has-icon">
                 <input
                   type="email"
@@ -359,13 +337,13 @@ function LoginContent() {
 
             <div className="swap-link">
               {isES ? "¿No tienes una cuenta?" : "Don't have an account?"}{" "}
-              <Link href="/signup">{isES ? "Crear cuenta gratis" : "Create free account"}</Link>
+              <Link href="/register">{isES ? "Crear cuenta gratis" : "Create free account"}</Link>
             </div>
           </form>
         </div>
 
         <div className="auth-footer">
-          <div>© {new Date().getFullYear()} Nurea Health</div>
+          <div>© {new Date().getFullYear()} Nurea</div>
           <div>
             <Link href="/privacy">{isES ? "Privacidad" : "Privacy"}</Link>
             <Link href="/terms">{isES ? "Términos" : "Terms"}</Link>

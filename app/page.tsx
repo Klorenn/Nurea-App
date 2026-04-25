@@ -2,6 +2,7 @@
 "use client"
 import { useEffect } from "react"
 import Link from 'next/link';
+import Image from 'next/image';
 import { getLandingStats } from '@/actions/landing-stats';
 import './landing.css';
 
@@ -131,10 +132,10 @@ export default function Page() {
 
 <nav className="nav" id="nav">
   <div className="container nav-inner">
-    <a href="/" className="logo">
-      <img src="/nurea-logo.svg" alt="Nurea" style={{ width: '28px', height: '32px', objectFit: 'contain' }} />
+    <Link href="/" className="logo">
+      <Image src="/logos/nurea-logo.svg" alt="Logo Nurea" width={32} height={32} priority />
       <span>Nurea</span>
-    </a>
+    </Link>
     <ul className="nav-links">
       <li><a href="#features">Plataforma</a></li>
       <li><a href="#how">Cómo funciona</a></li>
@@ -143,12 +144,12 @@ export default function Page() {
       <li><a href="#faq">Ayuda</a></li>
     </ul>
     <div className="nav-cta">
-      <a href="login.html" className="btn btn-ghost">Iniciar sesión</a>
-      <a href="register.html" className="btn btn-primary">Empezar gratis
+      <Link href="/login" className="btn btn-ghost">Iniciar sesión</Link>
+      <Link href="/signup" className="btn btn-primary">Empezar gratis
         <span className="btn-arrow">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
         </span>
-      </a>
+      </Link>
     </div>
   </div>
 </nav>
@@ -159,9 +160,7 @@ export default function Page() {
   <div className="hero-blob hero-blob-2"></div>
   <div className="container hero-grid">
     <div className="hero-content reveal">
-      <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'flex-start' }}>
-        <img src="/nurea-logo.svg" alt="Nurea" style={{ width: '120px', height: '140px', objectFit: 'contain' }} />
-      </div>
+
       <div className="hero-eyebrow">
         <span className="hero-eyebrow-dot"></span>
         Mercado de salud para profesionales verificados
@@ -173,10 +172,10 @@ export default function Page() {
         Una plataforma serena y segura donde quienes buscan cuidado se encuentran con quienes mejor pueden ofrecerlo. Menos fricción, más accesibilidad, y todo el tiempo que la salud merece.
       </p>
       <div className="hero-ctas">
-        <a href="register.html" className="btn btn-primary btn-large">Crear mi cuenta
+        <Link href="/signup" className="btn btn-primary btn-large">Crear mi cuenta
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-        </a>
-        <a href="register.html?role=pro" className="btn btn-outline btn-large">Soy profesional</a>
+        </Link>
+        <Link href="/signup?role=pro" className="btn btn-outline btn-large">Soy profesional</Link>
       </div>
       <div className="hero-trust">
         <div className="trust-avatars">
@@ -240,20 +239,6 @@ export default function Page() {
 </section>
 
 
-<section className="logos">
-  <div className="container logos-inner">
-    <div className="logos-label">Respaldados por instituciones de salud líderes en habla hispana</div>
-    <div className="logos-row">
-      <div className="client-logo"><span className="client-logo-mark round"></span>Vidalta</div>
-      <div className="client-logo"><span className="client-logo-mark"></span>MediCentro</div>
-      <div className="client-logo"><span className="client-logo-mark diamond"></span>Serena</div>
-      <div className="client-logo"><span className="client-logo-mark round"></span>Orbe Salud</div>
-      <div className="client-logo"><span className="client-logo-mark"></span>Calma</div>
-    </div>
-  </div>
-</section>
-
-
 <section className="stats">
   <div className="container">
     <div className="stats-head reveal">
@@ -310,7 +295,7 @@ export default function Page() {
             <div className="chip">Terapia cognitiva</div>
             <div className="chip">Online</div>
             <div className="chip">Español · Catalán</div>
-            <div className="chip">35€–60€</div>
+            <div className="chip">$35.000–$60.000</div>
           </div>
         </div>
       </div>
@@ -482,7 +467,7 @@ export default function Page() {
           <div className="testi-av" style={{"background":"linear-gradient(135deg,oklch(0.78 0.06 170),oklch(0.65 0.08 160))"}}></div>
           <div>
             <div className="testi-name">Laura Mendoza</div>
-            <div className="testi-role">Psicóloga clínica · Madrid</div>
+            <div className="testi-role">Psicóloga clínica · Santiago</div>
           </div>
         </div>
       </div>
@@ -526,9 +511,9 @@ export default function Page() {
       <div className="plan reveal">
         <div className="plan-name serif">Exploración</div>
         <div className="plan-desc">Para pacientes que inician su camino.</div>
-        <div className="plan-price"><span className="curr">€</span><span>0</span></div>
+        <div className="plan-price"><span className="curr">$</span><span>0</span></div>
         <div className="plan-period">Siempre gratis</div>
-        <a href="register.html" className="btn btn-outline plan-cta">Crear cuenta</a>
+        <Link href="/signup" className="btn btn-outline plan-cta">Crear cuenta</Link>
         <ul className="plan-features">
           <li><span className="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg></span>Acceso completo a la red</li>
           <li><span className="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg></span>Reserva de citas sin comisión</li>
@@ -541,9 +526,9 @@ export default function Page() {
         <div className="plan-badge">Más elegido</div>
         <div className="plan-name serif">Profesional</div>
         <div className="plan-desc">Para consultas independientes que crecen.</div>
-        <div className="plan-price" data-monthly="29" data-yearly="23"><span className="curr">€</span><span>29</span></div>
+        <div className="plan-price" data-monthly="29" data-yearly="23"><span className="curr">$</span><span>29.990</span></div>
         <div className="plan-period">por profesional / mes</div>
-        <a href="register.html?role=pro" className="btn btn-terracotta plan-cta">Empezar 14 días gratis</a>
+        <Link href="/signup?role=pro" className="btn btn-terracotta plan-cta">Empezar 14 días gratis</Link>
         <ul className="plan-features">
           <li><span className="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg></span>Perfil verificado y destacado</li>
           <li><span className="check-mini"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg></span>Agenda con sincronización total</li>
@@ -667,9 +652,9 @@ export default function Page() {
       <h2 className="serif">El cuidado empieza con una<br/>conversación <em>tranquila</em>.</h2>
       <p>Únete a Nurea hoy. Gratis para pacientes, catorce días sin coste para profesionales.</p>
       <div className="cta-actions">
-        <a href="register.html" className="btn btn-terracotta btn-large">Crear mi cuenta
+        <Link href="/signup" className="btn btn-terracotta btn-large">Crear mi cuenta
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-        </a>
+        </Link>
         <a href="#" className="btn btn-outline btn-large">Hablar con el equipo</a>
       </div>
     </div>
@@ -681,10 +666,10 @@ export default function Page() {
   <div className="container">
     <div className="footer-grid">
       <div className="footer-brand">
-        <a href="/" className="logo">
-          <img src="/nurea-logo.svg" alt="Nurea" style={{ width: '28px', height: '32px', objectFit: 'contain' }} />
+        <Link href="/" className="logo">
+          <Image src="/logos/nurea-logo.svg" alt="Logo Nurea" width={32} height={32} />
           <span>Nurea</span>
-        </a>
+        </Link>
         <p>El mercado de salud que conecta pacientes y profesionales con el cuidado que la salud merece.</p>
         <form className="newsletter" onSubmit={(e) => { e.preventDefault(); e.currentTarget.querySelector("button").textContent="Gracias ✓"; e.currentTarget.querySelector("input").value=""; }}>
           <input type="email" placeholder="Tu correo" required/>
@@ -721,15 +706,15 @@ export default function Page() {
       <div className="footer-col">
         <h4>Legal</h4>
         <ul>
-          <li><a href="#">Privacidad</a></li>
-          <li><a href="#">Condiciones</a></li>
+          <li><a href="/privacy">Privacidad</a></li>
+          <li><a href="/terms">Condiciones</a></li>
           <li><a href="#">Cookies</a></li>
           <li><a href="#">Código ético</a></li>
         </ul>
       </div>
     </div>
     <div className="footer-bottom">
-      <div>© 2026 Nurea Health, S.L. — Hecho con cuidado en Madrid y Ciudad de México.</div>
+      <div>© 2026 Nurea SpA — Hecho con cuidado en Santiago, Chile.</div>
       <div className="footer-legal">
         <a href="#">RGPD</a>
         <a href="#">ISO 27001</a>

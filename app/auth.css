@@ -36,7 +36,8 @@ body {
 a { color: inherit; }
 
 .auth {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
@@ -172,6 +173,21 @@ a { color: inherit; }
   padding: 40px 48px;
   display: flex; flex-direction: column;
   position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  /* Scrollbar estetica */
+  scrollbar-width: thin;
+  scrollbar-color: var(--sage-200) transparent;
+}
+.auth-main::-webkit-scrollbar {
+  width: 6px;
+}
+.auth-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+.auth-main::-webkit-scrollbar-thumb {
+  background: var(--sage-200);
+  border-radius: 3px;
 }
 .auth-top {
   display: flex; justify-content: space-between; align-items: center;
@@ -556,8 +572,8 @@ a { color: inherit; }
 
 /* Responsive */
 @media (max-width: 900px) {
-  .auth { grid-template-columns: 1fr; }
+  .auth { grid-template-columns: 1fr; height: auto; overflow: visible; }
   .auth-side { display: none; }
-  .auth-main { padding: 24px; min-height: 100vh; }
+  .auth-main { padding: 24px; height: auto; min-height: 100vh; overflow-y: visible; }
   .auth-form-wrap h1 { font-size: 32px; }
 }
