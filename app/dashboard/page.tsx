@@ -93,7 +93,7 @@ export default function DashboardRootPage() {
   }, [user, isLoaded, router])
 
   return (
-    <div className={loadingFullViewportClassName("bg-background")}>
+    <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background">
       <div className="text-center space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-[#0f766e] mx-auto" />
         <p className="text-sm text-muted-foreground animate-pulse font-medium">

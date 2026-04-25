@@ -2,32 +2,14 @@
 
 import Image from "next/image"
 import { motion } from "framer-motion"
-import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 interface DashboardLoadingProps {
-  /** "es" | "en" — controls copy language. Defaults to Spanish. */
   language?: "es" | "en"
-  /** Optional override for the heading. */
   title?: string
-  /** Optional override for the subtitle. */
   subtitle?: string
-  /** Pass a custom background class (defaults to brand surface). */
   className?: string
 }
 
-/**
- * NUREA-branded full-viewport loading screen.
- *
- * Uses the canonical sage palette + Fraunces serif so it matches the
- * rest of the app instead of looking like a generic teal spinner.
- *
- * Pegado al diseño:
- *   bg     → var(--bg)        #f8faf9 (sage-tinted off-white)
- *   logo   → /logos/nurea-logo.png inside a sage-100 chip with halo
- *   title  → Fraunces 500, ink
- *   sub    → Inter, ink-soft
- *   line   → animated sage-500 sweep
- */
 export function DashboardLoading({
   language = "es",
   title,
@@ -43,11 +25,14 @@ export function DashboardLoading({
       ? "Un momento, estamos preparando tu espacio."
       : "Just a moment, setting things up.")
 
+  const baseClass = "flex min-h-[100dvh] w-full flex-col items-center justify-center"
+  const containerClass = className 
+    ? `${baseClass} ${className}`
+    : `${baseClass} bg-[var(--bg)] text-[var(--ink)]`
+
   return (
     <div
-      className={loadingFullViewportClassName(
-        className ?? "bg-[var(--bg)] text-[var(--ink)]"
-      )}
+      className={containerClass}
       role="status"
       aria-live="polite"
       aria-busy="true"
@@ -58,7 +43,6 @@ export function DashboardLoading({
         transition={{ duration: 0.35, ease: "easeOut" }}
         className="flex flex-col items-center text-center gap-6 px-6"
       >
-        {/* Logo chip + halo */}
         <div className="relative">
           <motion.div
             aria-hidden="true"
@@ -78,7 +62,6 @@ export function DashboardLoading({
           </div>
         </div>
 
-        {/* Copy */}
         <div className="space-y-1.5 max-w-xs">
           <p
             className="text-2xl font-medium tracking-tight text-[var(--ink)]"
@@ -89,7 +72,6 @@ export function DashboardLoading({
           <p className="text-sm text-[var(--ink-soft)]">{sub}</p>
         </div>
 
-        {/* Sage progress sweep */}
         <div
           aria-hidden="true"
           className="relative h-[3px] w-40 rounded-full overflow-hidden bg-[var(--line-soft)]"

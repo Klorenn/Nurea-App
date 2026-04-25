@@ -4,7 +4,6 @@ import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { AlertTriangle, RefreshCw, Home } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 export default function Error({
   error,
@@ -21,7 +20,7 @@ export default function Error({
   }, [error])
 
   return (
-    <div className={loadingFullViewportClassName("bg-background p-4")}>
+    <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background p-4">
       <div className="max-w-md w-full text-center space-y-6">
         <div className="relative">
           <div className="w-20 h-20 rounded-2xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center mx-auto">

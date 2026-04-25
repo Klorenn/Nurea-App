@@ -9,7 +9,6 @@ import { ArrowLeft, Video } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 /**
  * Página de videollamada para una cita (paciente o profesional).
@@ -68,7 +67,7 @@ export default function ConsultaPage() {
 
   if (authLoading || allowed === null) {
     return (
-      <div className={loadingFullViewportClassName("bg-background")}>
+      <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
           <p className="text-muted-foreground">Cargando...</p>

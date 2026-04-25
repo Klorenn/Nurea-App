@@ -23,7 +23,6 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useSearchParams } from "next/navigation"
 import { trackEvent } from "@/lib/utils/analytics"
-import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&h=400&fit=crop"
 
@@ -573,7 +572,7 @@ function AppointmentsContent() {
 export default function AppointmentsPage() {
   return (
     <Suspense fallback={
-      <div className={loadingFullViewportClassName("bg-background")}>
+      <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>

@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertTriangle, Home, ArrowLeft } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { loadingFullViewportClassName } from "@/lib/loading-layout"
 
 export default function UnauthorizedPage() {
   const { language } = useLanguage()
@@ -15,7 +14,7 @@ export default function UnauthorizedPage() {
   const isSpanish = language === "es"
 
   return (
-    <div className={loadingFullViewportClassName("bg-background p-4")}>
+    <div className="flex min-h-[100dvh] w-full flex-col items-center justify-center bg-background p-4">
       <Card className="max-w-md w-full border-orange-200 dark:border-orange-800">
         <CardContent className="p-8 text-center space-y-6">
           <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mx-auto">
