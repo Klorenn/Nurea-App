@@ -43,11 +43,15 @@ export default function DashboardLayoutClient({
   // Hard timeout — never hang in loading state for more than 6s
   const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {
-    const t = setTimeout(() => setTimedOut(true), 6000)
+    const t = setTimeout(() => {
+      console.log("[dash] TIMEOUT FIRED!")
+      setTimedOut(true)
+    }, 6000)
     return () => clearTimeout(t)
   }, [])
 
   useEffect(() => {
+    console.log("[dash] render:", { authLoading, profileLoading, redirecting, timedOut, hasUser: !!user, hasProfile: !!profile, profileRole: profile?.role })
     if (authLoading || profileLoading || redirecting) return
 
     if (!user) {
@@ -97,8 +101,11 @@ export default function DashboardLayoutClient({
     return <DashboardLoading language={language === "en" ? "en" : "es"} />
   }
 
+  // If we timed out or something is missing, force render the dashboard anyway
+  // rather than showing blank - the sidebar will show login prompt if needed
   if (!user || !profile) {
-    return null
+    console.log("[dash] showing fallback UI:", { user: !!user, profile: !!profile, timedOut })
+    // Still render, don't return null - let the layout handle it
   }
 
   const role = (profile.role || profile.user_type || "patient") as UserRole
