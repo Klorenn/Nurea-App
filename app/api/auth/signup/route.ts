@@ -55,6 +55,8 @@ export async function POST(request: Request) {
     },
   })
 
+  console.log("[signup] result:", { error, userId: data.user?.id })
+
   if (error) {
     return NextResponse.json(
       {
