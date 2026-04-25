@@ -61,7 +61,8 @@ export default function DashboardLayoutClient({
     }
 
     // Missing profile or no role yet → go choose role
-    if (!profile || !profile.role) {
+    if (!profile || !profile?.role) {
+      console.log("[dash] no profile/role, redirecting:", { profile })
       setRedirecting(true)
       router.push("/complete-profile?from=oauth")
       return
@@ -108,7 +109,7 @@ export default function DashboardLayoutClient({
     // Still render, don't return null - let the layout handle it
   }
 
-  const role = (profile.role || profile.user_type || "patient") as UserRole
+  const role = (profile?.role || profile?.user_type || "patient") as UserRole
   const isSpanish = language === "es"
 
   return (

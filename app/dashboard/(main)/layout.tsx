@@ -62,13 +62,13 @@ export default function DashboardMainLayout({
 
     if (profileLoading) return
 
-    if (!profile || !profile.role) {
+    if (!profile || !profile?.role) {
       setRedirecting(true)
       router.replace("/complete-profile?from=oauth")
       return
     }
 
-    const userRole = profile.role
+    const userRole = profile?.role
     const isProfessionalRoute = pathname.startsWith("/dashboard/professional")
     const isPatientRoute = pathname.startsWith("/dashboard/patient")
     const isAdminRoute = pathname.startsWith("/dashboard/admin")
