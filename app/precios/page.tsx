@@ -1,5 +1,5 @@
 "use client"
-import { useUser } from "@clerk/nextjs"
+import { useUser } from "@/lib/clerk-shim"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -114,7 +114,7 @@ export default function PreciosPage() {
 
   const handleSelectPlan = async (plan: PricingPlan) => {
     if (!user) {
-      router.push("/auth/register?role=professional&redirect=/precios")
+      router.push("/register")
       return
     }
 

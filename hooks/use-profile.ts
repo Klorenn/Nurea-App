@@ -2,7 +2,7 @@
 
 import useSWR from "swr"
 import { createClient } from "@/lib/supabase/client"
-import { useUser } from "@clerk/nextjs"
+import { useUser } from "@/lib/clerk-shim"
 
 const supabase = createClient()
 

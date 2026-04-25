@@ -538,7 +538,7 @@ export function LoginForm() {
 
       <p className={`mt-2 text-center text-xs ${footerClass}`}>
         {language === "es" ? "¿No tienes una cuenta?" : "Don't have an account?"}{" "}
-        <a href={isSafeCallbackUrl(callbackUrl) ? `/auth/register?callbackUrl=${encodeURIComponent(callbackUrl!)}` : "/auth/register"} className={footerLinkClass}>
+        <a href="/register" className={footerLinkClass}>
           {language === "es" ? "Regístrate" : "Sign Up"}
         </a>
       </p>

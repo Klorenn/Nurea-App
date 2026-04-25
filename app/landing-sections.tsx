@@ -116,7 +116,7 @@ export default function RemainingSections() {
             <div className="chip">Terapia cognitiva</div>
             <div className="chip">Online</div>
             <div className="chip">Español · Catalán</div>
-            <div className="chip">35€–60€</div>
+            <div className="chip">$35.000–$60.000</div>
           </div>
         </div>
       </div>
@@ -288,7 +288,7 @@ export default function RemainingSections() {
           <div className="testi-av" style={{"background":"linear-gradient(135deg,oklch(0.78 0.06 170),oklch(0.65 0.08 160))"}}></div>
           <div>
             <div className="testi-name">Laura Mendoza</div>
-            <div className="testi-role">Psicóloga clínica · Madrid</div>
+            <div className="testi-role">Psicóloga clínica · Santiago</div>
           </div>
         </div>
       </div>
@@ -332,7 +332,7 @@ export default function RemainingSections() {
       <div className="plan reveal">
         <div className="plan-name serif">Exploración</div>
         <div className="plan-desc">Para pacientes que inician su camino.</div>
-        <div className="plan-price"><span className="curr">€</span><span>0</span></div>
+        <div className="plan-price"><span className="curr">$</span><span>0</span></div>
         <div className="plan-period">Siempre gratis</div>
         <a href="register.html" className="btn btn-outline plan-cta">Crear cuenta</a>
         <ul className="plan-features">
@@ -347,7 +347,7 @@ export default function RemainingSections() {
         <div className="plan-badge">Más elegido</div>
         <div className="plan-name serif">Profesional</div>
         <div className="plan-desc">Para consultas independientes que crecen.</div>
-        <div className="plan-price" data-monthly="29" data-yearly="23"><span className="curr">€</span><span>29</span></div>
+        <div className="plan-price" data-monthly="29" data-yearly="23"><span className="curr">$</span><span>29.990</span></div>
         <div className="plan-period">por profesional / mes</div>
         <a href="register.html?role=pro" className="btn btn-terracotta plan-cta">Empezar 14 días gratis</a>
         <ul className="plan-features">
@@ -535,7 +535,7 @@ export default function RemainingSections() {
       </div>
     </div>
     <div className="footer-bottom">
-      <div>© 2026 Nurea Health, S.L. — Hecho con cuidado en Madrid y Ciudad de México.</div>
+      <div>© 2026 Nurea SpA — Hecho con cuidado en Santiago, Chile.</div>
       <div className="footer-legal">
         <a href="#">RGPD</a>
         <a href="#">ISO 27001</a>

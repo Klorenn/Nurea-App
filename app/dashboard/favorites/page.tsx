@@ -1,7 +1,7 @@
 "use client"
 
 
-import { useUser } from "@clerk/nextjs"
+import { useUser } from "@/lib/clerk-shim"
 import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent } from "@/components/ui/card"

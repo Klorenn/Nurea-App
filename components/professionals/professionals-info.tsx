@@ -443,7 +443,7 @@ export function ProfessionalsInfo() {
                     ? "Comienza el proceso de registro y verificación. Nuestro equipo te ayudará en cada paso."
                     : "Start the registration and verification process. Our team will help you at every step."}
                 </p>
-                <Link href="/auth/register?role=professional">
+                <Link href="/register">
                   <Button size="lg" className="w-full sm:w-auto">
                     {isSpanish ? "Registrarse como Profesional" : "Register as Professional"}
                   </Button>

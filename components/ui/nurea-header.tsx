@@ -223,7 +223,7 @@ export function NureaHeader() {
 					className="flex shrink-0 items-center gap-2 rounded-md p-1.5 transition-colors hover:bg-accent/50"
 				>
 					<Image
-						src="/logo.png"
+						src="/logos/nurea-logo.png"
 						alt="NUREA"
 						width={32}
 						height={32}
@@ -277,7 +277,7 @@ export function NureaHeader() {
 										<li className="mt-1 border-t pt-2">
 											<p className="px-3 py-2 text-xs text-muted-foreground">
 												{language === 'es' ? '¿Eres profesional de salud?' : 'Healthcare professional?'}{' '}
-												<Link href="/auth/register?role=professional&step=verification" className="font-medium text-primary hover:underline">
+												<Link href="/register" className="font-medium text-primary hover:underline">
 													{language === 'es' ? 'Únete a NUREA' : 'Join NUREA'}
 												</Link>
 											</p>

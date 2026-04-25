@@ -1,5 +1,5 @@
 "use client"
-import { useUser } from "@clerk/nextjs"
+import { useUser } from "@/lib/clerk-shim"
 
 import { Suspense, useEffect, useState } from "react"
 import { ExploreContent } from "./explore-content"

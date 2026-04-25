@@ -456,7 +456,7 @@ export default function ProfesionalesInfoPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" className="text-lg px-8">
-                  <Link href="/auth/register?role=professional">
+                  <Link href="/register">
                     {isSpanish ? "Unirme como Profesional" : "Join as Professional"}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>

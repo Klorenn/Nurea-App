@@ -202,7 +202,7 @@ const sidebarContent = (
       {/* Logo */}
       <div className="sidebar-logo">
         <Image
-          src="/logo.png"
+          src="/logos/nurea-logo.png"
           alt="NUREA"
           width={36}
           height={36}
@@ -368,7 +368,7 @@ const sidebarContent = (
               )}
             >
               <Image
-                src="/logo.png"
+                src="/logos/nurea-logo.png"
                 alt="NUREA"
                 width={32}
                 height={32}
@@ -432,7 +432,7 @@ const sidebarContent = (
                       )}
                     >
                       <Image
-                        src="/logo.png"
+src="/logos/nurea-logo.png"
                         alt="NUREA"
                         width={36}
                         height={36}

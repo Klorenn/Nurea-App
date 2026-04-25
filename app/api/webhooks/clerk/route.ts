@@ -1,5 +1,5 @@
 import { Webhook } from 'svix'
-import { WebhookEvent } from '@clerk/nextjs/server'
+import { WebhookEvent } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 

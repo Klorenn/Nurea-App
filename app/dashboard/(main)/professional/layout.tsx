@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useUser } from "@clerk/nextjs"
+import { useUser } from "@/lib/clerk-shim"
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion } from "framer-motion"

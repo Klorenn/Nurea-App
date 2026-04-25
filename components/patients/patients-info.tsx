@@ -409,7 +409,7 @@ export function PatientsInfo() {
                     ? "Crea tu cuenta gratuita y comienza a gestionar tu salud de forma simple y segura."
                     : "Create your free account and start managing your health simply and securely."}
                 </p>
-                <Link href="/auth/register?role=patient">
+                <Link href="/register">
                   <Button size="lg" className="w-full sm:w-auto">
                     {isSpanish ? "Crear cuenta como Paciente" : "Create Patient Account"}
                   </Button>

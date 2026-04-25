@@ -262,7 +262,7 @@ export function Pricing() {
     if (authLoading) return
 
     if (!user) {
-      router.push(`/auth/register?role=professional&redirect=/precios`)
+      router.push("/register")
       return
     }
 

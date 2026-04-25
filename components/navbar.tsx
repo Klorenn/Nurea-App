@@ -12,7 +12,7 @@ import { UserDropdown } from "@/components/ui/user-dropdown"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useUser } from "@clerk/nextjs"
+import { useUser } from "@/lib/clerk-shim"
 
 const navLinkClass =
   "text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-sm active:opacity-80 transition-colors"
@@ -56,7 +56,7 @@ export function Navbar({ sticky = true }: NavbarProps) {
             aria-label="NUREA - Inicio"
           >
             <Image
-              src="/logo.png"
+              src="/logos/nurea-logo.png"
               alt="NUREA"
               width={36}
               height={36}

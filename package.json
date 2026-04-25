@@ -24,7 +24,6 @@
     "@react-email/body": "0.3.0"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.2.5",
     "@emotion/is-prop-valid": "latest",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",

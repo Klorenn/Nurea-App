@@ -22,7 +22,7 @@ export function Footer() {
               className="inline-flex items-center gap-2 w-fit shrink-0 rounded-lg opacity-95 hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2"
             >
               <Image
-                src="/logo.png"
+                src="/logos/nurea-logo.png"
                 alt="NUREA"
                 width={28}
                 height={28}

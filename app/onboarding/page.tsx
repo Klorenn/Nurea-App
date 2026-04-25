@@ -1,11 +1,7 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+export const dynamic = 'force-dynamic';
 
 export default async function OnboardingPage() {
   try {
@@ -15,18 +11,9 @@ export default async function OnboardingPage() {
       redirect('/login');
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', userId)
-      .single();
-
-    // Redirect to appropriate onboarding based on user role
-    if (profile?.role === 'professional') {
-      redirect('/onboarding/professional');
-    } else {
-      redirect('/onboarding/patient');
-    }
+    // Skip the profile check - just redirect to patient onboarding
+    // The profile creation will happen in the individual pages
+    redirect('/onboarding/patient');
   } catch (error) {
     console.error('Onboarding page error:', error);
     redirect('/login');

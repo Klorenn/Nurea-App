@@ -18,7 +18,7 @@ export function StackedCircularFooter() {
   ]
 
   const professionalLinks = [
-    { title: isEs ? "Únete a la Red" : "Join the Network", href: "/auth/register?role=professional" },
+    { title: isEs ? "Únete a la Red" : "Join the Network", href: "/register" },
     { title: isEs ? "Software de Gestión (HCE)" : "Management Software (EHR)", href: "/professional/dashboard" },
     { title: isEs ? "Tarifas y Pagos" : "Fees & Payments", href: "/professional/billing" },
     { title: isEs ? "Centro de Recursos" : "Resource Center", href: "/professional/resources" },
@@ -52,7 +52,7 @@ export function StackedCircularFooter() {
           <div className="lg:col-span-1 space-y-6">
             <Link href="/" className="flex items-center gap-2.5 group">
               <Image
-                src="/logo.png"
+                src="/logos/nurea-logo.png"
                 alt="NUREA"
                 width={40}
                 height={40}

@@ -169,7 +169,7 @@ export default function PricingPage() {
                       "w-full h-14 rounded-2xl text-lg font-bold transition-all hover:scale-[1.02] bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-100 dark:shadow-teal-950/10 mb-10"
                     )}
                   >
-                    <Link href={`/auth/register?role=professional&plan=${plan.id}`}>
+                    <Link href="/register">
                       {plan.cta}
                     </Link>
                   </Button>

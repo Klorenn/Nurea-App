@@ -29,7 +29,7 @@ export default function LegalLayout({
             >
               <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
               <Image
-                src="/logo.png"
+                src="/logos/nurea-logo.png"
                 alt="NUREA"
                 width={28}
                 height={28}

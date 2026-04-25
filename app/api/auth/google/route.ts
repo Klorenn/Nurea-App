@@ -14,8 +14,8 @@ export async function GET(request: Request) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      // IMPORTANTE: Redirigir a /auth/callback (no /api/auth/callback)
-      redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
+      // Redirect to the actual API endpoint
+      redirectTo: `${siteUrl}/api/auth/callback?next=${encodeURIComponent(next)}`,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
+      redirectTo: `${siteUrl}/api/auth/callback?next=${encodeURIComponent(next)}`,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',
