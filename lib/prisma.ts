@@ -1,34 +1,38 @@
-import { PrismaClient } from "@prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
-
 const globalForPrisma = globalThis as unknown as {
-  prisma?: PrismaClient
+  prisma?: any
 }
 
-const hasDatabaseUrl = !!process.env.DATABASE_URL
+let prismaInstance: any = null
 
-function createAdapter(): PrismaPg | null {
-  if (!process.env.DATABASE_URL) {
-    return null
-  }
-  return new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-  })
-}
+export const prisma = new Proxy({}, {
+  get(target, prop) {
+    if (prismaInstance !== null) {
+      return Reflect.get(prismaInstance, prop)
+    }
+    // Lazy load Prisma only when actually used
+    if (!prismaInstance && typeof window === 'undefined') {
+      const { PrismaClient } = require("@prisma/client")
+      const { PrismaPg } = require("@prisma/adapter-pg")
 
-const adapter = hasDatabaseUrl ? createAdapter() : null
+      const hasDatabaseUrl = !!process.env.DATABASE_URL
+      const adapter = hasDatabaseUrl && process.env.DATABASE_URL
+        ? new PrismaPg({ connectionString: process.env.DATABASE_URL })
+        : null
 
-export const prisma =
-  globalForPrisma.prisma ??
-  (adapter
-    ? new PrismaClient({
-        adapter,
-        log: ["error", "warn"],
-      })
-    : new PrismaClient({
-        log: ["error", "warn"],
-      }))
+      prismaInstance = globalForPrisma.prisma ??
+        (adapter
+          ? new PrismaClient({
+              adapter,
+              log: ["error", "warn"],
+            })
+          : new PrismaClient({
+              log: ["error", "warn"],
+            }))
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma
-}
+      if (process.env.NODE_ENV !== "production") {
+        globalForPrisma.prisma = prismaInstance
+      }
+    }
+    return prismaInstance ? Reflect.get(prismaInstance, prop) : target
+  },
+})
