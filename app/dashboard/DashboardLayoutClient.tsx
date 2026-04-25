@@ -132,14 +132,14 @@ export default function DashboardLayoutClient({
             <UserDropdown
               role={role}
               user={{
-                name: profile.full_name
+                name: profile?.full_name
                   ? profile.full_name
-                  : user.email?.split("@")[0] || "Usuario",
-                email: user.email || "",
+                  : user?.email?.split("@")[0] || "Usuario",
+                email: user?.email || "",
                 avatar: undefined,
                 initials:
-                  profile.full_name?.[0]?.toUpperCase() ||
-                  user.email?.[0]?.toUpperCase() ||
+                  profile?.full_name?.[0]?.toUpperCase() ||
+                  user?.email?.[0]?.toUpperCase() ||
                   "U",
                 status: "online",
               }}
