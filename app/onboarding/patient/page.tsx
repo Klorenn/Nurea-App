@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/lib/clerk-shim';
+import { useUser } from '@/hooks/use-user';
 import { savePatientProfile } from './actions';
 
 const CHRONIC_CONDITIONS = [

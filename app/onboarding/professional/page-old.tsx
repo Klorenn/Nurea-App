@@ -1,5 +1,5 @@
 "use client"
-import { useUser } from "@/lib/clerk-shim"
+import { useUser } from "@/hooks/use-user"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Switch } from "@/components/ui/switch"

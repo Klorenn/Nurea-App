@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { useUser } from "@/lib/clerk-shim"
+import { useUser } from "@/hooks/use-user"
 import { useProfile } from "@/hooks/use-profile"
 import { useLanguage } from "@/contexts/language-context"
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading"

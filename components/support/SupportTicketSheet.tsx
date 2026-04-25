@@ -1,5 +1,6 @@
 "use client"
 
+import { useAuth } from "@/hooks/use-auth"
 import React, { useState } from 'react'
 import { 
   HelpCircle, 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import { useLanguage } from "@/contexts/language-context"
 import { toast } from "sonner"
 import { MessageCircle, Clock, CheckCircle } from "lucide-react"

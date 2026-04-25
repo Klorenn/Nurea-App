@@ -1,5 +1,6 @@
 "use client"
 
+import { useAuth } from "@/hooks/use-auth"
 import { useState, useRef } from "react"
 import {
   Dialog,

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Gift, Copy, CheckCircle2, AlertCircle } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
 import { useLanguage } from "@/contexts/language-context"
 import { useTranslations } from "@/lib/i18n"
 import { cn } from "@/lib/utils"

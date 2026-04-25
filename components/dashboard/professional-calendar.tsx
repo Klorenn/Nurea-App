@@ -18,6 +18,7 @@ import {
   Settings,
   Menu,
 } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

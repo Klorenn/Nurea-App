@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
-import Link from 'next/link';
+import { useAuth } from "@/hooks/use-auth"
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/lib/clerk-shim';
+import { useUser } from '@/hooks/use-user'
 import { saveProfessionalProfile, uploadLicenseFile } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

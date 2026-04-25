@@ -1,5 +1,5 @@
 "use client"
-import { useUser } from "@/lib/clerk-shim"
+import { useUser } from "@/hooks/use-user"
 
 import { Suspense, useEffect, useState } from "react"
 import { ExploreContent } from "./explore-content"

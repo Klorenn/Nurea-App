@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { cn } from "@/lib/utils"
-import { useUser } from "@/lib/clerk-shim"
+import { useUser } from "@/hooks/use-user"
 import { createClient } from "@/lib/supabase/client"
 
 type Role = "patient" | "professional"

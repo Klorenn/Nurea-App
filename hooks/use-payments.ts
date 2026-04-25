@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from 'react'
-import { useUser } from '@/lib/clerk-shim'
+import { useUser } from '@/hooks/use-user'
 
 export interface Payment {
   id: string

@@ -1,5 +1,5 @@
 "use client"
-import { useUser } from "@/lib/clerk-shim"
+import { useUser } from "@/hooks/use-user"
 
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"

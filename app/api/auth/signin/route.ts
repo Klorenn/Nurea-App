@@ -2,16 +2,14 @@ import { NextResponse } from 'next/server'
 
 /**
  * POST /api/auth/signin
- * DEPRECATED: Clerk handles sign-in via its dashboard
- * This endpoint is no longer used as authentication moved to Clerk
+ * DEPRECATED: Use Supabase email/password or OAuth login instead
  */
 export async function POST(request: Request) {
   return NextResponse.json(
     {
       error: 'deprecated',
-      message: 'Sign in is now handled by Clerk. Please use the Clerk sign-in flow.',
+      message: 'Sign in is handled by Supabase. Please use the login page.',
     },
     { status: 410 }
   )
 }
-
