@@ -26,24 +26,24 @@ export function useUser() {
   useEffect(() => {
     let mounted = false
     const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
     )
 
     const safety = setTimeout(() => {
       if (mounted) setIsLoaded(true)
     }, 4000)
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return
-      setUser(decorate(session?.user ?? null))
+      setUser(decorate(data?.session?.user ?? null))
       setIsLoaded(true)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!mounted) return
-        setUser(decorate(session?.user ?? null))
+        setUser(decorate(session ?? null))
         setIsLoaded(true)
       }
     )
@@ -51,7 +51,7 @@ export function useUser() {
     return () => {
       mounted = false
       clearTimeout(safety)
-      subscription.unsubscribe()
+      data.subscription.unsubscribe()
     }
   }, [])
 
