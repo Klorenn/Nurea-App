@@ -3,16 +3,14 @@ import { useAuth } from "@/hooks/use-auth"
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { motion } from "framer-motion"
 import { useProfile } from "@/hooks/use-profile"
 import { DashboardSidebar, type UserRole } from "@/components/dashboard/Sidebar"
 import { UserDropdown } from "@/components/ui/user-dropdown"
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useLanguage } from "@/contexts/language-context"
-import { Loader2 } from "lucide-react"
 import { SupportTicketSheet } from "@/components/support/SupportTicketSheet"
-import { loadingFullViewportClassName } from "@/lib/loading-layout"
+import { DashboardLoading } from "@/components/dashboard/DashboardLoading"
 
 const sharedRoutes = [
   "/dashboard/forum",
@@ -96,35 +94,7 @@ export default function DashboardLayoutClient({
     !timedOut && (authLoading || (!!user && profileLoading) || redirecting)
 
   if (stillLoading) {
-    return (
-      <div className={loadingFullViewportClassName("bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900")}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="text-center space-y-6"
-        >
-          <div className="relative inline-block">
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur-xl opacity-20"
-              animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.3, 0.2] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            />
-            <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mx-auto shadow-lg">
-              <Loader2 className="h-10 w-10 text-white animate-spin" strokeWidth={2} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <p className="text-lg font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
-              {language === "es" ? "Cargando tu dashboard" : "Loading your dashboard"}
-            </p>
-            <p className="text-sm text-muted-foreground font-medium">
-              {language === "es" ? "Preparando tu espacio..." : "Setting things up..."}
-            </p>
-          </div>
-        </motion.div>
-      </div>
-    )
+    return <DashboardLoading language={language === "en" ? "en" : "es"} />
   }
 
   if (!user || !profile) {

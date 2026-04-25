@@ -4,8 +4,8 @@ import { useUser } from "@/lib/clerk-shim"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2 } from "lucide-react"
-import { loadingFullViewportClassName } from "@/lib/loading-layout"
+import { useLanguage } from "@/contexts/language-context"
+import { DashboardLoading } from "@/components/dashboard/DashboardLoading"
 
 /**
  * Root Dashboard Redirector

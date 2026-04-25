@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2 } from "lucide-react"
 import { useUser } from "@/lib/clerk-shim"
 import { useProfile } from "@/hooks/use-profile"
-import { loadingFullViewportClassName } from "@/lib/loading-layout"
+import { useLanguage } from "@/contexts/language-context"
+import { DashboardLoading } from "@/components/dashboard/DashboardLoading"
 
 const sharedRoutes = [
   "/dashboard/forum",
@@ -42,6 +42,7 @@ export default function DashboardMainLayout({
   const router = useRouter()
   const pathname = usePathname()
   const { profile, isLoading: profileLoading } = useProfile()
+  const { language } = useLanguage()
   const [redirecting, setRedirecting] = useState(false)
   const [timedOut, setTimedOut] = useState(false)
 
@@ -103,22 +104,7 @@ export default function DashboardMainLayout({
     !timedOut && (!isLoaded || (!!user && profileLoading) || redirecting)
 
   if (stillLoading) {
-    return (
-      <div className={loadingFullViewportClassName("bg-background")}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-4 flex flex-col items-center"
-        >
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 text-[#0f766e] animate-spin" />
-          </div>
-          <p className="text-sm text-muted-foreground animate-pulse font-medium">
-            Cargando tu espacio…
-          </p>
-        </motion.div>
-      </div>
-    )
+    return <DashboardLoading language={language === "en" ? "en" : "es"} />
   }
 
   return (
